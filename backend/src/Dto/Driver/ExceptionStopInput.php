@@ -19,8 +19,8 @@ final class ExceptionStopInput
     #[Assert\Length(max: 4000)]
     public string $comment = '';
 
-    #[Assert\Uuid]
-    public ?string $shipmentId = null;
+    #[Assert\Ulid]
+    public ?string $shipmentPublicId = null;
 
     public static function fromArray(array $payload): self
     {
@@ -28,7 +28,7 @@ final class ExceptionStopInput
         $dto->clientActionId = (string) ($payload['client_action_id'] ?? '');
         $dto->reason = (string) ($payload['reason'] ?? 'OTHER');
         $dto->comment = (string) ($payload['comment'] ?? '');
-        $dto->shipmentId = isset($payload['shipment_id']) ? (string) $payload['shipment_id'] : null;
+        $dto->shipmentPublicId = isset($payload['shipment_public_id']) ? (string) $payload['shipment_public_id'] : null;
 
         return $dto;
     }

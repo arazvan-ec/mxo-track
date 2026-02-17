@@ -15,6 +15,10 @@ use App\Entity\User;
 use App\Enum\ExceptionCode;
 use App\Enum\ShipmentEventType;
 use App\Http\ApiErrorResponder;
+use App\Repository\PodRepository;
+use App\Repository\RouteRepository;
+use App\Repository\RouteStopRepository;
+use App\Repository\ShipmentRepository;
 use App\Service\AuditLogger;
 use App\Service\DeliveryEvidenceFactory;
 use App\Service\DriverActionService;
@@ -37,17 +41,17 @@ class DriverApiController extends AbstractController
 
         $routes = $entityManager->getRepository(RouteEntity::class)->findBy(['driver' => $driver]);
         $items = array_map(static fn (RouteEntity $route): array => [
-            'id' => (string) $route->getId(),
+            'public_id' => $route->getPublicIdString(),
             'status' => $route->getStatus()->value,
         ], $routes);
 
         return $this->json(['items' => $items]);
     }
 
-    #[Route('/routes/{routeId}/start', methods: ['POST'])]
-    public function start(string $routeId, EntityManagerInterface $entityManager, ApiErrorResponder $errorResponder): JsonResponse
+    #[Route('/routes/{routePublicId}/start', methods: ['POST'])]
+    public function start(string $routePublicId, RouteRepository $routeRepository, EntityManagerInterface $entityManager, ApiErrorResponder $errorResponder): JsonResponse
     {
-        $route = $entityManager->find(RouteEntity::class, $routeId);
+        $route = $routeRepository->findOneByPublicId($routePublicId);
         if (!$route instanceof RouteEntity) {
             return $errorResponder->notFound('route_not_found', 'Ruta no encontrada.');
         }
@@ -58,10 +62,10 @@ class DriverApiController extends AbstractController
         return $this->json(['ok' => true, 'status' => $route->getStatus()->value]);
     }
 
-    #[Route('/routes/{routeId}/finish', methods: ['POST'])]
-    public function finish(string $routeId, EntityManagerInterface $entityManager, ApiErrorResponder $errorResponder): JsonResponse
+    #[Route('/routes/{routePublicId}/finish', methods: ['POST'])]
+    public function finish(string $routePublicId, RouteRepository $routeRepository, EntityManagerInterface $entityManager, ApiErrorResponder $errorResponder): JsonResponse
     {
-        $route = $entityManager->find(RouteEntity::class, $routeId);
+        $route = $routeRepository->findOneByPublicId($routePublicId);
         if (!$route instanceof RouteEntity) {
             return $errorResponder->notFound('route_not_found', 'Ruta no encontrada.');
         }
@@ -72,26 +76,26 @@ class DriverApiController extends AbstractController
         return $this->json(['ok' => true, 'status' => $route->getStatus()->value]);
     }
 
-    #[Route('/routes/{routeId}/stops', methods: ['GET'])]
-    public function stops(string $routeId, EntityManagerInterface $entityManager, ApiErrorResponder $errorResponder): JsonResponse
+    #[Route('/routes/{routePublicId}/stops', methods: ['GET'])]
+    public function stops(string $routePublicId, RouteRepository $routeRepository, EntityManagerInterface $entityManager, ApiErrorResponder $errorResponder): JsonResponse
     {
-        $route = $entityManager->find(RouteEntity::class, $routeId);
+        $route = $routeRepository->findOneByPublicId($routePublicId);
         if (!$route instanceof RouteEntity) {
             return $errorResponder->notFound('route_not_found', 'Ruta no encontrada.');
         }
 
         $stops = $entityManager->getRepository(RouteStop::class)->findBy(['route' => $route], ['sequence' => 'ASC']);
         $items = array_map(static fn (RouteStop $stop): array => [
-            'id' => (string) $stop->getId(),
+            'public_id' => $stop->getPublicIdString(),
             'status' => $stop->getStatus()->value,
         ], $stops);
 
         return $this->json(['items' => $items]);
     }
 
-    #[Route('/stops/{stopId}/deliver', methods: ['POST'])]
+    #[Route('/stops/{stopPublicId}/deliver', methods: ['POST'])]
     public function deliver(
-        string $stopId,
+        string $stopPublicId,
         Request $request,
         DriverActionService $actionService,
         EntityManagerInterface $entityManager,
@@ -99,6 +103,8 @@ class DriverApiController extends AbstractController
         ApiErrorResponder $errorResponder,
         ValidatorInterface $validator,
         DeliveryEvidenceFactory $deliveryEvidenceFactory,
+        RouteStopRepository $routeStopRepository,
+        ShipmentRepository $shipmentRepository,
     ): JsonResponse {
         $payload = $this->decodePayload($request, $errorResponder);
         if ($payload instanceof JsonResponse) {
@@ -114,7 +120,7 @@ class DriverApiController extends AbstractController
         /** @var User $driver */
         $driver = $this->getUser();
 
-        $stop = $entityManager->find(RouteStop::class, $stopId);
+        $stop = $routeStopRepository->findOneByPublicId($stopPublicId);
         if (!$stop instanceof RouteStop) {
             return $errorResponder->notFound('stop_not_found', 'Parada no encontrada.');
         }
@@ -133,22 +139,25 @@ class DriverApiController extends AbstractController
         $pod = new Pod($stop, $driver, $input->signedByName, $input->recipientIdEncoded);
         $entityManager->persist($pod);
 
-        if ($input->shipmentId !== null) {
-            $shipment = $entityManager->find(Shipment::class, $input->shipmentId);
+        if ($input->shipmentPublicId !== null) {
+            $shipment = $shipmentRepository->findOneByPublicId($input->shipmentPublicId);
             if ($shipment instanceof Shipment) {
-                $entityManager->persist(new ShipmentEvent($shipment, ShipmentEventType::DELIVERED, ['stop_id' => $stopId, 'confirmation_mode' => 'recipient_id_encoded']));
+                $entityManager->persist(new ShipmentEvent($shipment, ShipmentEventType::DELIVERED, [
+                    'stop_public_id' => $stopPublicId,
+                    'confirmation_mode' => 'recipient_id_encoded',
+                ]));
             }
         }
 
         $auditLogger->log($driver, 'DRIVER_DELIVER', 'route_stop', (string) $stop->getId(), [
             'client_action_id' => $input->clientActionId,
-            'shipment_id' => $input->shipmentId ?? '',
+            'shipment_public_id' => $input->shipmentPublicId ?? '',
             'delivery_evidence' => $deliveryEvidenceFactory->build(
                 $input->recipientIdEncoded,
                 $input->confirmedByDriver,
-                (string) $stop->getId(),
+                $stopPublicId,
                 $input->clientActionId,
-                (string) $driver->getId(),
+                $driver->getPublicIdString(),
                 (string) ($request->getClientIp() ?? ''),
                 (string) $request->headers->get('User-Agent', ''),
             ),
@@ -159,15 +168,17 @@ class DriverApiController extends AbstractController
         return $this->json(['ok' => true, 'idempotent' => false], 201);
     }
 
-    #[Route('/stops/{stopId}/exception', methods: ['POST'])]
+    #[Route('/stops/{stopPublicId}/exception', methods: ['POST'])]
     public function exception(
-        string $stopId,
+        string $stopPublicId,
         Request $request,
         DriverActionService $actionService,
         EntityManagerInterface $entityManager,
         AuditLogger $auditLogger,
         ApiErrorResponder $errorResponder,
         ValidatorInterface $validator,
+        RouteStopRepository $routeStopRepository,
+        ShipmentRepository $shipmentRepository,
     ): JsonResponse {
         $payload = $this->decodePayload($request, $errorResponder);
         if ($payload instanceof JsonResponse) {
@@ -182,7 +193,7 @@ class DriverApiController extends AbstractController
 
         /** @var User $driver */
         $driver = $this->getUser();
-        $stop = $entityManager->find(RouteStop::class, $stopId);
+        $stop = $routeStopRepository->findOneByPublicId($stopPublicId);
 
         if (!$stop instanceof RouteStop) {
             return $errorResponder->notFound('stop_not_found', 'Parada no encontrada.');
@@ -196,11 +207,11 @@ class DriverApiController extends AbstractController
         $reason = ExceptionCode::tryFrom($input->reason) ?? ExceptionCode::OTHER;
         $stop->markException($reason, $input->comment);
 
-        if ($input->shipmentId !== null) {
-            $shipment = $entityManager->find(Shipment::class, $input->shipmentId);
+        if ($input->shipmentPublicId !== null) {
+            $shipment = $shipmentRepository->findOneByPublicId($input->shipmentPublicId);
             if ($shipment instanceof Shipment) {
                 $entityManager->persist(new ShipmentEvent($shipment, ShipmentEventType::EXCEPTION, [
-                    'stop_id' => $stopId,
+                    'stop_public_id' => $stopPublicId,
                     'reason' => $reason->value,
                     'comment' => $input->comment,
                 ]));
@@ -209,6 +220,7 @@ class DriverApiController extends AbstractController
 
         $auditLogger->log($driver, 'DRIVER_EXCEPTION', 'route_stop', (string) $stop->getId(), [
             'client_action_id' => $input->clientActionId,
+            'shipment_public_id' => $input->shipmentPublicId ?? '',
             'reason' => $reason->value,
             'comment' => $input->comment,
         ]);
@@ -218,35 +230,35 @@ class DriverApiController extends AbstractController
         return $this->json(['ok' => true, 'idempotent' => false], 201);
     }
 
-    #[Route('/stops/{stopId}/pod', methods: ['GET'])]
-    public function podMetadata(string $stopId, EntityManagerInterface $entityManager, ApiErrorResponder $errorResponder): JsonResponse
+    #[Route('/stops/{stopPublicId}/pod', methods: ['GET'])]
+    public function podMetadata(string $stopPublicId, RouteStopRepository $routeStopRepository, PodRepository $podRepository, ApiErrorResponder $errorResponder): JsonResponse
     {
-        $stop = $entityManager->find(RouteStop::class, $stopId);
+        $stop = $routeStopRepository->findOneByPublicId($stopPublicId);
         if (!$stop instanceof RouteStop) {
             return $errorResponder->notFound('stop_not_found', 'Parada no encontrada.');
         }
 
-        $pod = $entityManager->getRepository(Pod::class)->findOneBy(['routeStop' => $stop]);
+        $pod = $podRepository->findOneBy(['routeStop' => $stop]);
         if (!$pod instanceof Pod) {
             return $errorResponder->notFound('pod_not_found', 'Confirmación no encontrada.');
         }
 
         return $this->json([
-            'pod_id' => (string) $pod->getId(),
-            'download_url' => sprintf('/api/driver/stops/%s/pod/download', $stopId),
+            'pod_public_id' => $pod->getPublicIdString(),
+            'download_url' => sprintf('/api/driver/stops/%s/pod/download', $stopPublicId),
             'confirmation_mode' => 'recipient_id_encoded',
         ]);
     }
 
-    #[Route('/stops/{stopId}/pod/download', methods: ['GET'])]
-    public function podDownload(string $stopId, EntityManagerInterface $entityManager, ApiErrorResponder $errorResponder): JsonResponse
+    #[Route('/stops/{stopPublicId}/pod/download', methods: ['GET'])]
+    public function podDownload(string $stopPublicId, RouteStopRepository $routeStopRepository, PodRepository $podRepository, ApiErrorResponder $errorResponder): JsonResponse
     {
-        $stop = $entityManager->find(RouteStop::class, $stopId);
+        $stop = $routeStopRepository->findOneByPublicId($stopPublicId);
         if (!$stop instanceof RouteStop) {
             return $errorResponder->notFound('stop_not_found', 'Parada no encontrada.');
         }
 
-        $pod = $entityManager->getRepository(Pod::class)->findOneBy(['routeStop' => $stop]);
+        $pod = $podRepository->findOneBy(['routeStop' => $stop]);
         if (!$pod instanceof Pod) {
             return $errorResponder->notFound('pod_not_found', 'Confirmación no encontrada.');
         }

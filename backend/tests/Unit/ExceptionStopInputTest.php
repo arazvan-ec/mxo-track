@@ -15,11 +15,12 @@ final class ExceptionStopInputTest extends TestCase
             'client_action_id' => 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
             'reason' => 'ABSENT',
             'comment' => 'Cliente ausente',
+            'shipment_public_id' => '01JQYJ5N6P4D7R8T2E2NNKNY7A',
         ]);
 
         self::assertSame('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', $dto->clientActionId);
         self::assertSame('ABSENT', $dto->reason);
         self::assertSame('Cliente ausente', $dto->comment);
-        self::assertNull($dto->shipmentId);
+        self::assertSame('01JQYJ5N6P4D7R8T2E2NNKNY7A', $dto->shipmentPublicId);
     }
 }

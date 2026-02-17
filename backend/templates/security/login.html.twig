@@ -1,13 +1,14 @@
-<!doctype html>
-<html lang="es">
-<head><meta charset="utf-8"><title>Login</title></head>
-<body>
+{% extends 'base.html.twig' %}
+
+{% block title %}Login{% endblock %}
+
+{% block body %}
 <h1>Portal transporte-tracking</h1>
 <form method="post">
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
   <label>Email <input type="email" name="_username" value="{{ last_username }}" required></label>
   <label>Clave <input type="password" name="_password" required></label>
   <button type="submit">Entrar</button>
 </form>
-{% if error %}<p>{{ error.messageKey }}</p>{% endif %}
-</body>
-</html>
+{% if error %}<p>Credenciales inválidas.</p>{% endif %}
+{% endblock %}

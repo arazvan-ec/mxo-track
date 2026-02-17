@@ -16,7 +16,7 @@ services:
   Symfony\Component\HttpFoundation\Session\Storage\Handler\RedisSessionHandler:
     arguments:
       - '@Predis\Client'
-      - { prefix: '%env(default:sess:REDIS_SESSION_PREFIX)%' }
+      - { prefix: '%env(string:REDIS_SESSION_PREFIX)%' }
 
   App\Service\MercureJwtFactory:
     arguments:

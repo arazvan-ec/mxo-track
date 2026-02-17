@@ -16,13 +16,13 @@ final class DeliverStopInputTest extends TestCase
             'signed_by_name' => 'Recepción',
             'recipient_id_encoded' => 'ZWplbXBsby1kbmk=',
             'confirmed_by_driver' => true,
-            'shipment_id' => '22222222-2222-2222-2222-222222222222',
+            'shipment_public_id' => '01JQYJ5N6P4D7R8T2E2NNKNY7A',
         ]);
 
         self::assertSame('11111111-1111-1111-1111-111111111111', $dto->clientActionId);
         self::assertSame('Recepción', $dto->signedByName);
         self::assertSame('ZWplbXBsby1kbmk=', $dto->recipientIdEncoded);
         self::assertTrue($dto->confirmedByDriver);
-        self::assertSame('22222222-2222-2222-2222-222222222222', $dto->shipmentId);
+        self::assertSame('01JQYJ5N6P4D7R8T2E2NNKNY7A', $dto->shipmentPublicId);
     }
 }
