@@ -1,0 +1,52 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    working_dir: /app/backend
+    volumes:
+      - ./:/app
+    environment:
+      APP_ENV: dev
+      APP_SECRET: local-dev-secret-change-me
+      DATABASE_URL: postgresql://mxo:mxo@db:5432/mxo_track?serverVersion=16&charset=utf8
+      REDIS_URL: redis://redis:6379
+      MERCURE_URL: http://mercure/.well-known/mercure
+      MERCURE_PUBLIC_URL: http://localhost:3000/.well-known/mercure
+      MERCURE_PUBLISHER_JWT_KEY: local-mercure-key-change-me
+    depends_on:
+      - db
+      - redis
+      - mercure
+    tty: true
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: mxo_track
+      POSTGRES_USER: mxo
+      POSTGRES_PASSWORD: mxo
+    volumes:
+      - pgdata_local:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  mercure:
+    image: dunglas/mercure
+    environment:
+      SERVER_NAME: ':80'
+      MERCURE_PUBLISHER_JWT_KEY: local-mercure-key-change-me
+      MERCURE_SUBSCRIBER_JWT_KEY: local-mercure-key-change-me
+      MERCURE_EXTRA_DIRECTIVES: |
+        cors_origins *
+        anonymous
+    ports:
+      - "3000:80"
+
+volumes:
+  pgdata_local:

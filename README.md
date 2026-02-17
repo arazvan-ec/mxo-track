@@ -14,6 +14,34 @@ Monorepo para plataforma de tracking y operación logística con Symfony 6.5 + T
 - `infra/`: Docker Compose/Nginx/scripts para 3 VPS Hetzner.
 - `docs/`: guía de despliegue, hardening, runbooks.
 
+
+## Probar en local con Docker (rápido)
+
+Si quieres validar el backend sin montar VPS, usa `docker-compose.local.yml` (PHP 8.2 CLI + PostgreSQL + Redis + Mercure).
+
+1. Levantar contenedores:
+   ```bash
+   docker compose -f docker-compose.local.yml up -d --build
+   ```
+2. Instalar dependencias de PHP dentro del contenedor:
+   ```bash
+   docker compose -f docker-compose.local.yml run --rm app composer install
+   ```
+3. Ejecutar migraciones:
+   ```bash
+   docker compose -f docker-compose.local.yml run --rm app php bin/console doctrine:migrations:migrate -n
+   ```
+4. Ejecutar tests/lint:
+   ```bash
+   docker compose -f docker-compose.local.yml run --rm app php bin/phpunit
+   docker compose -f docker-compose.local.yml run --rm app find src tests -name '*.php' -print0 | xargs -0 -n1 php -l
+   ```
+
+Notas:
+- El contenedor `app` queda preparado para comandos Symfony/Composer y usa `backend/` como working dir.
+- Si sólo quieres entrar al shell del contenedor: `docker compose -f docker-compose.local.yml run --rm app bash`.
+- Este setup es para desarrollo local (no reemplaza los compose de `infra/` para producción).
+
 ## Arquitectura resumida
 - VPS1 WEB: Nginx + PHP-FPM (host), Docker (`mercure`, `redis`).
 - VPS2 DB_APP: Docker PostgreSQL privado + backups diarios.
