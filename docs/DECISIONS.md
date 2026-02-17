@@ -1,35 +1,53 @@
 # DECISIONS — FASE 1
 
-1. **Symfony 7.4 LTS**
-   - Se fija baseline en rama `^7.4` para estabilidad LTS y actualizaciones menores compatibles.
+1. **Symfony 7.4 LTS estricta**
+   - Se congela Symfony en `7.4.*` para todas las fases (sin componentes `8.x`).
+   - Se fuerza con `extra.symfony.require=7.4.*`, conflicto explícito para `symfony/symfony >=8.0` y guardia de lockfile (`scripts/check_symfony_74_lock.sh`) para bloquear propuestas con componentes 8.x.
 
-2. **Login tradicional + sesiones Redis**
+2. **Symfony Flex + recetas como estándar**
+   - Se adopta Flex/recipes como forma oficial de bootstrap y mantenimiento de configuración del backend.
+
+3. **Login tradicional + sesiones Redis**
    - Se usa `form_login` (sin JWT propio para autenticación de portal).
    - Session handler en Redis con prefijo `sess:transporte:`.
 
-3. **public_id ULID + BIGINT interno**
+4. **public_id ULID + BIGINT interno**
    - Patrón para User y entidades críticas: PK BIGINT interno, `public_id` ULID único para exposición externa.
 
-4. **SameSite=Lax**
+5. **SameSite=Lax**
    - Cookies de sesión endurecidas con `HttpOnly`, `Secure=auto` y `SameSite=lax`.
 
-5. **Seguridad base**
+6. **Seguridad base**
    - Rate limiting en login.
    - Security headers: `X-Frame-Options=DENY`, `X-Content-Type-Options=nosniff`, `Referrer-Policy`, `CSP` básica.
 
-6. **Turbo global**
+7. **Turbo global**
    - Turbo habilitado por defecto en layout base; el mapa realtime podrá excluirse en fases posteriores.
 
-7. **Rutas públicas con `public_id`**
+8. **Rutas públicas con `public_id`**
    - Se migran endpoints públicos iniciales de Vehicle y Shipment a `{publicId}`.
    - El `id` interno queda reservado para joins/infra y no se expone en JSON público.
 
-8. **Migración dura de API pública a `public_id`**
+9. **Migración dura de API pública a `public_id`**
    - Se elimina uso de `{id}` en endpoints públicos migrados (Driver/Vehicle/Shipment) y se usa `{publicId}`.
 
-9. **Payload explícito `shipment_public_id`**
+10. **Payload explícito `shipment_public_id`**
    - En APIs DRIVER se renombra `shipment_id` a `shipment_public_id` para evitar ambigüedad con IDs internos.
 
-10. **Eventos internos**
+11. **Eventos internos**
    - Se mantiene `id` interno para joins y procesamiento interno (mejor rendimiento y simplicidad relacional).
    - `public_id` se usa en contratos públicos y payloads expuestos al cliente.
+
+
+12. **Criterio operativo de “Symfony funcionando”**
+   - Se valida de forma manual local con `bash scripts/symfony_e2e_boot_check.sh` levantando `db/redis/mercure` en Docker Compose.
+   - Por ahora no es gate obligatorio de CI.
+
+
+13. **Enfoque de fase actual**
+   - Prioridad: aplicación Symfony arrancando y operativa.
+   - Se pospone definición de estrategia de tests y CI para fases posteriores.
+
+
+14. **Mercure opcional en fase actual**
+   - Mercure no bloquea la validación base de arranque de la aplicación en esta etapa.

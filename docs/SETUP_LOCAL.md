@@ -40,3 +40,19 @@ Desde la raíz del repo:
 bash scripts/phase1_signoff.sh
 ```
 
+
+
+## Verificación E2E (DB + Redis + Mercure)
+
+Desde la raíz del repo:
+
+```bash
+bash scripts/symfony_e2e_boot_check.sh
+```
+
+Este script es el criterio mínimo manual para considerar el backend Symfony operativo en local (no obligatorio en CI por ahora).
+
+
+
+
+En esta fase sólo validamos arranque de aplicación. Dejamos tests y CI para fases posteriores. Mercure se considera opcional por ahora.

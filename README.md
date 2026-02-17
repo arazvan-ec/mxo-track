@@ -2,6 +2,8 @@
 
 Fase 1: bootstrap seguro base sobre Symfony **7.4 LTS** para portal logístico.
 
+> Estándar del repo: **Symfony Flex + recipes** habilitado y **bloqueo estricto en 7.4 LTS** (sin componentes 8.x).
+
 ## Requisitos
 - PHP 8.2+
 - Composer 2+
@@ -52,13 +54,7 @@ Credenciales iniciales:
 bash scripts/phase1_signoff.sh
 ```
 
-Este script valida: composer, consola Symfony, migraciones, fixtures, tests y chequeo Redis (`sess:transporte:*`) cuando `redis-cli` está disponible.
-
-## Tests
-```bash
-cd backend
-php bin/phpunit
-```
+Este script valida: composer, consola Symfony, migraciones, fixtures y chequeo Redis (`sess:transporte:*`) cuando `redis-cli` está disponible.
 
 ## Checklist aceptación Fase 1
 - [ ] composer install OK
@@ -67,4 +63,26 @@ php bin/phpunit
 - [ ] login funciona y mantiene sesión
 - [ ] Redis guarda sesiones (`sess:transporte:*`)
 - [ ] Turbo activo globalmente
-- [ ] tests pasan
+- [ ] Mercure opcional validado manualmente
+
+
+## Verificación E2E local (criterio manual de Symfony funcionando)
+```bash
+bash scripts/symfony_e2e_boot_check.sh
+```
+
+Este check levanta `db`, `redis` y `mercure` con `docker-compose.local.yml`, ejecuta `composer install`, valida consola Symfony y migraciones en contenedor `app`, y comprueba respuesta de Mercure.
+
+
+
+
+## Arranque de aplicación (enfoque actual)
+```bash
+cd backend
+composer install
+php bin/console about
+```
+
+En esta etapa nos enfocamos en tener la aplicación Symfony arrancando correctamente; la estrategia de testing/CI se definirá en fases posteriores.
+
+

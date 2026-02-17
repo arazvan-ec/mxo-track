@@ -46,11 +46,7 @@ ok "4) Cargando fixtures ADMIN"
 php bin/console doctrine:fixtures:load -n >/dev/null
 ok "fixtures OK"
 
-ok "5) Ejecutando tests unitarios/funcionales"
-php bin/phpunit >/dev/null
-ok "tests OK"
-
-ok "6) Verificación Redis local"
+ok "5) Verificación Redis local"
 if ! command -v redis-cli >/dev/null 2>&1; then
   warn "redis-cli no está instalado. Saltando verificación de keys de sesión."
 else
@@ -79,4 +75,4 @@ else
   fi
 fi
 
-ok "Checklist fase 1 completado (sin E2E)."
+ok "Checklist fase 1 completado (sin E2E y sin tests en esta fase)."
