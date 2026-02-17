@@ -1,0 +1,87 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service;
+
+use App\Entity\Vehicle;
+use App\Entity\VehicleCheckpoint;
+use App\Entity\VehicleLastPosition;
+use App\Entity\VehiclePosition;
+use DateTimeImmutable;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Mercure\HubInterface;
+use Symfony\Component\Mercure\Update;
+use Throwable;
+
+final class TraccarIngestionService
+{
+    public function __construct(
+        private readonly EntityManagerInterface $entityManager,
+        private readonly HubInterface $hub,
+    ) {
+    }
+
+    /** @param list<array<string,mixed>> $positions */
+    public function ingestForVehicle(Vehicle $vehicle, array $positions): int
+    {
+        $created = 0;
+
+        foreach ($positions as $position) {
+            $deviceTime = new DateTimeImmutable((string) ($position['deviceTime'] ?? 'now'));
+            $serverTime = new DateTimeImmutable((string) ($position['serverTime'] ?? 'now'));
+            $lat = (float) ($position['latitude'] ?? 0.0);
+            $lng = (float) ($position['longitude'] ?? 0.0);
+
+            $exists = $this->entityManager->getRepository(VehiclePosition::class)->findOneBy([
+                'vehicle' => $vehicle,
+                'deviceTime' => $deviceTime,
+            ]);
+            if ($exists !== null) {
+                continue;
+            }
+
+            $history = new VehiclePosition($vehicle, $lat, $lng, $deviceTime, $serverTime);
+            $this->entityManager->persist($history);
+            $created++;
+
+            $speed = (float) ($position['speed'] ?? 0.0);
+            $course = (float) ($position['course'] ?? 0.0);
+            $accuracy = (float) ($position['accuracy'] ?? 0.0);
+
+            $last = $this->entityManager->getRepository(VehicleLastPosition::class)->findOneBy(['vehicle' => $vehicle]);
+            if ($last === null) {
+                $last = VehicleLastPosition::fromTelemetry($vehicle, $lat, $lng, $speed, $course, $accuracy, $deviceTime, $serverTime);
+                $this->entityManager->persist($last);
+            } else {
+                $last->refresh($lat, $lng, $speed, $course, $accuracy, $deviceTime, $serverTime);
+            }
+
+            $checkpoint = $this->entityManager->getRepository(VehicleCheckpoint::class)->findOneBy(['vehicle' => $vehicle]) ?? new VehicleCheckpoint($vehicle);
+            $checkpoint->setLastDeviceTime($deviceTime);
+            $checkpoint->setLastTraccarPositionId(isset($position['id']) ? (int) $position['id'] : null);
+            $this->entityManager->persist($checkpoint);
+
+            try {
+                $this->hub->publish(new Update(
+                    sprintf('/vehicles/%s/position', (string) $vehicle->getId()),
+                    json_encode([
+                        'vehicle_id' => (string) $vehicle->getId(),
+                        'lat' => $lat,
+                        'lng' => $lng,
+                        'speed' => $speed,
+                        'course' => $course,
+                        'accuracy' => $accuracy,
+                        'device_time' => $deviceTime->format(DATE_ATOM),
+                    ], JSON_THROW_ON_ERROR),
+                ));
+            } catch (Throwable) {
+                // no romper ingesta por fallo temporal de Mercure
+            }
+        }
+
+        $this->entityManager->flush();
+
+        return $created;
+    }
+}

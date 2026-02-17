@@ -1,0 +1,36 @@
+parameters:
+  mercure.subscriber.ttl: '%env(int:MERCURE_SUBSCRIBER_TOKEN_TTL)%'
+
+services:
+  _defaults:
+    autowire: true
+    autoconfigure: true
+
+  App\:
+    resource: '../src/'
+
+  Predis\Client:
+    arguments:
+      - '%env(REDIS_URL)%'
+
+  Symfony\Component\HttpFoundation\Session\Storage\Handler\RedisSessionHandler:
+    arguments:
+      - '@Predis\Client'
+      - { prefix: '%env(default:sess:REDIS_SESSION_PREFIX)%' }
+
+  App\Service\MercureJwtFactory:
+    arguments:
+      $subscriberKey: '%env(MERCURE_SUBSCRIBER_JWT_KEY)%'
+      $ttlSeconds: '%mercure.subscriber.ttl%'
+
+
+  App\Service\TraccarApiClient:
+    arguments:
+      $baseUrl: '%env(TRACCAR_BASE_URL)%'
+      $username: '%env(TRACCAR_USERNAME)%'
+      $password: '%env(TRACCAR_PASSWORD)%'
+
+
+  App\Service\SystemHealthService:
+    arguments:
+      $mercurePublicUrl: '%env(MERCURE_PUBLIC_URL)%'

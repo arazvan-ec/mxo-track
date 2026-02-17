@@ -1,0 +1,18 @@
+<div>
+  <h2>Mapa de vehículo</h2>
+  <select id="vehicle-selector"></select>
+  <div id="map" data-no-turbo="true">Mapa realtime (sin Turbo Streams)</div>
+</div>
+<script>
+(async () => {
+  await fetch('/api/mercure-token', { credentials: 'include' });
+  const hub = new URL('{{ mercure_public_url|default('https://portal.midominio.com/.well-known/mercure') }}');
+  // topic exacto de ejemplo; se reemplaza dinámicamente por vehículo elegido
+  hub.searchParams.append('topic', '/vehicles/demo/position');
+  const es = new EventSource(hub, { withCredentials: true });
+  es.onmessage = (event) => {
+    const payload = JSON.parse(event.data);
+    console.log('position', payload);
+  };
+})();
+</script>

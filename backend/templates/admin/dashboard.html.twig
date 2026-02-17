@@ -1,0 +1,16 @@
+<h1>Backoffice</h1>
+<ul>
+  <li>Envíos por estado: {{ kpis.shipments_by_status|length }}</li>
+  <li>Vehículos sin señal: {{ kpis.vehicles_without_signal }}</li>
+  <li>Rutas activas: {{ kpis.active_routes }}</li>
+  <li>Paradas pendientes: {{ kpis.pending_stops }}</li>
+  <li>PODs del día: {{ kpis.pods_today }}</li>
+  <li>Imports CSV hoy: {{ kpis.import_runs_today }}</li>
+  <li>Posiciones ingeridas última hora: {{ kpis.positions_ingested_last_hour }}</li>
+</ul>
+
+<h2>Salud de integraciones</h2>
+<ul>
+  <li>Traccar API: {{ health.traccar_ok ? 'OK' : 'ERROR' }}</li>
+  <li>Mercure Hub: {{ health.mercure_ok ? 'OK' : 'ERROR' }}</li>
+</ul>

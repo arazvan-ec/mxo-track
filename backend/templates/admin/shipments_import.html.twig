@@ -1,0 +1,40 @@
+<h1>Importar envíos CSV</h1>
+{% for type, messages in app.flashes %}
+  {% for message in messages %}
+    <p><strong>{{ type }}</strong>: {{ message }}</p>
+  {% endfor %}
+{% endfor %}
+
+<form method="post" enctype="multipart/form-data">
+  <label>Cliente
+    <select name="customer_id" required>
+      <option value="">Selecciona</option>
+      {% for customer in customers %}
+        <option value="{{ customer.id }}">{{ customer.name }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>CSV (columna 1 = referencia)
+    <input type="file" name="csv_file" accept=".csv,text/csv" required>
+  </label>
+  <button type="submit">Importar</button>
+</form>
+
+<h2>Últimas importaciones</h2>
+<table>
+  <thead>
+    <tr><th>Fecha</th><th>Cliente</th><th>Creados</th><th>Omitidos</th></tr>
+  </thead>
+  <tbody>
+    {% for run in runs %}
+      <tr>
+        <td>{{ run.createdAt|date('Y-m-d H:i:s') }}</td>
+        <td>{{ run.customer.name }}</td>
+        <td>{{ run.createdCount }}</td>
+        <td>{{ run.skippedCount }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="4">Sin importaciones registradas.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
