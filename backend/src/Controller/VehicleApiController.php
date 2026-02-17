@@ -9,6 +9,7 @@ use App\Entity\Vehicle;
 use App\Entity\VehicleLastPosition;
 use App\Entity\VehiclePosition;
 use App\Http\ApiErrorResponder;
+use App\Repository\VehicleRepository;
 use App\Service\VisibilityScopeService;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
@@ -42,7 +43,7 @@ class VehicleApiController extends AbstractController
         foreach ($vehicles as $vehicle) {
             $last = $entityManager->getRepository(VehicleLastPosition::class)->findOneBy(['vehicle' => $vehicle]);
             $items[] = [
-                'id' => (string) $vehicle->getId(),
+                'public_id' => $vehicle->getPublicIdString(),
                 'name' => $vehicle->getName(),
                 'traccar_device_id' => $vehicle->getTraccarDeviceId(),
                 'last_position' => $last === null ? null : [
@@ -60,29 +61,30 @@ class VehicleApiController extends AbstractController
         return $this->json(['items' => $items]);
     }
 
-    #[Route('/api/vehicles/{id}/last-position', name: 'api_vehicle_last', methods: ['GET'])]
+    #[Route('/api/vehicles/{publicId}/last-position', name: 'api_vehicle_last', methods: ['GET'])]
     public function lastPosition(
-        string $id,
+        string $publicId,
         EntityManagerInterface $entityManager,
+        VehicleRepository $vehicleRepository,
         VisibilityScopeService $visibilityScopeService,
         ApiErrorResponder $errorResponder,
     ): JsonResponse {
         /** @var User $user */
         $user = $this->getUser();
 
-        if (!$visibilityScopeService->canAccessVehicle($user, $id)) {
-            return $errorResponder->notFound('vehicle_not_found', 'Vehículo no encontrado o no permitido.');
-        }
-
-        $vehicle = $entityManager->find(Vehicle::class, $id);
+        $vehicle = $vehicleRepository->findOneByPublicId($publicId);
         if (!$vehicle instanceof Vehicle) {
             return $errorResponder->notFound('vehicle_not_found', 'Vehículo no encontrado.');
+        }
+
+        if (!$visibilityScopeService->canAccessVehicle($user, (string) $vehicle->getId())) {
+            return $errorResponder->notFound('vehicle_not_found', 'Vehículo no encontrado o no permitido.');
         }
 
         $last = $entityManager->getRepository(VehicleLastPosition::class)->findOneBy(['vehicle' => $vehicle]);
 
         return $this->json([
-            'vehicle_id' => (string) $vehicle->getId(),
+            'public_id' => $vehicle->getPublicIdString(),
             'last_position' => $last === null ? null : [
                 'lat' => $last->getLat(),
                 'lng' => $last->getLng(),
@@ -95,24 +97,25 @@ class VehicleApiController extends AbstractController
         ]);
     }
 
-    #[Route('/api/vehicles/{id}/positions', name: 'api_vehicle_positions', methods: ['GET'])]
+    #[Route('/api/vehicles/{publicId}/positions', name: 'api_vehicle_positions', methods: ['GET'])]
     public function positions(
-        string $id,
+        string $publicId,
         Request $request,
         EntityManagerInterface $entityManager,
+        VehicleRepository $vehicleRepository,
         VisibilityScopeService $visibilityScopeService,
         ApiErrorResponder $errorResponder,
     ): JsonResponse {
         /** @var User $user */
         $user = $this->getUser();
 
-        if (!$visibilityScopeService->canAccessVehicle($user, $id)) {
-            return $errorResponder->notFound('vehicle_not_found', 'Vehículo no encontrado o no permitido.');
-        }
-
-        $vehicle = $entityManager->find(Vehicle::class, $id);
+        $vehicle = $vehicleRepository->findOneByPublicId($publicId);
         if (!$vehicle instanceof Vehicle) {
             return $errorResponder->notFound('vehicle_not_found', 'Vehículo no encontrado.');
+        }
+
+        if (!$visibilityScopeService->canAccessVehicle($user, (string) $vehicle->getId())) {
+            return $errorResponder->notFound('vehicle_not_found', 'Vehículo no encontrado o no permitido.');
         }
 
         $from = $this->parseDate((string) $request->query->get('from', ''));
@@ -151,7 +154,7 @@ class VehicleApiController extends AbstractController
         }
 
         return $this->json([
-            'vehicle_id' => $id,
+            'public_id' => $vehicle->getPublicIdString(),
             'paging' => [
                 'limit' => $limit,
                 'offset' => $offset,
@@ -161,25 +164,25 @@ class VehicleApiController extends AbstractController
         ]);
     }
 
-
-    #[Route('/api/vehicles/{id}/positions.csv', name: 'api_vehicle_positions_csv', methods: ['GET'])]
+    #[Route('/api/vehicles/{publicId}/positions.csv', name: 'api_vehicle_positions_csv', methods: ['GET'])]
     public function positionsExportCsv(
-        string $id,
+        string $publicId,
         Request $request,
         EntityManagerInterface $entityManager,
+        VehicleRepository $vehicleRepository,
         VisibilityScopeService $visibilityScopeService,
         ApiErrorResponder $errorResponder,
     ): JsonResponse|StreamedResponse {
         /** @var User $user */
         $user = $this->getUser();
 
-        if (!$visibilityScopeService->canAccessVehicle($user, $id)) {
-            return $errorResponder->notFound('vehicle_not_found', 'Vehículo no encontrado o no permitido.');
-        }
-
-        $vehicle = $entityManager->find(Vehicle::class, $id);
+        $vehicle = $vehicleRepository->findOneByPublicId($publicId);
         if (!$vehicle instanceof Vehicle) {
             return $errorResponder->notFound('vehicle_not_found', 'Vehículo no encontrado.');
+        }
+
+        if (!$visibilityScopeService->canAccessVehicle($user, (string) $vehicle->getId())) {
+            return $errorResponder->notFound('vehicle_not_found', 'Vehículo no encontrado o no permitido.');
         }
 
         $from = $this->parseDate((string) $request->query->get('from', ''));
@@ -219,7 +222,7 @@ class VehicleApiController extends AbstractController
         });
 
         $response->headers->set('Content-Type', 'text/csv; charset=utf-8');
-        $response->headers->set('Content-Disposition', sprintf('attachment; filename="vehicle-%s-positions.csv"', $id));
+        $response->headers->set('Content-Disposition', sprintf('attachment; filename="vehicle-%s-positions.csv"', $vehicle->getPublicIdString()));
 
         return $response;
     }

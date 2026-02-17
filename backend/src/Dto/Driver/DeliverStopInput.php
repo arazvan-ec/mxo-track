@@ -23,8 +23,8 @@ final class DeliverStopInput
     #[Assert\Type('bool')]
     public bool $confirmedByDriver = false;
 
-    #[Assert\Uuid]
-    public ?string $shipmentId = null;
+    #[Assert\Ulid]
+    public ?string $shipmentPublicId = null;
 
     public static function fromArray(array $payload): self
     {
@@ -33,7 +33,7 @@ final class DeliverStopInput
         $dto->signedByName = (string) ($payload['signed_by_name'] ?? '');
         $dto->recipientIdEncoded = (string) ($payload['recipient_id_encoded'] ?? '');
         $dto->confirmedByDriver = (bool) ($payload['confirmed_by_driver'] ?? false);
-        $dto->shipmentId = isset($payload['shipment_id']) ? (string) $payload['shipment_id'] : null;
+        $dto->shipmentPublicId = isset($payload['shipment_public_id']) ? (string) $payload['shipment_public_id'] : null;
 
         return $dto;
     }

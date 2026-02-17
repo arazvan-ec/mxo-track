@@ -6,14 +6,19 @@ namespace App\Entity;
 
 use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Uid\Ulid;
 use Symfony\Component\Uid\Uuid;
 
-#[ORM\Entity]
+#[ORM\Entity(repositoryClass: \App\Repository\ShipmentRepository::class)]
+#[ORM\UniqueConstraint(name: 'uniq_shipment_public_id', columns: ['public_id'])]
 class Shipment
 {
     #[ORM\Id]
     #[ORM\Column(type: 'uuid', unique: true)]
     private Uuid $id;
+
+    #[ORM\Column(type: 'ulid', unique: true)]
+    private Ulid $publicId;
 
     #[ORM\Column(length: 80, unique: true)]
     private string $reference;
@@ -28,12 +33,15 @@ class Shipment
     public function __construct(string $reference, Customer $customer)
     {
         $this->id = Uuid::v7();
+        $this->publicId = new Ulid();
         $this->reference = $reference;
         $this->customer = $customer;
         $this->createdAt = new DateTimeImmutable();
     }
 
     public function getId(): Uuid { return $this->id; }
+    public function getPublicId(): Ulid { return $this->publicId; }
+    public function getPublicIdString(): string { return (string) $this->publicId; }
     public function getReference(): string { return $this->reference; }
     public function getCustomer(): Customer { return $this->customer; }
     public function getCreatedAt(): DateTimeImmutable { return $this->createdAt; }
