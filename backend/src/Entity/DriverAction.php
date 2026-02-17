@@ -4,17 +4,17 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Entity\Concerns\PublicIdTrait;
 use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity]
-#[ORM\Table(name: 'driver_action', uniqueConstraints: [new ORM\UniqueConstraint(name: 'uniq_driver_action', columns: ['driver_user_id', 'client_action_id'])])]
+#[ORM\Table(name: 'driver_action', uniqueConstraints: [new ORM\UniqueConstraint(name: 'uniq_driver_action', columns: ['driver_user_id', 'client_action_id']), new ORM\UniqueConstraint(name: 'uniq_driver_action_public_id', columns: ['public_id'])])]
+#[ORM\HasLifecycleCallbacks]
 class DriverAction
 {
-    #[ORM\Id]
-    #[ORM\Column(type: 'uuid', unique: true)]
-    private Uuid $id;
+    use PublicIdTrait;
 
     #[ORM\ManyToOne(targetEntity: User::class)]
     #[ORM\JoinColumn(name: 'driver_user_id', nullable: false)]
@@ -35,7 +35,6 @@ class DriverAction
 
     public function __construct(User $driver, Uuid $clientActionId, string $type, RouteStop $stop)
     {
-        $this->id = Uuid::v7();
         $this->driver = $driver;
         $this->clientActionId = $clientActionId;
         $this->type = $type;

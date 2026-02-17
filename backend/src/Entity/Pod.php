@@ -4,21 +4,16 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Entity\Concerns\PublicIdTrait;
 use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
-use Symfony\Component\Uid\Ulid;
-use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: \App\Repository\PodRepository::class)]
 #[ORM\UniqueConstraint(name: 'uniq_pod_public_id', columns: ['public_id'])]
+#[ORM\HasLifecycleCallbacks]
 class Pod
 {
-    #[ORM\Id]
-    #[ORM\Column(type: 'uuid', unique: true)]
-    private Uuid $id;
-
-    #[ORM\Column(type: 'ulid', unique: true)]
-    private Ulid $publicId;
+    use PublicIdTrait;
 
     #[ORM\OneToOne(targetEntity: RouteStop::class)]
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
@@ -46,28 +41,11 @@ class Pod
 
     public function __construct(RouteStop $routeStop, User $driver, string $signedByName, string $recipientIdEncoded)
     {
-        $this->id = Uuid::v7();
-        $this->publicId = new Ulid();
         $this->routeStop = $routeStop;
         $this->createdByUser = $driver;
         $this->signedByName = $signedByName;
         $this->recipientIdEncoded = $recipientIdEncoded;
         $this->createdAt = new DateTimeImmutable();
-    }
-
-    public function getId(): Uuid
-    {
-        return $this->id;
-    }
-
-    public function getPublicId(): Ulid
-    {
-        return $this->publicId;
-    }
-
-    public function getPublicIdString(): string
-    {
-        return (string) $this->publicId;
     }
 
     public function getRecipientIdEncoded(): string

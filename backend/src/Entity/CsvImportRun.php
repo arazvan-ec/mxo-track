@@ -4,17 +4,17 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Entity\Concerns\PublicIdTrait;
 use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
-use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity]
 #[ORM\Table(name: 'csv_import_run')]
+#[ORM\UniqueConstraint(name: 'uniq_csv_import_run_public_id', columns: ['public_id'])]
+#[ORM\HasLifecycleCallbacks]
 class CsvImportRun
 {
-    #[ORM\Id]
-    #[ORM\Column(type: 'uuid', unique: true)]
-    private Uuid $id;
+    use PublicIdTrait;
 
     #[ORM\ManyToOne(targetEntity: Customer::class)]
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
@@ -31,7 +31,6 @@ class CsvImportRun
 
     public function __construct(Customer $customer, int $createdCount, int $skippedCount)
     {
-        $this->id = Uuid::v7();
         $this->customer = $customer;
         $this->createdCount = $createdCount;
         $this->skippedCount = $skippedCount;
