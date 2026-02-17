@@ -1,18 +1,96 @@
-<div>
-  <h2>Mapa de vehículo</h2>
-  <select id="vehicle-selector"></select>
-  <div id="map" data-no-turbo="true">Mapa realtime (sin Turbo Streams)</div>
-</div>
-<script>
-(async () => {
-  await fetch('/api/mercure-token', { credentials: 'include' });
-  const hub = new URL('{{ mercure_public_url|default('https://portal.midominio.com/.well-known/mercure') }}');
-  // topic exacto de ejemplo; se reemplaza dinámicamente por vehículo elegido
-  hub.searchParams.append('topic', '/vehicles/demo/position');
-  const es = new EventSource(hub, { withCredentials: true });
-  es.onmessage = (event) => {
-    const payload = JSON.parse(event.data);
-    console.log('position', payload);
-  };
-})();
-</script>
+{% extends 'base.html.twig' %}
+
+{% block title %}Fleet Map{% endblock %}
+{% block body_attrs %}data-turbo="false"{% endblock %}
+
+{% block styles %}
+  {{ parent() }}
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  >
+{% endblock %}
+
+{% block body %}
+  <main>
+    <h2>Mapa de vehículo</h2>
+    <label for="vehicle-selector">Vehículo</label>
+    <select id="vehicle-selector"></select>
+    <div id="map" style="height: 420px; margin-top: 12px;"></div>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script>
+    (async () => {
+      const selector = document.getElementById('vehicle-selector');
+      let eventSource = null;
+      let marker = null;
+
+      const map = L.map('map').setView([40.4168, -3.7038], 6);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(map);
+
+      const closeStream = () => {
+        if (eventSource !== null) {
+          eventSource.close();
+          eventSource = null;
+        }
+      };
+
+      const setMarker = (lat, lng) => {
+        if (marker === null) {
+          marker = L.marker([lat, lng]).addTo(map);
+        } else {
+          marker.setLatLng([lat, lng]);
+        }
+        map.panTo([lat, lng]);
+      };
+
+      await fetch('/api/mercure-token', { credentials: 'include' });
+      const vehiclesResponse = await fetch('/api/vehicles', { credentials: 'include' });
+      const vehiclesData = await vehiclesResponse.json();
+      const vehicles = vehiclesData.items ?? [];
+
+      if (vehicles.length === 0) {
+        selector.innerHTML = '<option value="">Sin vehículos</option>';
+        return;
+      }
+
+      selector.innerHTML = vehicles
+        .map((vehicle) => `<option value="${vehicle.public_id}">${vehicle.name}</option>`)
+        .join('');
+
+      const connect = (vehiclePublicId) => {
+        closeStream();
+
+        const selected = vehicles.find((v) => v.public_id === vehiclePublicId);
+        if (!selected) {
+          return;
+        }
+
+        if (selected.last_position) {
+          setMarker(selected.last_position.lat, selected.last_position.lng);
+        }
+
+        const hub = new URL('{{ mercure_public_url }}');
+        hub.searchParams.set('topic', `/vehicles/${selected.public_id}/position`);
+
+        eventSource = new EventSource(hub, { withCredentials: true });
+        eventSource.onmessage = (event) => {
+          const payload = JSON.parse(event.data);
+          if (Number.isFinite(payload.lat) && Number.isFinite(payload.lng)) {
+            setMarker(payload.lat, payload.lng);
+          }
+        };
+      };
+
+      selector.addEventListener('change', () => connect(selector.value));
+      window.addEventListener('beforeunload', closeStream);
+      connect(selector.value || vehicles[0].public_id);
+    })();
+  </script>
+{% endblock %}

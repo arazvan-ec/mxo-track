@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Entity\Concerns\PublicIdTrait;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
-use Symfony\Component\Uid\Ulid;
-use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: \App\Repository\VehicleRepository::class)]
 #[ORM\Table(name: 'vehicle')]
@@ -14,12 +14,7 @@ use Symfony\Component\Uid\Uuid;
 #[ORM\HasLifecycleCallbacks]
 class Vehicle
 {
-    #[ORM\Id]
-    #[ORM\Column(type: 'uuid', unique: true)]
-    private Uuid $id;
-
-    #[ORM\Column(type: 'ulid', unique: true)]
-    private Ulid $publicId;
+    use PublicIdTrait;
 
     #[ORM\Column(length: 120)]
     private string $name;
@@ -30,18 +25,39 @@ class Vehicle
     #[ORM\Column]
     private bool $isActive = true;
 
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
+    private \DateTimeImmutable $createdAt;
+
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
+    private \DateTimeImmutable $updatedAt;
+
     public function __construct(string $name)
     {
-        $this->id = Uuid::v7();
-        $this->publicId = new Ulid();
+        $now = new \DateTimeImmutable();
         $this->name = $name;
+        $this->createdAt = $now;
+        $this->updatedAt = $now;
     }
 
-    public function getId(): Uuid { return $this->id; }
-    public function getPublicId(): Ulid { return $this->publicId; }
-    public function getPublicIdString(): string { return (string) $this->publicId; }
     public function getName(): string { return $this->name; }
     public function getTraccarDeviceId(): ?int { return $this->traccarDeviceId; }
     public function setTraccarDeviceId(?int $id): void { $this->traccarDeviceId = $id; }
     public function isActive(): bool { return $this->isActive; }
+    public function getCreatedAt(): \DateTimeImmutable { return $this->createdAt; }
+    public function getUpdatedAt(): \DateTimeImmutable { return $this->updatedAt; }
+
+    #[ORM\PrePersist]
+    public function touchCreatedAt(): void
+    {
+        $now = new \DateTimeImmutable();
+        $this->createdAt = $now;
+        $this->updatedAt = $now;
+    }
+
+    #[ORM\PreUpdate]
+    public function touchUpdatedAt(): void
+    {
+        $this->updatedAt = new \DateTimeImmutable();
+    }
 }
+

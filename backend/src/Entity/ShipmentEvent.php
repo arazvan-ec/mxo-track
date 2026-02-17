@@ -4,18 +4,18 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Entity\Concerns\PublicIdTrait;
 use App\Enum\ShipmentEventType;
 use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
-use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity]
 #[ORM\Table(name: 'shipment_event')]
+#[ORM\UniqueConstraint(name: 'uniq_shipment_event_public_id', columns: ['public_id'])]
+#[ORM\HasLifecycleCallbacks]
 class ShipmentEvent
 {
-    #[ORM\Id]
-    #[ORM\Column(type: 'uuid', unique: true)]
-    private Uuid $id;
+    use PublicIdTrait;
 
     #[ORM\ManyToOne(targetEntity: Shipment::class)]
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
@@ -32,7 +32,6 @@ class ShipmentEvent
 
     public function __construct(Shipment $shipment, ShipmentEventType $eventType, array $payload = [])
     {
-        $this->id = Uuid::v7();
         $this->shipment = $shipment;
         $this->eventType = $eventType;
         $this->payload = $payload;

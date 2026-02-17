@@ -51,3 +51,14 @@
 
 14. **Mercure opcional en fase actual**
    - Mercure no bloquea la validación base de arranque de la aplicación en esta etapa.
+
+15. **Regla rígida de identidad en entidades**
+   - Arquitectura obligatoria: PK interna `BIGINT` + `public_id` ULID para exposición pública.
+   - Queda prohibido introducir nuevas entidades con PK UUID interna salvo justificación excepcional y decisión explícita documentada.
+
+16. **Topics Mercure por `public_id`**
+   - Se estandarizan los topics de vehículo en Mercure usando `public_id` (`/vehicles/{public_id}/position`) tanto para publicación backend como para suscripción.
+
+17. **Tablas técnicas 1:1: consistencia rígida también aplicada**
+   - Se prioriza uniformidad del modelo: PK interna BIGINT + `public_id` ULID también en tablas técnicas 1:1.
+   - En `vehicle_last_position` se acepta la desviación frente al prompt literal: `id` BIGSERIAL como PK y `vehicle_id` con UNIQUE.

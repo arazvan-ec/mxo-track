@@ -18,12 +18,12 @@ class MercureJwtFactory
     }
 
     /**
-     * @param list<string> $allowedVehicleIds
+     * @param list<string> $allowedVehiclePublicIds
      */
-    public function createSubscriberToken(User $user, array $allowedVehicleIds = []): string
+    public function createSubscriberToken(User $user, array $allowedVehiclePublicIds = []): string
     {
         $now = time();
-        $topics = $this->topicResolver->resolveForUser($user, $allowedVehicleIds);
+        $topics = $this->topicResolver->resolveForUser($user, $allowedVehiclePublicIds);
 
         $payload = [
             'mercure' => [

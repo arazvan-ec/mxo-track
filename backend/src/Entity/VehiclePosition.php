@@ -4,18 +4,18 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Entity\Concerns\PublicIdTrait;
 use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
-use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity]
 #[ORM\Table(name: 'vehicle_positions')]
 #[ORM\UniqueConstraint(name: 'uniq_vehicle_pos_time', columns: ['vehicle_id', 'device_time'])]
+#[ORM\UniqueConstraint(name: 'uniq_vehicle_position_public_id', columns: ['public_id'])]
+#[ORM\HasLifecycleCallbacks]
 class VehiclePosition
 {
-    #[ORM\Id]
-    #[ORM\Column(type: 'uuid', unique: true)]
-    private Uuid $id;
+    use PublicIdTrait;
 
     #[ORM\ManyToOne(targetEntity: Vehicle::class)]
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
@@ -32,7 +32,6 @@ class VehiclePosition
 
     public function __construct(Vehicle $vehicle, float $lat, float $lng, DateTimeImmutable $deviceTime, DateTimeImmutable $serverTime)
     {
-        $this->id = Uuid::v7();
         $this->vehicle = $vehicle;
         $this->lat = $lat;
         $this->lng = $lng;

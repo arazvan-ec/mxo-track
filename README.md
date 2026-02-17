@@ -86,3 +86,21 @@ php bin/console about
 En esta etapa nos enfocamos en tener la aplicación Symfony arrancando correctamente; la estrategia de testing/CI se definirá en fases posteriores.
 
 
+
+
+## Flujo de validación entre fases (continuidad + decisiones)
+```bash
+bash scripts/phase_flow_validate.sh
+```
+
+Este flujo revisa encaje entre decisiones de fases previas y estado actual (Symfony 7.4, contratos de Fase 2, rutas críticas, realtime map/Mercure) y genera un reporte con recomendaciones en `docs/PHASE_FLOW_VALIDATION.md`.
+
+
+## Cierre formal de Fase 2
+- Ver definición de cierre en `docs/PHASE2_SIGNOFF.md`.
+- Este documento fija el “done” de Fase 2 para evitar reabrir decisiones en Fase 3.
+
+
+## Preparación documental de Fase 3
+- Plantilla inicial disponible en `docs/PHASE3_SIGNOFF.md`.
+- Se usa como marco de “done” vivo mientras se implementa Fase 3.

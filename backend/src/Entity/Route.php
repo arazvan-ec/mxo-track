@@ -4,23 +4,18 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Entity\Concerns\PublicIdTrait;
 use App\Enum\RouteStatus;
 use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
-use Symfony\Component\Uid\Ulid;
-use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: \App\Repository\RouteRepository::class)]
 #[ORM\Table(name: 'route_plan')]
 #[ORM\UniqueConstraint(name: 'uniq_route_public_id', columns: ['public_id'])]
+#[ORM\HasLifecycleCallbacks]
 class Route
 {
-    #[ORM\Id]
-    #[ORM\Column(type: 'uuid', unique: true)]
-    private Uuid $id;
-
-    #[ORM\Column(type: 'ulid', unique: true)]
-    private Ulid $publicId;
+    use PublicIdTrait;
 
     #[ORM\Column(length: 140)]
     private string $name;
@@ -44,14 +39,9 @@ class Route
 
     public function __construct(string $name)
     {
-        $this->id = Uuid::v7();
-        $this->publicId = new Ulid();
         $this->name = $name;
     }
 
-    public function getId(): Uuid { return $this->id; }
-    public function getPublicId(): Ulid { return $this->publicId; }
-    public function getPublicIdString(): string { return (string) $this->publicId; }
     public function getStatus(): RouteStatus { return $this->status; }
     public function getVehicle(): ?Vehicle { return $this->vehicle; }
 

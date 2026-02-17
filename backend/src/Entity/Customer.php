@@ -4,25 +4,23 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Entity\Concerns\PublicIdTrait;
 use Doctrine\ORM\Mapping as ORM;
-use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity]
+#[ORM\UniqueConstraint(name: 'uniq_customer_public_id', columns: ['public_id'])]
+#[ORM\HasLifecycleCallbacks]
 class Customer
 {
-    #[ORM\Id]
-    #[ORM\Column(type: 'uuid', unique: true)]
-    private Uuid $id;
+    use PublicIdTrait;
 
     #[ORM\Column(length: 150)]
     private string $name;
 
     public function __construct(string $name)
     {
-        $this->id = Uuid::v7();
         $this->name = $name;
     }
 
-    public function getId(): Uuid { return $this->id; }
     public function getName(): string { return $this->name; }
 }

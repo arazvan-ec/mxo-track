@@ -64,15 +64,16 @@ final class TraccarIngestionService
 
             try {
                 $this->hub->publish(new Update(
-                    sprintf('/vehicles/%s/position', (string) $vehicle->getId()),
+                    sprintf('/vehicles/%s/position', $vehicle->getPublicIdString()),
                     json_encode([
-                        'vehicle_id' => (string) $vehicle->getId(),
+                        'vehicleId' => $vehicle->getPublicIdString(),
                         'lat' => $lat,
                         'lng' => $lng,
                         'speed' => $speed,
                         'course' => $course,
                         'accuracy' => $accuracy,
-                        'device_time' => $deviceTime->format(DATE_ATOM),
+                        'deviceTime' => $deviceTime->format(DATE_ATOM),
+                        'receivedAt' => $serverTime->format(DATE_ATOM),
                     ], JSON_THROW_ON_ERROR),
                 ));
             } catch (Throwable) {
