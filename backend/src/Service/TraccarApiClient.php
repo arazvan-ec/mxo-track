@@ -52,6 +52,28 @@ final class TraccarApiClient
         return $this->requestJson('/api/devices');
     }
 
+    /** @return array<string,mixed> */
+    public function createDevice(string $name, string $uniqueId): array
+    {
+        if ($this->cookie === null) {
+            $this->login();
+        }
+
+        $response = $this->httpClient->request('POST', rtrim($this->baseUrl, '/').'/api/devices', [
+            'headers' => [
+                'Cookie' => $this->cookie ?? '',
+                'Content-Type' => 'application/json',
+            ],
+            'json' => [
+                'name' => $name,
+                'uniqueId' => $uniqueId,
+            ],
+        ]);
+
+        /** @var array<string,mixed> */
+        return $response->toArray();
+    }
+
     /** @return list<array<string,mixed>> */
     public function getPositions(int $deviceId, ?DateTimeImmutable $from = null): array
     {

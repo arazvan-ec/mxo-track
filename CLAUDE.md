@@ -46,28 +46,50 @@ bash scripts/check_symfony_74_lock.sh
 
 ### Docker (local development)
 
-No se usa PHP local. Todo el desarrollo se hace dentro del contenedor Docker `app`.
+No se usa PHP local. Todo el desarrollo se hace dentro del contenedor Docker `app`. La imagen es `php:8.4-cli-bookworm` (sin Apache/nginx), por lo que el servidor web se arranca manualmente con el built-in server de PHP.
+
+#### Arranque rápido (desde la raíz del proyecto)
 
 ```bash
-# Construir y levantar todos los servicios
+# 1. Construir y levantar todos los servicios (db, redis, mercure, traccar)
 docker compose -f docker-compose.local.yml up -d --build
 
-# Entrar al contenedor para trabajar
+# 2. Entrar al contenedor app
 docker compose -f docker-compose.local.yml exec app bash
 
-# Dentro del contenedor: instalar, crear esquema, cargar fixtures y servir
+# 3. Dentro del contenedor: instalar deps, preparar DB y arrancar servidor
 composer install
 php bin/console doctrine:schema:create          # primera vez (DB vacía)
 php bin/console doctrine:migrations:migrate -n  # siguientes veces
 php bin/console doctrine:fixtures:load -n
-php -S 0.0.0.0:8000 -t public
+php -S 0.0.0.0:8000 -t public                  # arranca el servidor web
 ```
 
-Backend accesible en **http://localhost:8000**.
+#### Arranque en una línea (sin entrar al contenedor)
+
+```bash
+docker compose -f docker-compose.local.yml up -d --build
+docker compose -f docker-compose.local.yml exec app bash -c \
+  "composer install && php bin/console doctrine:migrations:migrate -n && php -S 0.0.0.0:8000 -t public"
+```
+
+#### URLs locales
+
+| Servicio | URL | Notas |
+|----------|-----|-------|
+| Backend (Symfony) | http://localhost:8000 | Built-in PHP server |
+| Traccar Web UI / API | http://localhost:8082 | Credenciales: `admin`/`admin` |
+| Mercure Hub | http://localhost:3000/.well-known/mercure | SSE realtime |
+| PostgreSQL | localhost:5432 | User: `mxo`, DB: `mxo_track` |
+| Redis | localhost:6379 | Sesiones |
+
+#### Notas
+
+- El servidor PHP built-in es **single-threaded** y solo para desarrollo. No usar en producción.
+- Traccar usa H2 embebida (sin MariaDB) — suficiente para desarrollo. **No crea usuario admin automáticamente** (ver sección "Inicialización de Traccar" más abajo). La app se conecta vía `TRACCAR_BASE_URL=http://traccar:8082`.
+- Si se cierra la terminal, el servidor PHP se detiene. Para arrancarlo de nuevo: entrar al contenedor y ejecutar `php -S 0.0.0.0:8000 -t public`.
 
 Services: `app` (PHP 8.4, puerto 8000), `db` (postgres:16, puerto 5432), `redis` (redis:7, puerto 6379), `mercure` (dunglas/mercure, puerto 3000), `traccar` (traccar/traccar, puerto 8082 API/Web + 5055 GPS).
-
-Traccar usa H2 embebida (sin MariaDB) — suficiente para desarrollo. Al primer arranque crea usuario admin (`admin`/`admin`). La app se conecta vía `TRACCAR_BASE_URL=http://traccar:8082`.
 
 ## Architecture
 
@@ -106,10 +128,48 @@ Defined in `UserRole` enum. Access control: `/admin` requires ADMIN or OPERATOR;
 
 ### Traccar Integration
 
-- `TraccarApiClient`: HTTP client for Traccar REST API (devices, positions)
+- `TraccarApiClient`: HTTP client for Traccar REST API (devices, positions, createDevice)
 - `TraccarStreamCommand`: Polling-based position ingestion with backfill (--once, --sleep=5)
 - `TraccarSyncDevicesCommand`: Syncs Traccar devices to local Vehicle entities
 - `TraccarIngestionService`: Processes and stores position data
+- `SimulateGpsCommand`: Simula posiciones GPS para desarrollo (ver sección dedicada abajo)
+
+#### Inicialización de Traccar (primer arranque)
+
+Traccar 6.x con H2 embebida arranca con la DB vacía y **sin usuario admin**. El endpoint `GET /api/server` devuelve `"newServer": true`. Hay que registrar manualmente el primer usuario:
+
+```bash
+# Desde dentro del contenedor app:
+curl -s -X POST 'http://traccar:8082/api/users' \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"admin","email":"admin","password":"admin"}'
+```
+
+Notas importantes:
+- El primer usuario creado recibe `administrator: true` automáticamente.
+- **No incluir** el campo `"administrator"` en el JSON — provoca un `NullPointerException` porque Traccar intenta verificar permisos antes de que exista ningún usuario.
+- Después de esto, login funciona normalmente via `POST /api/session` con `email=admin&password=admin`.
+- Si Traccar se recrea (volumen `traccar_data` borrado), hay que repetir este paso.
+
+#### Simulación GPS para desarrollo
+
+El comando `app:dev:simulate-gps` crea devices en Traccar, envía posiciones simuladas y opcionalmente las ingesta en Symfony:
+
+```bash
+# Dentro del contenedor app:
+php bin/console app:dev:simulate-gps --points=10 --interval=1 --ingest
+```
+
+Opciones: `--points=N` (posiciones a enviar), `--interval=N` (segundos entre cada una), `--ingest` (ingestar en Symfony al terminar).
+
+Flujo interno:
+1. Busca un Vehicle activo (preferencia por nombre con "Demo")
+2. Crea device en Traccar via API REST si no existe (uniqueId: `sim-{nombre}`)
+3. Actualiza `Vehicle.traccarDeviceId` en la DB local
+4. Envía posiciones al protocolo OsmAnd de Traccar (puerto 5055)
+5. Si `--ingest`: espera 3s y llama a `TraccarIngestionService`
+
+Ruta simulada: circuito por el centro de Madrid (Sol → Gran Vía → Plaza España → Palacio Real → Puerta de Toledo → Atocha → Retiro → Cibeles → Sol).
 
 ### Mercure Realtime
 

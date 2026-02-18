@@ -23,7 +23,48 @@ composer create-project symfony/skeleton backend
 composer require symfony/framework-bundle:^7.4
 ```
 
-## Instalación local (estado actual del repo)
+## Desarrollo local con Docker
+
+Todo el desarrollo se hace dentro del contenedor Docker `app`. La imagen es `php:8.4-cli-bookworm` (sin Apache/nginx), por lo que el servidor web se arranca con el built-in server de PHP.
+
+### Arranque rápido
+
+```bash
+# 1. Levantar todos los servicios (db, redis, mercure, traccar)
+docker compose -f docker-compose.local.yml up -d --build
+
+# 2. Entrar al contenedor
+docker compose -f docker-compose.local.yml exec app bash
+
+# 3. Instalar deps, preparar DB y arrancar servidor
+composer install
+php bin/console doctrine:schema:create          # primera vez (DB vacía)
+php bin/console doctrine:migrations:migrate -n  # siguientes veces
+php bin/console doctrine:fixtures:load -n
+php -S 0.0.0.0:8000 -t public                  # arranca el servidor web
+```
+
+### Arranque en una línea (sin entrar al contenedor)
+
+```bash
+docker compose -f docker-compose.local.yml up -d --build
+docker compose -f docker-compose.local.yml exec app bash -c \
+  "composer install && php bin/console doctrine:migrations:migrate -n && php -S 0.0.0.0:8000 -t public"
+```
+
+### URLs locales
+
+| Servicio | URL | Notas |
+|----------|-----|-------|
+| Backend (Symfony) | http://localhost:8000 | Built-in PHP server |
+| Traccar Web UI / API | http://localhost:8082 | Credenciales: `admin`/`admin` |
+| Mercure Hub | http://localhost:3000/.well-known/mercure | SSE realtime |
+| PostgreSQL | localhost:5432 | User: `mxo`, DB: `mxo_track` |
+| Redis | localhost:6379 | Sesiones |
+
+> **Nota**: el servidor PHP built-in es single-threaded y solo para desarrollo. Si se cierra la terminal, se detiene — volver a entrar al contenedor y ejecutar `php -S 0.0.0.0:8000 -t public`.
+
+## Instalación sin Docker (legacy)
 ```bash
 cp .env.example .env.local
 cd backend
