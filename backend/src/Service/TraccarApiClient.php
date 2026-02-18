@@ -37,7 +37,11 @@ final class TraccarApiClient
 
     public function canConnect(): bool
     {
-        $this->login();
+        try {
+            $this->login();
+        } catch (TransportExceptionInterface) {
+            return false;
+        }
 
         return $this->cookie !== null;
     }
