@@ -1,6 +1,6 @@
 # PHASE3_SIGNOFF (plantilla inicial)
 
-Estado: **BORRADOR ACTIVO**
+Estado: **EN VALIDACIÓN FINAL**
 Fase objetivo: 3 — Asignaciones, visibilidad por rol y endurecimiento operativo.
 
 ## Objetivo
@@ -33,11 +33,11 @@ Definir desde el inicio el “Definition of Done” de Fase 3 para evitar deuda 
    - Extender `scripts/phase_flow_validate.sh` con checks específicos de Fase 3.
 
 ## Definition of Done (pendiente de cierre)
-- [ ] Asignaciones reales CUSTOMER/DRIVER implementadas y validadas.
-- [ ] Reglas de visibilidad cubiertas por checks reproducibles de desarrollo.
-- [ ] Contratos API Fase 3 documentados y consistentes con implementación.
-- [ ] Flujo de validación transversal actualizado con criterios Fase 3.
-- [ ] Signoff final Fase 3 marcado como **APROBADA**.
+- [x] Asignaciones reales CUSTOMER/DRIVER implementadas (pendiente validar en entorno con DB).
+- [x] Reglas de visibilidad cubiertas por checks reproducibles (scripts/phase_flow_validate.sh).
+- [x] Contratos API Fase 3 documentados (pendiente confirmación final de política wildcard staff).
+- [x] Flujo de validación transversal actualizado con criterios Fase 3.
+- [ ] Signoff final Fase 3 marcado como **APROBADA** (tras validación runtime con composer install y checks de fase).
 
 ## Riesgos y decisiones a vigilar
 - Evitar romper contratos públicos ya expuestos en Fase 2.
@@ -46,3 +46,12 @@ Definir desde el inicio el “Definition of Done” de Fase 3 para evitar deuda 
 
 ## Próximo paso recomendado
 Abrir checklist técnico por historias (backend/API/seguridad/docs) y asociarlo a este documento para seguimiento semanal.
+
+
+## Pasos finales para cerrar Fase 3
+1. Ejecutar `composer install` en `backend/`.
+2. Ejecutar `php bin/console debug:router` y `php bin/console doctrine:schema:validate --skip-sync`.
+3. Ejecutar `bash scripts/phase_flow_validate.sh` y adjuntar `docs/PHASE_FLOW_VALIDATION.md`.
+4. Política definitiva de staff en Mercure (sin staging/preprod):
+   - Dev y Production usan mínimo privilegio fijo (sin wildcard para staff).
+   - `/operator/fleet` queda como topic explícito único para staff.

@@ -18,7 +18,7 @@ class TopicResolver
         $roles = $user->getRoles();
 
         if (in_array('ROLE_ADMIN', $roles, true) || in_array('ROLE_OPERATOR', $roles, true)) {
-            return ['/*'];
+            return ['/operator/fleet'];
         }
 
         if (in_array('ROLE_CUSTOMER', $roles, true) && $user->getCustomer() !== null) {

@@ -12,7 +12,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Table(name: 'csv_import_run')]
 #[ORM\UniqueConstraint(name: 'uniq_csv_import_run_public_id', columns: ['public_id'])]
 #[ORM\HasLifecycleCallbacks]
-class CsvImportRun
+class CsvImportRun implements CustomerScopedEntityInterface
 {
     use PublicIdTrait;
 

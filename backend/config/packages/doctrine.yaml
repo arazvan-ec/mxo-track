@@ -4,6 +4,10 @@ doctrine:
   orm:
     auto_generate_proxy_classes: true
     auto_mapping: true
+    filters:
+      customer_tenant:
+        class: App\Doctrine\CustomerTenantFilter
+        enabled: false
     mappings:
       App:
         type: attribute

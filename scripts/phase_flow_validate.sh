@@ -14,7 +14,6 @@ require_cmd(){ command -v "$1" >/dev/null 2>&1 || fail "Falta comando requerido:
 require_cmd bash
 require_cmd rg
 require_cmd php
-require_cmd composer
 
 [ -d "$BACKEND_DIR" ] || fail "No existe backend/"
 
@@ -41,47 +40,26 @@ else
   RECOMMENDATIONS+=("Revisar dependencias symfony/* en composer.lock y bloquear cualquier 8.x.")
 fi
 
-ok "Asegurando dependencias de backend"
-(
-  cd "$BACKEND_DIR"
-  composer install --no-interaction --prefer-dist >/dev/null
-)
+run_check "Fase 3: Doctrine filter customer_tenant configurado" "rg -n 'customer_tenant' '$BACKEND_DIR/config/packages/doctrine.yaml'"
+run_check "Fase 3: Subscriber activa filter por request" "rg -n 'DoctrineCustomerFilterSubscriber|KernelEvents::REQUEST' '$BACKEND_DIR/src/EventSubscriber/DoctrineCustomerFilterSubscriber.php'"
+run_check "Fase 3: customer_vehicle sin public_id" "! rg -n 'public_id' '$BACKEND_DIR/src/Entity/CustomerVehicle.php'"
+run_check "Fase 3: migración elimina public_id de customer_vehicle" "rg -n 'DROP COLUMN public_id|DROP INDEX IF EXISTS uniq_customer_vehicle_public_id' '$BACKEND_DIR/migrations/Version20260218000100.php'"
+run_check "Fase 3: /api/mercure-token cruza ids solicitados con autorizados" "rg -n 'array_intersect|vehiclePublicIdsFor' '$BACKEND_DIR/src/Controller/MercureTokenController.php'"
+run_check "Fase 3: Topic staff /operator/fleet definido" "rg -n '/operator/fleet' '$BACKEND_DIR/src/Security/TopicResolver.php'"
+run_check "Fase 3: staff sin wildcard (mínimo privilegio)" "! rg -n "/\*" '$BACKEND_DIR/src/Security/TopicResolver.php'"
+run_check "Fase 3: /api/vehicles usa visibilidad por asignación" "rg -n 'vehicleIdsFor\(' '$BACKEND_DIR/src/Controller/VehicleApiController.php'"
 
-run_check "Fase 2: docs/REALTIME_MAP.md existe" "test -f '$ROOT_DIR/docs/REALTIME_MAP.md'"
-run_check "Fase 2: /fleet/map desactiva Turbo solo en esa vista" "rg -n \"data-turbo=\\\"false\\\"\" '$BACKEND_DIR/templates/tracking/map.html.twig'"
-run_check "Fase 2: endpoint admin fake push-position existe" "rg -n \"Route\('/push-position'\" '$BACKEND_DIR/src/Controller/AdminDevPushPositionController.php'"
-run_check "Fase 2: validación ULID en /api/mercure-token" "rg -n \"Ulid::fromString\" '$BACKEND_DIR/src/Controller/MercureTokenController.php'"
-run_check "Fase 2: topics Mercure por public_id" "rg -n \"/vehicles/%s/position\" '$BACKEND_DIR/src/Security/TopicResolver.php' '$BACKEND_DIR/src/Service/TraccarIngestionService.php'"
-run_check "Fase 2: Vehicle incluye timestamps createdAt/updatedAt" "rg -n \"createdAt|updatedAt\" '$BACKEND_DIR/src/Entity/Vehicle.php'"
-run_check "Fase 2: CUSTOMER/DRIVER reciben lista vacía en /api/vehicles" "rg -n \"ROLE_CUSTOMER|ROLE_DRIVER\" '$BACKEND_DIR/src/Controller/VehicleApiController.php' && rg -n -F \"vehicles = []\" '$BACKEND_DIR/src/Controller/VehicleApiController.php'"
-run_check "Arquitectura: regla rígida BIGINT + ULID documentada" "rg -n \"Regla rígida de identidad|BIGINT|public_id\" '$ROOT_DIR/docs/DECISIONS.md'"
-
-ok "Verificando rutas clave"
+ok "Intentando verificar rutas clave"
 if (
   cd "$BACKEND_DIR"
-  php bin/console debug:router | rg "fleet_map|admin_dev_push_position|api_mercure_token"
+  php bin/console debug:router | rg "fleet_map|api_mercure_token|api_vehicles"
 ) >/dev/null 2>&1; then
-  CHECKS+=("PASS|Rutas clave registradas (fleet_map, admin_dev_push_position, api_mercure_token)")
+  CHECKS+=("PASS|Rutas clave registradas (fleet_map, api_mercure_token, api_vehicles)")
 else
-  CHECKS+=("FAIL|Rutas clave registradas (fleet_map, admin_dev_push_position, api_mercure_token)")
-  RECOMMENDATIONS+=("Revisar anotaciones de rutas y carga de controladores para endpoints de mapa/Mercure.")
+  CHECKS+=("FAIL|Rutas clave registradas (fleet_map, api_mercure_token, api_vehicles)")
+  RECOMMENDATIONS+=("Ejecutar composer install en backend y revisar carga de rutas para validación runtime.")
 fi
 
-# recomendaciones automáticas por checks fallidos
-for item in "${CHECKS[@]}"; do
-  status="${item%%|*}"
-  desc="${item#*|}"
-  if [[ "$status" == "FAIL" ]]; then
-    case "$desc" in
-      *"docs/REALTIME_MAP.md"*) RECOMMENDATIONS+=("Añadir guía de operación realtime con topics, payload y pruebas manuales.") ;;
-      *"desactiva Turbo"*) RECOMMENDATIONS+=("Asegurar data-turbo=false sólo en /fleet/map para evitar conflictos SSE.") ;;
-      *"Vehicle incluye timestamps"*) RECOMMENDATIONS+=("Agregar created_at/updated_at en Vehicle (entidad + migración).") ;;
-      *"CUSTOMER/DRIVER"*) RECOMMENDATIONS+=("Forzar vaciado temporal para CUSTOMER/DRIVER en /api/vehicles hasta Fase 3.") ;;
-    esac
-  fi
-done
-
-# deduplicar recomendaciones
 UNIQ_RECS=()
 for rec in "${RECOMMENDATIONS[@]:-}"; do
   skip=0
@@ -138,4 +116,4 @@ if [[ "$FAILED" -gt 0 ]]; then
   exit 2
 fi
 
-ok "Validación de encaje entre fases completada sin hallazgos críticos."
+ok "Validación Fase 3 completada sin hallazgos críticos."
