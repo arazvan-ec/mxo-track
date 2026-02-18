@@ -11,7 +11,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: \App\Repository\ShipmentRepository::class)]
 #[ORM\UniqueConstraint(name: 'uniq_shipment_public_id', columns: ['public_id'])]
 #[ORM\HasLifecycleCallbacks]
-class Shipment
+class Shipment implements CustomerScopedEntityInterface
 {
     use PublicIdTrait;
 

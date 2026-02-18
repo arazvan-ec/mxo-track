@@ -7,6 +7,7 @@ namespace App\Service;
 use App\Entity\CustomerVehicle;
 use App\Entity\Route;
 use App\Entity\User;
+use App\Entity\Vehicle;
 use Doctrine\ORM\EntityManagerInterface;
 
 final class VisibilityScopeService
@@ -47,6 +48,22 @@ final class VisibilityScopeService
         }
 
         return [];
+    }
+
+    /** @return list<string> */
+    public function vehiclePublicIdsFor(User $user): array
+    {
+        $vehicleIds = $this->vehicleIdsFor($user);
+        if ($vehicleIds === []) {
+            return [];
+        }
+
+        $vehicles = $this->entityManager->getRepository(Vehicle::class)->findBy(['id' => $vehicleIds]);
+
+        return array_values(array_unique(array_map(
+            static fn (Vehicle $vehicle): string => $vehicle->getPublicIdString(),
+            $vehicles,
+        )));
     }
 
     public function canAccessVehicle(User $user, string $vehicleId): bool

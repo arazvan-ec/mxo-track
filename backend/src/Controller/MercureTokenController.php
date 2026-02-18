@@ -6,6 +6,7 @@ namespace App\Controller;
 
 use App\Entity\User;
 use App\Service\MercureJwtFactory;
+use App\Service\VisibilityScopeService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -17,15 +18,18 @@ use Symfony\Component\Uid\Ulid;
 class MercureTokenController extends AbstractController
 {
     #[Route('/api/mercure-token', name: 'api_mercure_token', methods: ['GET'])]
-    public function __invoke(Request $request, MercureJwtFactory $factory): JsonResponse
-    {
+    public function __invoke(
+        Request $request,
+        MercureJwtFactory $factory,
+        VisibilityScopeService $visibilityScopeService,
+    ): JsonResponse {
         /** @var User $user */
         $user = $this->getUser();
-        $allowedVehiclePublicIds = $request->query->all('vehicle_ids');
+        $requestedVehiclePublicIds = $request->query->all('vehicle_ids');
         $normalizedVehiclePublicIds = [];
 
         $invalidVehicleIds = [];
-        foreach ($allowedVehiclePublicIds as $candidate) {
+        foreach ($requestedVehiclePublicIds as $candidate) {
             $value = trim((string) $candidate);
             if ($value === '') {
                 $invalidVehicleIds[] = (string) $candidate;
@@ -48,13 +52,25 @@ class MercureTokenController extends AbstractController
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
-        $token = $factory->createSubscriberToken($user, $normalizedVehiclePublicIds);
+        $authorizedVehiclePublicIds = $visibilityScopeService->vehiclePublicIdsFor($user);
+        if ($user->hasRole('ROLE_ADMIN') || $user->hasRole('ROLE_OPERATOR')) {
+            $effectiveVehiclePublicIds = array_values(array_unique($normalizedVehiclePublicIds));
+        } elseif ($normalizedVehiclePublicIds === []) {
+            $effectiveVehiclePublicIds = $authorizedVehiclePublicIds;
+        } else {
+            $effectiveVehiclePublicIds = array_values(array_intersect(
+                $authorizedVehiclePublicIds,
+                array_values(array_unique($normalizedVehiclePublicIds)),
+            ));
+        }
+
+        $token = $factory->createSubscriberToken($user, $effectiveVehiclePublicIds);
 
         $response = new JsonResponse(['ok' => true]);
         $response->headers->setCookie(Cookie::create('mercureAuthorization')
             ->withValue('Bearer '.$token)
             ->withHttpOnly(true)
-            ->withSecure('prod' === $_ENV['APP_ENV'])
+            ->withSecure($request->isSecure() || 'prod' === ($_ENV['APP_ENV'] ?? null))
             ->withSameSite('lax')
             ->withPath('/.well-known/mercure'));
 

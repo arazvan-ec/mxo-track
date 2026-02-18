@@ -4,17 +4,18 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
-use App\Entity\Concerns\PublicIdTrait;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity]
 #[ORM\Table(name: 'customer_vehicle')]
 #[ORM\UniqueConstraint(name: 'uniq_customer_vehicle', columns: ['customer_id', 'vehicle_id'])]
-#[ORM\UniqueConstraint(name: 'uniq_customer_vehicle_public_id', columns: ['public_id'])]
-#[ORM\HasLifecycleCallbacks]
-class CustomerVehicle
+class CustomerVehicle implements CustomerScopedEntityInterface
 {
-    use PublicIdTrait;
+    #[ORM\Id]
+    #[ORM\GeneratedValue]
+    #[ORM\Column(type: Types::BIGINT)]
+    private ?string $id = null;
 
     #[ORM\ManyToOne(targetEntity: Customer::class)]
     #[ORM\JoinColumn(name: 'customer_id', nullable: false, onDelete: 'CASCADE')]
@@ -28,6 +29,11 @@ class CustomerVehicle
     {
         $this->customer = $customer;
         $this->vehicle = $vehicle;
+    }
+
+    public function getId(): ?string
+    {
+        return $this->id;
     }
 
     public function getCustomer(): Customer
