@@ -65,7 +65,9 @@ php -S 0.0.0.0:8000 -t public
 
 Backend accesible en **http://localhost:8000**.
 
-Services: `app` (PHP 8.4, puerto 8000), `db` (postgres:16, puerto 5432), `redis` (redis:7, puerto 6379), `mercure` (dunglas/mercure, puerto 3000).
+Services: `app` (PHP 8.4, puerto 8000), `db` (postgres:16, puerto 5432), `redis` (redis:7, puerto 6379), `mercure` (dunglas/mercure, puerto 3000), `traccar` (traccar/traccar, puerto 8082 API/Web + 5055 GPS).
+
+Traccar usa H2 embebida (sin MariaDB) — suficiente para desarrollo. Al primer arranque crea usuario admin (`admin`/`admin`). La app se conecta vía `TRACCAR_BASE_URL=http://traccar:8082`.
 
 ## Architecture
 

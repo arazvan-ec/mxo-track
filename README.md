@@ -1,3 +1,5 @@
+claude --resume b6ad7773-e4bd-4c9b-8dd5-6ca95bdbe9a2
+
 # transporte-tracking
 
 Fase 1: bootstrap seguro base sobre Symfony **7.4 LTS** para portal logístico.
@@ -71,7 +73,23 @@ Este script valida: composer, consola Symfony, migraciones, fixtures y chequeo R
 bash scripts/symfony_e2e_boot_check.sh
 ```
 
-Este check levanta `db`, `redis` y `mercure` con `docker-compose.local.yml`, ejecuta `composer install`, valida consola Symfony y migraciones en contenedor `app`, y comprueba respuesta de Mercure.
+Este check levanta `db`, `redis`, `mercure` y `traccar` con `docker-compose.local.yml`, ejecuta `composer install`, valida consola Symfony y migraciones en contenedor `app`, y comprueba respuesta de Mercure.
+
+### Traccar (GPS tracking local)
+
+El servicio `traccar` se incluye en `docker-compose.local.yml` con H2 embebida (sin MariaDB).
+
+- **Web UI / API**: http://localhost:8082
+- **Puerto GPS (protocolo osmand/etc.)**: `5055`
+- **Credenciales por defecto**: `admin` / `admin` (se crean en el primer arranque)
+- **Desde el contenedor app**: `curl http://traccar:8082/api/server`
+
+Variables de entorno inyectadas en `app`:
+```
+TRACCAR_BASE_URL=http://traccar:8082
+TRACCAR_USERNAME=admin
+TRACCAR_PASSWORD=admin
+```
 
 
 

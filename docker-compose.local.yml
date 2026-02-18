@@ -14,10 +14,14 @@ services:
       MERCURE_URL: http://mercure/.well-known/mercure
       MERCURE_PUBLIC_URL: http://localhost:3000/.well-known/mercure
       MERCURE_PUBLISHER_JWT_KEY: local-mercure-key-change-me
+      TRACCAR_BASE_URL: http://traccar:8082
+      TRACCAR_USERNAME: admin
+      TRACCAR_PASSWORD: admin
     depends_on:
       - db
       - redis
       - mercure
+      - traccar
     ports:
       - "8000:8000"
     tty: true
@@ -50,5 +54,14 @@ services:
     ports:
       - "3000:80"
 
+  traccar:
+    image: traccar/traccar:latest
+    volumes:
+      - traccar_data:/opt/traccar/data
+    ports:
+      - "8082:8082"
+      - "5055:5055"
+
 volumes:
   pgdata_local:
+  traccar_data:
