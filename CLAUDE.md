@@ -12,7 +12,7 @@ The system tracks vehicles via Traccar integration, manages delivery routes with
 
 - PHP 8.4 (Docker image: `php:8.4-cli-bookworm`), Symfony 7.4 LTS (Flex + recipes)
 - PostgreSQL 16, Redis 7 (sessions), Mercure (realtime SSE)
-- Doctrine ORM with attribute mapping
+- Doctrine ORM 3.x with attribute mapping (requires `naming_strategy: underscore_number_aware` in doctrine.yaml)
 - Twig + Turbo (UX Turbo) for frontend
 - Traccar for GPS device tracking
 
@@ -55,9 +55,10 @@ docker compose -f docker-compose.local.yml up -d --build
 # Entrar al contenedor para trabajar
 docker compose -f docker-compose.local.yml exec app bash
 
-# Dentro del contenedor: instalar, migrar, cargar fixtures y servir
+# Dentro del contenedor: instalar, crear esquema, cargar fixtures y servir
 composer install
-php bin/console doctrine:migrations:migrate -n
+php bin/console doctrine:schema:create          # primera vez (DB vacía)
+php bin/console doctrine:migrations:migrate -n  # siguientes veces
 php bin/console doctrine:fixtures:load -n
 php -S 0.0.0.0:8000 -t public
 ```
@@ -70,7 +71,7 @@ Services: `app` (PHP 8.4, puerto 8000), `db` (postgres:16, puerto 5432), `redis`
 
 ### Entity Identity Pattern (mandatory)
 
-All entities use `PublicIdTrait` which provides:
+All entities (except `CustomerVehicle`) use `PublicIdTrait` which provides:
 - **Internal PK**: `BIGINT` auto-increment (`id`) — used for joins, internal processing
 - **Public ID**: `ULID` (`public_id`) — exposed in APIs, URLs, Mercure topics
 
@@ -90,7 +91,7 @@ ROLE_ADMIN > ROLE_OPERATOR > ROLE_CUSTOMER
 ROLE_ADMIN > ROLE_DRIVER
 ```
 
-Defined in `UserRole` enum. Access control: `/admin` requires ADMIN or OPERATOR; `/driver` and `/api/driver` require DRIVER.
+Defined in `UserRole` enum. Access control: `/admin` requires ADMIN or OPERATOR; `/driver` and `/api/driver` require ADMIN or DRIVER.
 
 ### Key Domain Concepts
 
@@ -104,13 +105,13 @@ Defined in `UserRole` enum. Access control: `/admin` requires ADMIN or OPERATOR;
 ### Traccar Integration
 
 - `TraccarApiClient`: HTTP client for Traccar REST API (devices, positions)
-- `TraccarStreamCommand`: WebSocket streaming for realtime positions
+- `TraccarStreamCommand`: Polling-based position ingestion with backfill (--once, --sleep=5)
 - `TraccarSyncDevicesCommand`: Syncs Traccar devices to local Vehicle entities
 - `TraccarIngestionService`: Processes and stores position data
 
 ### Mercure Realtime
 
-- Topics follow pattern `/vehicles/{public_id}/position`
+- Topics: `/vehicles/{public_id}/position`, `/operator/fleet`, `/customers/{id}/routes`, `/customers/{id}/shipments`
 - `MercureJwtFactory` generates subscriber tokens
 - `MercureTokenController` provides tokens to frontend
 - `TopicResolver` handles topic authorization
@@ -126,6 +127,7 @@ Defined in `UserRole` enum. Access control: `/admin` requires ADMIN or OPERATOR;
 
 - All PHP files use `declare(strict_types=1)`
 - Doctrine mappings via PHP attributes (not XML/YAML)
+- Doctrine ORM 3.x does not default to snake_case — `naming_strategy: underscore_number_aware` is required in `doctrine.yaml` so that column names match `UniqueConstraint` references (e.g. `publicId` property maps to `public_id` column)
 - Controllers use attribute routing
 - API error responses via `ApiErrorResponder` (consistent error format)
 - DTOs in `src/Dto/` with `fromArray()` factory + Symfony Validator constraints
