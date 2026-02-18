@@ -18,6 +18,8 @@ services:
       - db
       - redis
       - mercure
+    ports:
+      - "8000:8000"
     tty: true
 
   db:
