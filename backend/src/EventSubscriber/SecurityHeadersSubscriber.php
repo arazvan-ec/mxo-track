@@ -4,12 +4,26 @@ declare(strict_types=1);
 
 namespace App\EventSubscriber;
 
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpKernel\Event\ResponseEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
 
 final class SecurityHeadersSubscriber implements EventSubscriberInterface
 {
+    private string $mercureOrigin;
+
+    public function __construct(
+        #[Autowire('%env(MERCURE_PUBLIC_URL)%')]
+        string $mercurePublicUrl,
+    ) {
+        $parsed = parse_url($mercurePublicUrl);
+        $scheme = $parsed['scheme'] ?? 'http';
+        $host = $parsed['host'] ?? 'localhost';
+        $port = isset($parsed['port']) ? ':' . $parsed['port'] : '';
+        $this->mercureOrigin = $scheme . '://' . $host . $port;
+    }
+
     public static function getSubscribedEvents(): array
     {
         return [KernelEvents::RESPONSE => 'onKernelResponse'];
@@ -25,6 +39,15 @@ final class SecurityHeadersSubscriber implements EventSubscriberInterface
         $headers->set('X-Frame-Options', 'DENY');
         $headers->set('X-Content-Type-Options', 'nosniff');
         $headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
-        $headers->set('Content-Security-Policy', "default-src 'self'; frame-ancestors 'self'; object-src 'none'; base-uri 'self'");
+        $headers->set('Content-Security-Policy', implode('; ', [
+            "default-src 'self'",
+            "script-src 'self' 'unsafe-inline' https://unpkg.com",
+            "style-src 'self' 'unsafe-inline' https://unpkg.com",
+            "img-src 'self' https://*.tile.openstreetmap.org data:",
+            "connect-src 'self' " . $this->mercureOrigin,
+            "frame-ancestors 'self'",
+            "object-src 'none'",
+            "base-uri 'self'",
+        ]));
     }
 }

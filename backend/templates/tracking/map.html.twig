@@ -27,6 +27,7 @@
       const selector = document.getElementById('vehicle-selector');
       let eventSource = null;
       let marker = null;
+      let polyline = null;
 
       const map = L.map('map').setView([40.4168, -3.7038], 6);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -41,13 +42,10 @@
         }
       };
 
-      const setMarker = (lat, lng) => {
-        if (marker === null) {
-          marker = L.marker([lat, lng]).addTo(map);
-        } else {
-          marker.setLatLng([lat, lng]);
-        }
-        map.panTo([lat, lng]);
+      const clearMap = () => {
+        closeStream();
+        if (marker) { marker.remove(); marker = null; }
+        if (polyline) { polyline.remove(); polyline = null; }
       };
 
       await fetch('/api/mercure-token', { credentials: 'include' });
@@ -64,18 +62,38 @@
         .map((vehicle) => `<option value="${vehicle.public_id}">${vehicle.name}</option>`)
         .join('');
 
-      const connect = (vehiclePublicId) => {
-        closeStream();
+      const connect = async (vehiclePublicId) => {
+        clearMap();
 
         const selected = vehicles.find((v) => v.public_id === vehiclePublicId);
         if (!selected) {
           return;
         }
 
-        if (selected.last_position) {
-          setMarker(selected.last_position.lat, selected.last_position.lng);
+        // Fetch historical positions (ASC = chronological order)
+        const coords = [];
+        try {
+          const res = await fetch(`/api/vehicles/${vehiclePublicId}/positions?order=ASC&limit=2000`, { credentials: 'include' });
+          if (res.ok) {
+            const data = await res.json();
+            (data.items ?? []).forEach(p => coords.push([p.lat, p.lng]));
+          }
+        } catch (_) { /* positions endpoint unavailable, fall back to last_position */ }
+
+        // Fallback: use last_position from the vehicle list if no history
+        if (coords.length === 0 && selected.last_position) {
+          coords.push([selected.last_position.lat, selected.last_position.lng]);
         }
 
+        // Draw polyline + marker
+        if (coords.length > 0) {
+          polyline = L.polyline(coords, { color: '#2563eb', weight: 3, opacity: 0.8 }).addTo(map);
+          const last = coords[coords.length - 1];
+          marker = L.marker(last).addTo(map);
+          map.fitBounds(polyline.getBounds(), { padding: [30, 30] });
+        }
+
+        // Mercure SSE — extend route in real time
         const hub = new URL('{{ mercure_public_url }}');
         hub.searchParams.set('topic', `/vehicles/${selected.public_id}/position`);
 
@@ -83,7 +101,18 @@
         eventSource.onmessage = (event) => {
           const payload = JSON.parse(event.data);
           if (Number.isFinite(payload.lat) && Number.isFinite(payload.lng)) {
-            setMarker(payload.lat, payload.lng);
+            const latlng = [payload.lat, payload.lng];
+            if (polyline) {
+              polyline.addLatLng(latlng);
+            } else {
+              polyline = L.polyline([latlng], { color: '#2563eb', weight: 3, opacity: 0.8 }).addTo(map);
+            }
+            if (marker) {
+              marker.setLatLng(latlng);
+            } else {
+              marker = L.marker(latlng).addTo(map);
+            }
+            map.panTo(latlng);
           }
         };
       };

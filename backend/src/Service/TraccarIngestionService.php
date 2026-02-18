@@ -27,6 +27,9 @@ final class TraccarIngestionService
     {
         $created = 0;
 
+        $last = $this->entityManager->getRepository(VehicleLastPosition::class)->findOneBy(['vehicle' => $vehicle]);
+        $checkpoint = $this->entityManager->getRepository(VehicleCheckpoint::class)->findOneBy(['vehicle' => $vehicle]);
+
         foreach ($positions as $position) {
             $deviceTime = new DateTimeImmutable((string) ($position['deviceTime'] ?? 'now'));
             $serverTime = new DateTimeImmutable((string) ($position['serverTime'] ?? 'now'));
@@ -49,7 +52,6 @@ final class TraccarIngestionService
             $course = (float) ($position['course'] ?? 0.0);
             $accuracy = (float) ($position['accuracy'] ?? 0.0);
 
-            $last = $this->entityManager->getRepository(VehicleLastPosition::class)->findOneBy(['vehicle' => $vehicle]);
             if ($last === null) {
                 $last = VehicleLastPosition::fromTelemetry($vehicle, $lat, $lng, $speed, $course, $accuracy, $deviceTime, $serverTime);
                 $this->entityManager->persist($last);
@@ -57,10 +59,12 @@ final class TraccarIngestionService
                 $last->refresh($lat, $lng, $speed, $course, $accuracy, $deviceTime, $serverTime);
             }
 
-            $checkpoint = $this->entityManager->getRepository(VehicleCheckpoint::class)->findOneBy(['vehicle' => $vehicle]) ?? new VehicleCheckpoint($vehicle);
+            if ($checkpoint === null) {
+                $checkpoint = new VehicleCheckpoint($vehicle);
+                $this->entityManager->persist($checkpoint);
+            }
             $checkpoint->setLastDeviceTime($deviceTime);
             $checkpoint->setLastTraccarPositionId(isset($position['id']) ? (int) $position['id'] : null);
-            $this->entityManager->persist($checkpoint);
 
             try {
                 $this->hub->publish(new Update(
