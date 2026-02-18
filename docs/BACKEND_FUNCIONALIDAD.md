@@ -257,7 +257,9 @@ ROLE_OPERATOR: [ROLE_CUSTOMER]
   - Customer: `/vehicles/{publicId}/position`, `/customers/{customerId}/routes`, `/customers/{customerId}/shipments`
   - Driver: `/vehicles/{publicId}/position` (vehículos asignados)
 - **JWT**: `MercureJwtFactory` genera tokens HS256 con TTL configurable
-- **Auth**: Cookie `mercureAuthorization` HttpOnly seteada por `MercureTokenController`
+- **Auth**: Cookie `mercureAuthorization` HttpOnly (sin prefijo "Bearer") seteada por `MercureTokenController`
+- **Publicación**: Configurada con `publish: ['*']` en `mercure.yaml` para autorizar al publisher a todos los topics
+- **CORS**: En desarrollo, el hub Mercure usa `cors_origins http://localhost:8000` (no `*`, incompatible con `withCredentials`)
 
 ---
 
@@ -299,5 +301,5 @@ Ambos DTOs exponen factory `fromArray(array $payload): self` + validación vía 
 | `dashboard/index.html.twig` | Dashboard placeholder |
 | `admin/dashboard.html.twig` | Panel KPIs admin |
 | `admin/shipments_import.html.twig` | Import CSV + historial |
-| `tracking/map.html.twig` | Mapa Leaflet.js con Mercure SSE (centrado España) |
+| `tracking/map.html.twig` | Mapa Leaflet.js con polyline histórica + tracking en vivo por Mercure SSE (centrado España) |
 | `driver/route_execution.html.twig` | UI ejecución de ruta para driver |

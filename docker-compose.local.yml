@@ -14,6 +14,7 @@ services:
       MERCURE_URL: http://mercure/.well-known/mercure
       MERCURE_PUBLIC_URL: http://localhost:3000/.well-known/mercure
       MERCURE_PUBLISHER_JWT_KEY: local-mercure-key-change-me
+      MERCURE_SUBSCRIBER_JWT_KEY: local-mercure-key-change-me
       TRACCAR_BASE_URL: http://traccar:8082
       TRACCAR_USERNAME: admin
       TRACCAR_PASSWORD: admin
@@ -49,7 +50,7 @@ services:
       MERCURE_PUBLISHER_JWT_KEY: local-mercure-key-change-me
       MERCURE_SUBSCRIBER_JWT_KEY: local-mercure-key-change-me
       MERCURE_EXTRA_DIRECTIVES: |
-        cors_origins *
+        cors_origins http://localhost:8000
         anonymous
     ports:
       - "3000:80"

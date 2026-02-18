@@ -1,4 +1,4 @@
-# CLAUDE.md
+# CLAUDE.md: claude --resume a810f574-ec2f-4df0-bb37-070d3d15b116
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -171,12 +171,29 @@ Flujo interno:
 
 Ruta simulada: circuito por el centro de Madrid (Sol → Gran Vía → Plaza España → Palacio Real → Puerta de Toledo → Atocha → Retiro → Cibeles → Sol).
 
+#### Tracking en vivo (Mercure + Traccar)
+
+Para ver el vehículo moverse en tiempo real en `/fleet/map`, se necesitan **dos procesos simultáneos**:
+
+```bash
+# 1. Arrancar el stream que lee Traccar y publica a Mercure
+docker compose -f docker-compose.local.yml exec -T -d app php bin/console app:traccar:stream --sleep=2
+
+# 2. Simular movimiento GPS (~2 minutos)
+docker compose -f docker-compose.local.yml exec -T app php bin/console app:dev:simulate-gps --points=120 --interval=1
+```
+
+**Nota**: `--ingest` de `simulate-gps` hace ingesta batch al final, no en tiempo real. Para tracking en vivo, usar `app:traccar:stream` en paralelo.
+
 ### Mercure Realtime
 
 - Topics: `/vehicles/{public_id}/position`, `/operator/fleet`, `/customers/{id}/routes`, `/customers/{id}/shipments`
-- `MercureJwtFactory` generates subscriber tokens
-- `MercureTokenController` provides tokens to frontend
+- `MercureJwtFactory` generates subscriber tokens (HS256)
+- `MercureTokenController` provides tokens to frontend via `mercureAuthorization` cookie (just the JWT, no "Bearer" prefix)
 - `TopicResolver` handles topic authorization
+- Publisher config in `mercure.yaml` requires `publish: ['*']` to authorize publishing to all topics
+- CORS: Mercure hub must use specific origin (`cors_origins http://localhost:8000`), not `*`, because `EventSource` uses `withCredentials: true`
+- All JWT keys (publisher + subscriber) must match between `docker-compose.local.yml` `app` service and `mercure` service
 
 ### Session & Security
 

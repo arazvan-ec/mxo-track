@@ -68,7 +68,7 @@ class MercureTokenController extends AbstractController
 
         $response = new JsonResponse(['ok' => true]);
         $response->headers->setCookie(Cookie::create('mercureAuthorization')
-            ->withValue('Bearer '.$token)
+            ->withValue($token)
             ->withHttpOnly(true)
             ->withSecure($request->isSecure() || 'prod' === ($_ENV['APP_ENV'] ?? null))
             ->withSameSite('lax')
