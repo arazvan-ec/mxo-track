@@ -1,0 +1,134 @@
+# Auto-generated spec manifest
+# Updated by /workflows:discover on 2026-02-19
+
+manifest:
+  version: "1.0"
+  generated_at: "2026-02-19"
+  project: "transporte-tracking (mxo-track)"
+
+  statistics:
+    entities: 11
+    api_contracts: 5
+    business_rules: 4
+    architectural_constraints: 1
+    api_consumers: 1
+    total_specs: 22
+
+  entities:
+    - name: "Vehicle"
+      file: "entities/vehicle.yaml"
+      type: "entity"
+      last_updated: "2026-02-19"
+    - name: "VehiclePosition"
+      file: "entities/vehicle-position.yaml"
+      type: "entity"
+      last_updated: "2026-02-19"
+    - name: "VehicleLastPosition"
+      file: "entities/vehicle-last-position.yaml"
+      type: "entity"
+      last_updated: "2026-02-19"
+    - name: "Route"
+      file: "entities/route.yaml"
+      type: "aggregate"
+      last_updated: "2026-02-19"
+    - name: "RouteStop"
+      file: "entities/route-stop.yaml"
+      type: "entity"
+      last_updated: "2026-02-19"
+    - name: "Shipment"
+      file: "entities/shipment.yaml"
+      type: "aggregate"
+      last_updated: "2026-02-19"
+    - name: "ShipmentEvent"
+      file: "entities/shipment-event.yaml"
+      type: "entity"
+      last_updated: "2026-02-19"
+    - name: "Pod"
+      file: "entities/pod.yaml"
+      type: "entity"
+      last_updated: "2026-02-19"
+    - name: "User"
+      file: "entities/user.yaml"
+      type: "entity"
+      last_updated: "2026-02-19"
+    - name: "Customer"
+      file: "entities/customer.yaml"
+      type: "entity"
+      last_updated: "2026-02-19"
+    - name: "DriverAction"
+      file: "entities/driver-action.yaml"
+      type: "entity"
+      last_updated: "2026-02-19"
+
+  api_contracts:
+    - name: "Driver API"
+      file: "api-contracts/driver-api.yaml"
+      endpoints: 5
+      last_updated: "2026-02-19"
+    - name: "Vehicle API"
+      file: "api-contracts/vehicle-api.yaml"
+      endpoints: 3
+      last_updated: "2026-02-19"
+    - name: "Shipment API"
+      file: "api-contracts/shipment-api.yaml"
+      endpoints: 3
+      last_updated: "2026-02-19"
+    - name: "Mercure Token API"
+      file: "api-contracts/mercure-token-api.yaml"
+      endpoints: 1
+      last_updated: "2026-02-19"
+    - name: "Admin Web"
+      file: "api-contracts/admin-web.yaml"
+      endpoints: 6
+      last_updated: "2026-02-19"
+
+  business_rules:
+    - domain_area: "Delivery"
+      file: "business-rules/delivery.yaml"
+      rules_count: 5
+      critical_rules: 3
+      last_updated: "2026-02-19"
+    - domain_area: "Shipment"
+      file: "business-rules/shipment.yaml"
+      rules_count: 3
+      critical_rules: 2
+      last_updated: "2026-02-19"
+    - domain_area: "Multi-Tenant"
+      file: "business-rules/multi-tenant.yaml"
+      rules_count: 3
+      critical_rules: 2
+      last_updated: "2026-02-19"
+    - domain_area: "Vehicle Tracking"
+      file: "business-rules/vehicle-tracking.yaml"
+      rules_count: 4
+      critical_rules: 0
+      last_updated: "2026-02-19"
+    - domain_area: "Security"
+      file: "business-rules/security.yaml"
+      rules_count: 5
+      critical_rules: 3
+      last_updated: "2026-02-19"
+
+  architectural_constraints:
+    - category: "Layer Dependencies"
+      file: "architectural-constraints/layer-dependencies.yaml"
+      constraints_count: 12
+      last_updated: "2026-02-19"
+
+  api_consumers:
+    - name: "Traccar GPS Tracking API"
+      file: "api-consumers/traccar.yaml"
+      acl_compliant: false
+      last_updated: "2026-02-19"
+
+  api_architecture_diagnostic:
+    file: "api-architecture-diagnostic.yaml"
+    dimensions_classified: 6
+    last_updated: "2026-02-19"
+
+  extraction_config:
+    extract_specs: true
+    depth: "standard"
+    include_tests: false
+
+  next_recommended_update: "2026-02-26"
