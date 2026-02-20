@@ -40,9 +40,11 @@ class Vehicle
     }
 
     public function getName(): string { return $this->name; }
+    public function setName(string $name): void { $this->name = $name; }
     public function getTraccarDeviceId(): ?int { return $this->traccarDeviceId; }
     public function setTraccarDeviceId(?int $id): void { $this->traccarDeviceId = $id; }
     public function isActive(): bool { return $this->isActive; }
+    public function setActive(bool $isActive): void { $this->isActive = $isActive; }
     public function getCreatedAt(): \DateTimeImmutable { return $this->createdAt; }
     public function getUpdatedAt(): \DateTimeImmutable { return $this->updatedAt; }
 

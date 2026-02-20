@@ -37,13 +37,29 @@ class Route
     #[ORM\Column(nullable: true)]
     private ?DateTimeImmutable $endAt = null;
 
+    #[ORM\ManyToOne(targetEntity: Customer::class)]
+    #[ORM\JoinColumn(name: 'customer_id', nullable: true, onDelete: 'SET NULL')]
+    private ?Customer $customer = null;
+
     public function __construct(string $name)
     {
         $this->name = $name;
     }
 
+    public function getName(): string { return $this->name; }
+    public function setName(string $name): void { $this->name = $name; }
     public function getStatus(): RouteStatus { return $this->status; }
+    public function setStatus(RouteStatus $status): void { $this->status = $status; }
+    public function getDriver(): ?User { return $this->driver; }
+    public function setDriver(?User $driver): void { $this->driver = $driver; }
     public function getVehicle(): ?Vehicle { return $this->vehicle; }
+    public function setVehicle(?Vehicle $vehicle): void { $this->vehicle = $vehicle; }
+    public function getStartAt(): ?DateTimeImmutable { return $this->startAt; }
+    public function setStartAt(?DateTimeImmutable $startAt): void { $this->startAt = $startAt; }
+    public function getEndAt(): ?DateTimeImmutable { return $this->endAt; }
+    public function setEndAt(?DateTimeImmutable $endAt): void { $this->endAt = $endAt; }
+    public function getCustomer(): ?Customer { return $this->customer; }
+    public function setCustomer(?Customer $customer): void { $this->customer = $customer; }
 
     public function start(): void
     {

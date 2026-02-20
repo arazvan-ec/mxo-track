@@ -9,7 +9,6 @@ use App\Entity\Customer;
 use App\Service\ShipmentCsvImporter;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
@@ -24,6 +23,7 @@ class AdminShipmentController extends AbstractController
         ShipmentCsvImporter $importer,
     ): Response {
         $customers = $entityManager->getRepository(Customer::class)->findAll();
+        $result = null;
 
         if ($request->isMethod('POST')) {
             $customerId = (string) $request->request->get('customer_id');
@@ -31,17 +31,46 @@ class AdminShipmentController extends AbstractController
 
             $customer = $entityManager->find(Customer::class, $customerId);
             if (!$customer instanceof Customer || $csv === null) {
-                $this->addFlash('error', 'Debes seleccionar cliente y archivo CSV.');
-                return new RedirectResponse('/admin/shipments/import');
+                $this->addFlash('error', 'Debes seleccionar un cliente y un archivo CSV.');
+
+                return $this->redirectToRoute('admin_shipments_import');
             }
 
             $result = $importer->import($csv->getPathname(), $customer);
-            $this->addFlash('success', sprintf('Importación completada: creados=%d, omitidos=%d', $result['created'], $result['skipped']));
 
-            return new RedirectResponse('/admin/shipments/import');
+            if ($result['created'] > 0) {
+                $this->addFlash(
+                    'success',
+                    sprintf('%d envio(s) creado(s) correctamente.', $result['created']),
+                );
+            }
+
+            if ($result['skipped'] > 0) {
+                $this->addFlash(
+                    'warning',
+                    sprintf('%d fila(s) omitida(s) (referencia duplicada).', $result['skipped']),
+                );
+            }
+
+            if ($result['errors'] > 0) {
+                $this->addFlash(
+                    'error',
+                    sprintf('%d fila(s) con error (referencia vacia o formato invalido).', $result['errors']),
+                );
+            }
+
+            if ($result['created'] === 0 && $result['skipped'] === 0 && $result['errors'] === 0) {
+                $this->addFlash('warning', 'El archivo CSV esta vacio o solo contiene la cabecera.');
+            }
+
+            return $this->redirectToRoute('admin_shipments_import');
         }
 
-        $runs = $entityManager->getRepository(CsvImportRun::class)->findBy([], ['createdAt' => 'DESC'], 10);
+        $runs = $entityManager->getRepository(CsvImportRun::class)->findBy(
+            [],
+            ['createdAt' => 'DESC'],
+            10,
+        );
 
         return $this->render('admin/shipments_import.html.twig', [
             'customers' => $customers,
