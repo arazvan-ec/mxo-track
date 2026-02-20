@@ -193,9 +193,62 @@ curl -s http://127.0.0.1:8082/api/server | head  # Traccar server info
 
 ---
 
-## 4) Deploys posteriores
+## 4) Deploy automático (CI/CD con GitHub Actions)
 
-Para actualizar la aplicación después de hacer push a `main`:
+Cada push a `main` ejecuta automáticamente:
+1. Lint PHP + validación Symfony 7.4 lock
+2. Verificación de que Symfony arranca
+3. Deploy a VPS1 vía SSH
+4. Health check post-deploy
+
+### 4.1 Configurar GitHub Secrets
+
+En tu repositorio: **Settings → Secrets and variables → Actions** → añadir:
+
+| Secret | Valor | Ejemplo |
+|--------|-------|---------|
+| `VPS1_HOST` | IP pública de VPS1 | `65.21.xx.xx` |
+| `VPS1_USER` | Usuario SSH | `root` |
+| `VPS1_SSH_KEY` | Clave SSH privada (contenido completo) | `-----BEGIN OPENSSH...` |
+| `VPS1_PORT` | Puerto SSH (si no es 22) | `22` |
+| `PORTAL_DOMAIN` | Tu dominio del portal | `portal.tudominio.com` |
+
+### 4.2 Crear environment "production"
+
+En **Settings → Environments** → Create environment `production`.
+
+Opcional pero recomendado: activar **Required reviewers** para que alguien apruebe cada deploy antes de ejecutarse.
+
+### 4.3 Generar clave SSH para GitHub Actions
+
+```bash
+# En tu máquina local:
+ssh-keygen -t ed25519 -f ~/.ssh/github_deploy -C "github-actions-deploy" -N ""
+
+# Copiar la clave PÚBLICA al VPS1:
+ssh-copy-id -i ~/.ssh/github_deploy.pub root@<IP_VPS1>
+
+# Copiar la clave PRIVADA como Secret en GitHub (VPS1_SSH_KEY):
+cat ~/.ssh/github_deploy
+```
+
+### 4.4 Flujo de trabajo
+
+```
+git push origin main
+    ↓
+GitHub Actions: lint + validate
+    ↓ (si pasa)
+SSH a VPS1 → bash scripts/deploy_vps1_web.sh main
+    ↓
+Health check → curl https://portal.tudominio.com
+    ↓
+✅ Deploy exitoso / ❌ Fallo (ver logs en GitHub Actions)
+```
+
+### 4.5 Deploy manual (sin CI/CD)
+
+También puedes hacer deploy manual por SSH:
 
 ```bash
 ssh root@<IP_VPS1>
@@ -203,7 +256,9 @@ cd /var/www/transporte-tracking
 bash scripts/deploy_vps1_web.sh main
 ```
 
-El script hace: pull → composer install → cache clear → migrations → restart services.
+### 4.6 Deploy manual desde GitHub (workflow_dispatch)
+
+En GitHub → Actions → "Deploy to Production" → Run workflow. Puedes marcar "Skip tests" si necesitas deploy urgente.
 
 ---
 
