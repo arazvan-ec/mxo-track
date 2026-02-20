@@ -1,9 +1,9 @@
-FROM php:8.4-cli-bookworm
+FROM php:8.4-fpm-bookworm
 
-# System dependencies
+# System dependencies + nginx
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-       git unzip curl libpq-dev libzip-dev libicu-dev \
+       git unzip curl libpq-dev libzip-dev libicu-dev nginx \
     && docker-php-ext-install pdo pdo_pgsql zip intl opcache \
     && rm -rf /var/lib/apt/lists/*
 
@@ -19,6 +19,11 @@ expose_php=Off\n\
 display_errors=Off\n\
 log_errors=On' > /usr/local/etc/php/conf.d/production.ini
 
+# PHP-FPM: listen on port 9000, log to stderr
+RUN sed -i 's|^listen = .*|listen = 127.0.0.1:9000|' /usr/local/etc/php-fpm.d/www.conf \
+    && sed -i 's|^;catch_workers_output.*|catch_workers_output = yes|' /usr/local/etc/php-fpm.d/www.conf \
+    && sed -i 's|^;decorate_workers_output.*|decorate_workers_output = no|' /usr/local/etc/php-fpm.d/www.conf
+
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /app
@@ -31,7 +36,12 @@ ENV APP_ENV=prod
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts \
     && composer run-script post-install-cmd --no-interaction
 
-# Copy start script
+# Generate Doctrine proxy classes at build time
+RUN php bin/console doctrine:proxy:create-proxy-classes --env=prod 2>/dev/null || \
+    php bin/console cache:warmup --env=prod
+
+# Copy nginx config and start script
+COPY docker/nginx-railway.conf /etc/nginx/nginx-railway.conf.template
 COPY scripts/railway-start.sh /app/railway-start.sh
 RUN chmod +x /app/railway-start.sh
 

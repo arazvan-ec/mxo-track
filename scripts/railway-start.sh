@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+PORT="${PORT:-8000}"
+
 echo "==> Running database migrations..."
 php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
 
@@ -30,5 +32,14 @@ if [ -n "$TRACCAR_BASE_URL" ]; then
     fi
 fi
 
-echo "==> Starting PHP server on port ${PORT:-8000}..."
-exec php -S 0.0.0.0:${PORT:-8000} -t public
+# Configure nginx with the dynamic PORT from Railway
+echo "==> Configuring nginx on port $PORT..."
+sed "s/__PORT__/$PORT/g" /etc/nginx/nginx-railway.conf.template > /etc/nginx/nginx.conf
+
+# Start PHP-FPM in background
+echo "==> Starting PHP-FPM..."
+php-fpm -D
+
+# Start nginx in foreground
+echo "==> Starting nginx on port $PORT..."
+exec nginx -g 'daemon off;'
