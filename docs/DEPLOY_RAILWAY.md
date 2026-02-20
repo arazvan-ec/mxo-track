@@ -127,11 +127,11 @@ Instalar **Traccar Client** desde Google Play Store.
 | Campo | Valor |
 |-------|-------|
 | **Device identifier** | (se genera automáticamente, anotarlo) |
-| **Server URL** | `https://mxo-track-traccar-db4e.up.railway.app:443` |
+| **Server URL** | `https://mxo-track-traccar-db4e.up.railway.app` |
 | **Frequency** | 10 (segundos, ajustar según necesidad) |
 | **Status** | Service status → ON |
 
-> **IMPORTANTE**: Usar `https://` y puerto `443` (no `5055`). Railway termina SSL en el edge y reenvía al puerto 5055 internamente.
+> **IMPORTANTE**: Usar `https://` (no `http://`). Railway termina SSL en el edge y reenvía al puerto 5055 internamente.
 
 ### Crear el dispositivo en Traccar
 
