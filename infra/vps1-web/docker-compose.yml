@@ -1,0 +1,26 @@
+services:
+  mercure:
+    image: dunglas/mercure:v0.16
+    restart: unless-stopped
+    environment:
+      SERVER_NAME: ':3000'
+      MERCURE_PUBLISHER_JWT_KEY: ${MERCURE_PUBLISHER_JWT_KEY}
+      MERCURE_SUBSCRIBER_JWT_KEY: ${MERCURE_SUBSCRIBER_JWT_KEY}
+      MERCURE_EXTRA_DIRECTIVES: |
+        anonymous 0
+        publish_origins *
+        cors_origins https://${PORTAL_DOMAIN:-portal.midominio.com}
+    ports:
+      - '127.0.0.1:3000:3000'
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--save", "900", "1", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    ports:
+      - '127.0.0.1:6379:6379'
+    volumes:
+      - redis_data:/data
+
+volumes:
+  redis_data:

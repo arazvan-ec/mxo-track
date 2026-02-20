@@ -1,0 +1,68 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Vehiculos de {{ customer.name }} - Admin{% endblock %}
+
+{% block content %}
+    <div class="mb-6">
+      <a href="{{ path('admin_customers_index') }}" class="text-sm text-blue-600 hover:text-blue-800 hover:underline">
+        &larr; Volver a clientes
+      </a>
+    </div>
+
+    <div class="sm:flex sm:items-center sm:justify-between mb-6">
+      <h1 class="text-2xl font-bold text-gray-900">Vehiculos de {{ customer.name }}</h1>
+    </div>
+
+    <form method="post" action="{{ path('admin_customers_vehicles', {publicId: customer.publicIdString}) }}">
+      <input type="hidden" name="_token" value="{{ csrf_token('vehicles-customer-' ~ customer.publicIdString) }}">
+
+      {% if vehicles|length > 0 %}
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
+          {% for vehicle in vehicles %}
+            <label class="relative flex items-start rounded-lg border bg-white p-4 shadow-sm cursor-pointer hover:border-blue-400 transition-colors
+                          {{ vehicle.id in assignedIds ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200' }}">
+              <div class="flex h-5 items-center">
+                <input type="checkbox"
+                       name="vehicle_ids[]"
+                       value="{{ vehicle.publicIdString }}"
+                       {{ vehicle.id in assignedIds ? 'checked' : '' }}
+                       class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+              </div>
+              <div class="ml-3 text-sm">
+                <span class="font-medium text-gray-900">{{ vehicle.name }}</span>
+                <div class="mt-1 text-gray-500">
+                  {% if vehicle.traccarDeviceId %}
+                    <span class="text-xs">Traccar ID: {{ vehicle.traccarDeviceId }}</span>
+                  {% else %}
+                    <span class="text-xs text-gray-400">Sin dispositivo Traccar</span>
+                  {% endif %}
+                </div>
+                <div class="mt-1">
+                  {% if vehicle.active %}
+                    <span class="inline-flex rounded-full bg-green-100 px-2 text-xs font-semibold leading-5 text-green-800">Activo</span>
+                  {% else %}
+                    <span class="inline-flex rounded-full bg-red-100 px-2 text-xs font-semibold leading-5 text-red-800">Inactivo</span>
+                  {% endif %}
+                </div>
+              </div>
+            </label>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="rounded-md bg-gray-100 p-6 text-center text-sm text-gray-500 mb-6">
+          No hay vehiculos activos disponibles.
+        </div>
+      {% endif %}
+
+      <div class="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200">
+        <a href="{{ path('admin_customers_index') }}"
+           class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+          Cancelar
+        </a>
+        <button type="submit"
+                class="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500">
+          Guardar asignacion
+        </button>
+      </div>
+    </form>
+{% endblock %}

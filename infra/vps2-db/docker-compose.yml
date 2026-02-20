@@ -1,0 +1,17 @@
+version: '3.9'
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: transporte
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - '10.0.2.10:5432:5432'
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./backup:/backup
+
+volumes:
+  pg_data:

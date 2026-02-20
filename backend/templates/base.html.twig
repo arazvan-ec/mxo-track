@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="es" class="h-full bg-gray-50">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}MXO Track{% endblock %}</title>
+  <style>[x-cloak] { display: none !important; }</style>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              200: '#bfdbfe',
+              300: '#93c5fd',
+              400: '#60a5fa',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              800: '#1e40af',
+              900: '#1e3a8a',
+            },
+            sidebar: {
+              DEFAULT: '#1e293b',
+              hover: '#334155',
+              active: '#0f172a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  {% block styles %}{% endblock %}
+</head>
+<body class="h-full" {% block body_attrs %}{% endblock %}>
+{% block body %}
+<div x-data="{ sidebarOpen: false }" class="min-h-full">
+
+  {# ── Mobile sidebar overlay ─────────────────────────────────────── #}
+  <div x-show="sidebarOpen"
+       x-transition:enter="transition-opacity ease-linear duration-300"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100"
+       x-transition:leave="transition-opacity ease-linear duration-300"
+       x-transition:leave-start="opacity-100"
+       x-transition:leave-end="opacity-0"
+       class="fixed inset-0 z-40 lg:hidden"
+       style="display: none;">
+    <div class="fixed inset-0 bg-gray-900/80" @click="sidebarOpen = false"></div>
+
+    <div x-show="sidebarOpen"
+         x-transition:enter="transition ease-in-out duration-300 transform"
+         x-transition:enter-start="-translate-x-full"
+         x-transition:enter-end="translate-x-0"
+         x-transition:leave="transition ease-in-out duration-300 transform"
+         x-transition:leave-start="translate-x-0"
+         x-transition:leave-end="-translate-x-full"
+         class="relative flex w-72 max-w-xs flex-1 flex-col bg-slate-800">
+
+      {# Close button #}
+      <div class="absolute right-0 top-0 -mr-12 pt-4">
+        <button type="button" @click="sidebarOpen = false"
+                class="ml-1 flex h-10 w-10 items-center justify-center rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white">
+          <span class="sr-only">Cerrar menu</span>
+          <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      {% include '_sidebar_content.html.twig' with { mobile: true } %}
+    </div>
+  </div>
+
+  {# ── Desktop sidebar ────────────────────────────────────────────── #}
+  <div class="hidden lg:fixed lg:inset-y-0 lg:z-30 lg:flex lg:w-64 lg:flex-col">
+    <div class="flex grow flex-col overflow-y-auto bg-slate-800 border-r border-slate-700">
+      {% include '_sidebar_content.html.twig' with { mobile: false } %}
+    </div>
+  </div>
+
+  {# ── Main content area ──────────────────────────────────────────── #}
+  <div class="lg:pl-64">
+
+    {# ── Top bar ─────────────────────────────────────────────────── #}
+    <div class="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">
+
+      {# Mobile menu button #}
+      <button type="button" @click="sidebarOpen = true" class="-m-2.5 p-2.5 text-gray-700 lg:hidden">
+        <span class="sr-only">Abrir menu</span>
+        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/>
+        </svg>
+      </button>
+
+      {# Separator #}
+      <div class="h-6 w-px bg-gray-200 lg:hidden" aria-hidden="true"></div>
+
+      <div class="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
+        {# Breadcrumb area #}
+        <div class="flex flex-1 items-center">
+          <nav class="flex" aria-label="Breadcrumb">
+            <ol class="flex items-center space-x-2">
+              <li>
+                <div class="flex items-center">
+                  <svg class="h-5 w-5 shrink-0 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M9.293 2.293a1 1 0 011.414 0l7 7A1 1 0 0117 11h-1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-3a1 1 0 00-1-1H9a1 1 0 00-1 1v3a1 1 0 01-1 1H5a1 1 0 01-1-1v-6H3a1 1 0 01-.707-1.707l7-7z" clip-rule="evenodd"/>
+                  </svg>
+                </div>
+              </li>
+              {% block breadcrumbs %}{% endblock %}
+            </ol>
+          </nav>
+        </div>
+
+        {# User dropdown #}
+        <div class="flex items-center gap-x-4 lg:gap-x-6">
+          <div x-data="{ open: false }" class="relative">
+            <button type="button" @click="open = !open" @click.outside="open = false"
+                    class="-m-1.5 flex items-center p-1.5">
+              <span class="sr-only">Menu de usuario</span>
+              <span class="flex h-8 w-8 items-center justify-center rounded-full bg-brand-600 text-sm font-semibold text-white">
+                {{ app.user ? app.user.email|first|upper : '?' }}
+              </span>
+              <span class="hidden lg:flex lg:items-center">
+                <span class="ml-3 text-sm font-semibold leading-6 text-gray-900" aria-hidden="true">
+                  {{ app.user ? app.user.email : '' }}
+                </span>
+                <svg class="ml-2 h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd"/>
+                </svg>
+              </span>
+            </button>
+
+            <div x-show="open"
+                 x-transition:enter="transition ease-out duration-100"
+                 x-transition:enter-start="transform opacity-0 scale-95"
+                 x-transition:enter-end="transform opacity-100 scale-100"
+                 x-transition:leave="transition ease-in duration-75"
+                 x-transition:leave-start="transform opacity-100 scale-100"
+                 x-transition:leave-end="transform opacity-0 scale-95"
+                 class="absolute right-0 z-10 mt-2.5 w-48 origin-top-right rounded-md bg-white py-2 shadow-lg ring-1 ring-gray-900/5 focus:outline-none"
+                 style="display: none;">
+              <div class="px-4 py-2 border-b border-gray-100">
+                <p class="text-xs text-gray-500">Conectado como</p>
+                <p class="text-sm font-medium text-gray-900 truncate">{{ app.user ? app.user.email : '' }}</p>
+              </div>
+              <a href="{{ path('app_logout') }}"
+                 class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                Cerrar sesion
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# ── Flash messages (toasts) ─────────────────────────────────── #}
+    <div class="fixed top-20 right-4 z-50 flex flex-col gap-3 w-96 max-w-[calc(100vw-2rem)]">
+      {% for type, messages in app.flashes %}
+        {% for message in messages %}
+          <div x-data="{ show: true }"
+               x-init="setTimeout(() => show = false, 5000)"
+               x-show="show"
+               x-transition:enter="transition ease-out duration-300"
+               x-transition:enter-start="opacity-0 translate-x-8"
+               x-transition:enter-end="opacity-100 translate-x-0"
+               x-transition:leave="transition ease-in duration-200"
+               x-transition:leave-start="opacity-100 translate-x-0"
+               x-transition:leave-end="opacity-0 translate-x-8"
+               class="pointer-events-auto rounded-lg p-4 shadow-lg ring-1 ring-black/5
+                      {% if type == 'success' %}bg-emerald-50 text-emerald-800 ring-emerald-200{% endif %}
+                      {% if type == 'error' or type == 'danger' %}bg-red-50 text-red-800 ring-red-200{% endif %}
+                      {% if type == 'warning' %}bg-amber-50 text-amber-800 ring-amber-200{% endif %}
+                      {% if type == 'info' %}bg-blue-50 text-blue-800 ring-blue-200{% endif %}">
+            <div class="flex items-start gap-3">
+              <div class="shrink-0 pt-0.5">
+                {% if type == 'success' %}
+                  <svg class="h-5 w-5 text-emerald-500" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd"/>
+                  </svg>
+                {% elseif type == 'error' or type == 'danger' %}
+                  <svg class="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd"/>
+                  </svg>
+                {% elseif type == 'warning' %}
+                  <svg class="h-5 w-5 text-amber-500" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/>
+                  </svg>
+                {% else %}
+                  <svg class="h-5 w-5 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clip-rule="evenodd"/>
+                  </svg>
+                {% endif %}
+              </div>
+              <p class="text-sm font-medium flex-1">{{ message }}</p>
+              <button @click="show = false" class="shrink-0 text-current opacity-50 hover:opacity-100 transition-opacity">
+                <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        {% endfor %}
+      {% endfor %}
+    </div>
+
+    {# ── Page content ────────────────────────────────────────────── #}
+    <main class="py-8">
+      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        {% block content %}{% endblock %}
+      </div>
+    </main>
+  </div>
+
+</div>
+{% endblock %}
+{% block scripts %}{% endblock %}
+</body>
+</html>

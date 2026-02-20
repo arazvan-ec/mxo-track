@@ -1,0 +1,26 @@
+framework:
+  secret: '%env(APP_SECRET)%'
+  trusted_proxies: '%env(default::TRUSTED_PROXIES)%'
+  trusted_headers: ['x-forwarded-for', 'x-forwarded-host', 'x-forwarded-proto', 'x-forwarded-port', 'x-forwarded-prefix']
+  session:
+    handler_id: Symfony\Component\HttpFoundation\Session\Storage\Handler\RedisSessionHandler
+    cookie_secure: auto
+    cookie_httponly: true
+    cookie_samesite: lax
+    cookie_lifetime: 43200
+    gc_maxlifetime: 43200
+  rate_limiter:
+    login:
+      policy: 'sliding_window'
+      limit: 5
+      interval: '1 minute'
+  csrf_protection: true
+  http_method_override: false
+  php_errors:
+    log: true
+
+when@test:
+  framework:
+    test: true
+    session:
+      storage_factory_id: session.storage.factory.mock_file

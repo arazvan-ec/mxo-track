@@ -1,0 +1,57 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Entity;
+
+use App\Entity\Concerns\PublicIdTrait;
+use DateTimeImmutable;
+use Doctrine\ORM\Mapping as ORM;
+
+#[ORM\Entity]
+#[ORM\Table(name: 'vehicle_positions')]
+#[ORM\Index(name: 'idx_vehicle_positions_route_time', columns: ['route_id', 'device_time'])]
+#[ORM\UniqueConstraint(name: 'uniq_vehicle_pos_time', columns: ['vehicle_id', 'device_time'])]
+#[ORM\UniqueConstraint(name: 'uniq_vehicle_position_public_id', columns: ['public_id'])]
+#[ORM\HasLifecycleCallbacks]
+class VehiclePosition
+{
+    use PublicIdTrait;
+
+    #[ORM\ManyToOne(targetEntity: Vehicle::class)]
+    #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
+    private Vehicle $vehicle;
+
+    #[ORM\ManyToOne(targetEntity: Route::class)]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?Route $route = null;
+
+    #[ORM\Column(type: 'float')] private float $lat;
+    #[ORM\Column(type: 'float')] private float $lng;
+    #[ORM\Column(type: 'float')] private float $speed = 0;
+    #[ORM\Column(type: 'float')] private float $course = 0;
+    #[ORM\Column(type: 'float')] private float $accuracy = 0;
+    #[ORM\Column] private DateTimeImmutable $deviceTime;
+    #[ORM\Column] private DateTimeImmutable $serverTime;
+    #[ORM\Column(nullable: true)] private ?int $traccarPositionId = null;
+
+    public function __construct(Vehicle $vehicle, float $lat, float $lng, DateTimeImmutable $deviceTime, DateTimeImmutable $serverTime)
+    {
+        $this->vehicle = $vehicle;
+        $this->lat = $lat;
+        $this->lng = $lng;
+        $this->deviceTime = $deviceTime;
+        $this->serverTime = $serverTime;
+    }
+
+    public function getVehicle(): Vehicle { return $this->vehicle; }
+    public function getLat(): float { return $this->lat; }
+    public function getLng(): float { return $this->lng; }
+    public function getSpeed(): float { return $this->speed; }
+    public function getCourse(): float { return $this->course; }
+    public function getAccuracy(): float { return $this->accuracy; }
+    public function getDeviceTime(): DateTimeImmutable { return $this->deviceTime; }
+    public function getServerTime(): DateTimeImmutable { return $this->serverTime; }
+    public function getRoute(): ?Route { return $this->route; }
+    public function setRoute(?Route $route): void { $this->route = $route; }
+}

@@ -1,0 +1,69 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    working_dir: /app/backend
+    volumes:
+      - ./:/app
+    environment:
+      APP_ENV: dev
+      APP_SECRET: local-dev-secret-change-me
+      DATABASE_URL: postgresql://mxo:mxo@db:5432/mxo_track?serverVersion=16&charset=utf8
+      REDIS_URL: redis://redis:6379
+      MERCURE_URL: http://mercure/.well-known/mercure
+      MERCURE_PUBLIC_URL: http://localhost:3000/.well-known/mercure
+      MERCURE_PUBLISHER_JWT_KEY: local-mercure-jwt-key-change-me-dev
+      MERCURE_SUBSCRIBER_JWT_KEY: local-mercure-jwt-key-change-me-dev
+      TRACCAR_BASE_URL: http://traccar:8082
+      TRACCAR_WS_URL: ws://traccar:8082/api/socket
+      TRACCAR_USERNAME: admin
+      TRACCAR_PASSWORD: admin
+    depends_on:
+      - db
+      - redis
+      - mercure
+      - traccar
+    ports:
+      - "8000:8000"
+    tty: true
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: mxo_track
+      POSTGRES_USER: mxo
+      POSTGRES_PASSWORD: mxo
+    volumes:
+      - pgdata_local:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  mercure:
+    image: dunglas/mercure
+    environment:
+      SERVER_NAME: ':80'
+      MERCURE_PUBLISHER_JWT_KEY: local-mercure-jwt-key-change-me-dev
+      MERCURE_SUBSCRIBER_JWT_KEY: local-mercure-jwt-key-change-me-dev
+      MERCURE_EXTRA_DIRECTIVES: |
+        cors_origins http://localhost:8000 http://0.0.0.0:8000 http://127.0.0.1:8000
+        anonymous
+    ports:
+      - "3000:80"
+
+  traccar:
+    image: traccar/traccar:latest
+    volumes:
+      - traccar_data:/opt/traccar/data
+    ports:
+      - "8082:8082"
+      - "5055:5055"
+
+volumes:
+  pgdata_local:
+  traccar_data:
