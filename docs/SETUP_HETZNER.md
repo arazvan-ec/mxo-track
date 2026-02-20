@@ -1,58 +1,273 @@
 # Setup Hetzner (3 VPS) para transporte-tracking
 
-## 1) Crear infraestructura
-1. Crear VPS: `web`, `db_app`, `traccar`.
-2. Crear red privada Hetzner y adjuntar los 3 VPS.
-3. DNS:
-   - `portal.midominio.com` -> IP pública VPS1
-   - `gps.midominio.com` -> IP pública VPS3
+## Requisitos previos
 
-## 2) Firewall sugerido (UFW)
+- Cuenta en [Hetzner Cloud](https://www.hetzner.com/cloud)
+- Un dominio con acceso a la configuración DNS
+- Clave SSH configurada en Hetzner
 
-### VPS1 WEB
-- Allow: 22/tcp, 80/tcp, 443/tcp
-- Deny: 6379 público, 3000 público
-- Egress privado a VPS2:5432 y VPS3:8082
+## Arquitectura
 
-### VPS2 DB_APP
-- Allow: 22/tcp
-- Allow private: 5432/tcp sólo desde VPS1 private IP
-- Deny all public incoming
+```
+                    ┌──────────────────────────────────────────┐
+                    │          Red Privada Hetzner             │
+                    │         (10.0.0.0/16)                    │
+                    │                                          │
+  Internet ──►  VPS1 WEB (10.0.2.5)                           │
+  (HTTPS)       ├── Nginx (reverse proxy + SSL)               │
+                ├── PHP 8.4-FPM (Symfony app)                 │
+                ├── Docker: Mercure (SSE, :3000 loopback)     │
+                ├── Docker: Redis (sesiones, :6379 loopback)  │
+                └── systemd: traccar-stream worker            │
+                    │         │                                │
+                    │         ├──► VPS2 DB (10.0.2.10)        │
+                    │         │    └── Docker: PostgreSQL 16   │
+                    │         │        (:5432 red privada)     │
+                    │         │                                │
+  Internet ──►  VPS3 TRACCAR (10.0.3.20)                      │
+  (HTTPS/GPS)   ├── Nginx (reverse proxy + SSL)    ◄─────────┘
+                ├── Docker: Traccar (:8082 loopback)
+                ├── Docker: MariaDB 11 (interno)
+                └── Puerto GPS OsmAnd (:5055 via nginx)
+```
 
-### VPS3 TRACCAR
-- Allow: 22/tcp, 80/tcp, 443/tcp
-- Deny public: 8082/tcp y 5055/tcp (quedan loopback)
+## Coste estimado
 
-## 3) Servicios Docker
-- VPS1: `infra/vps1-web/docker-compose.yml`
-- VPS2: `infra/vps2-db/docker-compose.yml`
-- VPS3: `infra/vps3-traccar/docker-compose.yml`
+| VPS | Tipo sugerido | Coste/mes |
+|-----|---------------|-----------|
+| VPS1 Web | CX22 (2 vCPU, 4GB RAM) | ~€4.50 |
+| VPS2 DB | CX22 (2 vCPU, 4GB RAM) | ~€4.50 |
+| VPS3 Traccar | CX11 (1 vCPU, 2GB RAM) | ~€3.50 |
+| **Total** | | **~€12.50/mes** |
 
-## 4) TLS
-1. Instalar Nginx + certbot en VPS1 y VPS3.
-2. Emitir certificados para `portal.midominio.com` y `gps.midominio.com`.
-3. Activar configs Nginx del repo y recargar.
+---
 
-## 5) Symfony en host (no docker)
-1. Clonar repo en `/var/www/transporte-tracking`.
-2. Copiar `.env.example` a `.env.local` y completar secretos.
-3. Instalar dependencias PHP (`composer install`) en entorno con salida a packagist.
-4. Ejecutar migraciones.
-5. Configurar systemd para worker `app:traccar:stream`.
+## 1) Crear infraestructura en Hetzner
 
-## 6) Sesiones Redis y Mercure
-- `REDIS_URL=redis://127.0.0.1:6379`
-- Handler de sesión Redis con prefijo `sess:transporte:`.
-- Hub Mercure detrás de `/.well-known/mercure`.
-- Token subscriber por sesión en cookie HttpOnly `mercureAuthorization`.
+### 1.1 Crear red privada
 
-## 7) Traccar Client Android
-- URL servidor: `https://gps.midominio.com`
-- Protocolo: OsmAnd HTTP
-- Device identifier: IMEI o ID único estable
-- Intervalo sugerido: 5-10s (ajustar consumo batería)
+1. Hetzner Cloud Console → Networks → Create Network
+2. Nombre: `transporte-net`
+3. Rango IP: `10.0.0.0/16`
+4. Crear subred: `10.0.0.0/24` (zona: la misma de los VPS)
 
-## 8) Runbooks
-- Reinicio Mercure/Redis: `docker compose -f infra/vps1-web/docker-compose.yml restart`
-- Backup db: cron diario `infra/vps2-db/backup/backup_postgres.sh`
-- Revisar WS Traccar: logs de servicio `app:traccar:stream`
+### 1.2 Crear los 3 VPS
+
+Crear cada VPS con Ubuntu 24.04 y tu clave SSH:
+
+| VPS | Nombre | Tipo | Imagen |
+|-----|--------|------|--------|
+| VPS1 | `web` | CX22 | Ubuntu 24.04 |
+| VPS2 | `db` | CX22 | Ubuntu 24.04 |
+| VPS3 | `traccar` | CX11 | Ubuntu 24.04 |
+
+Adjuntar los 3 a la red `transporte-net`. Asignar IPs privadas:
+- VPS1: `10.0.2.5`
+- VPS2: `10.0.2.10`
+- VPS3: `10.0.3.20`
+
+### 1.3 Configurar DNS
+
+En tu proveedor de dominios, crear registros A:
+
+```
+portal.tudominio.com  →  <IP pública VPS1>
+gps.tudominio.com     →  <IP pública VPS3>
+```
+
+---
+
+## 2) Despliegue automatizado (scripts)
+
+Los scripts de setup hacen toda la configuración automáticamente. Ejecútalos en orden:
+
+### 2.1 VPS2 — Base de datos (primero)
+
+```bash
+ssh root@<IP_VPS2>
+# Descargar y ejecutar el script:
+curl -sL https://raw.githubusercontent.com/<tu-repo>/main/scripts/setup_vps2_db.sh -o setup.sh
+bash setup.sh 10.0.2.10 "TU_PASSWORD_DB_SEGURA"
+```
+
+Anota la `DATABASE_URL` que imprime al final.
+
+### 2.2 VPS3 — Traccar (segundo)
+
+```bash
+ssh root@<IP_VPS3>
+curl -sL https://raw.githubusercontent.com/<tu-repo>/main/scripts/setup_vps3_traccar.sh -o setup.sh
+bash setup.sh gps.tudominio.com "TU_PASSWORD_MYSQL"
+```
+
+Anota las URLs de Traccar que imprime al final. **Cambia la contraseña del admin de Traccar.**
+
+### 2.3 VPS1 — Web (último)
+
+```bash
+ssh root@<IP_VPS1>
+curl -sL https://raw.githubusercontent.com/<tu-repo>/main/scripts/setup_vps1_web.sh -o setup.sh
+bash setup.sh portal.tudominio.com
+```
+
+### 2.4 Configurar .env.local en VPS1
+
+```bash
+ssh root@<IP_VPS1>
+cp /var/www/transporte-tracking/.env.example /var/www/transporte-tracking/.env.local
+nano /var/www/transporte-tracking/.env.local
+```
+
+Completar con los valores reales:
+
+```env
+APP_ENV=prod
+APP_SECRET=<genera con: openssl rand -hex 32>
+APP_URL=https://portal.tudominio.com
+
+DATABASE_URL=postgresql://app:<PASSWORD_DB>@10.0.2.10:5432/transporte?serverVersion=16&charset=utf8
+
+REDIS_URL=redis://127.0.0.1:6379
+REDIS_SESSION_PREFIX=sess:transporte:
+
+MERCURE_URL=http://127.0.0.1:3000/.well-known/mercure
+MERCURE_PUBLIC_URL=https://portal.tudominio.com/.well-known/mercure
+MERCURE_PUBLISHER_JWT_KEY=<copiar de infra/vps1-web/.env>
+MERCURE_SUBSCRIBER_JWT_KEY=<copiar de infra/vps1-web/.env>
+MERCURE_SUBSCRIBER_TOKEN_TTL=3600
+
+TRACCAR_BASE_URL=http://10.0.3.20:8082
+TRACCAR_WS_URL=ws://10.0.3.20:8082/api/socket
+TRACCAR_USERNAME=admin
+TRACCAR_PASSWORD=<la contraseña que configuraste en Traccar>
+
+POD_STORAGE=database
+TRUSTED_PROXIES=127.0.0.1,REMOTE_ADDR
+TRUSTED_HEADERS=x-forwarded-for,x-forwarded-host,x-forwarded-proto,x-forwarded-port,x-forwarded-prefix
+```
+
+### 2.5 Primer deploy
+
+```bash
+ssh root@<IP_VPS1>
+cd /var/www/transporte-tracking
+bash scripts/deploy_vps1_web.sh main
+```
+
+### 2.6 Cargar datos iniciales
+
+```bash
+ssh root@<IP_VPS1>
+cd /var/www/transporte-tracking/backend
+php bin/console doctrine:fixtures:load -n --env=prod
+```
+
+---
+
+## 3) Verificación post-deploy
+
+### Checklist
+
+```bash
+# VPS1 — Verificar servicios
+systemctl status php8.4-fpm          # ✓ active
+systemctl status traccar-stream      # ✓ active
+docker compose -f /var/www/transporte-tracking/infra/vps1-web/docker-compose.yml ps  # mercure + redis running
+
+# VPS2 — Verificar PostgreSQL
+docker ps                             # postgres running
+docker exec $(docker ps -qf name=postgres) pg_isready  # accepting connections
+
+# VPS3 — Verificar Traccar
+docker ps                             # traccar + mariadb running
+curl -s http://127.0.0.1:8082/api/server | head  # Traccar server info
+```
+
+### URLs finales
+
+| URL | Qué es |
+|-----|--------|
+| `https://portal.tudominio.com` | Portal web (login) |
+| `https://portal.tudominio.com/.well-known/mercure` | Hub Mercure (SSE) |
+| `https://gps.tudominio.com` | Endpoint GPS para dispositivos |
+
+---
+
+## 4) Deploys posteriores
+
+Para actualizar la aplicación después de hacer push a `main`:
+
+```bash
+ssh root@<IP_VPS1>
+cd /var/www/transporte-tracking
+bash scripts/deploy_vps1_web.sh main
+```
+
+El script hace: pull → composer install → cache clear → migrations → restart services.
+
+---
+
+## 5) Traccar Client (dispositivos GPS)
+
+### Android — Traccar Client
+
+1. Instalar [Traccar Client](https://play.google.com/store/apps/details?id=org.traccar.client) desde Play Store
+2. Configurar:
+   - **URL servidor**: `https://gps.tudominio.com`
+   - **Device identifier**: IMEI o un ID único
+   - **Intervalo**: 5-10 segundos
+   - **Protocolo**: OsmAnd HTTP
+
+### iOS — Traccar Client
+
+Misma configuración en la app de iOS.
+
+---
+
+## 6) Runbooks (operaciones comunes)
+
+### Reiniciar Mercure/Redis
+
+```bash
+ssh root@<IP_VPS1>
+docker compose -f /var/www/transporte-tracking/infra/vps1-web/docker-compose.yml restart
+```
+
+### Ver logs del worker Traccar
+
+```bash
+ssh root@<IP_VPS1>
+journalctl -u traccar-stream -f
+```
+
+### Backup manual de la base de datos
+
+```bash
+ssh root@<IP_VPS2>
+bash /opt/db/backup/backup_postgres.sh
+ls -la /opt/db/backup/dumps/
+```
+
+### Restaurar backup
+
+```bash
+ssh root@<IP_VPS2>
+gunzip -c /opt/db/backup/dumps/transporte_FECHA.sql.gz | \
+  docker exec -i $(docker ps -qf name=postgres) psql -U app transporte
+```
+
+### Renovar certificados SSL (automático, pero manual si falla)
+
+```bash
+# VPS1
+sudo certbot renew
+# VPS3
+sudo certbot renew
+```
+
+### Ver logs de Symfony
+
+```bash
+ssh root@<IP_VPS1>
+tail -f /var/www/transporte-tracking/backend/var/log/prod.log
+```
