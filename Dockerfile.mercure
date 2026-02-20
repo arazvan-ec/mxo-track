@@ -1,0 +1,6 @@
+FROM dunglas/mercure:v0.16
+
+# Railway sets PORT dynamically — Mercure uses SERVER_NAME for the listen port
+# Environment variables are set in Railway dashboard, not hardcoded here
+
+EXPOSE 80

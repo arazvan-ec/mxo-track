@@ -1,21 +1,14 @@
 FROM php:8.4-cli-bookworm
 
-# System dependencies
+# System dependencies (same as app)
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
        git unzip curl libpq-dev libzip-dev libicu-dev \
     && docker-php-ext-install pdo pdo_pgsql zip intl opcache \
     && rm -rf /var/lib/apt/lists/*
 
-# OPcache production settings
-RUN echo 'opcache.enable=1\n\
-opcache.memory_consumption=256\n\
-opcache.max_accelerated_files=20000\n\
-opcache.validate_timestamps=0' > /usr/local/etc/php/conf.d/opcache-prod.ini
-
 # PHP production settings
 RUN echo 'memory_limit=256M\n\
-expose_php=Off\n\
 display_errors=Off\n\
 log_errors=On' > /usr/local/etc/php/conf.d/production.ini
 
@@ -32,9 +25,7 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction --no-script
     && composer run-script post-install-cmd --no-interaction
 
 # Copy start script
-COPY scripts/railway-start.sh /app/railway-start.sh
-RUN chmod +x /app/railway-start.sh
+COPY scripts/railway-worker-start.sh /app/railway-worker-start.sh
+RUN chmod +x /app/railway-worker-start.sh
 
-EXPOSE 8000
-
-CMD ["/app/railway-start.sh"]
+CMD ["/app/railway-worker-start.sh"]
