@@ -7,6 +7,7 @@ namespace App\Controller;
 use App\Service\AdminMetricsService;
 use App\Service\SystemHealthService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
@@ -15,8 +16,11 @@ use Symfony\Component\Routing\Annotation\Route;
 class AdminController extends AbstractController
 {
     #[Route('', name: 'admin_dashboard', methods: ['GET'])]
-    public function dashboard(AdminMetricsService $metricsService, SystemHealthService $systemHealthService): Response
-    {
+    public function dashboard(
+        AdminMetricsService $metricsService,
+        SystemHealthService $systemHealthService,
+        #[Autowire('%env(MERCURE_PUBLIC_URL)%')] string $mercurePublicUrl,
+    ): Response {
         $metrics = $metricsService->collect();
         $health = $systemHealthService->check();
 
@@ -31,6 +35,7 @@ class AdminController extends AbstractController
                 'positions_ingested_last_hour' => $metrics['positions_ingested_last_hour'],
             ],
             'health' => $health,
+            'mercure_public_url' => $mercurePublicUrl,
         ]);
     }
 

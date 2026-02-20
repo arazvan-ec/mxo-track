@@ -255,9 +255,9 @@
 
       {# Mis Rutas (driver) #}
       <li>
-        <a href="{{ path('admin_routes_index') }}"
+        <a href="{{ path('driver_routes_index') }}"
            class="group flex items-center gap-x-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors
-                  {% if app.request.attributes.get('_route') starts with 'admin_routes' or app.request.attributes.get('_route') starts with 'driver' %}
+                  {% if app.request.attributes.get('_route') starts with 'driver_routes' %}
                     bg-slate-900 text-white
                   {% else %}
                     text-slate-300 hover:bg-slate-700 hover:text-white

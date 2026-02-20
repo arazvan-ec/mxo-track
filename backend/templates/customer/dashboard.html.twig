@@ -14,21 +14,36 @@
 {% endblock %}
 
 {% block content %}
+<div x-data="customerDashboard()" x-init="init()">
+
   {# ── Header ──────────────────────────────────────────────────────── #}
-  <div class="mb-8">
-    <h1 class="text-2xl font-bold text-gray-900">Panel de control</h1>
-    <p class="mt-1 text-sm text-gray-500">{{ customer.name }}</p>
+  <div class="mb-8 flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Panel de control</h1>
+      <p class="mt-1 text-sm text-gray-500">{{ customer.name }}</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2 rounded-full bg-gray-50 px-3 py-1.5 ring-1 ring-gray-200">
+        <span class="relative flex h-2 w-2">
+          <span class="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"
+                :class="sseConnected ? 'bg-emerald-400' : 'bg-gray-400'"></span>
+          <span class="relative inline-flex h-2 w-2 rounded-full"
+                :class="sseConnected ? 'bg-emerald-500' : 'bg-gray-400'"></span>
+        </span>
+        <span class="text-xs font-medium text-gray-600" x-text="sseConnected ? 'En vivo' : 'Conectando...'"></span>
+      </div>
+      <span class="text-xs text-gray-400" x-text="lastRefresh ? 'Actualizado ' + lastRefresh : ''"></span>
+    </div>
   </div>
 
   {# ── KPI Cards ───────────────────────────────────────────────────── #}
   <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 mb-8">
 
-    {# Total shipments #}
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
       <div class="flex items-center justify-between">
         <div>
           <p class="text-sm font-medium text-gray-500">Envios totales</p>
-          <p class="text-3xl font-bold text-gray-900 mt-1">{{ kpis.total_shipments }}</p>
+          <p class="text-3xl font-bold text-gray-900 mt-1 transition-all duration-500" x-text="kpis.total_shipments"></p>
         </div>
         <div class="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
           <svg class="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -38,12 +53,11 @@
       </div>
     </div>
 
-    {# Active routes #}
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
       <div class="flex items-center justify-between">
         <div>
           <p class="text-sm font-medium text-gray-500">Rutas activas</p>
-          <p class="text-3xl font-bold text-gray-900 mt-1">{{ kpis.active_routes }}</p>
+          <p class="text-3xl font-bold text-gray-900 mt-1 transition-all duration-500" x-text="kpis.active_routes"></p>
         </div>
         <div class="w-12 h-12 bg-amber-50 rounded-lg flex items-center justify-center">
           <svg class="w-6 h-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -53,12 +67,11 @@
       </div>
     </div>
 
-    {# Pending deliveries #}
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
       <div class="flex items-center justify-between">
         <div>
           <p class="text-sm font-medium text-gray-500">Entregas pendientes</p>
-          <p class="text-3xl font-bold text-gray-900 mt-1">{{ kpis.pending_deliveries }}</p>
+          <p class="text-3xl font-bold text-gray-900 mt-1 transition-all duration-500" x-text="kpis.pending_deliveries"></p>
         </div>
         <div class="w-12 h-12 bg-slate-50 rounded-lg flex items-center justify-center">
           <svg class="w-6 h-6 text-slate-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -68,12 +81,11 @@
       </div>
     </div>
 
-    {# Completed today #}
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
       <div class="flex items-center justify-between">
         <div>
           <p class="text-sm font-medium text-gray-500">Completadas hoy</p>
-          <p class="text-3xl font-bold text-gray-900 mt-1">{{ kpis.completed_today }}</p>
+          <p class="text-3xl font-bold text-gray-900 mt-1 transition-all duration-500" x-text="kpis.completed_today"></p>
         </div>
         <div class="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
           <svg class="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -83,12 +95,11 @@
       </div>
     </div>
 
-    {# Exceptions #}
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
       <div class="flex items-center justify-between">
         <div>
           <p class="text-sm font-medium text-gray-500">Excepciones</p>
-          <p class="text-3xl font-bold text-gray-900 mt-1">{{ kpis.exceptions }}</p>
+          <p class="text-3xl font-bold text-gray-900 mt-1 transition-all duration-500" x-text="kpis.exceptions"></p>
         </div>
         <div class="w-12 h-12 bg-rose-50 rounded-lg flex items-center justify-center">
           <svg class="w-6 h-6 text-rose-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -200,4 +211,80 @@
 
     </div>
   </div>
+
+</div>
+
+<script>
+function customerDashboard() {
+  return {
+    kpis: {
+      total_shipments: {{ kpis.total_shipments }},
+      active_routes: {{ kpis.active_routes }},
+      pending_deliveries: {{ kpis.pending_deliveries }},
+      completed_today: {{ kpis.completed_today }},
+      exceptions: {{ kpis.exceptions }},
+    },
+    sseConnected: false,
+    lastRefresh: null,
+    _refreshInterval: null,
+    _eventSource: null,
+
+    async init() {
+      this._refreshInterval = setInterval(() => this._refreshKpis(), 30000);
+      this._connectSSE();
+      window.addEventListener('beforeunload', () => this._cleanup());
+    },
+
+    async _connectSSE() {
+      try {
+        await fetch('/api/mercure-token', { credentials: 'include' });
+        const res = await fetch('/api/vehicles', { credentials: 'include' });
+        if (!res.ok) return;
+
+        const data = await res.json();
+        const vehicles = data.items || [];
+        if (vehicles.length === 0) return;
+
+        const hub = new URL('{{ mercure_public_url }}');
+        vehicles.forEach(v => {
+          hub.searchParams.append('topic', '/vehicles/' + v.public_id + '/position');
+        });
+
+        this._eventSource = new EventSource(hub, { withCredentials: true });
+        this._eventSource.onopen = () => { this.sseConnected = true; };
+        this._eventSource.onerror = () => { this.sseConnected = false; };
+
+        let debounce = null;
+        this._eventSource.onmessage = () => {
+          this.sseConnected = true;
+          if (debounce) clearTimeout(debounce);
+          debounce = setTimeout(() => this._refreshKpis(), 5000);
+        };
+      } catch (_) {}
+    },
+
+    async _refreshKpis() {
+      try {
+        const res = await fetch('/customer/dashboard/kpis', { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          this.kpis.total_shipments = data.total_shipments ?? this.kpis.total_shipments;
+          this.kpis.active_routes = data.active_routes ?? this.kpis.active_routes;
+          this.kpis.pending_deliveries = data.pending_deliveries ?? this.kpis.pending_deliveries;
+          this.kpis.completed_today = data.completed_today ?? this.kpis.completed_today;
+          this.kpis.exceptions = data.exceptions ?? this.kpis.exceptions;
+          const now = new Date();
+          this.lastRefresh = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+        }
+      } catch (_) {}
+    },
+
+    _cleanup() {
+      if (this._eventSource) { this._eventSource.close(); }
+      if (this._refreshInterval) { clearInterval(this._refreshInterval); }
+    }
+  };
+}
+</script>
+
 {% endblock %}

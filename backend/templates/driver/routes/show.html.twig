@@ -1,0 +1,843 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ route.name }} - Ruta{% endblock %}
+
+{% block styles %}
+  {{ parent() }}
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  >
+  <style>
+    #route-map { min-height: 300px; height: 300px; }
+    @media (min-width: 768px) {
+      #route-map { height: 400px; }
+    }
+  </style>
+{% endblock %}
+
+{% block breadcrumbs %}
+  <li>
+    <div class="flex items-center">
+      <svg class="h-5 w-5 shrink-0 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd"/>
+      </svg>
+      <a href="{{ path('driver_routes_index') }}" class="ml-2 text-sm font-medium text-gray-500 hover:text-gray-700">Mis Rutas</a>
+    </div>
+  </li>
+  <li>
+    <div class="flex items-center">
+      <svg class="h-5 w-5 shrink-0 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd"/>
+      </svg>
+      <span class="ml-2 text-sm font-medium text-gray-500">{{ route.name }}</span>
+    </div>
+  </li>
+{% endblock %}
+
+{% block content %}
+<div x-data="driverRouteApp()" x-init="init()">
+
+  {# ── Offline banner ─────────────────────────────────────────────── #}
+  <div x-show="offline" x-cloak
+       class="mb-4 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 flex items-center gap-2">
+    <svg class="h-5 w-5 text-amber-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+      <path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/>
+    </svg>
+    <p class="text-sm font-medium text-amber-800">Sin conexion: las acciones se guardaran en cola local.</p>
+    <span x-show="queueCount > 0" class="ml-auto inline-flex items-center rounded-full bg-amber-200 px-2 py-0.5 text-xs font-semibold text-amber-900" x-text="queueCount + ' pendiente(s)'"></span>
+  </div>
+
+  {# ── Route header ───────────────────────────────────────────────── #}
+  <div class="mb-4">
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <h1 class="text-xl sm:text-2xl font-bold text-gray-900">{{ route.name }}</h1>
+        <div class="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+          {% if route.vehicle %}
+            <span class="flex items-center gap-1">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"/>
+              </svg>
+              {{ route.vehicle.name }}
+            </span>
+          {% endif %}
+        </div>
+      </div>
+      <div class="shrink-0">
+        {% if route.status.value == 'PLANNED' %}
+          <span class="inline-flex rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-800">Planificada</span>
+        {% elseif route.status.value == 'ACTIVE' %}
+          <span class="inline-flex rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800">Activa</span>
+        {% elseif route.status.value == 'DONE' %}
+          <span class="inline-flex rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-800">Completada</span>
+        {% elseif route.status.value == 'CANCELLED' %}
+          <span class="inline-flex rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-800">Cancelada</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# ══════════════════════════════════════════════════════════════════ #}
+  {# PLANNED state                                                      #}
+  {# ══════════════════════════════════════════════════════════════════ #}
+  {% if route.status.value == 'PLANNED' %}
+    <div class="bg-blue-50 border border-blue-200 rounded-xl p-6 text-center">
+      <svg class="mx-auto h-12 w-12 text-blue-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <h3 class="mt-3 text-base font-semibold text-blue-900">Esta ruta aun no ha sido iniciada</h3>
+      <p class="mt-1 text-sm text-blue-700">Cuando estes listo, pulsa el boton para comenzar.</p>
+      <button
+        x-data="{ loading: false }"
+        @click="if(!loading){ loading=true; fetch('/api/driver/routes/{{ route.publicIdString }}/start',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'}}).then(r=>{if(r.ok){window.location.reload()}else{loading=false;alert('Error al iniciar la ruta')}}).catch(()=>{loading=false;alert('Error de conexion')}) }"
+        :disabled="loading"
+        class="mt-4 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+        <template x-if="loading">
+          <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+          </svg>
+        </template>
+        <template x-if="!loading">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347a1.125 1.125 0 01-1.667-.986V5.653z"/>
+          </svg>
+        </template>
+        Iniciar ruta
+      </button>
+    </div>
+  {% endif %}
+
+  {# ══════════════════════════════════════════════════════════════════ #}
+  {# DONE state                                                         #}
+  {# ══════════════════════════════════════════════════════════════════ #}
+  {% if route.status.value == 'DONE' %}
+    <div class="bg-green-50 border border-green-200 rounded-xl p-6 text-center">
+      <svg class="mx-auto h-12 w-12 text-green-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <h3 class="mt-3 text-base font-semibold text-green-900">Ruta completada</h3>
+      <p class="mt-1 text-sm text-green-700">
+        {% if route.endAt %}
+          Finalizada el {{ route.endAt|date('d/m/Y') }} a las {{ route.endAt|date('H:i') }}.
+        {% else %}
+          Esta ruta ha sido marcada como completada.
+        {% endif %}
+      </p>
+      <div class="mt-4 flex flex-wrap justify-center gap-3">
+        {% set delivered = stops|filter(s => s.status.value == 'DELIVERED')|length %}
+        {% set exceptions = stops|filter(s => s.status.value == 'EXCEPTION')|length %}
+        {% set skipped = stops|filter(s => s.status.value == 'SKIPPED')|length %}
+        <span class="inline-flex items-center gap-1 rounded-md bg-green-100 px-3 py-1 text-sm font-medium text-green-800">
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg>
+          {{ delivered }} entregadas
+        </span>
+        {% if exceptions > 0 %}
+          <span class="inline-flex items-center gap-1 rounded-md bg-red-100 px-3 py-1 text-sm font-medium text-red-800">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg>
+            {{ exceptions }} excepciones
+          </span>
+        {% endif %}
+        {% if skipped > 0 %}
+          <span class="inline-flex items-center gap-1 rounded-md bg-gray-100 px-3 py-1 text-sm font-medium text-gray-800">
+            {{ skipped }} omitidas
+          </span>
+        {% endif %}
+      </div>
+    </div>
+
+    {# Show stop list for done routes too #}
+    {% if stops|length > 0 %}
+      <div class="mt-6">
+        <h2 class="text-base font-semibold text-gray-900 mb-3">Paradas ({{ stops|length }})</h2>
+        <div class="space-y-3">
+          {% for stop in stops %}
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 px-4 py-3">
+              <div class="flex items-start gap-3">
+                <div class="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white
+                  {% if stop.status.value == 'DELIVERED' %}bg-green-500
+                  {% elseif stop.status.value == 'EXCEPTION' %}bg-red-500
+                  {% elseif stop.status.value == 'SKIPPED' %}bg-gray-400
+                  {% else %}bg-blue-500{% endif %}">
+                  {{ stop.sequence }}
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-medium text-gray-900 truncate">{{ stop.address }}</p>
+                  {% if stop.recipientName %}
+                    <p class="text-xs text-gray-500 mt-0.5">{{ stop.recipientName }}{% if stop.recipientPhone %} &middot; {{ stop.recipientPhone }}{% endif %}</p>
+                  {% endif %}
+                  {% if stop.deliveredAt %}
+                    <p class="text-xs text-green-600 mt-0.5">Entregado: {{ stop.deliveredAt|date('d/m/Y H:i') }}</p>
+                  {% endif %}
+                  {% if stop.status.value == 'EXCEPTION' %}
+                    <p class="text-xs text-red-600 mt-0.5">Excepcion: {{ stop.exceptionCode ? stop.exceptionCode.value : '' }}{% if stop.exceptionNotes %} - {{ stop.exceptionNotes }}{% endif %}</p>
+                  {% endif %}
+                </div>
+                <div class="shrink-0">
+                  {% if stop.status.value == 'DELIVERED' %}
+                    <span class="inline-flex rounded-full bg-green-100 px-2 text-xs font-semibold leading-5 text-green-800">Entregado</span>
+                  {% elseif stop.status.value == 'EXCEPTION' %}
+                    <span class="inline-flex rounded-full bg-red-100 px-2 text-xs font-semibold leading-5 text-red-800">Excepcion</span>
+                  {% elseif stop.status.value == 'SKIPPED' %}
+                    <span class="inline-flex rounded-full bg-gray-100 px-2 text-xs font-semibold leading-5 text-gray-600">Omitido</span>
+                  {% else %}
+                    <span class="inline-flex rounded-full bg-blue-100 px-2 text-xs font-semibold leading-5 text-blue-800">Pendiente</span>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+  {% endif %}
+
+  {# ══════════════════════════════════════════════════════════════════ #}
+  {# CANCELLED state                                                    #}
+  {# ══════════════════════════════════════════════════════════════════ #}
+  {% if route.status.value == 'CANCELLED' %}
+    <div class="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+      <svg class="mx-auto h-12 w-12 text-red-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+      </svg>
+      <h3 class="mt-3 text-base font-semibold text-red-900">Ruta cancelada</h3>
+      <p class="mt-1 text-sm text-red-700">Esta ruta ha sido cancelada y no puede ejecutarse.</p>
+    </div>
+  {% endif %}
+
+  {# ══════════════════════════════════════════════════════════════════ #}
+  {# ACTIVE state - Main driver interface                               #}
+  {# ══════════════════════════════════════════════════════════════════ #}
+  {% if route.status.value == 'ACTIVE' %}
+
+    {# ── Map ──────────────────────────────────────────────────────── #}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-4">
+      <div id="route-map"></div>
+    </div>
+
+    {# ── Stops list ───────────────────────────────────────────────── #}
+    <div class="mb-3 flex items-center justify-between">
+      <h2 class="text-base font-semibold text-gray-900">Paradas ({{ stops|length }})</h2>
+      {% set delivered = stops|filter(s => s.status.value == 'DELIVERED')|length %}
+      <span class="text-xs text-gray-500">{{ delivered }}/{{ stops|length }} completadas</span>
+    </div>
+
+    <div class="space-y-3 pb-6">
+      {% for stop in stops %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div class="px-4 py-3">
+            <div class="flex items-start gap-3">
+              {# Sequence circle #}
+              <div class="shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white
+                {% if stop.status.value == 'DELIVERED' %}bg-green-500
+                {% elseif stop.status.value == 'EXCEPTION' %}bg-red-500
+                {% elseif stop.status.value == 'SKIPPED' %}bg-gray-400
+                {% else %}bg-blue-500{% endif %}">
+                {{ stop.sequence }}
+              </div>
+
+              <div class="flex-1 min-w-0">
+                {# Address + status #}
+                <div class="flex items-start justify-between gap-2">
+                  <p class="text-sm font-medium text-gray-900 line-clamp-2">{{ stop.address }}</p>
+                  <div class="shrink-0">
+                    {% if stop.status.value == 'DELIVERED' %}
+                      <span class="inline-flex rounded-full bg-green-100 px-2 text-xs font-semibold leading-5 text-green-800">Entregado</span>
+                    {% elseif stop.status.value == 'EXCEPTION' %}
+                      <span class="inline-flex rounded-full bg-red-100 px-2 text-xs font-semibold leading-5 text-red-800">Excepcion</span>
+                    {% elseif stop.status.value == 'SKIPPED' %}
+                      <span class="inline-flex rounded-full bg-gray-100 px-2 text-xs font-semibold leading-5 text-gray-600">Omitido</span>
+                    {% else %}
+                      <span class="inline-flex rounded-full bg-blue-100 px-2 text-xs font-semibold leading-5 text-blue-800">Pendiente</span>
+                    {% endif %}
+                  </div>
+                </div>
+
+                {# Recipient info #}
+                {% if stop.recipientName %}
+                  <p class="text-xs text-gray-500 mt-1">
+                    <span class="font-medium">{{ stop.recipientName }}</span>{% if stop.recipientPhone %} &middot; <a href="tel:{{ stop.recipientPhone }}" class="text-blue-600 hover:underline">{{ stop.recipientPhone }}</a>{% endif %}
+                  </p>
+                {% endif %}
+
+                {# Notes #}
+                {% if stop.notes %}
+                  <p class="text-xs text-gray-400 mt-1 italic">{{ stop.notes }}</p>
+                {% endif %}
+
+                {# Delivered info #}
+                {% if stop.status.value == 'DELIVERED' and stop.deliveredAt %}
+                  <p class="text-xs text-green-600 mt-1 flex items-center gap-1">
+                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg>
+                    Entregado el {{ stop.deliveredAt|date('d/m/Y') }} a las {{ stop.deliveredAt|date('H:i') }}
+                  </p>
+                {% endif %}
+
+                {# Exception info #}
+                {% if stop.status.value == 'EXCEPTION' %}
+                  <p class="text-xs text-red-600 mt-1 flex items-center gap-1">
+                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg>
+                    {{ stop.exceptionCode ? stop.exceptionCode.value : 'Desconocido' }}{% if stop.exceptionNotes %} - {{ stop.exceptionNotes }}{% endif %}
+                  </p>
+                {% endif %}
+
+                {# Action buttons for pending stops #}
+                {% if stop.status.value == 'PENDING' %}
+                  <div class="mt-3 flex gap-2">
+                    <button
+                      @click="openDeliverModal('{{ stop.publicIdString }}', '{{ stop.recipientName|default('')|e('js') }}', '{{ stop.shipment ? stop.shipment.publicIdString : '' }}')"
+                      class="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm hover:bg-green-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors">
+                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                      </svg>
+                      Entregar
+                    </button>
+                    <button
+                      @click="openExceptionModal('{{ stop.publicIdString }}', '{{ stop.shipment ? stop.shipment.publicIdString : '' }}')"
+                      class="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors">
+                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+                      </svg>
+                      Excepcion
+                    </button>
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+  {% endif %}{# end ACTIVE #}
+
+  {# ══════════════════════════════════════════════════════════════════ #}
+  {# Delivery Modal                                                     #}
+  {# ══════════════════════════════════════════════════════════════════ #}
+  <div x-show="deliverModal.open" x-cloak
+       class="fixed inset-0 z-50 overflow-y-auto"
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100"
+       x-transition:leave="transition ease-in duration-150"
+       x-transition:leave-start="opacity-100"
+       x-transition:leave-end="opacity-0">
+    <div class="flex min-h-full items-end justify-center p-4 sm:items-center sm:p-0">
+      {# Backdrop #}
+      <div class="fixed inset-0 bg-gray-500/75 transition-opacity" @click="deliverModal.open = false"></div>
+
+      {# Panel #}
+      <div class="relative transform overflow-hidden rounded-xl bg-white shadow-xl transition-all w-full max-w-md mx-auto"
+           x-show="deliverModal.open"
+           x-transition:enter="transition ease-out duration-200"
+           x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+           x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+           x-transition:leave="transition ease-in duration-150"
+           x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+           x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+           @click.outside="deliverModal.open = false">
+
+        <div class="px-5 py-4 border-b border-gray-100">
+          <h3 class="text-lg font-semibold text-gray-900">Confirmar entrega</h3>
+          <p class="text-sm text-gray-500 mt-0.5">Registra los datos de la entrega.</p>
+        </div>
+
+        <div class="px-5 py-4 space-y-4">
+          {# Error message #}
+          <div x-show="deliverModal.error" class="rounded-lg bg-red-50 border border-red-200 p-3">
+            <p class="text-sm text-red-700" x-text="deliverModal.error"></p>
+          </div>
+
+          {# Signed by name #}
+          <div>
+            <label for="deliver-name" class="block text-sm font-medium text-gray-700 mb-1">Nombre del receptor</label>
+            <input type="text" id="deliver-name" x-model="deliverModal.signedByName"
+                   class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border"
+                   placeholder="Nombre completo">
+          </div>
+
+          {# Recipient ID encoded #}
+          <div>
+            <label for="deliver-id" class="block text-sm font-medium text-gray-700 mb-1">DNI codificado <span class="text-red-500">*</span></label>
+            <input type="text" id="deliver-id" x-model="deliverModal.recipientIdEncoded" required
+                   class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border"
+                   placeholder="Introduce el DNI codificado del receptor">
+          </div>
+
+          {# Driver confirmation #}
+          <div class="flex items-start gap-3">
+            <input type="checkbox" id="deliver-confirm" x-model="deliverModal.confirmedByDriver"
+                   class="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+            <label for="deliver-confirm" class="text-sm text-gray-700">
+              Confirmo que he realizado la entrega personalmente y los datos son correctos.
+            </label>
+          </div>
+        </div>
+
+        <div class="px-5 py-4 bg-gray-50 flex gap-3 justify-end border-t border-gray-100">
+          <button @click="deliverModal.open = false"
+                  class="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 shadow-sm hover:bg-gray-50 transition-colors">
+            Cancelar
+          </button>
+          <button @click="submitDeliver()"
+                  :disabled="deliverModal.loading"
+                  class="rounded-lg px-4 py-2 text-sm font-semibold text-white bg-green-600 shadow-sm hover:bg-green-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+            <span x-show="!deliverModal.loading">Confirmar entrega</span>
+            <span x-show="deliverModal.loading" class="flex items-center gap-2">
+              <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+              </svg>
+              Enviando...
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ══════════════════════════════════════════════════════════════════ #}
+  {# Exception Modal                                                    #}
+  {# ══════════════════════════════════════════════════════════════════ #}
+  <div x-show="exceptionModal.open" x-cloak
+       class="fixed inset-0 z-50 overflow-y-auto"
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100"
+       x-transition:leave="transition ease-in duration-150"
+       x-transition:leave-start="opacity-100"
+       x-transition:leave-end="opacity-0">
+    <div class="flex min-h-full items-end justify-center p-4 sm:items-center sm:p-0">
+      {# Backdrop #}
+      <div class="fixed inset-0 bg-gray-500/75 transition-opacity" @click="exceptionModal.open = false"></div>
+
+      {# Panel #}
+      <div class="relative transform overflow-hidden rounded-xl bg-white shadow-xl transition-all w-full max-w-md mx-auto"
+           x-show="exceptionModal.open"
+           x-transition:enter="transition ease-out duration-200"
+           x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+           x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+           x-transition:leave="transition ease-in duration-150"
+           x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+           x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+           @click.outside="exceptionModal.open = false">
+
+        <div class="px-5 py-4 border-b border-gray-100">
+          <h3 class="text-lg font-semibold text-gray-900">Reportar excepcion</h3>
+          <p class="text-sm text-gray-500 mt-0.5">Indica el motivo por el que no se pudo entregar.</p>
+        </div>
+
+        <div class="px-5 py-4 space-y-4">
+          {# Error message #}
+          <div x-show="exceptionModal.error" class="rounded-lg bg-red-50 border border-red-200 p-3">
+            <p class="text-sm text-red-700" x-text="exceptionModal.error"></p>
+          </div>
+
+          {# Reason select #}
+          <div>
+            <label for="exception-reason" class="block text-sm font-medium text-gray-700 mb-1">Motivo <span class="text-red-500">*</span></label>
+            <select id="exception-reason" x-model="exceptionModal.reason"
+                    class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border">
+              <option value="ABSENT">Ausente</option>
+              <option value="WRONG_ADDRESS">Direccion incorrecta</option>
+              <option value="REFUSED">Rechazado</option>
+              <option value="DAMAGED">Danado</option>
+              <option value="OTHER">Otro</option>
+            </select>
+          </div>
+
+          {# Comment #}
+          <div>
+            <label for="exception-comment" class="block text-sm font-medium text-gray-700 mb-1">Comentario</label>
+            <textarea id="exception-comment" x-model="exceptionModal.comment" rows="3"
+                      class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border"
+                      placeholder="Detalles adicionales sobre la excepcion..."></textarea>
+          </div>
+        </div>
+
+        <div class="px-5 py-4 bg-gray-50 flex gap-3 justify-end border-t border-gray-100">
+          <button @click="exceptionModal.open = false"
+                  class="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 shadow-sm hover:bg-gray-50 transition-colors">
+            Cancelar
+          </button>
+          <button @click="submitException()"
+                  :disabled="exceptionModal.loading"
+                  class="rounded-lg px-4 py-2 text-sm font-semibold text-white bg-red-600 shadow-sm hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+            <span x-show="!exceptionModal.loading">Reportar excepcion</span>
+            <span x-show="exceptionModal.loading" class="flex items-center gap-2">
+              <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+              </svg>
+              Enviando...
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>{# end x-data #}
+{% endblock %}
+
+{% block scripts %}
+  {{ parent() }}
+  {% if route.status.value == 'ACTIVE' %}
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  {% endif %}
+  <script>
+    // ── Offline action queue ────────────────────────────────────────
+    const queueKey = 'driver_actions_queue';
+
+    function getQueue() {
+      try { return JSON.parse(localStorage.getItem(queueKey) || '[]'); } catch { return []; }
+    }
+    function saveQueue(q) {
+      localStorage.setItem(queueKey, JSON.stringify(q));
+    }
+    function enqueue(action) {
+      const q = getQueue();
+      q.push(action);
+      saveQueue(q);
+    }
+    async function flushQueue() {
+      if (!navigator.onLine) return;
+      const q = getQueue();
+      while (q.length > 0) {
+        const action = q[0];
+        try {
+          const r = await fetch(action.url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(action.payload),
+            credentials: 'include'
+          });
+          if (!r.ok) break;
+          q.shift();
+        } catch {
+          break;
+        }
+      }
+      saveQueue(q);
+      if (q.length === 0) {
+        // All flushed, reload to show updated state
+        window.location.reload();
+      }
+    }
+    window.addEventListener('online', flushQueue);
+    // Initial flush
+    if (navigator.onLine && getQueue().length > 0) {
+      flushQueue();
+    }
+
+    // ── Alpine.js app ───────────────────────────────────────────────
+    function driverRouteApp() {
+      return {
+        offline: !navigator.onLine,
+        queueCount: getQueue().length,
+
+        deliverModal: {
+          open: false,
+          stopPublicId: '',
+          shipmentPublicId: '',
+          signedByName: '',
+          recipientIdEncoded: '',
+          confirmedByDriver: false,
+          loading: false,
+          error: '',
+        },
+
+        exceptionModal: {
+          open: false,
+          stopPublicId: '',
+          shipmentPublicId: '',
+          reason: 'ABSENT',
+          comment: '',
+          loading: false,
+          error: '',
+        },
+
+        init() {
+          window.addEventListener('online', () => { this.offline = false; this.queueCount = getQueue().length; });
+          window.addEventListener('offline', () => { this.offline = true; });
+
+          {% if route.status.value == 'ACTIVE' %}
+          this.initMap();
+          {% endif %}
+        },
+
+        openDeliverModal(stopPublicId, recipientName, shipmentPublicId) {
+          this.deliverModal = {
+            open: true,
+            stopPublicId: stopPublicId,
+            shipmentPublicId: shipmentPublicId,
+            signedByName: recipientName || '',
+            recipientIdEncoded: '',
+            confirmedByDriver: false,
+            loading: false,
+            error: '',
+          };
+        },
+
+        openExceptionModal(stopPublicId, shipmentPublicId) {
+          this.exceptionModal = {
+            open: true,
+            stopPublicId: stopPublicId,
+            shipmentPublicId: shipmentPublicId,
+            reason: 'ABSENT',
+            comment: '',
+            loading: false,
+            error: '',
+          };
+        },
+
+        async submitDeliver() {
+          const m = this.deliverModal;
+          m.error = '';
+
+          if (!m.recipientIdEncoded || m.recipientIdEncoded.length < 6) {
+            m.error = 'El DNI codificado es obligatorio (minimo 6 caracteres).';
+            return;
+          }
+          if (!m.confirmedByDriver) {
+            m.error = 'Debes confirmar la entrega.';
+            return;
+          }
+
+          const payload = {
+            client_action_id: crypto.randomUUID(),
+            signed_by_name: m.signedByName,
+            recipient_id_encoded: m.recipientIdEncoded,
+            confirmed_by_driver: m.confirmedByDriver,
+          };
+          if (m.shipmentPublicId) {
+            payload.shipment_public_id = m.shipmentPublicId;
+          }
+
+          const url = '/api/driver/stops/' + m.stopPublicId + '/deliver';
+
+          if (!navigator.onLine) {
+            enqueue({ url: url, payload: payload });
+            this.queueCount = getQueue().length;
+            m.open = false;
+            alert('Sin conexion: la accion se ha guardado en cola local y se enviara automaticamente.');
+            return;
+          }
+
+          m.loading = true;
+          try {
+            const r = await fetch(url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+              credentials: 'include',
+            });
+            if (r.ok) {
+              window.location.reload();
+            } else {
+              const data = await r.json().catch(() => ({}));
+              m.error = data.message || data.detail || 'Error al registrar la entrega (HTTP ' + r.status + ').';
+              m.loading = false;
+            }
+          } catch (err) {
+            // Went offline during request, enqueue
+            enqueue({ url: url, payload: payload });
+            this.queueCount = getQueue().length;
+            this.offline = true;
+            m.open = false;
+            alert('Error de conexion: la accion se ha guardado en cola local.');
+          }
+        },
+
+        async submitException() {
+          const m = this.exceptionModal;
+          m.error = '';
+
+          if (!m.reason) {
+            m.error = 'Selecciona un motivo.';
+            return;
+          }
+
+          const payload = {
+            client_action_id: crypto.randomUUID(),
+            reason: m.reason,
+            comment: m.comment,
+          };
+          if (m.shipmentPublicId) {
+            payload.shipment_public_id = m.shipmentPublicId;
+          }
+
+          const url = '/api/driver/stops/' + m.stopPublicId + '/exception';
+
+          if (!navigator.onLine) {
+            enqueue({ url: url, payload: payload });
+            this.queueCount = getQueue().length;
+            m.open = false;
+            alert('Sin conexion: la accion se ha guardado en cola local y se enviara automaticamente.');
+            return;
+          }
+
+          m.loading = true;
+          try {
+            const r = await fetch(url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+              credentials: 'include',
+            });
+            if (r.ok) {
+              window.location.reload();
+            } else {
+              const data = await r.json().catch(() => ({}));
+              m.error = data.message || data.detail || 'Error al reportar la excepcion (HTTP ' + r.status + ').';
+              m.loading = false;
+            }
+          } catch (err) {
+            enqueue({ url: url, payload: payload });
+            this.queueCount = getQueue().length;
+            this.offline = true;
+            m.open = false;
+            alert('Error de conexion: la accion se ha guardado en cola local.');
+          }
+        },
+
+        {% if route.status.value == 'ACTIVE' %}
+        initMap() {
+          // Fix Leaflet default icon paths
+          delete L.Icon.Default.prototype._getIconUrl;
+          L.Icon.Default.mergeOptions({
+            iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+            iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+            shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+          });
+
+          const stops = {{ stops_json|raw }};
+          const vehiclePos = {{ vehicle_position_json|raw }};
+          const vehiclePublicId = '{{ vehicle_public_id }}';
+
+          const map = L.map('route-map').setView([40.4168, -3.7038], 13);
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap contributors'
+          }).addTo(map);
+
+          const statusColors = {
+            PENDING: '#3b82f6',
+            DELIVERED: '#22c55e',
+            EXCEPTION: '#ef4444',
+            SKIPPED: '#6b7280'
+          };
+
+          // Add stop markers
+          const polylineCoords = [];
+          stops.forEach(function (stop) {
+            if (stop.lat && stop.lng) {
+              const color = statusColors[stop.status] || '#3b82f6';
+              polylineCoords.push([stop.lat, stop.lng]);
+
+              L.circleMarker([stop.lat, stop.lng], {
+                radius: 12,
+                fillColor: color,
+                color: '#fff',
+                weight: 2,
+                fillOpacity: 0.9
+              })
+                .bindPopup(
+                  '<b>#' + stop.sequence + '</b><br>' +
+                  stop.address + '<br>' +
+                  (stop.recipientName ? '<b>' + stop.recipientName + '</b><br>' : '') +
+                  (stop.recipientPhone ? stop.recipientPhone + '<br>' : '') +
+                  '<span style="color:' + color + ';font-weight:600">' + stop.status + '</span>' +
+                  (stop.deliveredAt ? '<br><small>' + stop.deliveredAt + '</small>' : '')
+                )
+                .addTo(map);
+
+              // Sequence number label
+              L.marker([stop.lat, stop.lng], {
+                icon: L.divIcon({
+                  className: 'leaflet-stop-label',
+                  html: '<div style="display:flex;align-items:center;justify-content:center;width:24px;height:24px;font-size:12px;font-weight:700;color:#fff;pointer-events:none;">' + stop.sequence + '</div>',
+                  iconSize: [24, 24],
+                  iconAnchor: [12, 12],
+                }),
+                interactive: false,
+              }).addTo(map);
+            }
+          });
+
+          // Draw polyline connecting stops
+          if (polylineCoords.length > 1) {
+            L.polyline(polylineCoords, {
+              color: '#6366f1',
+              weight: 3,
+              opacity: 0.6,
+              dashArray: '8 6'
+            }).addTo(map);
+          }
+
+          // Vehicle marker
+          var vehicleMarker = null;
+          const vehicleIconHtml = '<div style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;background:#1e40af;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="white" style="width:16px;height:16px;"><path d="M6.5 18a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM13.5 18a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM17.836 5.318l-1.3-.39A5 5 0 0 0 11.8 2H8.2a5 5 0 0 0-4.737 2.928l-1.3.39A2 2 0 0 0 .758 7.282L1.5 12.5v1A1.5 1.5 0 0 0 3 15h14a1.5 1.5 0 0 0 1.5-1.5v-1l.742-5.218a2 2 0 0 0-1.406-1.964Z"/></svg></div>';
+
+          function createVehicleIcon() {
+            return L.divIcon({
+              className: 'leaflet-vehicle-icon',
+              html: vehicleIconHtml,
+              iconSize: [32, 32],
+              iconAnchor: [16, 16],
+            });
+          }
+
+          if (vehiclePos && vehiclePos.lat && vehiclePos.lng) {
+            vehicleMarker = L.marker([vehiclePos.lat, vehiclePos.lng], {
+              icon: createVehicleIcon(),
+            }).addTo(map).bindPopup('Vehiculo');
+          }
+
+          // Mercure real-time vehicle tracking
+          if (vehiclePublicId) {
+            fetch('/api/mercure-token', { credentials: 'include' }).then(function () {
+              var hub = new URL('{{ mercure_public_url }}');
+              hub.searchParams.set('topic', '/vehicles/' + vehiclePublicId + '/position');
+
+              var es = new EventSource(hub, { withCredentials: true });
+              es.onmessage = function (e) {
+                try {
+                  var d = JSON.parse(e.data);
+                  if (d.lat && d.lng) {
+                    if (vehicleMarker) {
+                      vehicleMarker.setLatLng([d.lat, d.lng]);
+                    } else {
+                      vehicleMarker = L.marker([d.lat, d.lng], {
+                        icon: createVehicleIcon(),
+                      }).addTo(map).bindPopup('Vehiculo');
+                    }
+                  }
+                } catch (err) {
+                  console.error('Mercure parse error:', err);
+                }
+              };
+
+              window.addEventListener('beforeunload', function () { es.close(); });
+            }).catch(function (err) {
+              console.warn('Could not fetch Mercure token:', err);
+            });
+          }
+
+          // Fit bounds to show all markers
+          var allPoints = stops.filter(function (s) { return s.lat && s.lng; }).map(function (s) { return [s.lat, s.lng]; });
+          if (vehiclePos && vehiclePos.lat && vehiclePos.lng) {
+            allPoints.push([vehiclePos.lat, vehiclePos.lng]);
+          }
+          if (allPoints.length > 0) {
+            map.fitBounds(allPoints, { padding: [30, 30] });
+          }
+        },
+        {% endif %}
+      };
+    }
+  </script>
+{% endblock %}

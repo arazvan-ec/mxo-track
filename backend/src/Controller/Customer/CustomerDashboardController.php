@@ -14,6 +14,8 @@ use App\Enum\RouteStatus;
 use App\Enum\RouteStopStatus;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route as SymfonyRoute;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
@@ -24,6 +26,7 @@ class CustomerDashboardController extends AbstractController
 {
     public function __construct(
         private readonly EntityManagerInterface $em,
+        #[Autowire('%env(MERCURE_PUBLIC_URL)%')] private readonly string $mercurePublicUrl,
     ) {}
 
     #[SymfonyRoute('/dashboard', name: 'customer_dashboard', methods: ['GET'])]
@@ -157,6 +160,78 @@ class CustomerDashboardController extends AbstractController
             'activeRoutes' => $activeRoutesList,
             'activeRouteProgress' => $activeRouteProgress,
             'vehiclesWithPosition' => $vehiclesWithPosition,
+            'mercure_public_url' => $this->mercurePublicUrl,
+        ]);
+    }
+
+    #[SymfonyRoute('/dashboard/kpis', name: 'customer_dashboard_kpis', methods: ['GET'])]
+    public function kpis(): JsonResponse
+    {
+        $user = $this->getUser();
+        $customer = $user->getCustomer();
+
+        if (!$customer instanceof Customer) {
+            return $this->json(['error' => 'No customer'], 403);
+        }
+
+        $totalShipments = (int) $this->em->createQueryBuilder()
+            ->select('COUNT(s.id)')
+            ->from(Shipment::class, 's')
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        $activeRoutes = (int) $this->em->createQueryBuilder()
+            ->select('COUNT(r.id)')
+            ->from(Route::class, 'r')
+            ->where('r.customer = :customer')
+            ->andWhere('r.status = :active')
+            ->setParameter('customer', $customer)
+            ->setParameter('active', RouteStatus::ACTIVE)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        $pendingDeliveries = (int) $this->em->createQueryBuilder()
+            ->select('COUNT(rs.id)')
+            ->from(RouteStop::class, 'rs')
+            ->join('rs.route', 'r')
+            ->where('r.customer = :customer')
+            ->andWhere('rs.status = :pending')
+            ->setParameter('customer', $customer)
+            ->setParameter('pending', RouteStopStatus::PENDING)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        $todayStart = new \DateTimeImmutable('today midnight');
+        $completedToday = (int) $this->em->createQueryBuilder()
+            ->select('COUNT(rs.id)')
+            ->from(RouteStop::class, 'rs')
+            ->join('rs.route', 'r')
+            ->where('r.customer = :customer')
+            ->andWhere('rs.status = :delivered')
+            ->andWhere('rs.deliveredAt >= :todayStart')
+            ->setParameter('customer', $customer)
+            ->setParameter('delivered', RouteStopStatus::DELIVERED)
+            ->setParameter('todayStart', $todayStart)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        $exceptions = (int) $this->em->createQueryBuilder()
+            ->select('COUNT(rs.id)')
+            ->from(RouteStop::class, 'rs')
+            ->join('rs.route', 'r')
+            ->where('r.customer = :customer')
+            ->andWhere('rs.status = :exception')
+            ->setParameter('customer', $customer)
+            ->setParameter('exception', RouteStopStatus::EXCEPTION)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        return $this->json([
+            'total_shipments' => $totalShipments,
+            'active_routes' => $activeRoutes,
+            'pending_deliveries' => $pendingDeliveries,
+            'completed_today' => $completedToday,
+            'exceptions' => $exceptions,
         ]);
     }
 }

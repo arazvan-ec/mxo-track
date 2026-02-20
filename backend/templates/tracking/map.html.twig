@@ -1,131 +1,561 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Fleet Map{% endblock %}
+{% block title %}Fleet Map - MXO Track{% endblock %}
 {% block body_attrs %}data-turbo="false"{% endblock %}
 
-{% block styles %}
-  {{ parent() }}
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-    crossorigin=""
-  >
-{% endblock %}
-
 {% block body %}
-  <main>
-    <h2>Mapa de vehículo</h2>
-    <label for="vehicle-selector">Vehículo</label>
-    <select id="vehicle-selector"></select>
-    <div id="map" style="height: 420px; margin-top: 12px;"></div>
-  </main>
+{# ── Leaflet CSS ─────────────────────────────────────────────────── #}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  <script>
-    delete L.Icon.Default.prototype._getIconUrl;
-    L.Icon.Default.mergeOptions({
-      iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-      iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-      shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-    });
-    (async () => {
-      const selector = document.getElementById('vehicle-selector');
-      let eventSource = null;
-      let marker = null;
-      let polyline = null;
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+  #fleet-map { width: 100%; height: 100vh; z-index: 1; }
 
-      const map = L.map('map').setView([40.4168, -3.7038], 6);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  /* Custom vehicle marker */
+  .vehicle-marker {
+    width: 36px; height: 36px;
+    background: #1e3a8a;
+    border: 2px solid #3b82f6;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    transition: transform 0.8s ease;
+  }
+  .vehicle-marker svg { width: 18px; height: 18px; fill: #fff; }
+
+  /* Route stop markers */
+  .stop-marker {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: #fff;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+    border: 2px solid rgba(255,255,255,0.6);
+  }
+  .stop-pending   { background: #3b82f6; }
+  .stop-delivered  { background: #22c55e; }
+  .stop-exception  { background: #ef4444; }
+  .stop-skipped    { background: #6b7280; }
+
+  /* Panel scrollbar */
+  .panel-scroll::-webkit-scrollbar { width: 4px; }
+  .panel-scroll::-webkit-scrollbar-track { background: transparent; }
+  .panel-scroll::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.3); border-radius: 2px; }
+
+  /* Leaflet tooltip override for dark theme */
+  .leaflet-tooltip.vehicle-tooltip {
+    background: rgba(15,23,42,0.92);
+    border: 1px solid rgba(59,130,246,0.5);
+    color: #e2e8f0;
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  .leaflet-tooltip.vehicle-tooltip::before { border-top-color: rgba(15,23,42,0.92); }
+</style>
+
+<div x-data="fleetMap()" x-init="init()" class="relative w-full h-screen overflow-hidden">
+
+  {# ── Top header bar (over the map) ──────────────────────────────── #}
+  <div class="absolute top-0 left-0 right-0 z-[1000] h-14 flex items-center justify-between px-4"
+       style="background: linear-gradient(to bottom, rgba(15,23,42,0.85) 0%, rgba(15,23,42,0.4) 70%, transparent 100%);">
+    <div class="flex items-center gap-3">
+      <a href="{{ path('admin_dashboard') }}"
+         class="flex items-center gap-2 text-slate-300 hover:text-white transition-colors text-sm font-medium">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/>
+        </svg>
+        Back to Dashboard
+      </a>
+    </div>
+    <div class="flex items-center gap-4">
+      <span class="text-slate-400 text-sm font-mono" x-text="currentTime"></span>
+      <div class="flex items-center gap-1.5">
+        <span class="relative flex h-2.5 w-2.5">
+          <span class="absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping"
+                :class="sseConnected ? 'bg-emerald-400' : 'bg-red-400'"></span>
+          <span class="relative inline-flex rounded-full h-2.5 w-2.5"
+                :class="sseConnected ? 'bg-emerald-500' : 'bg-red-500'"></span>
+        </span>
+        <span class="text-xs" :class="sseConnected ? 'text-emerald-400' : 'text-red-400'"
+              x-text="sseConnected ? 'Live' : 'Disconnected'"></span>
+      </div>
+    </div>
+  </div>
+
+  {# ── Left side panel ────────────────────────────────────────────── #}
+  <div class="absolute top-0 left-0 bottom-0 z-[999] w-80 flex flex-col bg-slate-900/95 backdrop-blur-xl border-r border-slate-700/50">
+
+    {# Brand header #}
+    <div class="flex-shrink-0 px-5 pt-5 pb-3">
+      <div class="flex items-center gap-2.5 mb-4">
+        <div class="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center">
+          <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-white font-bold text-base tracking-tight">MXO Track</h1>
+          <p class="text-slate-500 text-[10px] uppercase tracking-widest">Fleet Overview</p>
+        </div>
+      </div>
+
+      {# KPI pills #}
+      <div class="grid grid-cols-3 gap-2 mb-4">
+        <div class="bg-slate-800/80 rounded-lg px-2.5 py-2 text-center border border-slate-700/50">
+          <div class="text-white font-bold text-lg leading-none" x-text="kpi.total_vehicles">--</div>
+          <div class="text-slate-500 text-[9px] uppercase tracking-wider mt-1">Vehicles</div>
+        </div>
+        <div class="bg-slate-800/80 rounded-lg px-2.5 py-2 text-center border border-slate-700/50">
+          <div class="text-brand-400 font-bold text-lg leading-none" x-text="kpi.active_routes">--</div>
+          <div class="text-slate-500 text-[9px] uppercase tracking-wider mt-1">Routes</div>
+        </div>
+        <div class="bg-slate-800/80 rounded-lg px-2.5 py-2 text-center border border-slate-700/50">
+          <div class="text-amber-400 font-bold text-lg leading-none" x-text="kpi.pending_stops">--</div>
+          <div class="text-slate-500 text-[9px] uppercase tracking-wider mt-1">Pending</div>
+        </div>
+      </div>
+
+      {# Tabs #}
+      <div class="flex bg-slate-800/60 rounded-lg p-0.5 mb-3">
+        <button @click="activeTab = 'vehicles'"
+                class="flex-1 text-xs font-medium py-1.5 px-3 rounded-md transition-all"
+                :class="activeTab === 'vehicles' ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'">
+          Vehicles
+        </button>
+        <button @click="activeTab = 'routes'"
+                class="flex-1 text-xs font-medium py-1.5 px-3 rounded-md transition-all"
+                :class="activeTab === 'routes' ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'">
+          Routes
+        </button>
+      </div>
+
+      {# Search input #}
+      <div class="relative" x-show="activeTab === 'vehicles'">
+        <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/>
+        </svg>
+        <input type="text" x-model="searchQuery"
+               placeholder="Search vehicles..."
+               class="w-full bg-slate-800/80 border border-slate-700/50 rounded-lg pl-8 pr-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/30">
+      </div>
+    </div>
+
+    {# ── Vehicles list ─────────────────────────────────────────────── #}
+    <div x-show="activeTab === 'vehicles'" class="flex-1 overflow-y-auto panel-scroll px-3 pb-3">
+      <template x-for="v in filteredVehicles" :key="v.public_id">
+        <button @click="selectVehicle(v)"
+                class="w-full text-left p-3 rounded-lg mb-1.5 transition-all border"
+                :class="selectedVehicle && selectedVehicle.public_id === v.public_id
+                  ? 'bg-brand-600/20 border-brand-500/40 shadow-lg shadow-brand-500/10'
+                  : 'bg-slate-800/50 border-slate-700/30 hover:bg-slate-800/80 hover:border-slate-600/50'">
+          <div class="flex items-center justify-between mb-1">
+            <div class="flex items-center gap-2">
+              <span class="relative flex h-2 w-2">
+                <span class="absolute inline-flex h-full w-full rounded-full opacity-75"
+                      :class="v.last_position ? 'bg-emerald-400 animate-ping' : ''"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2"
+                      :class="v.last_position ? 'bg-emerald-500' : 'bg-slate-600'"></span>
+              </span>
+              <span class="text-sm font-medium text-slate-200 truncate" x-text="v.name"></span>
+            </div>
+            <template x-if="v.last_position">
+              <span class="text-[10px] text-slate-500" x-text="v.last_position.device_time"></span>
+            </template>
+          </div>
+          <div class="flex items-center gap-3 text-[11px]">
+            <template x-if="v.last_position">
+              <span class="text-slate-400">
+                <span x-text="Math.round(v.last_position.speed)"></span> km/h
+              </span>
+            </template>
+            <template x-if="!v.last_position">
+              <span class="text-slate-600">No signal</span>
+            </template>
+          </div>
+        </button>
+      </template>
+      <template x-if="filteredVehicles.length === 0">
+        <div class="text-center py-8 text-slate-600 text-sm">No vehicles found</div>
+      </template>
+    </div>
+
+    {# ── Routes list ───────────────────────────────────────────────── #}
+    <div x-show="activeTab === 'routes'" class="flex-1 overflow-y-auto panel-scroll px-3 pb-3">
+      <template x-for="r in routes" :key="r.public_id">
+        <button @click="selectRoute(r)"
+                class="w-full text-left p-3 rounded-lg mb-1.5 transition-all border"
+                :class="selectedRoute && selectedRoute.public_id === r.public_id
+                  ? 'bg-brand-600/20 border-brand-500/40 shadow-lg shadow-brand-500/10'
+                  : 'bg-slate-800/50 border-slate-700/30 hover:bg-slate-800/80 hover:border-slate-600/50'">
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-sm font-medium text-slate-200 truncate" x-text="r.name"></span>
+            <span class="text-[10px] font-medium px-1.5 py-0.5 rounded-full"
+                  :class="r.status === 'ACTIVE' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-blue-500/20 text-blue-400'"
+                  x-text="r.status"></span>
+          </div>
+          <div class="flex items-center justify-between text-[11px]">
+            <span class="text-slate-500" x-text="r.vehicle_name || 'No vehicle'"></span>
+            <div class="flex items-center gap-1.5">
+              <span class="text-emerald-400" x-text="r.delivered_stops"></span>
+              <span class="text-slate-600">/</span>
+              <span class="text-slate-400" x-text="r.total_stops"></span>
+              <span class="text-slate-600 text-[10px]">stops</span>
+            </div>
+          </div>
+          <template x-if="r.driver_email">
+            <div class="mt-1 text-[10px] text-slate-500 truncate" x-text="r.driver_email"></div>
+          </template>
+        </button>
+      </template>
+      <template x-if="routes.length === 0">
+        <div class="text-center py-8 text-slate-600 text-sm">No active routes</div>
+      </template>
+    </div>
+  </div>
+
+  {# ── Map container ──────────────────────────────────────────────── #}
+  <div id="fleet-map" class="absolute inset-0"></div>
+
+  {# ── Map layer toggle (bottom-right) ────────────────────────────── #}
+  <div class="absolute bottom-6 right-6 z-[1000]">
+    <button @click="toggleMapStyle()"
+            class="bg-slate-900/90 backdrop-blur-lg border border-slate-700/50 rounded-lg px-3 py-2 text-xs text-slate-300 hover:text-white hover:border-slate-500 transition-all shadow-lg">
+      <svg class="w-4 h-4 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z"/>
+      </svg>
+      <span x-text="darkTiles ? 'Light Map' : 'Dark Map'"></span>
+    </button>
+  </div>
+</div>
+
+{# ── Leaflet JS ──────────────────────────────────────────────────── #}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+<script>
+function fleetMap() {
+  return {
+    // Data from server
+    vehicles: {{ vehicles_json|raw }},
+    routes: {{ routes_json|raw }},
+    mercureUrl: '{{ mercure_public_url }}',
+
+    // UI state
+    activeTab: 'vehicles',
+    searchQuery: '',
+    selectedVehicle: null,
+    selectedRoute: null,
+    currentTime: '',
+    sseConnected: false,
+    darkTiles: true,
+    kpi: { total_vehicles: '--', active_routes: '--', pending_stops: '--' },
+
+    // Map internals
+    map: null,
+    vehicleMarkers: {},
+    routeStopMarkers: [],
+    routePolyline: null,
+    darkLayer: null,
+    lightLayer: null,
+    eventSource: null,
+
+    get filteredVehicles() {
+      if (!this.searchQuery.trim()) return this.vehicles;
+      const q = this.searchQuery.toLowerCase();
+      return this.vehicles.filter(v => v.name.toLowerCase().includes(q));
+    },
+
+    init() {
+      this.initMap();
+      this.placeAllVehicles();
+      this.startClock();
+      this.loadKpi();
+      this.fetchMercureToken().then(() => this.connectSse());
+    },
+
+    initMap() {
+      this.map = L.map('fleet-map', {
+        zoomControl: false,
+        attributionControl: false,
+      }).setView([40.4168, -3.7038], 6);
+
+      // Zoom control in top-right
+      L.control.zoom({ position: 'topright' }).addTo(this.map);
+      L.control.attribution({ position: 'bottomleft', prefix: false })
+        .addAttribution('&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>')
+        .addTo(this.map);
+
+      this.darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
         maxZoom: 19,
-        attribution: '&copy; OpenStreetMap contributors'
-      }).addTo(map);
+        subdomains: 'abcd',
+      });
+      this.lightLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+        subdomains: 'abcd',
+      });
 
-      const closeStream = () => {
-        if (eventSource !== null) {
-          eventSource.close();
-          eventSource = null;
-        }
-      };
+      this.darkLayer.addTo(this.map);
+    },
 
-      const clearMap = () => {
-        closeStream();
-        if (marker) { marker.remove(); marker = null; }
-        if (polyline) { polyline.remove(); polyline = null; }
-      };
+    toggleMapStyle() {
+      if (this.darkTiles) {
+        this.map.removeLayer(this.darkLayer);
+        this.lightLayer.addTo(this.map);
+      } else {
+        this.map.removeLayer(this.lightLayer);
+        this.darkLayer.addTo(this.map);
+      }
+      this.darkTiles = !this.darkTiles;
+    },
 
-      await fetch('/api/mercure-token', { credentials: 'include' });
-      const vehiclesResponse = await fetch('/api/vehicles', { credentials: 'include' });
-      const vehiclesData = await vehiclesResponse.json();
-      const vehicles = vehiclesData.items ?? [];
+    createVehicleIcon(course) {
+      const rotation = course || 0;
+      return L.divIcon({
+        className: '',
+        iconSize: [36, 36],
+        iconAnchor: [18, 18],
+        popupAnchor: [0, -20],
+        html: `<div class="vehicle-marker" style="transform: rotate(${rotation}deg);">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M18 18.5a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm-12 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM19.92 6.09C19.72 5.46 19.16 5 18.5 5h-11c-.66 0-1.21.42-1.42 1.02L4 12v6c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h10v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-6l-2.08-5.91zM7.5 15a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm9 0a1.5 1.5 0 110-3 1.5 1.5 0 010 3zM5.81 10l1.04-3h10.29l1.04 3H5.81z"/>
+          </svg>
+        </div>`,
+      });
+    },
 
-      if (vehicles.length === 0) {
-        selector.innerHTML = '<option value="">Sin vehículos</option>';
+    createStopIcon(status, sequence) {
+      const cls = {
+        'PENDING': 'stop-pending',
+        'DELIVERED': 'stop-delivered',
+        'EXCEPTION': 'stop-exception',
+        'SKIPPED': 'stop-skipped',
+      }[status] || 'stop-pending';
+
+      return L.divIcon({
+        className: '',
+        iconSize: [26, 26],
+        iconAnchor: [13, 13],
+        html: `<div class="stop-marker ${cls}">${sequence}</div>`,
+      });
+    },
+
+    placeAllVehicles() {
+      this.vehicles.forEach(v => {
+        if (!v.last_position) return;
+        const latlng = [v.last_position.lat, v.last_position.lng];
+        const marker = L.marker(latlng, {
+          icon: this.createVehicleIcon(v.last_position.course),
+        }).addTo(this.map);
+
+        const speed = Math.round(v.last_position.speed || 0);
+        marker.bindTooltip(`${v.name} - ${speed} km/h`, {
+          className: 'vehicle-tooltip',
+          direction: 'top',
+          offset: [0, -20],
+        });
+
+        this.vehicleMarkers[v.public_id] = marker;
+      });
+    },
+
+    selectVehicle(v) {
+      // Clear selected route overlay
+      this.clearRouteOverlay();
+      this.selectedRoute = null;
+
+      if (this.selectedVehicle && this.selectedVehicle.public_id === v.public_id) {
+        this.selectedVehicle = null;
         return;
       }
 
-      selector.innerHTML = vehicles
-        .map((vehicle) => `<option value="${vehicle.public_id}">${vehicle.name}</option>`)
-        .join('');
+      this.selectedVehicle = v;
 
-      const connect = async (vehiclePublicId) => {
-        clearMap();
+      if (v.last_position) {
+        this.map.flyTo([v.last_position.lat, v.last_position.lng], 15, { duration: 1 });
+      }
 
-        const selected = vehicles.find((v) => v.public_id === vehiclePublicId);
-        if (!selected) {
-          return;
+      // Check if this vehicle has an active route and show it
+      const vehicleRoute = this.routes.find(r => r.vehicle_public_id === v.public_id);
+      if (vehicleRoute) {
+        this.showRouteStops(vehicleRoute);
+      }
+    },
+
+    selectRoute(r) {
+      this.selectedVehicle = null;
+      this.clearRouteOverlay();
+
+      if (this.selectedRoute && this.selectedRoute.public_id === r.public_id) {
+        this.selectedRoute = null;
+        return;
+      }
+
+      this.selectedRoute = r;
+      this.showRouteStops(r);
+
+      // Fly to route bounds
+      const validStops = r.stops.filter(s => s.lat && s.lng);
+      if (validStops.length > 0) {
+        const bounds = L.latLngBounds(validStops.map(s => [s.lat, s.lng]));
+        this.map.flyToBounds(bounds, { padding: [80, 80], duration: 1 });
+      }
+    },
+
+    showRouteStops(route) {
+      this.clearRouteOverlay();
+
+      const coords = [];
+      route.stops.forEach(stop => {
+        if (!stop.lat || !stop.lng) return;
+        const latlng = [stop.lat, stop.lng];
+        coords.push(latlng);
+
+        const marker = L.marker(latlng, {
+          icon: this.createStopIcon(stop.status, stop.sequence),
+        }).addTo(this.map);
+
+        let tooltipHtml = `<strong>#${stop.sequence}</strong> ${stop.address}`;
+        if (stop.recipient) tooltipHtml += `<br>${stop.recipient}`;
+        tooltipHtml += `<br><em>${stop.status}</em>`;
+        marker.bindTooltip(tooltipHtml, {
+          className: 'vehicle-tooltip',
+          direction: 'top',
+          offset: [0, -14],
+        });
+
+        this.routeStopMarkers.push(marker);
+      });
+
+      if (coords.length > 1) {
+        this.routePolyline = L.polyline(coords, {
+          color: '#6366f1',
+          weight: 3,
+          opacity: 0.7,
+          dashArray: '8 6',
+        }).addTo(this.map);
+      }
+    },
+
+    clearRouteOverlay() {
+      this.routeStopMarkers.forEach(m => m.remove());
+      this.routeStopMarkers = [];
+      if (this.routePolyline) {
+        this.routePolyline.remove();
+        this.routePolyline = null;
+      }
+    },
+
+    startClock() {
+      const update = () => {
+        const now = new Date();
+        this.currentTime = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      };
+      update();
+      setInterval(update, 1000);
+    },
+
+    async loadKpi() {
+      try {
+        const res = await fetch('/api/fleet/summary', { credentials: 'include' });
+        if (res.ok) {
+          this.kpi = await res.json();
         }
+      } catch (_) { /* silent */ }
+    },
 
-        // Fetch historical positions (ASC = chronological order)
-        const coords = [];
-        try {
-          const res = await fetch(`/api/vehicles/${vehiclePublicId}/positions?order=ASC&limit=2000`, { credentials: 'include' });
-          if (res.ok) {
-            const data = await res.json();
-            (data.items ?? []).forEach(p => coords.push([p.lat, p.lng]));
-          }
-        } catch (_) { /* positions endpoint unavailable, fall back to last_position */ }
+    async fetchMercureToken() {
+      try {
+        await fetch('/api/mercure-token', { credentials: 'include' });
+      } catch (_) { /* silent */ }
+    },
 
-        // Fallback: use last_position from the vehicle list if no history
-        if (coords.length === 0 && selected.last_position) {
-          coords.push([selected.last_position.lat, selected.last_position.lng]);
-        }
+    connectSse() {
+      if (this.eventSource) {
+        this.eventSource.close();
+      }
 
-        // Draw polyline + marker
-        if (coords.length > 0) {
-          polyline = L.polyline(coords, { color: '#2563eb', weight: 3, opacity: 0.8 }).addTo(map);
-          const last = coords[coords.length - 1];
-          marker = L.marker(last).addTo(map);
-          map.fitBounds(polyline.getBounds(), { padding: [30, 30] });
-        }
+      const hub = new URL(this.mercureUrl);
 
-        // Mercure SSE — extend route in real time
-        const hub = new URL('{{ mercure_public_url }}');
-        hub.searchParams.set('topic', `/vehicles/${selected.public_id}/position`);
+      // Subscribe to all vehicle topics and operator fleet topic
+      this.vehicles.forEach(v => {
+        hub.searchParams.append('topic', `/vehicles/${v.public_id}/position`);
+      });
+      hub.searchParams.append('topic', '/operator/fleet');
 
-        eventSource = new EventSource(hub, { withCredentials: true });
-        eventSource.onmessage = (event) => {
-          const payload = JSON.parse(event.data);
-          if (Number.isFinite(payload.lat) && Number.isFinite(payload.lng)) {
-            const latlng = [payload.lat, payload.lng];
-            if (polyline) {
-              polyline.addLatLng(latlng);
-            } else {
-              polyline = L.polyline([latlng], { color: '#2563eb', weight: 3, opacity: 0.8 }).addTo(map);
-            }
-            if (marker) {
-              marker.setLatLng(latlng);
-            } else {
-              marker = L.marker(latlng).addTo(map);
-            }
-            map.panTo(latlng);
-          }
-        };
+      this.eventSource = new EventSource(hub.toString(), { withCredentials: true });
+
+      this.eventSource.onopen = () => {
+        this.sseConnected = true;
       };
 
-      selector.addEventListener('change', () => connect(selector.value));
-      window.addEventListener('beforeunload', closeStream);
-      connect(selector.value || vehicles[0].public_id);
-    })();
-  </script>
+      this.eventSource.onerror = () => {
+        this.sseConnected = false;
+      };
+
+      this.eventSource.onmessage = (event) => {
+        this.sseConnected = true;
+        try {
+          const payload = JSON.parse(event.data);
+          if (payload.vehicle_public_id && Number.isFinite(payload.lat) && Number.isFinite(payload.lng)) {
+            this.handlePositionUpdate(payload);
+          }
+        } catch (_) { /* ignore malformed */ }
+      };
+    },
+
+    handlePositionUpdate(payload) {
+      const vid = payload.vehicle_public_id;
+      const latlng = [payload.lat, payload.lng];
+      const speed = payload.speed || 0;
+      const course = payload.course || 0;
+      const deviceTime = payload.device_time || '';
+
+      // Update vehicle data
+      const vehicle = this.vehicles.find(v => v.public_id === vid);
+      if (vehicle) {
+        vehicle.last_position = {
+          lat: payload.lat,
+          lng: payload.lng,
+          speed: speed,
+          course: course,
+          device_time: deviceTime,
+        };
+      }
+
+      // Update or create marker
+      if (this.vehicleMarkers[vid]) {
+        const marker = this.vehicleMarkers[vid];
+        marker.setLatLng(latlng);
+        marker.setIcon(this.createVehicleIcon(course));
+
+        const speedRounded = Math.round(speed);
+        const name = vehicle ? vehicle.name : vid;
+        marker.setTooltipContent(`${name} - ${speedRounded} km/h`);
+      } else {
+        const marker = L.marker(latlng, {
+          icon: this.createVehicleIcon(course),
+        }).addTo(this.map);
+
+        const name = vehicle ? vehicle.name : vid;
+        marker.bindTooltip(`${name} - ${Math.round(speed)} km/h`, {
+          className: 'vehicle-tooltip',
+          direction: 'top',
+          offset: [0, -20],
+        });
+
+        this.vehicleMarkers[vid] = marker;
+      }
+
+      // If this vehicle is selected, pan map
+      if (this.selectedVehicle && this.selectedVehicle.public_id === vid) {
+        this.map.panTo(latlng);
+      }
+    },
+  };
+}
+</script>
 {% endblock %}

@@ -14,98 +14,79 @@
 {% endblock %}
 
 {% block content %}
+<div x-data="adminDashboard()" x-init="init()">
 
 {# ── Page header ──────────────────────────────────────────────────── #}
-<div class="mb-8">
-  <h1 class="text-2xl font-bold tracking-tight text-gray-900">Dashboard</h1>
-  <p class="mt-1 text-sm text-gray-500">
-    Vista general del sistema de seguimiento logistico
-  </p>
+<div class="mb-8 flex items-center justify-between">
+  <div>
+    <h1 class="text-2xl font-bold tracking-tight text-gray-900">Dashboard</h1>
+    <p class="mt-1 text-sm text-gray-500">
+      Vista general del sistema de seguimiento logistico
+    </p>
+  </div>
+  <div class="flex items-center gap-3">
+    {# Live indicator #}
+    <div class="flex items-center gap-2 rounded-full bg-gray-50 px-3 py-1.5 ring-1 ring-gray-200">
+      <span class="relative flex h-2 w-2">
+        <span class="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"
+              :class="sseConnected ? 'bg-emerald-400' : 'bg-red-400'"></span>
+        <span class="relative inline-flex h-2 w-2 rounded-full"
+              :class="sseConnected ? 'bg-emerald-500' : 'bg-red-500'"></span>
+      </span>
+      <span class="text-xs font-medium text-gray-600" x-text="sseConnected ? 'En vivo' : 'Desconectado'"></span>
+    </div>
+    {# Last refresh #}
+    <span class="text-xs text-gray-400" x-text="lastRefresh ? 'Actualizado ' + lastRefresh : ''"></span>
+  </div>
 </div>
 
 {# ── Health indicators ────────────────────────────────────────────── #}
 <div class="mb-8 flex flex-wrap gap-4">
-  <div class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium shadow-sm ring-1 ring-inset
-              {% if health.traccar_ok %}bg-emerald-50 text-emerald-700 ring-emerald-200{% else %}bg-red-50 text-red-700 ring-red-200{% endif %}">
+  <div class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium shadow-sm ring-1 ring-inset"
+       :class="health.traccar_ok ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' : 'bg-red-50 text-red-700 ring-red-200'">
     <span class="relative flex h-2.5 w-2.5">
-      {% if health.traccar_ok %}
-        <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
-        <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
-      {% else %}
+      <template x-if="health.traccar_ok">
+        <span>
+          <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+          <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
+        </span>
+      </template>
+      <template x-if="!health.traccar_ok">
         <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500"></span>
-      {% endif %}
+      </template>
     </span>
-    Traccar API: {{ health.traccar_ok ? 'Conectado' : 'Sin conexion' }}
+    <span x-text="health.traccar_ok ? 'Traccar API: Conectado' : 'Traccar API: Sin conexion'"></span>
   </div>
 
-  <div class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium shadow-sm ring-1 ring-inset
-              {% if health.mercure_ok %}bg-emerald-50 text-emerald-700 ring-emerald-200{% else %}bg-red-50 text-red-700 ring-red-200{% endif %}">
+  <div class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium shadow-sm ring-1 ring-inset"
+       :class="health.mercure_ok ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' : 'bg-red-50 text-red-700 ring-red-200'">
     <span class="relative flex h-2.5 w-2.5">
-      {% if health.mercure_ok %}
-        <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
-        <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
-      {% else %}
+      <template x-if="health.mercure_ok">
+        <span>
+          <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+          <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
+        </span>
+      </template>
+      <template x-if="!health.mercure_ok">
         <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500"></span>
-      {% endif %}
+      </template>
     </span>
-    Mercure Hub: {{ health.mercure_ok ? 'Conectado' : 'Sin conexion' }}
+    <span x-text="health.mercure_ok ? 'Mercure Hub: Conectado' : 'Mercure Hub: Sin conexion'"></span>
+  </div>
+
+  {# Live position counter #}
+  <div class="inline-flex items-center gap-2 rounded-full bg-cyan-50 px-4 py-2 text-sm font-medium text-cyan-700 shadow-sm ring-1 ring-inset ring-cyan-200"
+       x-show="livePositionCount > 0"
+       x-transition>
+    <svg class="h-4 w-4 animate-pulse" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M3 3l8.735 8.735m0 0a.374.374 0 11.53.53m-.53-.53l.53.53m0 0L21 21M14.652 9.348a3.75 3.75 0 010 5.304m2.121-7.425a6.75 6.75 0 010 9.546m2.121-11.667c3.808 3.807 3.808 9.98 0 13.788"/>
+    </svg>
+    <span x-text="livePositionCount + ' posiciones recibidas'"></span>
   </div>
 </div>
 
 {# ── KPI cards grid ───────────────────────────────────────────────── #}
 <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-
-  {# ── Envios por estado ──────────────────────────────────────────── #}
-  <div class="relative overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5">
-    <div class="p-6">
-      <div class="flex items-center gap-4">
-        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-blue-50">
-          <svg class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"/>
-          </svg>
-        </div>
-        <div class="min-w-0 flex-1">
-          <p class="text-sm font-medium text-gray-500 truncate">Envios por estado</p>
-          <p class="mt-1 text-2xl font-bold tracking-tight text-gray-900">{{ kpis.shipments_by_status|length }}</p>
-        </div>
-      </div>
-      {% if kpis.shipments_by_status|length > 0 %}
-      <div class="mt-4 border-t border-gray-100 pt-4">
-        <div class="flex flex-wrap gap-2">
-          {% for status, count in kpis.shipments_by_status %}
-            <span class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium
-                         {% if status == 'DELIVERED' %}bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200
-                         {% elseif status == 'IN_TRANSIT' %}bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-200
-                         {% elseif status == 'EXCEPTION' %}bg-red-50 text-red-700 ring-1 ring-inset ring-red-200
-                         {% elseif status == 'PENDING' %}bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200
-                         {% else %}bg-gray-50 text-gray-700 ring-1 ring-inset ring-gray-200
-                         {% endif %}">
-              {{ status }}: {{ count }}
-            </span>
-          {% endfor %}
-        </div>
-      </div>
-      {% endif %}
-    </div>
-  </div>
-
-  {# ── Vehiculos sin senal ────────────────────────────────────────── #}
-  <div class="relative overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5">
-    <div class="p-6">
-      <div class="flex items-center gap-4">
-        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-amber-50">
-          <svg class="h-6 w-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
-          </svg>
-        </div>
-        <div class="min-w-0 flex-1">
-          <p class="text-sm font-medium text-gray-500 truncate">Vehiculos sin senal</p>
-          <p class="mt-1 text-2xl font-bold tracking-tight text-gray-900">{{ kpis.vehicles_without_signal }}</p>
-        </div>
-      </div>
-    </div>
-    <div class="absolute bottom-0 left-0 right-0 h-1 {% if kpis.vehicles_without_signal > 0 %}bg-amber-400{% else %}bg-emerald-400{% endif %}"></div>
-  </div>
 
   {# ── Rutas activas ──────────────────────────────────────────────── #}
   <div class="relative overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5">
@@ -118,7 +99,7 @@
         </div>
         <div class="min-w-0 flex-1">
           <p class="text-sm font-medium text-gray-500 truncate">Rutas activas</p>
-          <p class="mt-1 text-2xl font-bold tracking-tight text-gray-900">{{ kpis.active_routes }}</p>
+          <p class="mt-1 text-2xl font-bold tracking-tight text-gray-900 transition-all duration-500" x-text="kpis.active_routes"></p>
         </div>
       </div>
     </div>
@@ -136,29 +117,11 @@
         </div>
         <div class="min-w-0 flex-1">
           <p class="text-sm font-medium text-gray-500 truncate">Paradas pendientes</p>
-          <p class="mt-1 text-2xl font-bold tracking-tight text-gray-900">{{ kpis.pending_stops }}</p>
+          <p class="mt-1 text-2xl font-bold tracking-tight text-gray-900 transition-all duration-500" x-text="kpis.pending_stops"></p>
         </div>
       </div>
     </div>
     <div class="absolute bottom-0 left-0 right-0 h-1 bg-orange-400"></div>
-  </div>
-
-  {# ── PODs del dia ───────────────────────────────────────────────── #}
-  <div class="relative overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5">
-    <div class="p-6">
-      <div class="flex items-center gap-4">
-        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-emerald-50">
-          <svg class="h-6 w-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z"/>
-          </svg>
-        </div>
-        <div class="min-w-0 flex-1">
-          <p class="text-sm font-medium text-gray-500 truncate">PODs del dia</p>
-          <p class="mt-1 text-2xl font-bold tracking-tight text-gray-900">{{ kpis.pods_today }}</p>
-        </div>
-      </div>
-    </div>
-    <div class="absolute bottom-0 left-0 right-0 h-1 bg-emerald-400"></div>
   </div>
 
   {# ── Imports CSV hoy ────────────────────────────────────────────── #}
@@ -172,7 +135,7 @@
         </div>
         <div class="min-w-0 flex-1">
           <p class="text-sm font-medium text-gray-500 truncate">Imports CSV hoy</p>
-          <p class="mt-1 text-2xl font-bold tracking-tight text-gray-900">{{ kpis.import_runs_today }}</p>
+          <p class="mt-1 text-2xl font-bold tracking-tight text-gray-900 transition-all duration-500" x-text="kpis.import_runs_today"></p>
         </div>
       </div>
     </div>
@@ -190,7 +153,7 @@
         </div>
         <div class="min-w-0 flex-1">
           <p class="text-sm font-medium text-gray-500 truncate">Posiciones (ultima hora)</p>
-          <p class="mt-1 text-2xl font-bold tracking-tight text-gray-900">{{ kpis.positions_ingested_last_hour }}</p>
+          <p class="mt-1 text-2xl font-bold tracking-tight text-gray-900 transition-all duration-500" x-text="kpis.positions_ingested_last_hour"></p>
         </div>
       </div>
     </div>
@@ -198,5 +161,184 @@
   </div>
 
 </div>
+
+{# ── Live Activity Feed ──────────────────────────────────────────── #}
+<div class="mt-8">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-lg font-semibold text-gray-900">Actividad en vivo</h2>
+    <div class="flex items-center gap-2">
+      <a href="{{ path('fleet_map') }}"
+         class="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-brand-500 transition-colors">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/>
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/>
+        </svg>
+        Abrir mapa
+      </a>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm ring-1 ring-gray-900/5 overflow-hidden">
+    <div class="max-h-80 overflow-y-auto divide-y divide-gray-100">
+      <template x-if="activityFeed.length === 0">
+        <div class="px-6 py-8 text-center">
+          <svg class="mx-auto h-10 w-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 3l8.735 8.735m0 0a.374.374 0 11.53.53m-.53-.53l.53.53m0 0L21 21M14.652 9.348a3.75 3.75 0 010 5.304m2.121-7.425a6.75 6.75 0 010 9.546m2.121-11.667c3.808 3.807 3.808 9.98 0 13.788"/>
+          </svg>
+          <p class="mt-2 text-sm text-gray-500">Esperando actividad en tiempo real...</p>
+          <p class="mt-1 text-xs text-gray-400">Las posiciones de vehiculos apareceran aqui</p>
+        </div>
+      </template>
+
+      <template x-for="event in activityFeed" :key="event.id">
+        <div class="flex items-center gap-4 px-6 py-3 hover:bg-gray-50 transition-colors"
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0 -translate-y-2"
+             x-transition:enter-end="opacity-100 translate-y-0">
+          <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-cyan-100">
+            <svg class="h-4 w-4 text-cyan-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/>
+            </svg>
+          </div>
+          <div class="min-w-0 flex-1">
+            <p class="text-sm text-gray-900">
+              <span class="font-medium" x-text="event.vehicleName"></span>
+              <span class="text-gray-500"> reporto posicion</span>
+            </p>
+            <p class="text-xs text-gray-400" x-text="event.coords + (event.speed ? ' · ' + event.speed + ' km/h' : '')"></p>
+          </div>
+          <span class="text-xs text-gray-400 shrink-0" x-text="event.time"></span>
+        </div>
+      </template>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+function adminDashboard() {
+  return {
+    kpis: {
+      active_routes: {{ kpis.active_routes }},
+      pending_stops: {{ kpis.pending_stops }},
+      import_runs_today: {{ kpis.import_runs_today }},
+      positions_ingested_last_hour: {{ kpis.positions_ingested_last_hour }},
+    },
+    health: {
+      traccar_ok: {{ health.traccar_ok ? 'true' : 'false' }},
+      mercure_ok: {{ health.mercure_ok ? 'true' : 'false' }},
+    },
+    sseConnected: false,
+    livePositionCount: 0,
+    lastRefresh: null,
+    activityFeed: [],
+    _eventSource: null,
+    _refreshInterval: null,
+    _vehicleNames: {},
+
+    async init() {
+      // Load vehicle names for the activity feed
+      try {
+        await fetch('/api/mercure-token', { credentials: 'include' });
+        const res = await fetch('/api/vehicles', { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          (data.items || []).forEach(v => {
+            this._vehicleNames[v.public_id] = v.name;
+          });
+        }
+      } catch (_) {}
+
+      // Start SSE for live position updates
+      this._connectSSE();
+
+      // Auto-refresh KPIs every 30 seconds
+      this._refreshInterval = setInterval(() => this._refreshKpis(), 30000);
+      this._refreshKpis();
+
+      // Cleanup on navigation
+      window.addEventListener('beforeunload', () => this._cleanup());
+    },
+
+    _connectSSE() {
+      try {
+        const hub = new URL('{{ mercure_public_url }}');
+        // Subscribe to all vehicle topics using wildcard-like approach
+        // Admin subscribes to individual vehicle topics by listing them
+        Object.keys(this._vehicleNames).forEach(id => {
+          hub.searchParams.append('topic', '/vehicles/' + id + '/position');
+        });
+
+        if (Object.keys(this._vehicleNames).length === 0) {
+          // No vehicles, skip SSE
+          return;
+        }
+
+        this._eventSource = new EventSource(hub, { withCredentials: true });
+
+        this._eventSource.onopen = () => {
+          this.sseConnected = true;
+        };
+
+        this._eventSource.onmessage = (event) => {
+          try {
+            const d = JSON.parse(event.data);
+            this.livePositionCount++;
+
+            // Add to activity feed (max 50 entries)
+            const vehicleName = this._vehicleNames[d.vehicleId] || d.vehicleId || 'Vehiculo';
+            const now = new Date();
+            this.activityFeed.unshift({
+              id: Date.now() + '-' + Math.random(),
+              vehicleName: vehicleName,
+              coords: (d.lat ? d.lat.toFixed(4) : '?') + ', ' + (d.lng ? d.lng.toFixed(4) : '?'),
+              speed: d.speed ? Math.round(d.speed) : null,
+              time: now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+            });
+
+            if (this.activityFeed.length > 50) {
+              this.activityFeed = this.activityFeed.slice(0, 50);
+            }
+          } catch (_) {}
+        };
+
+        this._eventSource.onerror = () => {
+          this.sseConnected = false;
+        };
+      } catch (_) {
+        this.sseConnected = false;
+      }
+    },
+
+    async _refreshKpis() {
+      try {
+        const res = await fetch('/admin/health', { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.metrics) {
+            this.kpis.active_routes = data.metrics.active_routes ?? this.kpis.active_routes;
+            this.kpis.pending_stops = data.metrics.pending_stops ?? this.kpis.pending_stops;
+            this.kpis.import_runs_today = data.metrics.import_runs_today ?? this.kpis.import_runs_today;
+            this.kpis.positions_ingested_last_hour = data.metrics.positions_ingested_last_hour ?? this.kpis.positions_ingested_last_hour;
+          }
+          if (data.health) {
+            this.health.traccar_ok = data.health.traccar_ok ?? this.health.traccar_ok;
+            this.health.mercure_ok = data.health.mercure_ok ?? this.health.mercure_ok;
+          }
+          const now = new Date();
+          this.lastRefresh = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+        }
+      } catch (_) {}
+    },
+
+    _cleanup() {
+      if (this._eventSource) { this._eventSource.close(); }
+      if (this._refreshInterval) { clearInterval(this._refreshInterval); }
+    }
+  };
+}
+</script>
 
 {% endblock %}
