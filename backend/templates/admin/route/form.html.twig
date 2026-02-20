@@ -1,0 +1,195 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ route.id ? 'Editar: ' ~ route.name : 'Nueva ruta' }} - Admin{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-4xl">
+    {# Header #}
+    <div class="mb-6">
+      <h1 class="text-2xl font-bold text-gray-900">
+        {{ route.id ? 'Editar: ' ~ route.name : 'Nueva ruta' }}
+      </h1>
+    </div>
+
+    {# Route form #}
+    <div class="bg-white shadow rounded-lg p-6 mb-8">
+      <h2 class="text-lg font-semibold text-gray-900 mb-4">Datos de la ruta</h2>
+
+      {{ form_start(form, {'attr': {'novalidate': 'novalidate'}}) }}
+
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div class="sm:col-span-2">
+            {{ form_label(form.name, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 mb-1'}}) }}
+            {{ form_widget(form.name) }}
+            {{ form_errors(form.name) }}
+          </div>
+
+          <div>
+            {{ form_label(form.customer, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 mb-1'}}) }}
+            {{ form_widget(form.customer) }}
+            {{ form_errors(form.customer) }}
+          </div>
+
+          <div>
+            {{ form_label(form.vehicle, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 mb-1'}}) }}
+            {{ form_widget(form.vehicle) }}
+            {{ form_errors(form.vehicle) }}
+          </div>
+
+          <div>
+            {{ form_label(form.driver, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 mb-1'}}) }}
+            {{ form_widget(form.driver) }}
+            {{ form_errors(form.driver) }}
+          </div>
+
+          <div>
+            {{ form_label(form.status, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 mb-1'}}) }}
+            {{ form_widget(form.status) }}
+            {{ form_errors(form.status) }}
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between pt-6 mt-6 border-t border-gray-200">
+          <a href="{{ path('admin_routes_index') }}"
+             class="text-sm font-medium text-gray-600 hover:text-gray-900">
+            Cancelar
+          </a>
+          <button type="submit"
+                  class="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
+            {{ route.id ? 'Guardar cambios' : 'Crear ruta' }}
+          </button>
+        </div>
+
+      {{ form_end(form) }}
+    </div>
+
+    {# Stops section (only on edit) #}
+    {% if route.id %}
+      <div class="bg-white shadow rounded-lg p-6 mb-8">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">Paradas</h2>
+
+        {% if stops is defined and stops|length > 0 %}
+          <div class="overflow-hidden rounded-lg border border-gray-200 mb-6">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th scope="col" class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">#</th>
+                  <th scope="col" class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Direccion</th>
+                  <th scope="col" class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Destinatario</th>
+                  <th scope="col" class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Telefono</th>
+                  <th scope="col" class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Coords</th>
+                  <th scope="col" class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Estado</th>
+                  <th scope="col" class="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Acciones</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200 bg-white">
+                {% for stop in stops %}
+                  <tr>
+                    <td class="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900">
+                      {{ stop.sequence }}
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-700 max-w-xs truncate" title="{{ stop.address }}">
+                      {{ stop.address }}
+                    </td>
+                    <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-500">
+                      {{ stop.recipientName ?? '-' }}
+                    </td>
+                    <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-500">
+                      {{ stop.recipientPhone ?? '-' }}
+                    </td>
+                    <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-500">
+                      {% if stop.latitude and stop.longitude %}
+                        {{ stop.latitude|number_format(4) }}, {{ stop.longitude|number_format(4) }}
+                      {% else %}
+                        <span class="text-gray-400">-</span>
+                      {% endif %}
+                    </td>
+                    <td class="whitespace-nowrap px-4 py-3 text-sm">
+                      {% if stop.status.value == 'PENDING' %}
+                        <span class="inline-flex rounded-full bg-gray-100 px-2 text-xs font-semibold leading-5 text-gray-800">Pendiente</span>
+                      {% elseif stop.status.value == 'DELIVERED' %}
+                        <span class="inline-flex rounded-full bg-green-100 px-2 text-xs font-semibold leading-5 text-green-800">Entregada</span>
+                      {% elseif stop.status.value == 'EXCEPTION' %}
+                        <span class="inline-flex rounded-full bg-red-100 px-2 text-xs font-semibold leading-5 text-red-800">Excepcion</span>
+                      {% elseif stop.status.value == 'SKIPPED' %}
+                        <span class="inline-flex rounded-full bg-yellow-100 px-2 text-xs font-semibold leading-5 text-yellow-800">Omitida</span>
+                      {% endif %}
+                    </td>
+                    <td class="whitespace-nowrap px-4 py-3 text-right text-sm font-medium">
+                      <form method="post"
+                            action="{{ path('admin_routes_stop_delete', {publicId: route.publicIdString, stopPublicId: stop.publicIdString}) }}"
+                            class="inline"
+                            onsubmit="return confirm('Eliminar esta parada?');">
+                        <input type="hidden" name="_token" value="{{ csrf_token('delete-stop-' ~ stop.publicIdString) }}">
+                        <button type="submit" class="text-red-600 hover:text-red-900">Eliminar</button>
+                      </form>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <p class="text-sm text-gray-500 mb-6">No hay paradas en esta ruta.</p>
+        {% endif %}
+
+        {# Add stop form #}
+        {% if stopForm is defined %}
+          <div class="border-t border-gray-200 pt-6">
+            <h3 class="text-md font-semibold text-gray-800 mb-4">Anadir parada</h3>
+
+            {{ form_start(stopForm, {'attr': {'novalidate': 'novalidate'}}) }}
+
+              <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div class="sm:col-span-2">
+                  {{ form_label(stopForm.address, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 mb-1'}}) }}
+                  {{ form_widget(stopForm.address) }}
+                  {{ form_errors(stopForm.address) }}
+                </div>
+
+                <div>
+                  {{ form_label(stopForm.latitude, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 mb-1'}}) }}
+                  {{ form_widget(stopForm.latitude) }}
+                  {{ form_errors(stopForm.latitude) }}
+                </div>
+
+                <div>
+                  {{ form_label(stopForm.longitude, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 mb-1'}}) }}
+                  {{ form_widget(stopForm.longitude) }}
+                  {{ form_errors(stopForm.longitude) }}
+                </div>
+
+                <div>
+                  {{ form_label(stopForm.recipientName, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 mb-1'}}) }}
+                  {{ form_widget(stopForm.recipientName) }}
+                  {{ form_errors(stopForm.recipientName) }}
+                </div>
+
+                <div>
+                  {{ form_label(stopForm.recipientPhone, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 mb-1'}}) }}
+                  {{ form_widget(stopForm.recipientPhone) }}
+                  {{ form_errors(stopForm.recipientPhone) }}
+                </div>
+
+                <div class="sm:col-span-2">
+                  {{ form_label(stopForm.notes, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 mb-1'}}) }}
+                  {{ form_widget(stopForm.notes) }}
+                  {{ form_errors(stopForm.notes) }}
+                </div>
+              </div>
+
+              <div class="flex justify-end pt-4 mt-4">
+                <button type="submit"
+                        class="inline-flex items-center rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600">
+                  Anadir parada
+                </button>
+              </div>
+
+            {{ form_end(stopForm) }}
+          </div>
+        {% endif %}
+      </div>
+    {% endif %}
+
+</div>
+{% endblock %}

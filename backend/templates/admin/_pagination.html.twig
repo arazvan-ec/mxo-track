@@ -1,0 +1,124 @@
+{#
+  Reusable pagination component.
+
+  Expected variables:
+    - pager.currentPage  (int)   Current page number (1-based)
+    - pager.totalPages   (int)   Total number of pages
+    - pager.routeName    (string) Route name for generating page URLs
+    - pager.routeParams  (array)  Additional route parameters (optional)
+#}
+
+{% if pager.totalPages > 1 %}
+<nav class="flex items-center justify-between border-t border-gray-200 pt-6 mt-6" aria-label="Paginacion">
+
+  {# ── Mobile: simple Previous / Next ────────────────────────────── #}
+  <div class="flex flex-1 justify-between sm:hidden">
+    {% if pager.currentPage > 1 %}
+      <a href="{{ path(pager.routeName, (pager.routeParams|default({}))|merge({ page: pager.currentPage - 1 })) }}"
+         class="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+        Anterior
+      </a>
+    {% else %}
+      <span class="relative inline-flex items-center rounded-md border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-medium text-gray-400 cursor-not-allowed">
+        Anterior
+      </span>
+    {% endif %}
+
+    {% if pager.currentPage < pager.totalPages %}
+      <a href="{{ path(pager.routeName, (pager.routeParams|default({}))|merge({ page: pager.currentPage + 1 })) }}"
+         class="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+        Siguiente
+      </a>
+    {% else %}
+      <span class="relative ml-3 inline-flex items-center rounded-md border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-medium text-gray-400 cursor-not-allowed">
+        Siguiente
+      </span>
+    {% endif %}
+  </div>
+
+  {# ── Desktop: full pagination ──────────────────────────────────── #}
+  <div class="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+
+    {# Page info #}
+    <div>
+      <p class="text-sm text-gray-700">
+        Pagina <span class="font-semibold">{{ pager.currentPage }}</span>
+        de <span class="font-semibold">{{ pager.totalPages }}</span>
+      </p>
+    </div>
+
+    {# Page numbers #}
+    <div>
+      <nav class="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Paginacion">
+
+        {# Previous arrow #}
+        {% if pager.currentPage > 1 %}
+          <a href="{{ path(pager.routeName, (pager.routeParams|default({}))|merge({ page: pager.currentPage - 1 })) }}"
+             class="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 transition-colors">
+            <span class="sr-only">Anterior</span>
+            <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clip-rule="evenodd"/>
+            </svg>
+          </a>
+        {% else %}
+          <span class="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-300 ring-1 ring-inset ring-gray-300 cursor-not-allowed">
+            <span class="sr-only">Anterior</span>
+            <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clip-rule="evenodd"/>
+            </svg>
+          </span>
+        {% endif %}
+
+        {# Page numbers with ellipsis logic #}
+        {% set windowSize = 2 %}
+        {% for page in 1..pager.totalPages %}
+          {% if page == 1
+            or page == pager.totalPages
+            or (page >= pager.currentPage - windowSize and page <= pager.currentPage + windowSize)
+          %}
+            {% if page == pager.currentPage %}
+              <span aria-current="page"
+                    class="relative z-10 inline-flex items-center bg-brand-600 px-4 py-2 text-sm font-semibold text-white focus:z-20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">
+                {{ page }}
+              </span>
+            {% else %}
+              <a href="{{ path(pager.routeName, (pager.routeParams|default({}))|merge({ page: page })) }}"
+                 class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 transition-colors">
+                {{ page }}
+              </a>
+            {% endif %}
+          {% elseif page == 2 and pager.currentPage - windowSize > 2 %}
+            <span class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 ring-1 ring-inset ring-gray-300">
+              ...
+            </span>
+          {% elseif page == pager.totalPages - 1 and pager.currentPage + windowSize < pager.totalPages - 1 %}
+            <span class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 ring-1 ring-inset ring-gray-300">
+              ...
+            </span>
+          {% endif %}
+        {% endfor %}
+
+        {# Next arrow #}
+        {% if pager.currentPage < pager.totalPages %}
+          <a href="{{ path(pager.routeName, (pager.routeParams|default({}))|merge({ page: pager.currentPage + 1 })) }}"
+             class="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 transition-colors">
+            <span class="sr-only">Siguiente</span>
+            <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd"/>
+            </svg>
+          </a>
+        {% else %}
+          <span class="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-300 ring-1 ring-inset ring-gray-300 cursor-not-allowed">
+            <span class="sr-only">Siguiente</span>
+            <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd"/>
+            </svg>
+          </span>
+        {% endif %}
+
+      </nav>
+    </div>
+  </div>
+
+</nav>
+{% endif %}

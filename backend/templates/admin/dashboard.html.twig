@@ -1,16 +1,202 @@
-<h1>Backoffice</h1>
-<ul>
-  <li>Envíos por estado: {{ kpis.shipments_by_status|length }}</li>
-  <li>Vehículos sin señal: {{ kpis.vehicles_without_signal }}</li>
-  <li>Rutas activas: {{ kpis.active_routes }}</li>
-  <li>Paradas pendientes: {{ kpis.pending_stops }}</li>
-  <li>PODs del día: {{ kpis.pods_today }}</li>
-  <li>Imports CSV hoy: {{ kpis.import_runs_today }}</li>
-  <li>Posiciones ingeridas última hora: {{ kpis.positions_ingested_last_hour }}</li>
-</ul>
+{% extends 'base.html.twig' %}
 
-<h2>Salud de integraciones</h2>
-<ul>
-  <li>Traccar API: {{ health.traccar_ok ? 'OK' : 'ERROR' }}</li>
-  <li>Mercure Hub: {{ health.mercure_ok ? 'OK' : 'ERROR' }}</li>
-</ul>
+{% block title %}Dashboard - MXO Track{% endblock %}
+
+{% block breadcrumbs %}
+  <li>
+    <div class="flex items-center">
+      <svg class="h-5 w-5 shrink-0 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd"/>
+      </svg>
+      <span class="ml-2 text-sm font-medium text-gray-500">Dashboard</span>
+    </div>
+  </li>
+{% endblock %}
+
+{% block content %}
+
+{# ── Page header ──────────────────────────────────────────────────── #}
+<div class="mb-8">
+  <h1 class="text-2xl font-bold tracking-tight text-gray-900">Dashboard</h1>
+  <p class="mt-1 text-sm text-gray-500">
+    Vista general del sistema de seguimiento logistico
+  </p>
+</div>
+
+{# ── Health indicators ────────────────────────────────────────────── #}
+<div class="mb-8 flex flex-wrap gap-4">
+  <div class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium shadow-sm ring-1 ring-inset
+              {% if health.traccar_ok %}bg-emerald-50 text-emerald-700 ring-emerald-200{% else %}bg-red-50 text-red-700 ring-red-200{% endif %}">
+    <span class="relative flex h-2.5 w-2.5">
+      {% if health.traccar_ok %}
+        <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+        <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
+      {% else %}
+        <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500"></span>
+      {% endif %}
+    </span>
+    Traccar API: {{ health.traccar_ok ? 'Conectado' : 'Sin conexion' }}
+  </div>
+
+  <div class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium shadow-sm ring-1 ring-inset
+              {% if health.mercure_ok %}bg-emerald-50 text-emerald-700 ring-emerald-200{% else %}bg-red-50 text-red-700 ring-red-200{% endif %}">
+    <span class="relative flex h-2.5 w-2.5">
+      {% if health.mercure_ok %}
+        <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+        <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
+      {% else %}
+        <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500"></span>
+      {% endif %}
+    </span>
+    Mercure Hub: {{ health.mercure_ok ? 'Conectado' : 'Sin conexion' }}
+  </div>
+</div>
+
+{# ── KPI cards grid ───────────────────────────────────────────────── #}
+<div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+
+  {# ── Envios por estado ──────────────────────────────────────────── #}
+  <div class="relative overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5">
+    <div class="p-6">
+      <div class="flex items-center gap-4">
+        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-blue-50">
+          <svg class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"/>
+          </svg>
+        </div>
+        <div class="min-w-0 flex-1">
+          <p class="text-sm font-medium text-gray-500 truncate">Envios por estado</p>
+          <p class="mt-1 text-2xl font-bold tracking-tight text-gray-900">{{ kpis.shipments_by_status|length }}</p>
+        </div>
+      </div>
+      {% if kpis.shipments_by_status|length > 0 %}
+      <div class="mt-4 border-t border-gray-100 pt-4">
+        <div class="flex flex-wrap gap-2">
+          {% for status, count in kpis.shipments_by_status %}
+            <span class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium
+                         {% if status == 'DELIVERED' %}bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200
+                         {% elseif status == 'IN_TRANSIT' %}bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-200
+                         {% elseif status == 'EXCEPTION' %}bg-red-50 text-red-700 ring-1 ring-inset ring-red-200
+                         {% elseif status == 'PENDING' %}bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200
+                         {% else %}bg-gray-50 text-gray-700 ring-1 ring-inset ring-gray-200
+                         {% endif %}">
+              {{ status }}: {{ count }}
+            </span>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# ── Vehiculos sin senal ────────────────────────────────────────── #}
+  <div class="relative overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5">
+    <div class="p-6">
+      <div class="flex items-center gap-4">
+        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-amber-50">
+          <svg class="h-6 w-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+          </svg>
+        </div>
+        <div class="min-w-0 flex-1">
+          <p class="text-sm font-medium text-gray-500 truncate">Vehiculos sin senal</p>
+          <p class="mt-1 text-2xl font-bold tracking-tight text-gray-900">{{ kpis.vehicles_without_signal }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="absolute bottom-0 left-0 right-0 h-1 {% if kpis.vehicles_without_signal > 0 %}bg-amber-400{% else %}bg-emerald-400{% endif %}"></div>
+  </div>
+
+  {# ── Rutas activas ──────────────────────────────────────────────── #}
+  <div class="relative overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5">
+    <div class="p-6">
+      <div class="flex items-center gap-4">
+        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-indigo-50">
+          <svg class="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z"/>
+          </svg>
+        </div>
+        <div class="min-w-0 flex-1">
+          <p class="text-sm font-medium text-gray-500 truncate">Rutas activas</p>
+          <p class="mt-1 text-2xl font-bold tracking-tight text-gray-900">{{ kpis.active_routes }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="absolute bottom-0 left-0 right-0 h-1 bg-indigo-400"></div>
+  </div>
+
+  {# ── Paradas pendientes ─────────────────────────────────────────── #}
+  <div class="relative overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5">
+    <div class="p-6">
+      <div class="flex items-center gap-4">
+        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-orange-50">
+          <svg class="h-6 w-6 text-orange-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+        </div>
+        <div class="min-w-0 flex-1">
+          <p class="text-sm font-medium text-gray-500 truncate">Paradas pendientes</p>
+          <p class="mt-1 text-2xl font-bold tracking-tight text-gray-900">{{ kpis.pending_stops }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="absolute bottom-0 left-0 right-0 h-1 bg-orange-400"></div>
+  </div>
+
+  {# ── PODs del dia ───────────────────────────────────────────────── #}
+  <div class="relative overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5">
+    <div class="p-6">
+      <div class="flex items-center gap-4">
+        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-emerald-50">
+          <svg class="h-6 w-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z"/>
+          </svg>
+        </div>
+        <div class="min-w-0 flex-1">
+          <p class="text-sm font-medium text-gray-500 truncate">PODs del dia</p>
+          <p class="mt-1 text-2xl font-bold tracking-tight text-gray-900">{{ kpis.pods_today }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="absolute bottom-0 left-0 right-0 h-1 bg-emerald-400"></div>
+  </div>
+
+  {# ── Imports CSV hoy ────────────────────────────────────────────── #}
+  <div class="relative overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5">
+    <div class="p-6">
+      <div class="flex items-center gap-4">
+        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-violet-50">
+          <svg class="h-6 w-6 text-violet-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+          </svg>
+        </div>
+        <div class="min-w-0 flex-1">
+          <p class="text-sm font-medium text-gray-500 truncate">Imports CSV hoy</p>
+          <p class="mt-1 text-2xl font-bold tracking-tight text-gray-900">{{ kpis.import_runs_today }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="absolute bottom-0 left-0 right-0 h-1 bg-violet-400"></div>
+  </div>
+
+  {# ── Posiciones ingeridas (ultima hora) ─────────────────────────── #}
+  <div class="relative overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5">
+    <div class="p-6">
+      <div class="flex items-center gap-4">
+        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-cyan-50">
+          <svg class="h-6 w-6 text-cyan-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 7.5h-.75A2.25 2.25 0 004.5 9.75v7.5a2.25 2.25 0 002.25 2.25h7.5a2.25 2.25 0 002.25-2.25v-7.5a2.25 2.25 0 00-2.25-2.25h-.75m0-3l-3-3m0 0l-3 3m3-3v11.25m6-2.25h.75a2.25 2.25 0 012.25 2.25v7.5a2.25 2.25 0 01-2.25 2.25h-7.5a2.25 2.25 0 01-2.25-2.25v-.75"/>
+          </svg>
+        </div>
+        <div class="min-w-0 flex-1">
+          <p class="text-sm font-medium text-gray-500 truncate">Posiciones (ultima hora)</p>
+          <p class="mt-1 text-2xl font-bold tracking-tight text-gray-900">{{ kpis.positions_ingested_last_hour }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="absolute bottom-0 left-0 right-0 h-1 bg-cyan-400"></div>
+  </div>
+
+</div>
+
+{% endblock %}

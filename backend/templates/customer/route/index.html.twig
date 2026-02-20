@@ -1,0 +1,143 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Mis rutas - MXO Track{% endblock %}
+
+{% block breadcrumbs %}
+  <li>
+    <div class="flex items-center">
+      <svg class="h-5 w-5 shrink-0 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd"/>
+      </svg>
+      <a href="{{ path('customer_dashboard') }}" class="ml-2 text-sm font-medium text-gray-500 hover:text-gray-700">Panel</a>
+    </div>
+  </li>
+  <li>
+    <div class="flex items-center">
+      <svg class="h-5 w-5 shrink-0 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd"/>
+      </svg>
+      <span class="ml-2 text-sm font-medium text-gray-500">Rutas</span>
+    </div>
+  </li>
+{% endblock %}
+
+{% block content %}
+  {# ── Header ──────────────────────────────────────────────────────── #}
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Mis rutas</h1>
+  </div>
+
+  {# ── Status filter tabs ──────────────────────────────────────────── #}
+  <div class="mb-6 border-b border-gray-200">
+    <nav class="-mb-px flex space-x-6" aria-label="Filtros">
+      <a href="{{ path('customer_routes_index') }}"
+         class="whitespace-nowrap border-b-2 pb-3 px-1 text-sm font-medium {% if currentStatus == '' %}border-blue-500 text-blue-600{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{% endif %}">
+        Todas
+      </a>
+      <a href="{{ path('customer_routes_index', {status: 'PLANNED'}) }}"
+         class="whitespace-nowrap border-b-2 pb-3 px-1 text-sm font-medium {% if currentStatus == 'PLANNED' %}border-blue-500 text-blue-600{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{% endif %}">
+        Planificadas
+      </a>
+      <a href="{{ path('customer_routes_index', {status: 'ACTIVE'}) }}"
+         class="whitespace-nowrap border-b-2 pb-3 px-1 text-sm font-medium {% if currentStatus == 'ACTIVE' %}border-amber-500 text-amber-600{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{% endif %}">
+        Activas
+      </a>
+      <a href="{{ path('customer_routes_index', {status: 'DONE'}) }}"
+         class="whitespace-nowrap border-b-2 pb-3 px-1 text-sm font-medium {% if currentStatus == 'DONE' %}border-green-500 text-green-600{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{% endif %}">
+        Completadas
+      </a>
+      <a href="{{ path('customer_routes_index', {status: 'CANCELLED'}) }}"
+         class="whitespace-nowrap border-b-2 pb-3 px-1 text-sm font-medium {% if currentStatus == 'CANCELLED' %}border-red-500 text-red-600{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{% endif %}">
+        Canceladas
+      </a>
+    </nav>
+  </div>
+
+  {# ── Table ───────────────────────────────────────────────────────── #}
+  <div class="bg-white shadow rounded-lg overflow-hidden">
+    <table class="min-w-full divide-y divide-gray-200">
+      <thead class="bg-gray-50">
+        <tr>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Nombre</th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Vehiculo</th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Transportista</th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Estado</th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Progreso</th>
+          <th scope="col" class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Acciones</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-200 bg-white">
+        {% for route in routes %}
+          {% set counts = stopCounts[route.id] ?? {total: 0, delivered: 0} %}
+          <tr>
+            <td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
+              {{ route.name }}
+            </td>
+            <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+              {{ route.vehicle ? route.vehicle.name : '-' }}
+            </td>
+            <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+              {{ route.driver ? route.driver.email : '-' }}
+            </td>
+            <td class="whitespace-nowrap px-6 py-4 text-sm">
+              {% if route.status.value == 'PLANNED' %}
+                <span class="inline-flex rounded-full bg-blue-100 px-2 text-xs font-semibold leading-5 text-blue-800">Planificada</span>
+              {% elseif route.status.value == 'ACTIVE' %}
+                <span class="inline-flex rounded-full bg-amber-100 px-2 text-xs font-semibold leading-5 text-amber-800">Activa</span>
+              {% elseif route.status.value == 'DONE' %}
+                <span class="inline-flex rounded-full bg-green-100 px-2 text-xs font-semibold leading-5 text-green-800">Completada</span>
+              {% elseif route.status.value == 'CANCELLED' %}
+                <span class="inline-flex rounded-full bg-red-100 px-2 text-xs font-semibold leading-5 text-red-800">Cancelada</span>
+              {% endif %}
+            </td>
+            <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+              {% if counts.total > 0 %}
+                <div class="flex items-center space-x-2">
+                  <div class="w-24 bg-gray-200 rounded-full h-2">
+                    <div class="bg-green-500 h-2 rounded-full" style="width: {{ (counts.delivered / counts.total * 100)|round }}%"></div>
+                  </div>
+                  <span class="text-xs text-gray-600">{{ counts.delivered }}/{{ counts.total }} entregas</span>
+                </div>
+              {% else %}
+                <span class="text-xs text-gray-400">Sin paradas</span>
+              {% endif %}
+            </td>
+            <td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
+              <a href="{{ path('customer_routes_show', {publicId: route.publicIdString}) }}"
+                 class="text-brand-600 hover:text-brand-500">Ver</a>
+            </td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="6" class="px-6 py-8 text-center text-sm text-gray-500">
+              No hay rutas registradas.
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {# ── Pagination ──────────────────────────────────────────────────── #}
+  {% if totalPages > 1 %}
+    <nav class="mt-6 flex items-center justify-between">
+      <div class="text-sm text-gray-700">
+        Pagina {{ page }} de {{ totalPages }}
+      </div>
+      <div class="flex space-x-2">
+        {% if page > 1 %}
+          <a href="{{ path('customer_routes_index', {page: page - 1, status: currentStatus}) }}"
+             class="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+            Anterior
+          </a>
+        {% endif %}
+        {% if page < totalPages %}
+          <a href="{{ path('customer_routes_index', {page: page + 1, status: currentStatus}) }}"
+             class="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+            Siguiente
+          </a>
+        {% endif %}
+      </div>
+    </nav>
+  {% endif %}
+{% endblock %}

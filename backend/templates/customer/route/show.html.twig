@@ -1,0 +1,288 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ route.name }} - Ruta{% endblock %}
+
+{% block styles %}
+  {{ parent() }}
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  >
+  <style>
+    #route-map { min-height: 500px; height: 100%; }
+  </style>
+{% endblock %}
+
+{% block breadcrumbs %}
+  <li>
+    <div class="flex items-center">
+      <svg class="h-5 w-5 shrink-0 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd"/>
+      </svg>
+      <a href="{{ path('customer_dashboard') }}" class="ml-2 text-sm font-medium text-gray-500 hover:text-gray-700">Panel</a>
+    </div>
+  </li>
+  <li>
+    <div class="flex items-center">
+      <svg class="h-5 w-5 shrink-0 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd"/>
+      </svg>
+      <a href="{{ path('customer_routes_index') }}" class="ml-2 text-sm font-medium text-gray-500 hover:text-gray-700">Rutas</a>
+    </div>
+  </li>
+  <li>
+    <div class="flex items-center">
+      <svg class="h-5 w-5 shrink-0 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd"/>
+      </svg>
+      <span class="ml-2 text-sm font-medium text-gray-500">{{ route.name }}</span>
+    </div>
+  </li>
+{% endblock %}
+
+{% block content %}
+  {# ── Header ──────────────────────────────────────────────────────── #}
+  <div class="mb-6">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">{{ route.name }}</h1>
+        <div class="mt-1 flex items-center gap-3 text-sm text-gray-500">
+          {% if route.vehicle %}
+            <span class="flex items-center gap-1">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"/>
+              </svg>
+              {{ route.vehicle.name }}
+            </span>
+          {% endif %}
+          {% if route.driver %}
+            <span class="flex items-center gap-1">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/>
+              </svg>
+              {{ route.driver.email }}
+            </span>
+          {% endif %}
+        </div>
+      </div>
+      <div>
+        {% if route.status.value == 'PLANNED' %}
+          <span class="inline-flex rounded-full bg-blue-100 px-3 py-1 text-sm font-semibold text-blue-800">Planificada</span>
+        {% elseif route.status.value == 'ACTIVE' %}
+          <span class="inline-flex rounded-full bg-amber-100 px-3 py-1 text-sm font-semibold text-amber-800">Activa</span>
+        {% elseif route.status.value == 'DONE' %}
+          <span class="inline-flex rounded-full bg-green-100 px-3 py-1 text-sm font-semibold text-green-800">Completada</span>
+        {% elseif route.status.value == 'CANCELLED' %}
+          <span class="inline-flex rounded-full bg-red-100 px-3 py-1 text-sm font-semibold text-red-800">Cancelada</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# ── Split Layout: stops + map ───────────────────────────────────── #}
+  <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+
+    {# ── Left: Stop List ──────────────────────────────────────────── #}
+    <div class="lg:col-span-2">
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-100">
+          <h2 class="text-sm font-semibold text-gray-900">Paradas ({{ stops|length }})</h2>
+        </div>
+
+        {% if stops|length > 0 %}
+          <ul class="divide-y divide-gray-100 max-h-[600px] overflow-y-auto">
+            {% for stop in stops %}
+              <li class="px-5 py-4">
+                <div class="flex items-start gap-3">
+                  {# Sequence number with status color #}
+                  <div class="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white
+                    {% if stop.status.value == 'DELIVERED' %}bg-green-500
+                    {% elseif stop.status.value == 'EXCEPTION' %}bg-red-500
+                    {% elseif stop.status.value == 'SKIPPED' %}bg-gray-400
+                    {% else %}bg-blue-500{% endif %}">
+                    {{ stop.sequence }}
+                  </div>
+
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center justify-between gap-2">
+                      <p class="text-sm font-medium text-gray-900 truncate">{{ stop.address }}</p>
+                      {% if stop.status.value == 'DELIVERED' %}
+                        <span class="shrink-0 inline-flex rounded-full bg-green-100 px-2 text-xs font-semibold leading-5 text-green-800">Entregado</span>
+                      {% elseif stop.status.value == 'EXCEPTION' %}
+                        <span class="shrink-0 inline-flex rounded-full bg-red-100 px-2 text-xs font-semibold leading-5 text-red-800">Excepcion</span>
+                      {% elseif stop.status.value == 'SKIPPED' %}
+                        <span class="shrink-0 inline-flex rounded-full bg-gray-100 px-2 text-xs font-semibold leading-5 text-gray-800">Omitido</span>
+                      {% else %}
+                        <span class="shrink-0 inline-flex rounded-full bg-blue-100 px-2 text-xs font-semibold leading-5 text-blue-800">Pendiente</span>
+                      {% endif %}
+                    </div>
+
+                    {% if stop.recipientName %}
+                      <p class="text-xs text-gray-500 mt-0.5">{{ stop.recipientName }}{% if stop.recipientPhone %} &middot; {{ stop.recipientPhone }}{% endif %}</p>
+                    {% endif %}
+
+                    {% if stop.deliveredAt %}
+                      <p class="text-xs text-green-600 mt-0.5">Entregado: {{ stop.deliveredAt|date('d/m/Y H:i') }}</p>
+                    {% endif %}
+
+                    {% if stop.notes %}
+                      <p class="text-xs text-gray-400 mt-0.5">{{ stop.notes }}</p>
+                    {% endif %}
+                  </div>
+                </div>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <div class="px-5 py-8 text-center">
+            <p class="text-sm text-gray-500">No hay paradas asignadas a esta ruta.</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# ── Right: Map ───────────────────────────────────────────────── #}
+    <div class="lg:col-span-3">
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-100">
+          <h2 class="text-sm font-semibold text-gray-900">Mapa de ruta</h2>
+        </div>
+        <div id="route-map" style="height: 600px;"></div>
+      </div>
+    </div>
+
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  {{ parent() }}
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script>
+    delete L.Icon.Default.prototype._getIconUrl;
+    L.Icon.Default.mergeOptions({
+      iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+      iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+      shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+    });
+
+    (function () {
+      const stops = {{ stops_json|raw }};
+      const vehiclePos = {{ vehicle_position_json|raw }};
+      const vehiclePublicId = '{{ vehicle_public_id }}';
+
+      const map = L.map('route-map').setView([40.4168, -3.7038], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(map);
+
+      // Status colors
+      const statusColors = {
+        PENDING: '#3b82f6',
+        DELIVERED: '#22c55e',
+        EXCEPTION: '#ef4444',
+        SKIPPED: '#6b7280'
+      };
+
+      // Add stop markers
+      const polylineCoords = [];
+      stops.forEach(function (stop) {
+        if (stop.lat && stop.lng) {
+          const color = statusColors[stop.status] || '#3b82f6';
+          polylineCoords.push([stop.lat, stop.lng]);
+
+          L.circleMarker([stop.lat, stop.lng], {
+            radius: 10,
+            fillColor: color,
+            color: '#fff',
+            weight: 2,
+            fillOpacity: 0.9
+          })
+            .bindPopup(
+              '<b>#' + stop.sequence + '</b><br>' +
+              stop.address + '<br>' +
+              (stop.recipientName ? stop.recipientName + '<br>' : '') +
+              '<span style="color:' + color + ';font-weight:600">' + stop.status + '</span>' +
+              (stop.deliveredAt ? '<br><small>' + stop.deliveredAt + '</small>' : '')
+            )
+            .addTo(map);
+
+          // Sequence number label
+          L.marker([stop.lat, stop.lng], {
+            icon: L.divIcon({
+              className: 'leaflet-stop-label',
+              html: '<div style="display:flex;align-items:center;justify-content:center;width:20px;height:20px;font-size:11px;font-weight:700;color:#fff;pointer-events:none;">' + stop.sequence + '</div>',
+              iconSize: [20, 20],
+              iconAnchor: [10, 10],
+            }),
+            interactive: false,
+          }).addTo(map);
+        }
+      });
+
+      // Draw polyline connecting stops in sequence order
+      if (polylineCoords.length > 1) {
+        L.polyline(polylineCoords, {
+          color: '#6366f1',
+          weight: 3,
+          opacity: 0.6,
+          dashArray: '8 6'
+        }).addTo(map);
+      }
+
+      // Vehicle marker
+      var vehicleMarker = null;
+      if (vehiclePos && vehiclePos.lat && vehiclePos.lng) {
+        vehicleMarker = L.marker([vehiclePos.lat, vehiclePos.lng], {
+          icon: L.divIcon({
+            className: 'leaflet-vehicle-icon',
+            html: '<div style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;background:#1e40af;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="white" style="width:16px;height:16px;"><path d="M6.5 18a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM13.5 18a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM17.836 5.318l-1.3-.39A5 5 0 0 0 11.8 2H8.2a5 5 0 0 0-4.737 2.928l-1.3.39A2 2 0 0 0 .758 7.282L1.5 12.5v1A1.5 1.5 0 0 0 3 15h14a1.5 1.5 0 0 0 1.5-1.5v-1l.742-5.218a2 2 0 0 0-1.406-1.964Z"/></svg></div>',
+            iconSize: [32, 32],
+            iconAnchor: [16, 16],
+          }),
+        }).addTo(map).bindPopup('Vehiculo');
+      }
+
+      // Mercure real-time vehicle tracking
+      if (vehiclePublicId) {
+        // Fetch Mercure auth cookie first
+        fetch('/api/mercure-token', { credentials: 'include' }).then(function () {
+          var hub = new URL('{{ mercure_public_url }}');
+          hub.searchParams.set('topic', '/vehicles/' + vehiclePublicId + '/position');
+
+          var es = new EventSource(hub, { withCredentials: true });
+          es.onmessage = function (e) {
+            var d = JSON.parse(e.data);
+            if (d.lat && d.lng) {
+              if (vehicleMarker) {
+                vehicleMarker.setLatLng([d.lat, d.lng]);
+              } else {
+                vehicleMarker = L.marker([d.lat, d.lng], {
+                  icon: L.divIcon({
+                    className: 'leaflet-vehicle-icon',
+                    html: '<div style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;background:#1e40af;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="white" style="width:16px;height:16px;"><path d="M6.5 18a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM13.5 18a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM17.836 5.318l-1.3-.39A5 5 0 0 0 11.8 2H8.2a5 5 0 0 0-4.737 2.928l-1.3.39A2 2 0 0 0 .758 7.282L1.5 12.5v1A1.5 1.5 0 0 0 3 15h14a1.5 1.5 0 0 0 1.5-1.5v-1l.742-5.218a2 2 0 0 0-1.406-1.964Z"/></svg></div>',
+                    iconSize: [32, 32],
+                    iconAnchor: [16, 16],
+                  }),
+                }).addTo(map).bindPopup('Vehiculo');
+              }
+            }
+          };
+
+          window.addEventListener('beforeunload', function () { es.close(); });
+        });
+      }
+
+      // Fit bounds to show all markers
+      var allPoints = stops.filter(function (s) { return s.lat && s.lng; }).map(function (s) { return [s.lat, s.lng]; });
+      if (vehiclePos && vehiclePos.lat && vehiclePos.lng) {
+        allPoints.push([vehiclePos.lat, vehiclePos.lng]);
+      }
+      if (allPoints.length > 0) {
+        map.fitBounds(allPoints, { padding: [30, 30] });
+      }
+    })();
+  </script>
+{% endblock %}

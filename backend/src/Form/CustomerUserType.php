@@ -65,7 +65,7 @@ class CustomerUserType extends AbstractType
                 'label' => 'Activo',
                 'required' => false,
                 'getter' => static fn (User $user): bool => $user->isActive(),
-                'setter' => static fn (User $user, bool $value): void => $user->setActive($value),
+                'setter' => static function (User $user, bool $value): void { $user->setActive($value); },
             ]);
     }
 

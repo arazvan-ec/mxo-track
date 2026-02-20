@@ -1,0 +1,73 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ customer.id ? 'Editar almacen' : 'Nuevo almacen' }} - Admin{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+  <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    {% for type, messages in app.flashes %}
+      {% for message in messages %}
+        <div class="mb-4 rounded-md p-4 {{ type == 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800' }}">
+          {{ message }}
+        </div>
+      {% endfor %}
+    {% endfor %}
+
+    <div class="mb-6">
+      <a href="{{ path('admin_customers_index') }}" class="text-sm text-blue-600 hover:text-blue-800 hover:underline">
+        &larr; Volver a almacenes
+      </a>
+    </div>
+
+    <h1 class="text-2xl font-bold text-gray-900 mb-6">
+      {{ customer.id ? 'Editar almacen' : 'Nuevo almacen' }}
+    </h1>
+
+    <div class="bg-white shadow sm:rounded-lg">
+      {{ form_start(form, {attr: {class: 'space-y-6 p-6'}}) }}
+
+        <div>
+          {{ form_label(form.name, null, {label_attr: {class: 'block text-sm font-medium text-gray-700 mb-1'}}) }}
+          {{ form_widget(form.name) }}
+          {{ form_errors(form.name) }}
+        </div>
+
+        <div>
+          {{ form_label(form.address, null, {label_attr: {class: 'block text-sm font-medium text-gray-700 mb-1'}}) }}
+          {{ form_widget(form.address) }}
+          {{ form_errors(form.address) }}
+        </div>
+
+        <div>
+          {{ form_label(form.contactEmail, null, {label_attr: {class: 'block text-sm font-medium text-gray-700 mb-1'}}) }}
+          {{ form_widget(form.contactEmail) }}
+          {{ form_errors(form.contactEmail) }}
+        </div>
+
+        <div>
+          {{ form_label(form.contactPhone, null, {label_attr: {class: 'block text-sm font-medium text-gray-700 mb-1'}}) }}
+          {{ form_widget(form.contactPhone) }}
+          {{ form_errors(form.contactPhone) }}
+        </div>
+
+        <div class="flex items-center">
+          {{ form_widget(form.isActive, {attr: {class: 'h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500'}}) }}
+          {{ form_label(form.isActive, null, {label_attr: {class: 'ml-2 block text-sm text-gray-700'}}) }}
+          {{ form_errors(form.isActive) }}
+        </div>
+
+        <div class="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200">
+          <a href="{{ path('admin_customers_index') }}"
+             class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+            Cancelar
+          </a>
+          <button type="submit"
+                  class="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500">
+            {{ customer.id ? 'Guardar cambios' : 'Crear almacen' }}
+          </button>
+        </div>
+
+      {{ form_end(form) }}
+    </div>
+{% endblock %}

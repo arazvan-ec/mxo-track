@@ -57,7 +57,7 @@ class CustomerType extends AbstractType
                 'required' => false,
                 'data' => $customer?->getId() !== null ? $customer->isActive() : true,
                 'getter' => static fn (Customer $c): bool => $c->isActive(),
-                'setter' => static fn (Customer $c, bool $value): void => $c->setActive($value),
+                'setter' => static function (Customer $c, bool $value): void { $c->setActive($value); },
             ]);
     }
 

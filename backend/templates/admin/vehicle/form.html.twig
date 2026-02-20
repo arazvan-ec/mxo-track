@@ -2,19 +2,8 @@
 
 {% block title %}{{ vehicle.id ? 'Editar vehiculo' : 'Nuevo vehiculo' }} - Admin{% endblock %}
 
-{% block body %}
-<div class="min-h-screen bg-gray-100 py-8">
-  <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:px-8">
-
-    {# Flash messages #}
-    {% for type, messages in app.flashes %}
-      {% for message in messages %}
-        <div class="mb-4 rounded-md p-4 {% if type == 'success' %}bg-green-50 text-green-800{% elseif type == 'error' %}bg-red-50 text-red-800{% else %}bg-blue-50 text-blue-800{% endif %}">
-          {{ message }}
-        </div>
-      {% endfor %}
-    {% endfor %}
-
+{% block content %}
+<div class="mx-auto max-w-2xl">
     {# Header #}
     <div class="mb-6">
       <h1 class="text-2xl font-bold text-gray-900">
@@ -51,6 +40,5 @@
       {{ form_end(form) }}
     </div>
 
-  </div>
 </div>
 {% endblock %}
