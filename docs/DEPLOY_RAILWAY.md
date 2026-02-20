@@ -20,9 +20,9 @@ En Railway, para cada servicio que necesite acceso externo:
 
 **Settings → Networking → Generate Domain**
 
-Servicios que necesitan dominio público:
-- **app-mxo** (puerto 8000) → genera algo como `app-mxo-production.up.railway.app`
-- **mercure-mxo** (puerto 80) → genera algo como `mercure-mxo-production.up.railway.app`
+Dominios públicos asignados:
+- **app-mxo** (puerto 8000) → `https://mxo-track-production.up.railway.app`
+- **mercure-mxo** (puerto 80) → `https://mxo-track-production.up.railway.app`
 
 Traccar no necesita dominio público (solo se accede internamente desde app y worker).
 
@@ -30,7 +30,7 @@ Traccar no necesita dominio público (solo se accede internamente desde app y wo
 
 Ir a cada servicio → **Variables → Raw Editor** y pegar el bloque correspondiente.
 
-> **IMPORTANTE**: Reemplazar `TU_DOMINIO_APP` y `TU_DOMINIO_MERCURE` con los dominios reales generados en el paso 1.
+Dominios ya configurados — URLs listas para copiar y pegar.
 
 ### app-mxo
 
@@ -38,12 +38,12 @@ Ir a cada servicio → **Variables → Raw Editor** y pegar el bloque correspond
 APP_ENV=prod
 APP_DEBUG=0
 APP_SECRET=8bdbc8f3fc515442faf5f8f955f2a0b714b2620ede7b64480734c28fcce7c236
-APP_URL=https://TU_DOMINIO_APP.up.railway.app
+APP_URL=https://mxo-track-production.up.railway.app
 DATABASE_URL=postgresql://postgres:BGBYqGcZewWwMOtfnFzTFDnEHpEpgNoZ@postgres.railway.internal:5432/railway?serverVersion=16&charset=utf8
 REDIS_URL=redis://default:nisOENRFqAgwVqYgEYmbquCdZfaLYKvJ@redis.railway.internal:6379
 REDIS_SESSION_PREFIX=sess:transporte:
 MERCURE_URL=http://mercure-mxo.railway.internal/.well-known/mercure
-MERCURE_PUBLIC_URL=https://TU_DOMINIO_MERCURE.up.railway.app/.well-known/mercure
+MERCURE_PUBLIC_URL=https://mxo-track-production.up.railway.app/.well-known/mercure
 MERCURE_PUBLISHER_JWT_KEY=75ea28a79d9c88144fda4448226969a45f013e6e4b8ac016586257a302567daa
 MERCURE_SUBSCRIBER_JWT_KEY=75ea28a79d9c88144fda4448226969a45f013e6e4b8ac016586257a302567daa
 MERCURE_SUBSCRIBER_TOKEN_TTL=3600
@@ -75,8 +75,6 @@ TRACCAR_PASSWORD=6Mrby8dT37ytpvcpaKc
 
 ### mercure-mxo
 
-> Reemplazar `TU_DOMINIO_APP` con el dominio real de app-mxo.
-
 ```env
 SERVER_NAME=:80
 MERCURE_PUBLISHER_JWT_KEY=75ea28a79d9c88144fda4448226969a45f013e6e4b8ac016586257a302567daa
@@ -85,7 +83,7 @@ MERCURE_SUBSCRIBER_JWT_KEY=75ea28a79d9c88144fda4448226969a45f013e6e4b8ac01658625
 MERCURE_SUBSCRIBER_JWT_ALG=HS256
 MERCURE_EXTRA_DIRECTIVES=anonymous 0
 publish_origins *
-cors_origins https://TU_DOMINIO_APP.up.railway.app
+cors_origins https://mxo-track-production.up.railway.app
 ```
 
 ### traccar-mxo
