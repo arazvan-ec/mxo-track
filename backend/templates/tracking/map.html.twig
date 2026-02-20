@@ -237,6 +237,8 @@
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
 <script>
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
 function fleetMap() {
   return {
     // Data from server
@@ -352,7 +354,7 @@ function fleetMap() {
         }).addTo(this.map);
 
         const speed = Math.round(v.last_position.speed || 0);
-        marker.bindTooltip(`${v.name} - ${speed} km/h`, {
+        marker.bindTooltip(`${esc(v.name)} - ${speed} km/h`, {
           className: 'vehicle-tooltip',
           direction: 'top',
           offset: [0, -20],
@@ -418,9 +420,9 @@ function fleetMap() {
           icon: this.createStopIcon(stop.status, stop.sequence),
         }).addTo(this.map);
 
-        let tooltipHtml = `<strong>#${stop.sequence}</strong> ${stop.address}`;
-        if (stop.recipient) tooltipHtml += `<br>${stop.recipient}`;
-        tooltipHtml += `<br><em>${stop.status}</em>`;
+        let tooltipHtml = `<strong>#${stop.sequence}</strong> ${esc(stop.address)}`;
+        if (stop.recipient) tooltipHtml += `<br>${esc(stop.recipient)}`;
+        tooltipHtml += `<br><em>${esc(stop.status)}</em>`;
         marker.bindTooltip(tooltipHtml, {
           className: 'vehicle-tooltip',
           direction: 'top',
@@ -534,14 +536,14 @@ function fleetMap() {
 
         const speedRounded = Math.round(speed);
         const name = vehicle ? vehicle.name : vid;
-        marker.setTooltipContent(`${name} - ${speedRounded} km/h`);
+        marker.setTooltipContent(`${esc(name)} - ${speedRounded} km/h`);
       } else {
         const marker = L.marker(latlng, {
           icon: this.createVehicleIcon(course),
         }).addTo(this.map);
 
         const name = vehicle ? vehicle.name : vid;
-        marker.bindTooltip(`${name} - ${Math.round(speed)} km/h`, {
+        marker.bindTooltip(`${esc(name)} - ${Math.round(speed)} km/h`, {
           className: 'vehicle-tooltip',
           direction: 'top',
           offset: [0, -20],

@@ -13,8 +13,8 @@ services:
       REDIS_URL: redis://redis:6379
       MERCURE_URL: http://mercure/.well-known/mercure
       MERCURE_PUBLIC_URL: http://localhost:3000/.well-known/mercure
-      MERCURE_PUBLISHER_JWT_KEY: local-mercure-key-change-me
-      MERCURE_SUBSCRIBER_JWT_KEY: local-mercure-key-change-me
+      MERCURE_PUBLISHER_JWT_KEY: local-mercure-jwt-key-change-me-dev
+      MERCURE_SUBSCRIBER_JWT_KEY: local-mercure-jwt-key-change-me-dev
       TRACCAR_BASE_URL: http://traccar:8082
       TRACCAR_USERNAME: admin
       TRACCAR_PASSWORD: admin
@@ -47,8 +47,8 @@ services:
     image: dunglas/mercure
     environment:
       SERVER_NAME: ':80'
-      MERCURE_PUBLISHER_JWT_KEY: local-mercure-key-change-me
-      MERCURE_SUBSCRIBER_JWT_KEY: local-mercure-key-change-me
+      MERCURE_PUBLISHER_JWT_KEY: local-mercure-jwt-key-change-me-dev
+      MERCURE_SUBSCRIBER_JWT_KEY: local-mercure-jwt-key-change-me-dev
       MERCURE_EXTRA_DIRECTIVES: |
         cors_origins http://localhost:8000
         anonymous

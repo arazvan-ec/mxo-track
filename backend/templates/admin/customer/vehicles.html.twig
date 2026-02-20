@@ -3,17 +3,6 @@
 {% block title %}Vehiculos de {{ customer.name }} - Admin{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gray-50">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
-    {% for type, messages in app.flashes %}
-      {% for message in messages %}
-        <div class="mb-4 rounded-md p-4 {{ type == 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800' }}">
-          {{ message }}
-        </div>
-      {% endfor %}
-    {% endfor %}
-
     <div class="mb-6">
       <a href="{{ path('admin_customers_index') }}" class="text-sm text-blue-600 hover:text-blue-800 hover:underline">
         &larr; Volver a almacenes
@@ -35,7 +24,7 @@
               <div class="flex h-5 items-center">
                 <input type="checkbox"
                        name="vehicle_ids[]"
-                       value="{{ vehicle.id }}"
+                       value="{{ vehicle.publicIdString }}"
                        {{ vehicle.id in assignedIds ? 'checked' : '' }}
                        class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
               </div>

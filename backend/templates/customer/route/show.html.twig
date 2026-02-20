@@ -168,6 +168,8 @@
     });
 
     (function () {
+      function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
       const stops = {{ stops_json|raw }};
       const vehiclePos = {{ vehicle_position_json|raw }};
       const vehiclePublicId = '{{ vehicle_public_id }}';
@@ -202,10 +204,10 @@
           })
             .bindPopup(
               '<b>#' + stop.sequence + '</b><br>' +
-              stop.address + '<br>' +
-              (stop.recipientName ? stop.recipientName + '<br>' : '') +
-              '<span style="color:' + color + ';font-weight:600">' + stop.status + '</span>' +
-              (stop.deliveredAt ? '<br><small>' + stop.deliveredAt + '</small>' : '')
+              esc(stop.address) + '<br>' +
+              (stop.recipientName ? esc(stop.recipientName) + '<br>' : '') +
+              '<span style="color:' + color + ';font-weight:600">' + esc(stop.status) + '</span>' +
+              (stop.deliveredAt ? '<br><small>' + esc(stop.deliveredAt) + '</small>' : '')
             )
             .addTo(map);
 

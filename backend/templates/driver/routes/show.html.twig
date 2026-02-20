@@ -714,6 +714,8 @@
             shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
           });
 
+          function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
           const stops = {{ stops_json|raw }};
           const vehiclePos = {{ vehicle_position_json|raw }};
           const vehiclePublicId = '{{ vehicle_public_id }}';
@@ -747,11 +749,11 @@
               })
                 .bindPopup(
                   '<b>#' + stop.sequence + '</b><br>' +
-                  stop.address + '<br>' +
-                  (stop.recipientName ? '<b>' + stop.recipientName + '</b><br>' : '') +
-                  (stop.recipientPhone ? stop.recipientPhone + '<br>' : '') +
-                  '<span style="color:' + color + ';font-weight:600">' + stop.status + '</span>' +
-                  (stop.deliveredAt ? '<br><small>' + stop.deliveredAt + '</small>' : '')
+                  esc(stop.address) + '<br>' +
+                  (stop.recipientName ? '<b>' + esc(stop.recipientName) + '</b><br>' : '') +
+                  (stop.recipientPhone ? esc(stop.recipientPhone) + '<br>' : '') +
+                  '<span style="color:' + color + ';font-weight:600">' + esc(stop.status) + '</span>' +
+                  (stop.deliveredAt ? '<br><small>' + esc(stop.deliveredAt) + '</small>' : '')
                 )
                 .addTo(map);
 

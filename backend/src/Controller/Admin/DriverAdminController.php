@@ -14,8 +14,10 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[Route('/admin/drivers')]
+#[IsGranted('ROLE_OPERATOR')]
 class DriverAdminController extends AbstractController
 {
     private const int ITEMS_PER_PAGE = 20;
@@ -102,6 +104,10 @@ class DriverAdminController extends AbstractController
         $driver = $this->userRepository->findOneByPublicId($publicId);
 
         if (!$driver instanceof User) {
+            throw $this->createNotFoundException('Conductor no encontrado.');
+        }
+
+        if (!$driver->hasRole('ROLE_DRIVER')) {
             throw $this->createNotFoundException('Conductor no encontrado.');
         }
 

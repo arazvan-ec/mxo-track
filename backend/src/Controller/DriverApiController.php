@@ -28,9 +28,11 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 #[Route('/api/driver')]
+#[IsGranted('ROLE_DRIVER')]
 class DriverApiController extends AbstractController
 {
     #[Route('/routes', methods: ['GET'])]
@@ -56,6 +58,12 @@ class DriverApiController extends AbstractController
             return $errorResponder->notFound('route_not_found', 'Ruta no encontrada.');
         }
 
+        /** @var User $driver */
+        $driver = $this->getUser();
+        if ($route->getDriver()?->getId() !== $driver->getId()) {
+            return $errorResponder->notFound('route_not_found', 'Ruta no encontrada.');
+        }
+
         $route->start();
         $entityManager->flush();
 
@@ -70,6 +78,12 @@ class DriverApiController extends AbstractController
             return $errorResponder->notFound('route_not_found', 'Ruta no encontrada.');
         }
 
+        /** @var User $driver */
+        $driver = $this->getUser();
+        if ($route->getDriver()?->getId() !== $driver->getId()) {
+            return $errorResponder->notFound('route_not_found', 'Ruta no encontrada.');
+        }
+
         $route->finish();
         $entityManager->flush();
 
@@ -81,6 +95,12 @@ class DriverApiController extends AbstractController
     {
         $route = $routeRepository->findOneByPublicId($routePublicId);
         if (!$route instanceof RouteEntity) {
+            return $errorResponder->notFound('route_not_found', 'Ruta no encontrada.');
+        }
+
+        /** @var User $driver */
+        $driver = $this->getUser();
+        if ($route->getDriver()?->getId() !== $driver->getId()) {
             return $errorResponder->notFound('route_not_found', 'Ruta no encontrada.');
         }
 
@@ -125,16 +145,20 @@ class DriverApiController extends AbstractController
             return $errorResponder->notFound('stop_not_found', 'Parada no encontrada.');
         }
 
+        if ($stop->getRoute()->getDriver()?->getId() !== $driver->getId()) {
+            return $errorResponder->notFound('stop_not_found', 'Parada no encontrada.');
+        }
+
         $created = $actionService->register($driver, $input->clientActionId, 'DELIVER', $stop);
         if (!$created) {
             return $this->json(['ok' => true, 'idempotent' => true]);
         }
 
-        $stop->markDelivered();
-
         if (!$input->confirmedByDriver) {
             return $errorResponder->badRequest('driver_confirmation_required', 'El driver debe confirmar explícitamente la entrega.');
         }
+
+        $stop->markDelivered();
 
         $pod = new Pod($stop, $driver, $input->signedByName, $input->recipientIdEncoded);
         $entityManager->persist($pod);
@@ -199,6 +223,10 @@ class DriverApiController extends AbstractController
             return $errorResponder->notFound('stop_not_found', 'Parada no encontrada.');
         }
 
+        if ($stop->getRoute()->getDriver()?->getId() !== $driver->getId()) {
+            return $errorResponder->notFound('stop_not_found', 'Parada no encontrada.');
+        }
+
         $created = $actionService->register($driver, $input->clientActionId, 'EXCEPTION', $stop);
         if (!$created) {
             return $this->json(['ok' => true, 'idempotent' => true]);
@@ -233,8 +261,15 @@ class DriverApiController extends AbstractController
     #[Route('/stops/{stopPublicId}/pod', methods: ['GET'])]
     public function podMetadata(string $stopPublicId, RouteStopRepository $routeStopRepository, PodRepository $podRepository, ApiErrorResponder $errorResponder): JsonResponse
     {
+        /** @var User $driver */
+        $driver = $this->getUser();
+
         $stop = $routeStopRepository->findOneByPublicId($stopPublicId);
         if (!$stop instanceof RouteStop) {
+            return $errorResponder->notFound('stop_not_found', 'Parada no encontrada.');
+        }
+
+        if ($stop->getRoute()->getDriver()?->getId() !== $driver->getId()) {
             return $errorResponder->notFound('stop_not_found', 'Parada no encontrada.');
         }
 
@@ -253,8 +288,15 @@ class DriverApiController extends AbstractController
     #[Route('/stops/{stopPublicId}/pod/download', methods: ['GET'])]
     public function podDownload(string $stopPublicId, RouteStopRepository $routeStopRepository, PodRepository $podRepository, ApiErrorResponder $errorResponder): JsonResponse
     {
+        /** @var User $driver */
+        $driver = $this->getUser();
+
         $stop = $routeStopRepository->findOneByPublicId($stopPublicId);
         if (!$stop instanceof RouteStop) {
+            return $errorResponder->notFound('stop_not_found', 'Parada no encontrada.');
+        }
+
+        if ($stop->getRoute()->getDriver()?->getId() !== $driver->getId()) {
             return $errorResponder->notFound('stop_not_found', 'Parada no encontrada.');
         }
 

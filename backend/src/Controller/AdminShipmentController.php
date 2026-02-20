@@ -12,8 +12,11 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Uid\Ulid;
 
 #[Route('/admin/shipments')]
+#[IsGranted('ROLE_OPERATOR')]
 class AdminShipmentController extends AbstractController
 {
     #[Route('/import', name: 'admin_shipments_import', methods: ['GET', 'POST'])]
@@ -26,10 +29,20 @@ class AdminShipmentController extends AbstractController
         $result = null;
 
         if ($request->isMethod('POST')) {
-            $customerId = (string) $request->request->get('customer_id');
+            if (!$this->isCsrfTokenValid('import-shipments', $request->request->getString('_token'))) {
+                $this->addFlash('error', 'Token CSRF invalido.');
+
+                return $this->redirectToRoute('admin_shipments_import');
+            }
+
+            $customerPublicId = $request->request->getString('customer_id');
             $csv = $request->files->get('csv_file');
 
-            $customer = $entityManager->find(Customer::class, $customerId);
+            try {
+                $customer = $entityManager->getRepository(Customer::class)->findOneBy(['publicId' => Ulid::fromString($customerPublicId)]);
+            } catch (\InvalidArgumentException) {
+                $customer = null;
+            }
             if (!$customer instanceof Customer || $csv === null) {
                 $this->addFlash('error', 'Debes seleccionar un cliente y un archivo CSV.');
 

@@ -150,7 +150,7 @@ class CustomerRouteController extends AbstractController
             'sequence' => $stop->getSequence(),
             'recipientName' => $stop->getRecipientName(),
             'deliveredAt' => $stop->getDeliveredAt()?->format('d/m/Y H:i'),
-        ], $stops), JSON_THROW_ON_ERROR);
+        ], $stops), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_THROW_ON_ERROR);
 
         // Load vehicle last position if route has a vehicle
         $vehiclePositionJson = 'null';
@@ -167,7 +167,7 @@ class CustomerRouteController extends AbstractController
                 $vehiclePositionJson = json_encode([
                     'lat' => $lastPosition->getLat(),
                     'lng' => $lastPosition->getLng(),
-                ], JSON_THROW_ON_ERROR);
+                ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_THROW_ON_ERROR);
             }
         }
 

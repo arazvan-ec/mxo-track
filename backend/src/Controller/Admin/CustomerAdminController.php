@@ -9,14 +9,17 @@ use App\Entity\CustomerVehicle;
 use App\Entity\User;
 use App\Entity\Vehicle;
 use App\Form\CustomerType;
+use App\Repository\VehicleRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Uid\Ulid;
 
 #[Route('/admin/customers')]
+#[IsGranted('ROLE_OPERATOR')]
 class CustomerAdminController extends AbstractController
 {
     private const int ITEMS_PER_PAGE = 20;
@@ -167,7 +170,7 @@ class CustomerAdminController extends AbstractController
     }
 
     #[Route('/{publicId}/vehicles', name: 'admin_customers_vehicles', methods: ['GET', 'POST'])]
-    public function vehicles(string $publicId, Request $request): Response
+    public function vehicles(string $publicId, Request $request, VehicleRepository $vehicleRepository): Response
     {
         $customer = $this->findCustomerByPublicId($publicId);
 
@@ -182,7 +185,7 @@ class CustomerAdminController extends AbstractController
                 return $this->redirectToRoute('admin_customers_vehicles', ['publicId' => $publicId]);
             }
 
-            $selectedIds = $request->request->all('vehicle_ids');
+            $selectedPublicIds = $request->request->all('vehicle_ids');
 
             // Remove existing assignments
             $this->em->createQueryBuilder()
@@ -193,8 +196,8 @@ class CustomerAdminController extends AbstractController
                 ->execute();
 
             // Add selected
-            foreach ($selectedIds as $vid) {
-                $vehicle = $this->em->find(Vehicle::class, $vid);
+            foreach ($selectedPublicIds as $vpid) {
+                $vehicle = $vehicleRepository->findOneByPublicId($vpid);
                 if ($vehicle) {
                     $this->em->persist(new CustomerVehicle($customer, $vehicle));
                 }

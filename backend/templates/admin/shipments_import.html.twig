@@ -35,6 +35,7 @@
   {# ── Import form card ──────────────────────────────────────────────── #}
   <div class="bg-white shadow-sm ring-1 ring-gray-900/5 rounded-xl">
     <form method="post" enctype="multipart/form-data" action="{{ path('admin_shipments_import') }}">
+      <input type="hidden" name="_token" value="{{ csrf_token('import-shipments') }}">
 
       <div class="px-6 py-6 space-y-6">
 
@@ -46,7 +47,7 @@
                          focus:border-brand-500 focus:ring-brand-500 border">
             <option value="">Selecciona un cliente</option>
             {% for customer in customers %}
-              <option value="{{ customer.id }}">{{ customer.name }}</option>
+              <option value="{{ customer.publicIdString }}">{{ customer.name }}</option>
             {% endfor %}
           </select>
         </div>

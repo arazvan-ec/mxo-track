@@ -17,8 +17,10 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route as SymfonyRoute;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[SymfonyRoute('/admin/routes')]
+#[IsGranted('ROLE_OPERATOR')]
 class RouteAdminController extends AbstractController
 {
     private const int ITEMS_PER_PAGE = 20;
@@ -258,6 +260,10 @@ class RouteAdminController extends AbstractController
         $stop = $this->routeStopRepository->findOneByPublicId($stopPublicId);
 
         if (!$stop instanceof RouteStop) {
+            throw $this->createNotFoundException('Parada no encontrada.');
+        }
+
+        if ($stop->getRoute()->getId() !== $route->getId()) {
             throw $this->createNotFoundException('Parada no encontrada.');
         }
 
