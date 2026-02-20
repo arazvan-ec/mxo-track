@@ -1,6 +1,8 @@
 doctrine:
   dbal:
     url: '%env(resolve:DATABASE_URL)%'
+    server_version: '16'
+    charset: utf8
   orm:
     auto_generate_proxy_classes: true
     auto_mapping: true
