@@ -23,7 +23,7 @@ En Railway, para cada servicio que necesite acceso externo:
 Dominios públicos asignados:
 - **app-mxo** (puerto 8000) → `https://mxo-track-production.up.railway.app`
 - **mercure-mxo** (puerto 80) → `https://mxo-track-production.up.railway.app`
-- **traccar-mxo** (puerto 5055) → `https://mxo-track-production-db4e.up.railway.app`
+- **traccar-mxo** (puerto 5055) → `https://mxo-track-traccar-db4e.up.railway.app`
 
 > **Traccar**: Generar el dominio público mapeado al **puerto 5055** (OsmAnd GPS).
 > Los servicios internos (app-mxo, worker-mxo) acceden a Traccar API (8082) vía URL interna — no necesita dominio público para 8082.
@@ -127,7 +127,7 @@ Instalar **Traccar Client** desde Google Play Store.
 | Campo | Valor |
 |-------|-------|
 | **Device identifier** | (se genera automáticamente, anotarlo) |
-| **Server URL** | `https://mxo-track-production-db4e.up.railway.app:443` |
+| **Server URL** | `https://mxo-track-traccar-db4e.up.railway.app:443` |
 | **Frequency** | 10 (segundos, ajustar según necesidad) |
 | **Status** | Service status → ON |
 
@@ -182,7 +182,7 @@ Después del deploy, el script `railway-start.sh` automáticamente:
 
 ```bash
 # Desde cualquier máquina con internet, simular un envío GPS:
-curl -v "https://mxo-track-production-db4e.up.railway.app/?id=test123&lat=40.4168&lon=-3.7038&timestamp=1708100000&speed=0"
+curl -v "https://mxo-track-traccar-db4e.up.railway.app/?id=test123&lat=40.4168&lon=-3.7038&timestamp=1708100000&speed=0"
 ```
 
 Si devuelve HTTP 200, el protocolo OsmAnd está funcionando correctamente.
