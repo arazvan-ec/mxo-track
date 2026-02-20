@@ -102,7 +102,10 @@ conventions:
     service: backend/src/Service/TraccarApiClient.php
     service_interface: backend/src/Service/PodStorageInterface.php
     controller_api: backend/src/Controller/DriverApiController.php
+    controller_admin_crud: backend/src/Controller/Admin/RouteAdminController.php
     controller_web: backend/src/Controller/AdminController.php
+    controller_customer: backend/src/Controller/Customer/CustomerDashboardController.php
+    controller_fleet_map: backend/src/Controller/FleetMapController.php
     command: backend/src/Command/TraccarStreamCommand.php
     dto: backend/src/Dto/Driver/DeliverStopInput.php
     enum: backend/src/Enum/UserRole.php
@@ -124,5 +127,80 @@ quality_thresholds:
   max_interface_methods: 5
   max_files_per_simple_change: 5
 
-learned_patterns: []
-learned_antipatterns: []
+learned_patterns:
+  - name: "Class-Level IsGranted"
+    description: "Apply #[IsGranted] at class level, not method level, to prevent omission on new methods"
+    confidence: high
+    source_features: [phase-4-crud-dashboards]
+    reference: "backend/src/Controller/Admin/RouteAdminController.php"
+
+  - name: "IDOR Prevention via Ownership Chain Traversal"
+    description: "Check entity ownership by traversing relations (stop->route->driver), return 404 for unauthorized (not 403)"
+    confidence: high
+    source_features: [phase-4-crud-dashboards]
+    reference: "backend/src/Controller/DriverApiController.php"
+
+  - name: "CSRF Token Bound to Entity PublicId"
+    description: "Include entity publicId in CSRF intention string to prevent cross-entity token reuse"
+    confidence: high
+    source_features: [phase-4-crud-dashboards]
+    reference: "backend/src/Controller/Admin/RouteAdminController.php"
+
+  - name: "JSON_HEX Flags for JSON-in-Template"
+    description: "Always use JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_AMP when embedding JSON via |raw in Twig"
+    confidence: high
+    source_features: [phase-4-crud-dashboards]
+    reference: "backend/src/Controller/FleetMapController.php"
+
+  - name: "Cookie-Based Mercure Auth with Topic Scoping"
+    description: "Issue JWT via httpOnly cookie with restricted path; scope topics per user role via TopicResolver"
+    confidence: medium
+    source_features: [phase-4-crud-dashboards]
+    reference: "backend/src/Controller/MercureTokenController.php"
+
+  - name: "findOneByPublicId Repository Gateway"
+    description: "Single lookup method bridging public ULID space to internal entities; consistent null-check pattern"
+    confidence: high
+    source_features: [phase-4-crud-dashboards]
+    reference: "backend/src/Repository/VehicleRepository.php"
+
+  - name: "DTO + Validator + ApiErrorResponder Pipeline"
+    description: "JSON APIs use DTO::fromArray() + Symfony Validator + consistent error envelope via ApiErrorResponder"
+    confidence: high
+    source_features: [phase-4-crud-dashboards]
+    reference: "backend/src/Dto/Driver/DeliverStopInput.php"
+
+  - name: "Dual Multi-Tenant Isolation"
+    description: "SQL filter for CustomerScopedEntityInterface entities + manual WHERE for non-scoped entities"
+    confidence: medium
+    source_features: [phase-4-crud-dashboards]
+    reference: "backend/src/Controller/Customer/CustomerDashboardController.php"
+
+learned_antipatterns:
+  - name: "Method-Level Only IsGranted"
+    description: "Missing IsGranted on controller class leaves new methods unprotected"
+    frequency: 1
+    severity: critical
+    prevention: "Always use class-level #[IsGranted], check in review"
+    source_features: [phase-4-crud-dashboards]
+
+  - name: "IDOR in Nested Resource Endpoints"
+    description: "API endpoints that look up entities by publicId without verifying ownership chain"
+    frequency: 1
+    severity: critical
+    prevention: "Every endpoint must verify entity belongs to authenticated user"
+    source_features: [phase-4-crud-dashboards]
+
+  - name: "Raw JSON Without HEX Flags"
+    description: "Using |raw in Twig without JSON_HEX_TAG enables script injection via </script>"
+    frequency: 1
+    severity: high
+    prevention: "Pair |raw with JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_AMP server-side"
+    source_features: [phase-4-crud-dashboards]
+
+  - name: "Internal IDs in Form Values"
+    description: "Select options using entity.id instead of entity.publicIdString"
+    frequency: 1
+    severity: medium
+    prevention: "All public-facing values must use publicIdString"
+    source_features: [phase-4-crud-dashboards]

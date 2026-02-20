@@ -2,17 +2,18 @@
 # Updated by /workflows:discover on 2026-02-19
 
 manifest:
-  version: "1.0"
+  version: "1.1"
   generated_at: "2026-02-19"
+  last_updated: "2026-02-20"
   project: "transporte-tracking (mxo-track)"
 
   statistics:
     entities: 11
     api_contracts: 5
-    business_rules: 4
+    business_rules: 5
     architectural_constraints: 1
     api_consumers: 1
-    total_specs: 22
+    total_specs: 23
 
   entities:
     - name: "Vehicle"
@@ -79,8 +80,8 @@ manifest:
       last_updated: "2026-02-19"
     - name: "Admin Web"
       file: "api-contracts/admin-web.yaml"
-      endpoints: 6
-      last_updated: "2026-02-19"
+      endpoints: 42
+      last_updated: "2026-02-20"
 
   business_rules:
     - domain_area: "Delivery"
@@ -105,9 +106,9 @@ manifest:
       last_updated: "2026-02-19"
     - domain_area: "Security"
       file: "business-rules/security.yaml"
-      rules_count: 5
-      critical_rules: 3
-      last_updated: "2026-02-19"
+      rules_count: 11
+      critical_rules: 5
+      last_updated: "2026-02-20"
 
   architectural_constraints:
     - category: "Layer Dependencies"
@@ -126,9 +127,19 @@ manifest:
     dimensions_classified: 6
     last_updated: "2026-02-19"
 
+  history:
+    - date: "2026-02-20"
+      feature: "phase-4-crud-dashboards"
+      updated_by: "/workflows:compound"
+      changes:
+        - "Updated admin-web API contract: 6 -> 42 endpoints (5 CRUDs + customer/driver web)"
+        - "Updated security business rules: 5 -> 11 rules (IDOR, CSRF, XSS, IsGranted)"
+        - "Updated architecture profile: 8 learned patterns, 4 learned anti-patterns"
+        - "Updated spec manifest with new counts and history"
+
   extraction_config:
     extract_specs: true
     depth: "standard"
     include_tests: false
 
-  next_recommended_update: "2026-02-26"
+  next_recommended_update: "2026-02-27"
