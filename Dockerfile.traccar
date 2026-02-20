@@ -1,0 +1,5 @@
+FROM traccar/traccar:latest
+
+COPY docker/traccar-railway/traccar.xml /opt/traccar/conf/traccar.xml
+
+EXPOSE 8082
