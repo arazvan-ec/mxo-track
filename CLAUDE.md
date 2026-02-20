@@ -1,4 +1,4 @@
-# CLAUDE.md: claude --resume a810f574-ec2f-4df0-bb37-070d3d15b116
+# CLAUDE.md: claude --resume 2a057aa1-7456-4257-ab81-debee0c6a901 <> eliminar customer vehicle -> seguir
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
