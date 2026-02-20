@@ -46,7 +46,7 @@ final class DoctrineCustomerFilterSubscriber implements EventSubscriberInterface
             return;
         }
 
-        $shouldEnable = ($user->hasRole('ROLE_CUSTOMER') || $user->hasRole('ROLE_DRIVER'))
+        $shouldEnable = $user->hasRole('ROLE_CUSTOMER')
             && $user->getCustomer() !== null;
 
         if (!$shouldEnable) {

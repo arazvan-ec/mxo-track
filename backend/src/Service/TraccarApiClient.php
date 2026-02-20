@@ -35,6 +35,11 @@ final class TraccarApiClient
     }
 
 
+    public function getSessionCookie(): ?string
+    {
+        return $this->cookie;
+    }
+
     public function canConnect(): bool
     {
         try {

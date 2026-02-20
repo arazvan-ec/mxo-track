@@ -41,10 +41,10 @@ final class SecurityHeadersSubscriber implements EventSubscriberInterface
         $headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
         $headers->set('Content-Security-Policy', implode('; ', [
             "default-src 'self'",
-            "script-src 'self' 'unsafe-inline' https://unpkg.com",
-            "style-src 'self' 'unsafe-inline' https://unpkg.com",
-            "img-src 'self' https://*.tile.openstreetmap.org https://unpkg.com data:",
-            "connect-src 'self' " . $this->mercureOrigin,
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdn.tailwindcss.com https://cdn.jsdelivr.net",
+            "style-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.tailwindcss.com",
+            "img-src 'self' https://*.tile.openstreetmap.org https://*.basemaps.cartocdn.com https://unpkg.com data:",
+            "connect-src 'self' https://unpkg.com https://nominatim.openstreetmap.org " . $this->mercureOrigin,
             "frame-ancestors 'self'",
             "object-src 'none'",
             "base-uri 'self'",

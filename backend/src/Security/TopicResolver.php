@@ -17,7 +17,7 @@ class TopicResolver
     {
         $roles = $user->getRoles();
 
-        if (in_array('ROLE_ADMIN', $roles, true) || in_array('ROLE_OPERATOR', $roles, true)) {
+        if (in_array('ROLE_ADMIN', $roles, true)) {
             return ['*'];
         }
 

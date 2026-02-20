@@ -37,7 +37,7 @@ class CustomerRouteController extends AbstractController
         $customer = $this->getUser()->getCustomer();
 
         if (!$customer instanceof Customer) {
-            throw $this->createAccessDeniedException('No tiene un almacen asociado.');
+            throw $this->createAccessDeniedException('No tiene un cliente asociado.');
         }
 
         $page = max(1, $request->query->getInt('page', 1));
@@ -117,7 +117,7 @@ class CustomerRouteController extends AbstractController
         $customer = $this->getUser()->getCustomer();
 
         if (!$customer instanceof Customer) {
-            throw $this->createAccessDeniedException('No tiene un almacen asociado.');
+            throw $this->createAccessDeniedException('No tiene un cliente asociado.');
         }
 
         $route = $this->routeRepository->findOneByPublicId($publicId);

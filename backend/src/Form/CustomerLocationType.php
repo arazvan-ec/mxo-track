@@ -4,57 +4,68 @@ declare(strict_types=1);
 
 namespace App\Form;
 
-use App\Entity\User;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
-use Symfony\Component\Form\Extension\Core\Type\EmailType;
-use Symfony\Component\Form\Extension\Core\Type\PasswordType;
+use Symfony\Component\Form\Extension\Core\Type\NumberType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
-class DriverType extends AbstractType
+class CustomerLocationType extends AbstractType
 {
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
             ->add('name', TextType::class, [
                 'label' => 'Nombre',
-                'required' => false,
+                'required' => true,
                 'attr' => [
-                    'placeholder' => 'Nombre del conductor',
                     'class' => 'w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm',
+                    'placeholder' => 'Ej: Almacen Madrid',
                 ],
             ])
-            ->add('email', EmailType::class, [
-                'label' => 'Email',
+            ->add('address', TextType::class, [
+                'label' => 'Direccion',
+                'required' => true,
                 'attr' => [
                     'class' => 'w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm',
-                    'placeholder' => 'conductor@ejemplo.com',
+                    'placeholder' => 'Direccion completa',
                 ],
             ])
-            ->add('plainPassword', PasswordType::class, [
-                'label' => 'Contrasena',
+            ->add('latitude', NumberType::class, [
+                'label' => 'Latitud',
                 'required' => false,
-                'mapped' => false,
+                'scale' => 6,
                 'attr' => [
                     'class' => 'w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm',
-                    'placeholder' => 'Dejar vacio para no cambiar',
-                    'autocomplete' => 'new-password',
+                    'placeholder' => '40.416775',
+                    'step' => '0.000001',
                 ],
+            ])
+            ->add('longitude', NumberType::class, [
+                'label' => 'Longitud',
+                'required' => false,
+                'scale' => 6,
+                'attr' => [
+                    'class' => 'w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm',
+                    'placeholder' => '-3.703790',
+                    'step' => '0.000001',
+                ],
+            ])
+            ->add('isDefault', CheckboxType::class, [
+                'label' => 'Ubicacion por defecto',
+                'required' => false,
             ])
             ->add('isActive', CheckboxType::class, [
-                'label' => 'Activo',
+                'label' => 'Activa',
                 'required' => false,
-                'getter' => static fn (User $user): bool => $user->isActive(),
-                'setter' => static function (User $user, bool $value): void { $user->setActive($value); },
             ]);
     }
 
     public function configureOptions(OptionsResolver $resolver): void
     {
         $resolver->setDefaults([
-            'data_class' => User::class,
+            'data_class' => null,
         ]);
     }
 }

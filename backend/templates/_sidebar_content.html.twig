@@ -15,7 +15,7 @@
   <ul role="list" class="flex flex-1 flex-col gap-y-1">
 
     {# ── Admin / Operator navigation ─────────────────────────────── #}
-    {% if is_granted('ROLE_ADMIN') or is_granted('ROLE_OPERATOR') %}
+    {% if is_granted('ROLE_ADMIN') %}
 
       <li class="mb-2">
         <span class="px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Principal</span>
@@ -101,7 +101,7 @@
           <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z"/>
           </svg>
-          Almacenes
+          Clientes
         </a>
       </li>
 
@@ -165,7 +165,7 @@
     {% endif %}
 
     {# ── Customer navigation ─────────────────────────────────────── #}
-    {% if is_granted('ROLE_CUSTOMER') and not is_granted('ROLE_ADMIN') and not is_granted('ROLE_OPERATOR') %}
+    {% if is_granted('ROLE_CUSTOMER') and not is_granted('ROLE_ADMIN') %}
 
       <li class="mb-2">
         <span class="px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Principal</span>
@@ -275,21 +275,23 @@
     <li class="mt-auto pt-6 border-t border-slate-700">
       <div class="flex items-center gap-x-3 px-3 py-2">
         <div class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-600 text-sm font-semibold text-white">
-          {{ app.user ? app.user.email|first|upper : '?' }}
+          {{ app.user.name ? app.user.name|first|upper : app.user.email|first|upper }}
         </div>
         <div class="min-w-0 flex-1">
-          <p class="text-sm font-medium text-white truncate">{{ app.user ? app.user.email : '' }}</p>
-          <p class="text-xs text-slate-400 truncate">
-            {% if is_granted('ROLE_ADMIN') %}
-              Administrador
-            {% elseif is_granted('ROLE_OPERATOR') %}
-              Operador
-            {% elseif is_granted('ROLE_CUSTOMER') %}
-              Cliente
-            {% elseif is_granted('ROLE_DRIVER') %}
-              Conductor
-            {% endif %}
-          </p>
+          <p class="text-sm font-medium text-white truncate">{{ app.user.name ?? app.user.email }}</p>
+          {% if app.user.name %}
+            <p class="text-xs text-slate-400 truncate">{{ app.user.email }}</p>
+          {% else %}
+            <p class="text-xs text-slate-400 truncate">
+              {% if is_granted('ROLE_ADMIN') %}
+                Administrador
+              {% elseif is_granted('ROLE_CUSTOMER') %}
+                Cliente
+              {% elseif is_granted('ROLE_DRIVER') %}
+                Conductor
+              {% endif %}
+            </p>
+          {% endif %}
         </div>
         <a href="{{ path('app_logout') }}" class="text-slate-400 hover:text-white transition-colors" title="Cerrar sesion">
           <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">

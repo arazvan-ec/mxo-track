@@ -31,6 +31,10 @@ services:
       $password: '%env(TRACCAR_PASSWORD)%'
 
 
+  App\Service\TraccarWebSocketClient:
+    arguments:
+      $wsUrl: '%env(TRACCAR_WS_URL)%'
+
   App\Service\SystemHealthService:
     arguments:
-      $mercurePublicUrl: '%env(MERCURE_PUBLIC_URL)%'
+      $mercureInternalUrl: '%env(MERCURE_URL)%'

@@ -31,6 +31,12 @@
           </div>
 
           <div>
+            {{ form_label(form.originLocation, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 mb-1'}}) }}
+            {{ form_widget(form.originLocation) }}
+            {{ form_errors(form.originLocation) }}
+          </div>
+
+          <div>
             {{ form_label(form.vehicle, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 mb-1'}}) }}
             {{ form_widget(form.vehicle) }}
             {{ form_errors(form.vehicle) }}
@@ -86,7 +92,11 @@
                 {% for stop in stops %}
                   <tr>
                     <td class="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900">
-                      {{ stop.sequence }}
+                      {% if stop.origin %}
+                        <span class="inline-flex items-center rounded-full bg-purple-100 px-2 text-xs font-semibold leading-5 text-purple-800">Origen</span>
+                      {% else %}
+                        {{ stop.sequence }}
+                      {% endif %}
                     </td>
                     <td class="px-4 py-3 text-sm text-gray-700 max-w-xs truncate" title="{{ stop.address }}">
                       {{ stop.address }}
@@ -116,13 +126,17 @@
                       {% endif %}
                     </td>
                     <td class="whitespace-nowrap px-4 py-3 text-right text-sm font-medium">
-                      <form method="post"
-                            action="{{ path('admin_routes_stop_delete', {publicId: route.publicIdString, stopPublicId: stop.publicIdString}) }}"
-                            class="inline"
-                            onsubmit="return confirm('Eliminar esta parada?');">
-                        <input type="hidden" name="_token" value="{{ csrf_token('delete-stop-' ~ stop.publicIdString) }}">
-                        <button type="submit" class="text-red-600 hover:text-red-900">Eliminar</button>
-                      </form>
+                      {% if not stop.origin %}
+                        <form method="post"
+                              action="{{ path('admin_routes_stop_delete', {publicId: route.publicIdString, stopPublicId: stop.publicIdString}) }}"
+                              class="inline"
+                              onsubmit="return confirm('Eliminar esta parada?');">
+                          <input type="hidden" name="_token" value="{{ csrf_token('delete-stop-' ~ stop.publicIdString) }}">
+                          <button type="submit" class="text-red-600 hover:text-red-900">Eliminar</button>
+                        </form>
+                      {% else %}
+                        <span class="text-xs text-gray-400">Automatico</span>
+                      {% endif %}
                     </td>
                   </tr>
                 {% endfor %}

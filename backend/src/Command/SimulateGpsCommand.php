@@ -14,6 +14,7 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 #[AsCommand(
@@ -27,6 +28,8 @@ class SimulateGpsCommand extends Command
         private readonly TraccarApiClient $traccarApiClient,
         private readonly TraccarIngestionService $ingestionService,
         private readonly HttpClientInterface $httpClient,
+        #[Autowire('%kernel.project_dir%')]
+        private readonly string $projectDir,
     ) {
         parent::__construct();
     }
@@ -36,17 +39,20 @@ class SimulateGpsCommand extends Command
         $this
             ->addOption('points', null, InputOption::VALUE_REQUIRED, 'Número de posiciones GPS a enviar', '20')
             ->addOption('interval', null, InputOption::VALUE_REQUIRED, 'Segundos entre cada posición', '2')
-            ->addOption('ingest', null, InputOption::VALUE_NONE, 'Ingestar posiciones en Symfony al terminar');
+            ->addOption('ingest', null, InputOption::VALUE_NONE, 'Ingestar posiciones en Symfony al terminar')
+            ->addOption('vehicle', null, InputOption::VALUE_REQUIRED, 'Public ID (ULID) del vehículo a simular')
+            ->addOption('route-file', null, InputOption::VALUE_OPTIONAL, 'Ruta al JSON de coordenadas. Sin valor usa demo_route_coordinates.json', false)
+            ->addOption('segment-delay', null, InputOption::VALUE_REQUIRED, 'Segundos de espera entre segmentos (modo route-file)', '60');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $numPoints = max(1, (int) $input->getOption('points'));
         $interval = max(1, (int) $input->getOption('interval'));
         $shouldIngest = (bool) $input->getOption('ingest');
 
         // 1. Find a vehicle
-        $vehicle = $this->findVehicle();
+        $vehiclePublicId = $input->getOption('vehicle');
+        $vehicle = $this->findVehicle($vehiclePublicId);
         if ($vehicle === null) {
             $output->writeln('<error>No se encontró ningún Vehicle activo.</error>');
             return self::FAILURE;
@@ -68,9 +74,190 @@ class SimulateGpsCommand extends Command
         $this->entityManager->flush();
         $output->writeln(sprintf('Vehicle.traccarDeviceId actualizado a <info>%d</info>', $traccarDeviceId));
 
-        // 4. Generate route points and send to OsmAnd
+        // 4. Bifurcate: route-file mode vs legacy mode
+        $routeFileOption = $input->getOption('route-file');
+
+        if ($routeFileOption !== false) {
+            $segmentDelay = max(0, (int) $input->getOption('segment-delay'));
+            $startTime = $this->executeRouteFileMode($uniqueId, $routeFileOption, $interval, $segmentDelay, $output);
+        } else {
+            $numPoints = max(1, (int) $input->getOption('points'));
+            $startTime = $this->executeLegacyMode($uniqueId, $numPoints, $interval, $output);
+        }
+
+        if ($startTime === null) {
+            return self::FAILURE;
+        }
+
+        // 5. Ingest if requested
+        if ($shouldIngest) {
+            $output->writeln("\nEsperando 3s para que Traccar procese...");
+            sleep(3);
+
+            $output->writeln('Ingesting posiciones desde Traccar...');
+            $positions = $this->traccarApiClient->getPositions($traccarDeviceId, $startTime);
+            $totalCreated = $this->ingestionService->ingestForVehicle($vehicle, $positions);
+            $output->writeln(sprintf('<info>%d</info> posiciones ingested en Symfony.', $totalCreated));
+        }
+
+        return self::SUCCESS;
+    }
+
+    private function executeRouteFileMode(
+        string $uniqueId,
+        ?string $routeFilePath,
+        int $interval,
+        int $segmentDelay,
+        OutputInterface $output,
+    ): ?DateTimeImmutable {
+        // Resolve file path
+        if ($routeFilePath === null || $routeFilePath === '') {
+            $routeFilePath = $this->projectDir . '/src/DataFixtures/data/demo_route_coordinates.json';
+        }
+
+        if (!file_exists($routeFilePath)) {
+            $output->writeln(sprintf('<error>Route file not found: %s</error>', $routeFilePath));
+            return null;
+        }
+
+        $json = file_get_contents($routeFilePath);
+        $data = json_decode($json, true, 512, \JSON_THROW_ON_ERROR);
+        $segments = $data['segments'] ?? [];
+
+        if ($segments === []) {
+            $output->writeln('<error>No segments found in route file.</error>');
+            return null;
+        }
+
+        // Sort segments by natural key order ("0-1", "1-2", "2-3", ...)
+        uksort($segments, static function (string $a, string $b): int {
+            $aStart = (int) explode('-', $a)[0];
+            $bStart = (int) explode('-', $b)[0];
+            return $aStart <=> $bStart;
+        });
+
+        $osmandUrl = $this->getOsmandUrl();
+        $segmentKeys = array_keys($segments);
+        $totalSegments = \count($segmentKeys);
+        $startTime = new DateTimeImmutable();
+
+        $output->writeln(sprintf(
+            "\n<info>Modo route-file</info>: %d segmentos, interval=%ds, segment-delay=%ds\n",
+            $totalSegments,
+            $interval,
+            $segmentDelay,
+        ));
+
+        foreach ($segmentKeys as $segIndex => $segKey) {
+            $segment = $segments[$segKey];
+            $fromName = $segment['from']['name'] ?? '?';
+            $toName = $segment['to']['name'] ?? '?';
+            $route = $segment['route'] ?? '';
+            $points = $segment['points'] ?? [];
+            $numPoints = \count($points);
+
+            $output->writeln(sprintf(
+                '━━━ Segmento <info>%s</info> (%s → %s) — %d puntos',
+                $segKey,
+                $fromName,
+                $toName,
+                $numPoints,
+            ));
+            if ($route !== '') {
+                $output->writeln(sprintf('    Ruta: %s', $route));
+            }
+
+            foreach ($points as $i => $point) {
+                $lat = (float) $point[0];
+                $lon = (float) $point[1];
+
+                // Calculate bearing toward next point (or keep last bearing)
+                if ($i < $numPoints - 1) {
+                    $nextLat = (float) $points[$i + 1][0];
+                    $nextLon = (float) $points[$i + 1][1];
+                    $bearing = $this->bearing($lat, $lon, $nextLat, $nextLon);
+                } else {
+                    $bearing = isset($prevBearing) ? $prevBearing : 0.0;
+                }
+                $prevBearing = $bearing;
+
+                // Simulate speed: 30-50 km/h in knots
+                $speedKmh = 30.0 + (20.0 * abs(sin($i * 0.5)));
+                $speedKnots = $speedKmh / 1.852;
+
+                $url = sprintf(
+                    '%s/?id=%s&lat=%f&lon=%f&speed=%f&bearing=%f&timestamp=%d',
+                    rtrim($osmandUrl, '/'),
+                    urlencode($uniqueId),
+                    $lat,
+                    $lon,
+                    $speedKnots,
+                    $bearing,
+                    time(),
+                );
+
+                try {
+                    $response = $this->httpClient->request('GET', $url);
+                    $statusCode = $response->getStatusCode();
+                } catch (\Throwable $e) {
+                    $statusCode = 0;
+                    $output->writeln(sprintf('  <error>Error enviando punto %d: %s</error>', $i + 1, $e->getMessage()));
+                    if ($i < $numPoints - 1) {
+                        sleep($interval);
+                    }
+                    continue;
+                }
+
+                $output->writeln(sprintf(
+                    '  [%d/%d] lat=%.6f lon=%.6f speed=%.1f bearing=%.1f → HTTP %d',
+                    $i + 1,
+                    $numPoints,
+                    $lat,
+                    $lon,
+                    $speedKnots,
+                    $bearing,
+                    $statusCode,
+                ));
+
+                if ($i < $numPoints - 1) {
+                    sleep($interval);
+                }
+            }
+
+            $output->writeln(sprintf('  ✓ Segmento %s completado.', $segKey));
+
+            // Pause between segments (except after the last one)
+            if ($segIndex < $totalSegments - 1 && $segmentDelay > 0) {
+                $output->writeln(sprintf("\n  Esperando %ds antes del siguiente segmento...", $segmentDelay));
+                for ($remaining = $segmentDelay; $remaining > 0; $remaining--) {
+                    if ($remaining % 10 === 0 || $remaining <= 5) {
+                        $output->writeln(sprintf('    %ds restantes...', $remaining));
+                    }
+                    sleep(1);
+                }
+                $output->writeln('');
+            }
+        }
+
+        $output->writeln("\nTodos los segmentos completados.");
+        return $startTime;
+    }
+
+    private function executeLegacyMode(
+        string $uniqueId,
+        int $numPoints,
+        int $interval,
+        OutputInterface $output,
+    ): DateTimeImmutable {
         $waypoints = $this->madridRoute();
-        $points = $this->interpolatePoints($waypoints, $numPoints);
+        $osrmRoute = $this->fetchOsrmRoute($waypoints, $output);
+
+        if ($osrmRoute !== null) {
+            $points = $this->sampleAlongRoute($osrmRoute, $numPoints);
+        } else {
+            $points = $this->interpolatePoints($waypoints, $numPoints);
+        }
+
         $osmandUrl = $this->getOsmandUrl();
 
         $output->writeln(sprintf("\nEnviando <info>%d</info> posiciones a OsmAnd (%s)...\n", $numPoints, $osmandUrl));
@@ -118,24 +305,16 @@ class SimulateGpsCommand extends Command
         }
 
         $output->writeln("\nTodas las posiciones enviadas a Traccar.");
-
-        // 5. Ingest if requested
-        if ($shouldIngest) {
-            $output->writeln("\nEsperando 3s para que Traccar procese...");
-            sleep(3);
-
-            $output->writeln('Ingesting posiciones desde Traccar...');
-            $positions = $this->traccarApiClient->getPositions($traccarDeviceId, $startTime);
-            $totalCreated = $this->ingestionService->ingestForVehicle($vehicle, $positions);
-            $output->writeln(sprintf('<info>%d</info> posiciones ingested en Symfony.', $totalCreated));
-        }
-
-        return self::SUCCESS;
+        return $startTime;
     }
 
-    private function findVehicle(): ?Vehicle
+    private function findVehicle(?string $publicId = null): ?Vehicle
     {
         $repo = $this->entityManager->getRepository(Vehicle::class);
+
+        if ($publicId !== null) {
+            return $repo->findOneBy(['publicId' => $publicId, 'isActive' => true]);
+        }
 
         // Prefer a vehicle with "Demo" in its name
         $vehicles = $repo->findBy(['isActive' => true]);
@@ -270,6 +449,145 @@ class SimulateGpsCommand extends Command
         $y = cos($lat1) * sin($lat2) - sin($lat1) * cos($lat2) * cos($dLon);
         $bearing = rad2deg(atan2($x, $y));
         return fmod($bearing + 360.0, 360.0);
+    }
+
+    /**
+     * Decode a Google Encoded Polyline into an array of [lat, lon] pairs.
+     *
+     * @return list<array{lat: float, lon: float}>
+     */
+    private function decodePolyline(string $encoded): array
+    {
+        $points = [];
+        $index = 0;
+        $len = \strlen($encoded);
+        $lat = 0;
+        $lon = 0;
+
+        while ($index < $len) {
+            foreach (['lat', 'lon'] as $coord) {
+                $shift = 0;
+                $result = 0;
+                do {
+                    $byte = \ord($encoded[$index++]) - 63;
+                    $result |= ($byte & 0x1F) << $shift;
+                    $shift += 5;
+                } while ($byte >= 0x20);
+
+                $delta = ($result & 1) ? ~($result >> 1) : ($result >> 1);
+                $$coord += $delta;
+            }
+
+            $points[] = ['lat' => $lat / 1e5, 'lon' => $lon / 1e5];
+        }
+
+        return $points;
+    }
+
+    /**
+     * Fetch a street-following route from OSRM for the given waypoints.
+     * Falls back to null if the request fails.
+     *
+     * @param list<array{lat: float, lon: float}> $waypoints
+     * @return list<array{lat: float, lon: float}>|null
+     */
+    private function fetchOsrmRoute(array $waypoints, OutputInterface $output): ?array
+    {
+        $coordinates = implode(';', array_map(
+            static fn(array $wp): string => sprintf('%f,%f', $wp['lon'], $wp['lat']),
+            $waypoints,
+        ));
+
+        $url = sprintf(
+            'https://router.project-osrm.org/route/v1/driving/%s?overview=full&geometries=polyline',
+            $coordinates,
+        );
+
+        try {
+            $response = $this->httpClient->request('GET', $url, ['timeout' => 10]);
+            $data = $response->toArray();
+        } catch (\Throwable $e) {
+            $output->writeln(sprintf('<comment>OSRM request failed: %s — using linear interpolation fallback.</comment>', $e->getMessage()));
+            return null;
+        }
+
+        $geometry = $data['routes'][0]['geometry'] ?? null;
+        if (!\is_string($geometry) || $geometry === '') {
+            $output->writeln('<comment>OSRM returned no geometry — using linear interpolation fallback.</comment>');
+            return null;
+        }
+
+        $points = $this->decodePolyline($geometry);
+        if (\count($points) < 2) {
+            $output->writeln('<comment>OSRM returned too few points — using linear interpolation fallback.</comment>');
+            return null;
+        }
+
+        $output->writeln(sprintf('<info>OSRM returned %d street-following points.</info>', \count($points)));
+        return $points;
+    }
+
+    /**
+     * Sample numPoints evenly along a polyline, computing speed and bearing for each.
+     *
+     * @param list<array{lat: float, lon: float}> $routePoints
+     * @return list<array{lat: float, lon: float, speed: float, bearing: float}>
+     */
+    private function sampleAlongRoute(array $routePoints, int $numPoints): array
+    {
+        // Calculate cumulative distances
+        $distances = [0.0];
+        for ($i = 1; $i < \count($routePoints); $i++) {
+            $distances[] = $distances[$i - 1] + $this->haversine(
+                $routePoints[$i - 1]['lat'], $routePoints[$i - 1]['lon'],
+                $routePoints[$i]['lat'], $routePoints[$i]['lon'],
+            );
+        }
+        $totalDistance = end($distances);
+
+        $sampled = [];
+        $distPerPoint = $totalDistance / max(1, $numPoints - 1);
+
+        for ($p = 0; $p < $numPoints; $p++) {
+            $targetDist = min($p * $distPerPoint, $totalDistance);
+
+            // Binary search for the segment containing targetDist
+            $lo = 0;
+            $hi = \count($distances) - 1;
+            while ($lo < $hi - 1) {
+                $mid = intdiv($lo + $hi, 2);
+                if ($distances[$mid] <= $targetDist) {
+                    $lo = $mid;
+                } else {
+                    $hi = $mid;
+                }
+            }
+            $segIdx = $lo;
+
+            $segLen = $distances[$segIdx + 1] - $distances[$segIdx];
+            $t = $segLen > 0 ? ($targetDist - $distances[$segIdx]) / $segLen : 0.0;
+
+            $lat = $routePoints[$segIdx]['lat'] + $t * ($routePoints[$segIdx + 1]['lat'] - $routePoints[$segIdx]['lat']);
+            $lon = $routePoints[$segIdx]['lon'] + $t * ($routePoints[$segIdx + 1]['lon'] - $routePoints[$segIdx]['lon']);
+
+            $bearing = $this->bearing(
+                $routePoints[$segIdx]['lat'], $routePoints[$segIdx]['lon'],
+                $routePoints[$segIdx + 1]['lat'], $routePoints[$segIdx + 1]['lon'],
+            );
+
+            // Simulate speed: 30-50 km/h in knots
+            $speedKmh = 30.0 + (20.0 * abs(sin($p * 0.5)));
+            $speedKnots = $speedKmh / 1.852;
+
+            $sampled[] = [
+                'lat' => $lat,
+                'lon' => $lon,
+                'speed' => $speedKnots,
+                'bearing' => $bearing,
+            ];
+        }
+
+        return $sampled;
     }
 
     private function getOsmandUrl(): string

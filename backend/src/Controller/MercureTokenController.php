@@ -53,7 +53,7 @@ class MercureTokenController extends AbstractController
         }
 
         $authorizedVehiclePublicIds = $visibilityScopeService->vehiclePublicIdsFor($user);
-        if ($user->hasRole('ROLE_ADMIN') || $user->hasRole('ROLE_OPERATOR')) {
+        if ($user->hasRole('ROLE_ADMIN')) {
             $effectiveVehiclePublicIds = array_values(array_unique($normalizedVehiclePublicIds));
         } elseif ($normalizedVehiclePublicIds === []) {
             $effectiveVehiclePublicIds = $authorizedVehiclePublicIds;

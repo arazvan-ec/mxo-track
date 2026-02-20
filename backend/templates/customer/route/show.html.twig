@@ -12,6 +12,71 @@
   >
   <style>
     #route-map { min-height: 500px; height: 100%; }
+
+    /* Vehicle marker (fleet map style) */
+    .vehicle-marker {
+      width: 36px; height: 36px;
+      background: #1e3a8a;
+      border: 2px solid #3b82f6;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+      transition: transform 0.8s ease;
+    }
+    .vehicle-marker svg { width: 18px; height: 18px; fill: #fff; }
+
+    /* Route stop markers */
+    .stop-marker {
+      width: 26px; height: 26px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700; color: #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+      border: 2px solid rgba(255,255,255,0.6);
+    }
+    .stop-pending   { background: #3b82f6; }
+    .stop-delivered  { background: #22c55e; }
+    .stop-exception  { background: #ef4444; }
+    .stop-skipped    { background: #6b7280; }
+
+    /* Dark tooltip */
+    .leaflet-tooltip.vehicle-tooltip {
+      background: rgba(15,23,42,0.92);
+      border: 1px solid rgba(59,130,246,0.5);
+      color: #e2e8f0;
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    .leaflet-tooltip.vehicle-tooltip::before { border-top-color: rgba(15,23,42,0.92); }
+
+    /* Dark popup */
+    .leaflet-popup-content-wrapper {
+      background: rgba(15,23,42,0.95);
+      color: #e2e8f0;
+      border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    }
+    .leaflet-popup-content-wrapper a { color: #93c5fd; }
+    .leaflet-popup-tip { background: rgba(15,23,42,0.95); }
+    .leaflet-popup-close-button { color: #94a3b8 !important; }
+    .leaflet-popup-close-button:hover { color: #fff !important; }
+
+    /* Zoom controls */
+    .leaflet-control-zoom a {
+      background: rgba(15,23,42,0.85) !important;
+      color: #e2e8f0 !important;
+      border-color: rgba(51,65,85,0.6) !important;
+      width: 36px !important;
+      height: 36px !important;
+      line-height: 36px !important;
+      font-size: 18px !important;
+    }
+    .leaflet-control-zoom a:hover {
+      background: rgba(30,58,138,0.9) !important;
+      color: #fff !important;
+    }
   </style>
 {% endblock %}
 
@@ -160,13 +225,6 @@
   {{ parent() }}
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script>
-    delete L.Icon.Default.prototype._getIconUrl;
-    L.Icon.Default.mergeOptions({
-      iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-      iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-      shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-    });
-
     (function () {
       function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
@@ -174,63 +232,77 @@
       const vehiclePos = {{ vehicle_position_json|raw }};
       const vehiclePublicId = '{{ vehicle_public_id }}';
 
-      const map = L.map('route-map').setView([40.4168, -3.7038], 13);
+      const statusCls = {
+        PENDING: 'stop-pending',
+        DELIVERED: 'stop-delivered',
+        EXCEPTION: 'stop-exception',
+        SKIPPED: 'stop-skipped',
+      };
+
+      const map = L.map('route-map', {
+        zoomControl: false,
+        attributionControl: false,
+      }).setView([40.4168, -3.7038], 13);
+
+      L.control.zoom({ position: 'topright' }).addTo(map);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '&copy; OpenStreetMap contributors'
       }).addTo(map);
 
-      // Status colors
-      const statusColors = {
-        PENDING: '#3b82f6',
-        DELIVERED: '#22c55e',
-        EXCEPTION: '#ef4444',
-        SKIPPED: '#6b7280'
+      function createStopIcon(status, sequence) {
+        const cls = statusCls[status] || 'stop-pending';
+        return L.divIcon({
+          className: '',
+          iconSize: [26, 26],
+          iconAnchor: [13, 13],
+          html: '<div class="stop-marker ' + cls + '">' + sequence + '</div>',
+        });
+      }
+
+      function createVehicleIcon(course) {
+        const rotation = course || 0;
+        return L.divIcon({
+          className: '',
+          iconSize: [36, 36],
+          iconAnchor: [18, 18],
+          popupAnchor: [0, -20],
+          html: '<div class="vehicle-marker" style="transform: rotate(' + rotation + 'deg);">' +
+            '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">' +
+            '<path d="M18 18.5a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm-12 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM19.92 6.09C19.72 5.46 19.16 5 18.5 5h-11c-.66 0-1.21.42-1.42 1.02L4 12v6c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h10v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-6l-2.08-5.91zM7.5 15a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm9 0a1.5 1.5 0 110-3 1.5 1.5 0 010 3zM5.81 10l1.04-3h10.29l1.04 3H5.81z"/>' +
+            '</svg></div>',
+        });
+      }
+
+      const tooltipOpts = { className: 'vehicle-tooltip', direction: 'top', offset: [0, -14] };
+
+      const statusColor = function (s) {
+        return { DELIVERED: '#22c55e', EXCEPTION: '#ef4444', SKIPPED: '#6b7280' }[s] || '#3b82f6';
       };
 
       // Add stop markers
-      const polylineCoords = [];
+      const validStops = [];
       stops.forEach(function (stop) {
         if (stop.lat && stop.lng) {
-          const color = statusColors[stop.status] || '#3b82f6';
-          polylineCoords.push([stop.lat, stop.lng]);
+          validStops.push({ latlng: [stop.lat, stop.lng], status: stop.status });
 
-          L.circleMarker([stop.lat, stop.lng], {
-            radius: 10,
-            fillColor: color,
-            color: '#fff',
-            weight: 2,
-            fillOpacity: 0.9
-          })
-            .bindPopup(
-              '<b>#' + stop.sequence + '</b><br>' +
-              esc(stop.address) + '<br>' +
-              (stop.recipientName ? esc(stop.recipientName) + '<br>' : '') +
-              '<span style="color:' + color + ';font-weight:600">' + esc(stop.status) + '</span>' +
-              (stop.deliveredAt ? '<br><small>' + esc(stop.deliveredAt) + '</small>' : '')
-            )
-            .addTo(map);
+          let tooltipHtml = '<strong>#' + stop.sequence + '</strong> ' + esc(stop.address);
+          if (stop.recipientName) tooltipHtml += '<br>' + esc(stop.recipientName);
+          tooltipHtml += '<br><em>' + esc(stop.status) + '</em>';
+          if (stop.deliveredAt) tooltipHtml += '<br><small>' + esc(stop.deliveredAt) + '</small>';
 
-          // Sequence number label
           L.marker([stop.lat, stop.lng], {
-            icon: L.divIcon({
-              className: 'leaflet-stop-label',
-              html: '<div style="display:flex;align-items:center;justify-content:center;width:20px;height:20px;font-size:11px;font-weight:700;color:#fff;pointer-events:none;">' + stop.sequence + '</div>',
-              iconSize: [20, 20],
-              iconAnchor: [10, 10],
-            }),
-            interactive: false,
-          }).addTo(map);
+            icon: createStopIcon(stop.status, stop.sequence),
+          }).addTo(map).bindTooltip(tooltipHtml, tooltipOpts);
         }
       });
 
-      // Draw polyline connecting stops in sequence order
-      if (polylineCoords.length > 1) {
-        L.polyline(polylineCoords, {
-          color: '#6366f1',
+      // Route segments colored by destination stop status
+      for (let i = 1; i < validStops.length; i++) {
+        L.polyline([validStops[i - 1].latlng, validStops[i].latlng], {
+          color: statusColor(validStops[i].status),
           weight: 3,
-          opacity: 0.6,
-          dashArray: '8 6'
+          opacity: 0.8,
         }).addTo(map);
       }
 
@@ -238,46 +310,40 @@
       var vehicleMarker = null;
       if (vehiclePos && vehiclePos.lat && vehiclePos.lng) {
         vehicleMarker = L.marker([vehiclePos.lat, vehiclePos.lng], {
-          icon: L.divIcon({
-            className: 'leaflet-vehicle-icon',
-            html: '<div style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;background:#1e40af;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="white" style="width:16px;height:16px;"><path d="M6.5 18a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM13.5 18a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM17.836 5.318l-1.3-.39A5 5 0 0 0 11.8 2H8.2a5 5 0 0 0-4.737 2.928l-1.3.39A2 2 0 0 0 .758 7.282L1.5 12.5v1A1.5 1.5 0 0 0 3 15h14a1.5 1.5 0 0 0 1.5-1.5v-1l.742-5.218a2 2 0 0 0-1.406-1.964Z"/></svg></div>',
-            iconSize: [32, 32],
-            iconAnchor: [16, 16],
-          }),
-        }).addTo(map).bindPopup('Vehiculo');
+          icon: createVehicleIcon(vehiclePos.course),
+        }).addTo(map).bindTooltip('Vehiculo', { className: 'vehicle-tooltip', direction: 'top', offset: [0, -20] });
       }
 
       // Mercure real-time vehicle tracking
       if (vehiclePublicId) {
-        // Fetch Mercure auth cookie first
         fetch('/api/mercure-token', { credentials: 'include' }).then(function () {
           var hub = new URL('{{ mercure_public_url }}');
           hub.searchParams.set('topic', '/vehicles/' + vehiclePublicId + '/position');
 
           var es = new EventSource(hub, { withCredentials: true });
           es.onmessage = function (e) {
-            var d = JSON.parse(e.data);
-            if (d.lat && d.lng) {
-              if (vehicleMarker) {
-                vehicleMarker.setLatLng([d.lat, d.lng]);
-              } else {
-                vehicleMarker = L.marker([d.lat, d.lng], {
-                  icon: L.divIcon({
-                    className: 'leaflet-vehicle-icon',
-                    html: '<div style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;background:#1e40af;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="white" style="width:16px;height:16px;"><path d="M6.5 18a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM13.5 18a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM17.836 5.318l-1.3-.39A5 5 0 0 0 11.8 2H8.2a5 5 0 0 0-4.737 2.928l-1.3.39A2 2 0 0 0 .758 7.282L1.5 12.5v1A1.5 1.5 0 0 0 3 15h14a1.5 1.5 0 0 0 1.5-1.5v-1l.742-5.218a2 2 0 0 0-1.406-1.964Z"/></svg></div>',
-                    iconSize: [32, 32],
-                    iconAnchor: [16, 16],
-                  }),
-                }).addTo(map).bindPopup('Vehiculo');
+            try {
+              var d = JSON.parse(e.data);
+              if (d.lat && d.lng) {
+                if (vehicleMarker) {
+                  vehicleMarker.setLatLng([d.lat, d.lng]);
+                  if (vehicleMarker.getTooltip()) vehicleMarker.unbindTooltip();
+                  vehicleMarker.setIcon(createVehicleIcon(d.course));
+                  vehicleMarker.bindTooltip('Vehiculo - ' + Math.round(d.speed || 0) + ' km/h', { className: 'vehicle-tooltip', direction: 'top', offset: [0, -20] });
+                } else {
+                  vehicleMarker = L.marker([d.lat, d.lng], {
+                    icon: createVehicleIcon(d.course),
+                  }).addTo(map).bindTooltip('Vehiculo', { className: 'vehicle-tooltip', direction: 'top', offset: [0, -20] });
+                }
               }
-            }
+            } catch (err) { /* ignore */ }
           };
 
           window.addEventListener('beforeunload', function () { es.close(); });
         });
       }
 
-      // Fit bounds to show all markers
+      // Fit bounds
       var allPoints = stops.filter(function (s) { return s.lat && s.lng; }).map(function (s) { return [s.lat, s.lng]; });
       if (vehiclePos && vehiclePos.lat && vehiclePos.lng) {
         allPoints.push([vehiclePos.lat, vehiclePos.lng]);

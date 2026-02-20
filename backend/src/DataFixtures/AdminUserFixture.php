@@ -22,6 +22,7 @@ final class AdminUserFixture extends Fixture
         $admin->assignRole(UserRole::ADMIN);
         $admin->setPassword($this->passwordHasher->hashPassword($admin, 'ChangeMe_123!'));
         $admin->setActive(true);
+        $admin->setName('Administrador');
 
         $manager->persist($admin);
         $manager->flush();

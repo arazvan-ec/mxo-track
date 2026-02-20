@@ -7,7 +7,6 @@ namespace App\Form;
 use App\Entity\Customer;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
-use Symfony\Component\Form\Extension\Core\Type\EmailType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
@@ -25,7 +24,7 @@ class CustomerType extends AbstractType
                 'required' => true,
                 'attr' => [
                     'class' => 'w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm',
-                    'placeholder' => 'Nombre del almacen',
+                    'placeholder' => 'Nombre del cliente',
                 ],
             ])
             ->add('address', TextType::class, [
@@ -33,15 +32,7 @@ class CustomerType extends AbstractType
                 'required' => false,
                 'attr' => [
                     'class' => 'w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm',
-                    'placeholder' => 'Direccion del almacen',
-                ],
-            ])
-            ->add('contactEmail', EmailType::class, [
-                'label' => 'Email de contacto',
-                'required' => false,
-                'attr' => [
-                    'class' => 'w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm',
-                    'placeholder' => 'contacto@ejemplo.com',
+                    'placeholder' => 'Direccion del cliente',
                 ],
             ])
             ->add('contactPhone', TextType::class, [

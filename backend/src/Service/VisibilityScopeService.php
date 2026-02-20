@@ -19,7 +19,7 @@ final class VisibilityScopeService
     /** @return list<string> */
     public function vehicleIdsFor(User $user): array
     {
-        if ($user->hasRole('ROLE_ADMIN') || $user->hasRole('ROLE_OPERATOR')) {
+        if ($user->hasRole('ROLE_ADMIN')) {
             return [];
         }
 
@@ -68,7 +68,7 @@ final class VisibilityScopeService
 
     public function canAccessVehicle(User $user, string $vehicleId): bool
     {
-        if ($user->hasRole('ROLE_ADMIN') || $user->hasRole('ROLE_OPERATOR')) {
+        if ($user->hasRole('ROLE_ADMIN')) {
             return true;
         }
 

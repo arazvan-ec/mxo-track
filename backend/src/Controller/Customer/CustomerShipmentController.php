@@ -32,7 +32,7 @@ class CustomerShipmentController extends AbstractController
         $customer = $this->getUser()->getCustomer();
 
         if (!$customer instanceof Customer) {
-            throw $this->createAccessDeniedException('No tiene un almacen asociado.');
+            throw $this->createAccessDeniedException('No tiene un cliente asociado.');
         }
 
         $page = max(1, $request->query->getInt('page', 1));
@@ -92,7 +92,7 @@ class CustomerShipmentController extends AbstractController
         $customer = $this->getUser()->getCustomer();
 
         if (!$customer instanceof Customer) {
-            throw $this->createAccessDeniedException('No tiene un almacen asociado.');
+            throw $this->createAccessDeniedException('No tiene un cliente asociado.');
         }
 
         // Auto-filtered by CustomerTenantFilter — only this customer's shipments

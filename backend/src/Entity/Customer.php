@@ -20,9 +20,6 @@ class Customer
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $address = null;
 
-    #[ORM\Column(length: 180, nullable: true)]
-    private ?string $contactEmail = null;
-
     #[ORM\Column(length: 30, nullable: true)]
     private ?string $contactPhone = null;
 
@@ -38,8 +35,6 @@ class Customer
     public function setName(string $name): void { $this->name = $name; }
     public function getAddress(): ?string { return $this->address; }
     public function setAddress(?string $address): void { $this->address = $address; }
-    public function getContactEmail(): ?string { return $this->contactEmail; }
-    public function setContactEmail(?string $contactEmail): void { $this->contactEmail = $contactEmail; }
     public function getContactPhone(): ?string { return $this->contactPhone; }
     public function setContactPhone(?string $contactPhone): void { $this->contactPhone = $contactPhone; }
     public function isActive(): bool { return $this->isActive; }

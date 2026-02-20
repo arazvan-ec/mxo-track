@@ -16,7 +16,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Uid\Ulid;
 
 #[Route('/admin/shipments')]
-#[IsGranted('ROLE_OPERATOR')]
+#[IsGranted('ROLE_ADMIN')]
 class AdminShipmentController extends AbstractController
 {
     #[Route('/import', name: 'admin_shipments_import', methods: ['GET', 'POST'])]

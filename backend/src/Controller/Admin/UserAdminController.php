@@ -16,7 +16,7 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[Route('/admin/users')]
-#[IsGranted('ROLE_OPERATOR')]
+#[IsGranted('ROLE_ADMIN')]
 class UserAdminController extends AbstractController
 {
     private const int ITEMS_PER_PAGE = 20;
@@ -161,7 +161,7 @@ class UserAdminController extends AbstractController
 
     private function determinePrimaryRole(array $roles): string
     {
-        $priority = ['ROLE_ADMIN', 'ROLE_OPERATOR', 'ROLE_CUSTOMER', 'ROLE_DRIVER'];
+        $priority = ['ROLE_ADMIN', 'ROLE_CUSTOMER', 'ROLE_DRIVER'];
 
         foreach ($priority as $role) {
             if (in_array($role, $roles, true)) {

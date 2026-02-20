@@ -18,7 +18,7 @@
         <thead class="bg-gray-50">
           <tr>
             <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Email</th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Almacen</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Nombre</th>
             <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Estado</th>
             <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Creado</th>
             <th scope="col" class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Acciones</th>
@@ -31,7 +31,7 @@
                 {{ driver.email }}
               </td>
               <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                {{ driver.customer ? driver.customer.name : '-' }}
+                {{ driver.name ?? '-' }}
               </td>
               <td class="whitespace-nowrap px-6 py-4 text-sm">
                 {% if driver.active %}

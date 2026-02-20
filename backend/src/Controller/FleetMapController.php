@@ -20,7 +20,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route as SymfonyRoute;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-#[IsGranted('ROLE_OPERATOR')]
+#[IsGranted('ROLE_ADMIN')]
 final class FleetMapController extends AbstractController
 {
     #[SymfonyRoute('/fleet/map', name: 'fleet_map', methods: ['GET'])]
@@ -32,19 +32,36 @@ final class FleetMapController extends AbstractController
         /** @var User $user */
         $user = $this->getUser();
 
-        // Load visible vehicles with their last positions
-        if ($user->hasRole('ROLE_ADMIN') || $user->hasRole('ROLE_OPERATOR')) {
-            $vehicles = $em->getRepository(Vehicle::class)->findBy(['isActive' => true]);
-        } else {
-            $allowedIds = $visibilityScope->vehicleIdsFor($user);
-            $vehicles = $allowedIds === []
-                ? []
-                : $em->getRepository(Vehicle::class)->findBy(['id' => $allowedIds, 'isActive' => true]);
+        // Load active routes first — only vehicles with active routes are shown on the map
+        $activeRoutes = $em->createQueryBuilder()
+            ->select('r', 'v', 'd')
+            ->from(Route::class, 'r')
+            ->leftJoin('r.vehicle', 'v')
+            ->leftJoin('r.driver', 'd')
+            ->where('r.status IN (:statuses)')
+            ->setParameter('statuses', [RouteStatus::ACTIVE, RouteStatus::PLANNED])
+            ->orderBy('r.id', 'DESC')
+            ->getQuery()
+            ->getResult();
+
+        // Collect vehicles assigned to active routes
+        $routeVehicles = [];
+        foreach ($activeRoutes as $route) {
+            $vehicle = $route->getVehicle();
+            if ($vehicle !== null && $vehicle->isActive()) {
+                $routeVehicles[$vehicle->getId()] = $vehicle;
+            }
+        }
+
+        // Apply visibility scope for non-admin users
+        if (!$user->hasRole('ROLE_ADMIN')) {
+            $allowedIds = array_flip($visibilityScope->vehicleIdsFor($user));
+            $routeVehicles = array_filter($routeVehicles, static fn (Vehicle $v) => isset($allowedIds[$v->getId()]));
         }
 
         // Build vehicle data with last positions
         $vehiclesData = [];
-        foreach ($vehicles as $vehicle) {
+        foreach ($routeVehicles as $vehicle) {
             $lastPos = $em->getRepository(VehicleLastPosition::class)->findOneBy(['vehicle' => $vehicle]);
             $vehiclesData[] = [
                 'public_id' => $vehicle->getPublicIdString(),
@@ -58,18 +75,6 @@ final class FleetMapController extends AbstractController
                 ] : null,
             ];
         }
-
-        // Load active routes with stops for overlay
-        $activeRoutes = $em->createQueryBuilder()
-            ->select('r', 'v', 'd')
-            ->from(Route::class, 'r')
-            ->leftJoin('r.vehicle', 'v')
-            ->leftJoin('r.driver', 'd')
-            ->where('r.status IN (:statuses)')
-            ->setParameter('statuses', [RouteStatus::ACTIVE, RouteStatus::PLANNED])
-            ->orderBy('r.id', 'DESC')
-            ->getQuery()
-            ->getResult();
 
         $routesData = [];
         foreach ($activeRoutes as $route) {

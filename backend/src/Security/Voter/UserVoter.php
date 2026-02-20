@@ -24,9 +24,9 @@ class UserVoter extends BaseVoter
         }
 
         if ($attribute === self::VIEW) {
-            return $user->getPublicIdString() === $subject->getPublicIdString() || $user->hasRole(UserRole::OPERATOR->value);
+            return $user->getPublicIdString() === $subject->getPublicIdString() || $user->hasRole(UserRole::ADMIN->value);
         }
 
-        return $user->hasRole(UserRole::OPERATOR->value);
+        return $user->hasRole(UserRole::ADMIN->value);
     }
 }

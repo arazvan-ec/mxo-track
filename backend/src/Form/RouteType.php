@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Form;
 
 use App\Entity\Customer;
+use App\Entity\CustomerLocation;
 use App\Entity\Route;
 use App\Entity\User;
 use App\Entity\Vehicle;
@@ -35,8 +36,23 @@ class RouteType extends AbstractType
                 'class' => Customer::class,
                 'choice_label' => 'name',
                 'required' => false,
-                'label' => 'Almacen',
-                'placeholder' => 'Seleccionar almacen...',
+                'label' => 'Cliente',
+                'placeholder' => 'Seleccionar cliente...',
+                'attr' => [
+                    'class' => 'w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm',
+                ],
+            ])
+            ->add('originLocation', EntityType::class, [
+                'class' => CustomerLocation::class,
+                'choice_label' => 'name',
+                'required' => false,
+                'label' => 'Ubicacion de origen',
+                'placeholder' => 'Seleccionar origen...',
+                'query_builder' => function (EntityRepository $er): QueryBuilder {
+                    return $er->createQueryBuilder('l')
+                        ->where('l.isActive = true')
+                        ->orderBy('l.name', 'ASC');
+                },
                 'attr' => [
                     'class' => 'w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm',
                 ],
@@ -64,7 +80,7 @@ class RouteType extends AbstractType
                 'placeholder' => 'Seleccionar transportista...',
                 'query_builder' => function (EntityRepository $er): QueryBuilder {
                     return $er->createQueryBuilder('u')
-                        ->where('u.roles LIKE :r')
+                        ->where('JSON_TEXT(u.roles) LIKE :r')
                         ->setParameter('r', '%ROLE_DRIVER%')
                         ->andWhere('u.isActive = true')
                         ->orderBy('u.email', 'ASC');

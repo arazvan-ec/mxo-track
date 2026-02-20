@@ -16,8 +16,9 @@
         <thead class="bg-gray-50">
           <tr>
             <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Email</th>
+            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Nombre</th>
             <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Rol</th>
-            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Almacen</th>
+            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Cliente</th>
             <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Estado</th>
             <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Creado</th>
             <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Acciones</th>
@@ -29,13 +30,14 @@
               <td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
                 {{ u.email }}
               </td>
+              <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                {{ u.name ?? '-' }}
+              </td>
               <td class="whitespace-nowrap px-6 py-4 text-sm">
                 {% if u.hasRole('ROLE_ADMIN') %}
                   <span class="inline-flex rounded-full bg-purple-100 px-2 text-xs font-semibold leading-5 text-purple-800">Administrador</span>
-                {% elseif u.hasRole('ROLE_OPERATOR') %}
-                  <span class="inline-flex rounded-full bg-blue-100 px-2 text-xs font-semibold leading-5 text-blue-800">Operador</span>
                 {% elseif u.hasRole('ROLE_CUSTOMER') %}
-                  <span class="inline-flex rounded-full bg-teal-100 px-2 text-xs font-semibold leading-5 text-teal-800">Almacen</span>
+                  <span class="inline-flex rounded-full bg-teal-100 px-2 text-xs font-semibold leading-5 text-teal-800">Cliente</span>
                 {% elseif u.hasRole('ROLE_DRIVER') %}
                   <span class="inline-flex rounded-full bg-amber-100 px-2 text-xs font-semibold leading-5 text-amber-800">Transportista</span>
                 {% else %}
@@ -68,7 +70,7 @@
             </tr>
           {% else %}
             <tr>
-              <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">
+              <td colspan="7" class="px-6 py-4 text-center text-sm text-gray-500">
                 No hay usuarios registrados.
               </td>
             </tr>

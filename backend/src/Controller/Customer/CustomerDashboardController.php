@@ -36,7 +36,7 @@ class CustomerDashboardController extends AbstractController
         $customer = $user->getCustomer();
 
         if (!$customer instanceof Customer) {
-            throw $this->createAccessDeniedException('No tiene un almacen asociado.');
+            throw $this->createAccessDeniedException('No tiene un cliente asociado.');
         }
 
         // Total shipments (auto-filtered by CustomerTenantFilter for ROLE_CUSTOMER)

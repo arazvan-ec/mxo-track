@@ -16,6 +16,12 @@
       {{ form_start(form, {'attr': {'novalidate': 'novalidate'}}) }}
 
         <div class="mb-4">
+          {{ form_label(form.name, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 mb-1'}}) }}
+          {{ form_widget(form.name, {'attr': {'class': 'w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm'}}) }}
+          {{ form_errors(form.name) }}
+        </div>
+
+        <div class="mb-4">
           {{ form_label(form.email, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 mb-1'}}) }}
           {{ form_widget(form.email, {'attr': {'class': 'w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm'}}) }}
           {{ form_errors(form.email) }}
@@ -28,12 +34,6 @@
             <p class="mt-1 text-xs text-gray-500">Dejar vacio para mantener la contrasena actual.</p>
           {% endif %}
           {{ form_errors(form.plainPassword) }}
-        </div>
-
-        <div class="mb-4">
-          {{ form_label(form.customer, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 mb-1'}}) }}
-          {{ form_widget(form.customer, {'attr': {'class': 'w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm'}}) }}
-          {{ form_errors(form.customer) }}
         </div>
 
         <div class="flex items-center mb-4">

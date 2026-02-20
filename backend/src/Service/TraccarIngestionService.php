@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Entity\Route;
 use App\Entity\Vehicle;
 use App\Entity\VehicleCheckpoint;
 use App\Entity\VehicleLastPosition;
 use App\Entity\VehiclePosition;
+use App\Enum\RouteStatus;
 use DateTimeImmutable;
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\Update;
@@ -26,6 +29,11 @@ final class TraccarIngestionService
     public function ingestForVehicle(Vehicle $vehicle, array $positions): int
     {
         $created = 0;
+
+        $activeRoute = $this->entityManager->getRepository(Route::class)->findOneBy([
+            'vehicle' => $vehicle,
+            'status' => RouteStatus::ACTIVE,
+        ]);
 
         $last = $this->entityManager->getRepository(VehicleLastPosition::class)->findOneBy(['vehicle' => $vehicle]);
         $checkpoint = $this->entityManager->getRepository(VehicleCheckpoint::class)->findOneBy(['vehicle' => $vehicle]);
@@ -45,6 +53,9 @@ final class TraccarIngestionService
             }
 
             $history = new VehiclePosition($vehicle, $lat, $lng, $deviceTime, $serverTime);
+            if ($activeRoute !== null) {
+                $history->setRoute($activeRoute);
+            }
             $this->entityManager->persist($history);
             $created++;
 
@@ -67,6 +78,15 @@ final class TraccarIngestionService
             $checkpoint->setLastTraccarPositionId(isset($position['id']) ? (int) $position['id'] : null);
 
             try {
+                $this->entityManager->flush();
+            } catch (UniqueConstraintViolationException) {
+                $this->entityManager->clear();
+                $last = null;
+                $checkpoint = null;
+                continue;
+            }
+
+            try {
                 $this->hub->publish(new Update(
                     sprintf('/vehicles/%s/position', $vehicle->getPublicIdString()),
                     json_encode([
@@ -84,8 +104,6 @@ final class TraccarIngestionService
                 // no romper ingesta por fallo temporal de Mercure
             }
         }
-
-        $this->entityManager->flush();
 
         return $created;
     }

@@ -30,7 +30,7 @@ class VehicleApiController extends AbstractController
         $user = $this->getUser();
 
         $repo = $entityManager->getRepository(Vehicle::class);
-        if ($user->hasRole('ROLE_ADMIN') || $user->hasRole('ROLE_OPERATOR')) {
+        if ($user->hasRole('ROLE_ADMIN')) {
             $vehicles = $repo->findBy(['isActive' => true]);
         } else {
             $allowedIds = $visibilityScopeService->vehicleIdsFor($user);

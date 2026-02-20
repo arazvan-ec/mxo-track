@@ -19,7 +19,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Uid\Ulid;
 
 #[Route('/admin/customers')]
-#[IsGranted('ROLE_OPERATOR')]
+#[IsGranted('ROLE_ADMIN')]
 class CustomerAdminController extends AbstractController
 {
     private const int ITEMS_PER_PAGE = 20;
@@ -72,6 +72,7 @@ class CustomerAdminController extends AbstractController
 
         // Count users per customer
         $userCounts = [];
+        $customerEmails = [];
         if (\count($customers) > 0) {
             $customerIds = array_map(static fn (Customer $c) => $c->getId(), $customers);
 
@@ -87,6 +88,21 @@ class CustomerAdminController extends AbstractController
             foreach ($userCountRows as $row) {
                 $userCounts[$row['customer_id']] = (int) $row['user_count'];
             }
+
+            $emailRows = $this->em->createQueryBuilder()
+                ->select('IDENTITY(u.customer) AS customer_id, MIN(u.email) AS email')
+                ->from(User::class, 'u')
+                ->where('u.customer IN (:ids)')
+                ->andWhere('JSON_TEXT(u.roles) LIKE :role')
+                ->setParameter('ids', $customerIds)
+                ->setParameter('role', '%ROLE_CUSTOMER%')
+                ->groupBy('u.customer')
+                ->getQuery()
+                ->getArrayResult();
+
+            foreach ($emailRows as $row) {
+                $customerEmails[$row['customer_id']] = $row['email'];
+            }
         }
 
         return $this->render('admin/customer/index.html.twig', [
@@ -95,6 +111,7 @@ class CustomerAdminController extends AbstractController
             'totalPages' => $totalPages,
             'vehicleCounts' => $vehicleCounts,
             'userCounts' => $userCounts,
+            'customerEmails' => $customerEmails,
         ]);
     }
 
@@ -109,7 +126,7 @@ class CustomerAdminController extends AbstractController
             $this->em->persist($customer);
             $this->em->flush();
 
-            $this->addFlash('success', 'Almacen creado correctamente.');
+            $this->addFlash('success', 'Cliente creado correctamente.');
 
             return $this->redirectToRoute('admin_customers_index');
         }
@@ -126,7 +143,7 @@ class CustomerAdminController extends AbstractController
         $customer = $this->findCustomerByPublicId($publicId);
 
         if (!$customer instanceof Customer) {
-            throw $this->createNotFoundException('Almacen no encontrado.');
+            throw $this->createNotFoundException('Cliente no encontrado.');
         }
 
         $form = $this->createForm(CustomerType::class, $customer);
@@ -135,7 +152,7 @@ class CustomerAdminController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->em->flush();
 
-            $this->addFlash('success', 'Almacen actualizado correctamente.');
+            $this->addFlash('success', 'Cliente actualizado correctamente.');
 
             return $this->redirectToRoute('admin_customers_index');
         }
@@ -152,7 +169,7 @@ class CustomerAdminController extends AbstractController
         $customer = $this->findCustomerByPublicId($publicId);
 
         if (!$customer instanceof Customer) {
-            throw $this->createNotFoundException('Almacen no encontrado.');
+            throw $this->createNotFoundException('Cliente no encontrado.');
         }
 
         if (!$this->isCsrfTokenValid('delete-customer-' . $publicId, $request->request->getString('_token'))) {
@@ -164,7 +181,7 @@ class CustomerAdminController extends AbstractController
         $customer->setActive(false);
         $this->em->flush();
 
-        $this->addFlash('success', 'Almacen desactivado correctamente.');
+        $this->addFlash('success', 'Cliente desactivado correctamente.');
 
         return $this->redirectToRoute('admin_customers_index');
     }
@@ -175,7 +192,7 @@ class CustomerAdminController extends AbstractController
         $customer = $this->findCustomerByPublicId($publicId);
 
         if (!$customer instanceof Customer) {
-            throw $this->createNotFoundException('Almacen no encontrado.');
+            throw $this->createNotFoundException('Cliente no encontrado.');
         }
 
         if ($request->isMethod('POST')) {

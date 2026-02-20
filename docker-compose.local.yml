@@ -16,6 +16,7 @@ services:
       MERCURE_PUBLISHER_JWT_KEY: local-mercure-jwt-key-change-me-dev
       MERCURE_SUBSCRIBER_JWT_KEY: local-mercure-jwt-key-change-me-dev
       TRACCAR_BASE_URL: http://traccar:8082
+      TRACCAR_WS_URL: ws://traccar:8082/api/socket
       TRACCAR_USERNAME: admin
       TRACCAR_PASSWORD: admin
     depends_on:
@@ -50,7 +51,7 @@ services:
       MERCURE_PUBLISHER_JWT_KEY: local-mercure-jwt-key-change-me-dev
       MERCURE_SUBSCRIBER_JWT_KEY: local-mercure-jwt-key-change-me-dev
       MERCURE_EXTRA_DIRECTIVES: |
-        cors_origins http://localhost:8000
+        cors_origins http://localhost:8000 http://0.0.0.0:8000 http://127.0.0.1:8000
         anonymous
     ports:
       - "3000:80"

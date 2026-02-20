@@ -12,7 +12,7 @@ final class SystemHealthService
     public function __construct(
         private readonly TraccarApiClient $traccarApiClient,
         private readonly HttpClientInterface $httpClient,
-        private readonly string $mercurePublicUrl,
+        private readonly string $mercureInternalUrl,
     ) {
     }
 
@@ -38,7 +38,7 @@ final class SystemHealthService
         $mercureOk = false;
 
         try {
-            $response = $this->httpClient->request('GET', $this->mercurePublicUrl, [
+            $response = $this->httpClient->request('GET', $this->mercureInternalUrl, [
                 'query' => ['topic' => '/health/ping'],
                 'timeout' => 2,
             ]);

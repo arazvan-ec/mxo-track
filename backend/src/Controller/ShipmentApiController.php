@@ -24,7 +24,7 @@ class ShipmentApiController extends AbstractController
         $user = $this->getUser();
 
         $criteria = [];
-        if ($user->hasRole('ROLE_CUSTOMER') && !$user->hasRole('ROLE_OPERATOR') && !$user->hasRole('ROLE_ADMIN')) {
+        if ($user->hasRole('ROLE_CUSTOMER') && !$user->hasRole('ROLE_ADMIN')) {
             $customer = $user->getCustomer();
             if ($customer === null) {
                 return $this->json(['items' => []]);

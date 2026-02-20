@@ -16,7 +16,7 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[Route('/admin/vehicles')]
-#[IsGranted('ROLE_OPERATOR')]
+#[IsGranted('ROLE_ADMIN')]
 class VehicleAdminController extends AbstractController
 {
     private const int ITEMS_PER_PAGE = 20;

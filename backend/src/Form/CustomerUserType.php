@@ -12,6 +12,7 @@ use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
 use Symfony\Component\Form\Extension\Core\Type\PasswordType;
+use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
@@ -20,6 +21,14 @@ class CustomerUserType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
+            ->add('name', TextType::class, [
+                'label' => 'Nombre',
+                'required' => false,
+                'attr' => [
+                    'class' => 'w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm',
+                    'placeholder' => 'Nombre del usuario',
+                ],
+            ])
             ->add('email', EmailType::class, [
                 'label' => 'Email',
                 'required' => true,
@@ -39,11 +48,11 @@ class CustomerUserType extends AbstractType
                 ],
             ])
             ->add('customer', EntityType::class, [
-                'label' => 'Almacen',
+                'label' => 'Cliente',
                 'class' => Customer::class,
                 'choice_label' => 'name',
                 'required' => false,
-                'placeholder' => 'Sin almacen',
+                'placeholder' => 'Sin cliente',
                 'attr' => [
                     'class' => 'w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm',
                 ],
@@ -53,8 +62,7 @@ class CustomerUserType extends AbstractType
                 'mapped' => false,
                 'choices' => [
                     'Administrador' => 'ROLE_ADMIN',
-                    'Operador' => 'ROLE_OPERATOR',
-                    'Almacen' => 'ROLE_CUSTOMER',
+                    'Cliente' => 'ROLE_CUSTOMER',
                     'Transportista' => 'ROLE_DRIVER',
                 ],
                 'attr' => [

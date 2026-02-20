@@ -17,7 +17,7 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[Route('/admin/drivers')]
-#[IsGranted('ROLE_OPERATOR')]
+#[IsGranted('ROLE_ADMIN')]
 class DriverAdminController extends AbstractController
 {
     private const int ITEMS_PER_PAGE = 20;
@@ -37,7 +37,7 @@ class DriverAdminController extends AbstractController
         $qb = $this->em->createQueryBuilder()
             ->select('u')
             ->from(User::class, 'u')
-            ->where('u.roles LIKE :role')
+            ->where('JSON_TEXT(u.roles) LIKE :role')
             ->setParameter('role', '%ROLE_DRIVER%')
             ->orderBy('u.createdAt', 'DESC')
             ->setFirstResult(($page - 1) * $limit)
@@ -48,7 +48,7 @@ class DriverAdminController extends AbstractController
         $total = (int) $this->em->createQueryBuilder()
             ->select('COUNT(u.id)')
             ->from(User::class, 'u')
-            ->where('u.roles LIKE :role')
+            ->where('JSON_TEXT(u.roles) LIKE :role')
             ->setParameter('role', '%ROLE_DRIVER%')
             ->getQuery()
             ->getSingleScalarResult();
@@ -83,6 +83,7 @@ class DriverAdminController extends AbstractController
 
             $driver->setPassword($this->passwordHasher->hashPassword($driver, $plainPassword));
             $driver->assignRole(UserRole::DRIVER);
+            $driver->setCustomer(null);
 
             $this->em->persist($driver);
             $this->em->flush();
@@ -120,6 +121,8 @@ class DriverAdminController extends AbstractController
             if (!empty($plainPassword)) {
                 $driver->setPassword($this->passwordHasher->hashPassword($driver, $plainPassword));
             }
+
+            $driver->setCustomer(null);
 
             $this->em->flush();
 

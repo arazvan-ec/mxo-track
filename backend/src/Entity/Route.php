@@ -41,6 +41,10 @@ class Route
     #[ORM\JoinColumn(name: 'customer_id', nullable: true, onDelete: 'SET NULL')]
     private ?Customer $customer = null;
 
+    #[ORM\ManyToOne(targetEntity: CustomerLocation::class)]
+    #[ORM\JoinColumn(name: 'origin_location_id', nullable: true, onDelete: 'SET NULL')]
+    private ?CustomerLocation $originLocation = null;
+
     public function __construct(string $name)
     {
         $this->name = $name;
@@ -60,6 +64,8 @@ class Route
     public function setEndAt(?DateTimeImmutable $endAt): void { $this->endAt = $endAt; }
     public function getCustomer(): ?Customer { return $this->customer; }
     public function setCustomer(?Customer $customer): void { $this->customer = $customer; }
+    public function getOriginLocation(): ?CustomerLocation { return $this->originLocation; }
+    public function setOriginLocation(?CustomerLocation $originLocation): void { $this->originLocation = $originLocation; }
 
     public function start(): void
     {

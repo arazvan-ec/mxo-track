@@ -20,7 +20,7 @@ use Symfony\Component\Routing\Annotation\Route as SymfonyRoute;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[SymfonyRoute('/admin/routes')]
-#[IsGranted('ROLE_OPERATOR')]
+#[IsGranted('ROLE_ADMIN')]
 class RouteAdminController extends AbstractController
 {
     private const int ITEMS_PER_PAGE = 20;
@@ -106,6 +106,7 @@ class RouteAdminController extends AbstractController
 
         if ($form->isSubmitted() && $form->isValid()) {
             $this->em->persist($route);
+            $this->createOriginStopIfNeeded($route);
             $this->em->flush();
 
             $this->addFlash('success', 'Ruta creada correctamente.');
@@ -134,6 +135,7 @@ class RouteAdminController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            $this->syncOriginStop($route);
             $this->em->flush();
 
             $this->addFlash('success', 'Ruta actualizada correctamente.');
@@ -283,5 +285,39 @@ class RouteAdminController extends AbstractController
         return $this->redirectToRoute('admin_routes_edit', [
             'publicId' => $route->getPublicIdString(),
         ]);
+    }
+
+    private function createOriginStopIfNeeded(Route $route): void
+    {
+        $origin = $route->getOriginLocation();
+        if ($origin === null) {
+            return;
+        }
+
+        $stop = new RouteStop($route, 0, $origin->getAddress());
+        $stop->setLatitude($origin->getLatitude());
+        $stop->setLongitude($origin->getLongitude());
+        $stop->setOrigin(true);
+        $this->em->persist($stop);
+    }
+
+    private function syncOriginStop(Route $route): void
+    {
+        // Remove existing origin stop
+        $existingOrigin = $this->em->createQueryBuilder()
+            ->select('s')
+            ->from(RouteStop::class, 's')
+            ->where('s.route = :route')
+            ->andWhere('s.isOrigin = true')
+            ->setParameter('route', $route)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        if ($existingOrigin !== null) {
+            $this->em->remove($existingOrigin);
+        }
+
+        // Create new one if origin location is set
+        $this->createOriginStopIfNeeded($route);
     }
 }
