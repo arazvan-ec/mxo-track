@@ -23,6 +23,7 @@ class AdminController extends AbstractController
     ): Response {
         $metrics = $metricsService->collect();
         $health = $systemHealthService->check();
+        $live = $systemHealthService->checkLive();
 
         return $this->render('admin/dashboard.html.twig', [
             'kpis' => [
@@ -35,6 +36,7 @@ class AdminController extends AbstractController
                 'positions_ingested_last_hour' => $metrics['positions_ingested_last_hour'],
             ],
             'health' => $health,
+            'live' => $live,
             'mercure_public_url' => $mercurePublicUrl,
         ]);
     }
@@ -45,6 +47,7 @@ class AdminController extends AbstractController
         return $this->json([
             'status' => 'ok',
             'health' => $systemHealthService->check(),
+            'live' => $systemHealthService->checkLive(),
             'metrics' => $metricsService->collect(),
             'generated_at' => (new \DateTimeImmutable())->format(DATE_ATOM),
         ]);
