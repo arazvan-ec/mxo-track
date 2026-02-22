@@ -72,30 +72,83 @@
     {# Stops section (only on edit) #}
     {% if route.id %}
       <div class="bg-white shadow rounded-lg p-6 mb-8">
-        <h2 class="text-lg font-semibold text-gray-900 mb-4">Paradas</h2>
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-semibold text-gray-900">Paradas</h2>
+          {% if stops is defined and stops|length > 1 %}
+            <div class="flex items-center gap-3">
+              {% if totalDistance is defined and totalDistance > 0 %}
+                <span class="text-sm text-gray-500" id="total-distance-label">
+                  Distancia total: <strong>{{ totalDistance|number_format(2) }} km</strong>
+                </span>
+              {% endif %}
+              <button type="button" id="btn-optimize"
+                      class="inline-flex items-center gap-1.5 rounded-md bg-amber-500 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-amber-400 transition-colors">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"/>
+                </svg>
+                Optimizar orden
+              </button>
+            </div>
+          {% endif %}
+        </div>
+
+        {# Optimization preview modal #}
+        <div id="optimize-modal" class="hidden mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4">
+          <h3 class="text-sm font-semibold text-amber-900 mb-2">Vista previa de optimizacion</h3>
+          <div class="flex items-center gap-4 mb-3 text-sm">
+            <span class="text-gray-600">Distancia actual: <strong id="opt-dist-before">-</strong> km</span>
+            <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/>
+            </svg>
+            <span class="text-green-700">Optimizada: <strong id="opt-dist-after">-</strong> km</span>
+            <span class="text-green-700 font-semibold" id="opt-savings"></span>
+          </div>
+          <div id="opt-preview-list" class="mb-3 text-sm text-gray-700"></div>
+          <div class="flex gap-2">
+            <button type="button" id="btn-apply-optimize"
+                    class="inline-flex items-center rounded-md bg-green-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-green-500">
+              Aplicar optimizacion
+            </button>
+            <button type="button" id="btn-cancel-optimize"
+                    class="inline-flex items-center rounded-md bg-white px-3 py-1.5 text-xs font-medium text-gray-700 border border-gray-300 shadow-sm hover:bg-gray-50">
+              Cancelar
+            </button>
+          </div>
+        </div>
 
         {% if stops is defined and stops|length > 0 %}
           <div class="overflow-hidden rounded-lg border border-gray-200 mb-6">
             <table class="min-w-full divide-y divide-gray-200">
               <thead class="bg-gray-50">
                 <tr>
+                  <th scope="col" class="w-8 px-2 py-3"></th>
                   <th scope="col" class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">#</th>
                   <th scope="col" class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Direccion</th>
                   <th scope="col" class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Destinatario</th>
-                  <th scope="col" class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Telefono</th>
                   <th scope="col" class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Coords</th>
+                  <th scope="col" class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Distancia</th>
+                  <th scope="col" class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Ventana</th>
                   <th scope="col" class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Estado</th>
                   <th scope="col" class="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Acciones</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-gray-200 bg-white">
+              <tbody id="stops-tbody" class="divide-y divide-gray-200 bg-white">
                 {% for stop in stops %}
-                  <tr>
+                  <tr data-stop-id="{{ stop.publicIdString }}" class="stop-row{% if not stop.origin %} draggable-stop{% endif %}">
+                    <td class="px-2 py-3 text-center">
+                      {% if not stop.origin %}
+                        <span class="drag-handle cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600" title="Arrastrar para reordenar">
+                          <svg class="w-4 h-4 inline" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5"/>
+                          </svg>
+                        </span>
+                      {% endif %}
+                    </td>
                     <td class="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900">
                       {% if stop.origin %}
                         <span class="inline-flex items-center rounded-full bg-purple-100 px-2 text-xs font-semibold leading-5 text-purple-800">Origen</span>
                       {% else %}
-                        {{ stop.sequence }}
+                        <span class="stop-sequence">{{ stop.sequence }}</span>
                       {% endif %}
                     </td>
                     <td class="px-4 py-3 text-sm text-gray-700 max-w-xs truncate" title="{{ stop.address }}">
@@ -105,11 +158,26 @@
                       {{ stop.recipientName ?? '-' }}
                     </td>
                     <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-500">
-                      {{ stop.recipientPhone ?? '-' }}
-                    </td>
-                    <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-500">
                       {% if stop.latitude and stop.longitude %}
                         {{ stop.latitude|number_format(4) }}, {{ stop.longitude|number_format(4) }}
+                      {% else %}
+                        <span class="text-gray-400">-</span>
+                      {% endif %}
+                    </td>
+                    <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-500">
+                      {% if segmentDistances is defined and segmentDistances[stop.publicIdString] is defined and segmentDistances[stop.publicIdString] is not null %}
+                        <span class="text-xs text-blue-600 font-medium">{{ segmentDistances[stop.publicIdString]|number_format(2) }} km</span>
+                      {% else %}
+                        <span class="text-gray-400">-</span>
+                      {% endif %}
+                    </td>
+                    <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-500">
+                      {% if stop.deliveryWindowStart and stop.deliveryWindowEnd %}
+                        <span class="text-xs font-medium text-indigo-600">{{ stop.deliveryWindowStart|date('H:i') }} - {{ stop.deliveryWindowEnd|date('H:i') }}</span>
+                      {% elseif stop.deliveryWindowStart %}
+                        <span class="text-xs font-medium text-indigo-600">Desde {{ stop.deliveryWindowStart|date('H:i') }}</span>
+                      {% elseif stop.deliveryWindowEnd %}
+                        <span class="text-xs font-medium text-indigo-600">Hasta {{ stop.deliveryWindowEnd|date('H:i') }}</span>
                       {% else %}
                         <span class="text-gray-400">-</span>
                       {% endif %}
@@ -206,4 +274,209 @@
     {% endif %}
 
 </div>
+{% endblock %}
+
+{% block scripts %}
+  {{ parent() }}
+  {% if route.id and stops is defined and stops|length > 0 %}
+  <script>
+  (function() {
+    'use strict';
+
+    var routePublicId = '{{ route.publicIdString }}';
+    var optimizeCsrf = '{{ csrf_token('optimize-route-' ~ route.publicIdString) }}';
+    var reorderCsrf = '{{ csrf_token('reorder-stops-' ~ route.publicIdString) }}';
+
+    // ── Drag and drop reordering ────────────────────────────────────
+    var tbody = document.getElementById('stops-tbody');
+    var dragRow = null;
+
+    function getDraggableRows() {
+      return tbody.querySelectorAll('tr.draggable-stop');
+    }
+
+    function initDragAndDrop() {
+      var rows = getDraggableRows();
+      rows.forEach(function(row) {
+        var handle = row.querySelector('.drag-handle');
+        if (!handle) return;
+
+        handle.addEventListener('mousedown', function(e) {
+          e.preventDefault();
+          dragRow = row;
+          row.classList.add('opacity-50', 'bg-blue-50');
+
+          document.addEventListener('mousemove', onMouseMove);
+          document.addEventListener('mouseup', onMouseUp);
+        });
+      });
+    }
+
+    function onMouseMove(e) {
+      if (!dragRow) return;
+
+      var allRows = Array.from(tbody.querySelectorAll('tr'));
+      var hoverRow = null;
+
+      for (var i = 0; i < allRows.length; i++) {
+        var rect = allRows[i].getBoundingClientRect();
+        if (e.clientY >= rect.top && e.clientY <= rect.bottom) {
+          hoverRow = allRows[i];
+          break;
+        }
+      }
+
+      if (hoverRow && hoverRow !== dragRow && hoverRow.classList.contains('draggable-stop')) {
+        var allRowsArr = Array.from(tbody.querySelectorAll('tr'));
+        var dragIndex = allRowsArr.indexOf(dragRow);
+        var hoverIndex = allRowsArr.indexOf(hoverRow);
+
+        if (dragIndex < hoverIndex) {
+          tbody.insertBefore(dragRow, hoverRow.nextSibling);
+        } else {
+          tbody.insertBefore(dragRow, hoverRow);
+        }
+      }
+    }
+
+    function onMouseUp() {
+      if (dragRow) {
+        dragRow.classList.remove('opacity-50', 'bg-blue-50');
+        dragRow = null;
+      }
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+
+      saveNewOrder();
+    }
+
+    function saveNewOrder() {
+      var rows = Array.from(tbody.querySelectorAll('tr'));
+      var order = [];
+
+      rows.forEach(function(row, index) {
+        var stopId = row.getAttribute('data-stop-id');
+        if (stopId) {
+          order.push(stopId);
+          // Update displayed sequence numbers
+          var seqEl = row.querySelector('.stop-sequence');
+          if (seqEl) {
+            seqEl.textContent = index;
+          }
+        }
+      });
+
+      fetch('/admin/routes/' + routePublicId + '/stops/reorder', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': reorderCsrf,
+        },
+        body: JSON.stringify({ order: order }),
+        credentials: 'include',
+      }).then(function(r) {
+        if (!r.ok) {
+          console.error('Failed to save stop order');
+        }
+      }).catch(function(err) {
+        console.error('Error saving stop order:', err);
+      });
+    }
+
+    initDragAndDrop();
+
+    // ── Route optimization ──────────────────────────────────────────
+    var btnOptimize = document.getElementById('btn-optimize');
+    var optimizeModal = document.getElementById('optimize-modal');
+    var btnApply = document.getElementById('btn-apply-optimize');
+    var btnCancel = document.getElementById('btn-cancel-optimize');
+
+    if (btnOptimize) {
+      btnOptimize.addEventListener('click', function() {
+        btnOptimize.disabled = true;
+        btnOptimize.textContent = 'Calculando...';
+
+        var formData = new FormData();
+        formData.append('_token', optimizeCsrf);
+
+        fetch('/admin/routes/' + routePublicId + '/optimize', {
+          method: 'POST',
+          body: formData,
+          credentials: 'include',
+        }).then(function(r) { return r.json(); })
+        .then(function(data) {
+          btnOptimize.disabled = false;
+          btnOptimize.innerHTML = '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"/></svg> Optimizar orden';
+
+          if (data.ok) {
+            document.getElementById('opt-dist-before').textContent = data.distanceBefore;
+            document.getElementById('opt-dist-after').textContent = data.distanceAfter;
+
+            var savings = data.distanceBefore > 0
+              ? Math.round((1 - data.distanceAfter / data.distanceBefore) * 100)
+              : 0;
+            var savingsEl = document.getElementById('opt-savings');
+            if (savings > 0) {
+              savingsEl.textContent = '(' + savings + '% ahorro)';
+            } else {
+              savingsEl.textContent = '(sin mejora)';
+            }
+
+            if (data.stops) {
+              var listHtml = '<ol class="list-decimal list-inside space-y-1">';
+              data.stops.forEach(function(s) {
+                var label = s.isOrigin ? '<strong>[Origen]</strong> ' : '';
+                listHtml += '<li>' + label + s.address + '</li>';
+              });
+              listHtml += '</ol>';
+              document.getElementById('opt-preview-list').innerHTML = listHtml;
+            }
+
+            optimizeModal.classList.remove('hidden');
+          }
+        }).catch(function(err) {
+          btnOptimize.disabled = false;
+          btnOptimize.innerHTML = '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"/></svg> Optimizar orden';
+          console.error('Optimization error:', err);
+        });
+      });
+    }
+
+    if (btnApply) {
+      btnApply.addEventListener('click', function() {
+        btnApply.disabled = true;
+        btnApply.textContent = 'Aplicando...';
+
+        var formData = new FormData();
+        formData.append('_token', optimizeCsrf);
+        formData.append('confirm', '1');
+
+        fetch('/admin/routes/' + routePublicId + '/optimize', {
+          method: 'POST',
+          body: formData,
+          credentials: 'include',
+        }).then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.ok && data.applied) {
+            window.location.reload();
+          } else {
+            btnApply.disabled = false;
+            btnApply.textContent = 'Aplicar optimizacion';
+          }
+        }).catch(function(err) {
+          btnApply.disabled = false;
+          btnApply.textContent = 'Aplicar optimizacion';
+          console.error('Apply optimization error:', err);
+        });
+      });
+    }
+
+    if (btnCancel) {
+      btnCancel.addEventListener('click', function() {
+        optimizeModal.classList.add('hidden');
+      });
+    }
+  })();
+  </script>
+  {% endif %}
 {% endblock %}

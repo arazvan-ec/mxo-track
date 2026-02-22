@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Controller\Admin;
 
+use App\Entity\Customer;
 use App\Entity\Route;
 use App\Entity\RouteStop;
+use App\Entity\User;
 use App\Enum\RouteStatus;
 use App\Enum\RouteStopStatus;
 use App\Form\RouteStopType;
@@ -40,32 +42,62 @@ class RouteAdminController extends AbstractController
         $page = max(1, $request->query->getInt('page', 1));
         $limit = self::ITEMS_PER_PAGE;
         $currentStatus = $request->query->getString('status', '');
+        $dateFrom = $request->query->getString('date_from', '');
+        $dateTo = $request->query->getString('date_to', '');
+        $driverId = $request->query->getString('driver', '');
+        $customerId = $request->query->getString('customer', '');
 
         $qb = $this->em->createQueryBuilder()
-            ->select('r', 'v', 'd')
+            ->select('r', 'v', 'd', 'c')
             ->from(Route::class, 'r')
             ->leftJoin('r.vehicle', 'v')
             ->leftJoin('r.driver', 'd')
+            ->leftJoin('r.customer', 'c')
             ->orderBy('r.id', 'DESC')
             ->setFirstResult(($page - 1) * $limit)
             ->setMaxResults($limit);
 
-        if ($currentStatus !== '' && RouteStatus::tryFrom($currentStatus) !== null) {
-            $qb->where('r.status = :status')
-                ->setParameter('status', $currentStatus);
-        }
-
-        $routes = $qb->getQuery()->getResult();
-
-        // Count query
         $countQb = $this->em->createQueryBuilder()
             ->select('COUNT(r.id)')
             ->from(Route::class, 'r');
 
+        // Apply filters to both query builders
         if ($currentStatus !== '' && RouteStatus::tryFrom($currentStatus) !== null) {
-            $countQb->where('r.status = :status')
-                ->setParameter('status', $currentStatus);
+            $qb->andWhere('r.status = :status')->setParameter('status', $currentStatus);
+            $countQb->andWhere('r.status = :status')->setParameter('status', $currentStatus);
         }
+
+        if ($dateFrom !== '') {
+            try {
+                $from = new \DateTimeImmutable($dateFrom . ' 00:00:00');
+                $qb->andWhere('r.startAt >= :dateFrom')->setParameter('dateFrom', $from);
+                $countQb->andWhere('r.startAt >= :dateFrom')->setParameter('dateFrom', $from);
+            } catch (\Exception) {
+                // ignore invalid date
+            }
+        }
+
+        if ($dateTo !== '') {
+            try {
+                $to = new \DateTimeImmutable($dateTo . ' 23:59:59');
+                $qb->andWhere('r.startAt <= :dateTo')->setParameter('dateTo', $to);
+                $countQb->andWhere('r.startAt <= :dateTo')->setParameter('dateTo', $to);
+            } catch (\Exception) {
+                // ignore invalid date
+            }
+        }
+
+        if ($driverId !== '') {
+            $qb->andWhere('d.id = :driverId')->setParameter('driverId', $driverId);
+            $countQb->leftJoin('r.driver', 'cd')->andWhere('cd.id = :driverId')->setParameter('driverId', $driverId);
+        }
+
+        if ($customerId !== '') {
+            $qb->andWhere('c.id = :customerId')->setParameter('customerId', $customerId);
+            $countQb->leftJoin('r.customer', 'cc')->andWhere('cc.id = :customerId')->setParameter('customerId', $customerId);
+        }
+
+        $routes = $qb->getQuery()->getResult();
 
         $total = (int) $countQb->getQuery()->getSingleScalarResult();
         $totalPages = max(1, (int) ceil($total / $limit));
@@ -91,12 +123,46 @@ class RouteAdminController extends AbstractController
             }
         }
 
+        // Load drivers and customers for filter dropdowns
+        $drivers = $this->em->createQueryBuilder()
+            ->select('u')
+            ->from(User::class, 'u')
+            ->where("u.roles LIKE :driverRole")
+            ->setParameter('driverRole', '%ROLE_DRIVER%')
+            ->orderBy('u.email', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        $customers = $this->em->createQueryBuilder()
+            ->select('cust')
+            ->from(Customer::class, 'cust')
+            ->where('cust.isActive = true')
+            ->orderBy('cust.name', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        // Build filter params for pagination links
+        $filterParams = array_filter([
+            'status' => $currentStatus,
+            'date_from' => $dateFrom,
+            'date_to' => $dateTo,
+            'driver' => $driverId,
+            'customer' => $customerId,
+        ], fn(string $v): bool => $v !== '');
+
         return $this->render('admin/route/index.html.twig', [
             'routes' => $routes,
             'stopCounts' => $stopCounts,
             'page' => $page,
             'totalPages' => $totalPages,
             'currentStatus' => $currentStatus,
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
+            'driverId' => $driverId,
+            'customerId' => $customerId,
+            'drivers' => $drivers,
+            'customers' => $customers,
+            'filterParams' => $filterParams,
         ]);
     }
 
