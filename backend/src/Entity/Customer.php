@@ -23,6 +23,9 @@ class Customer
     #[ORM\Column(length: 30, nullable: true)]
     private ?string $contactPhone = null;
 
+    #[ORM\Column(length: 500, nullable: true)]
+    private ?string $webhookUrl = null;
+
     #[ORM\Column]
     private bool $isActive = true;
 
@@ -37,6 +40,8 @@ class Customer
     public function setAddress(?string $address): void { $this->address = $address; }
     public function getContactPhone(): ?string { return $this->contactPhone; }
     public function setContactPhone(?string $contactPhone): void { $this->contactPhone = $contactPhone; }
+    public function getWebhookUrl(): ?string { return $this->webhookUrl; }
+    public function setWebhookUrl(?string $webhookUrl): void { $this->webhookUrl = $webhookUrl; }
     public function isActive(): bool { return $this->isActive; }
     public function setActive(bool $isActive): void { $this->isActive = $isActive; }
 }

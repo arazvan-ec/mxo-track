@@ -10,6 +10,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: \App\Repository\ShipmentRepository::class)]
 #[ORM\UniqueConstraint(name: 'uniq_shipment_public_id', columns: ['public_id'])]
+#[ORM\UniqueConstraint(name: 'uniq_shipment_tracking_token', columns: ['tracking_token'])]
 #[ORM\HasLifecycleCallbacks]
 class Shipment implements CustomerScopedEntityInterface
 {
@@ -40,6 +41,9 @@ class Shipment implements CustomerScopedEntityInterface
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $notes = null;
 
+    #[ORM\Column(length: 20, nullable: true, unique: true)]
+    private ?string $trackingToken = null;
+
     #[ORM\Column]
     private DateTimeImmutable $createdAt;
 
@@ -48,6 +52,15 @@ class Shipment implements CustomerScopedEntityInterface
         $this->reference = $reference;
         $this->customer = $customer;
         $this->createdAt = new DateTimeImmutable();
+        $this->trackingToken = self::generateTrackingToken();
+    }
+
+    public static function generateTrackingToken(): string
+    {
+        $bytes = random_bytes(6);
+        $hex = strtoupper(bin2hex($bytes));
+
+        return sprintf('TRK-%s-%s', substr($hex, 0, 4), substr($hex, 4, 4));
     }
 
     public function getReference(): string { return $this->reference; }
@@ -66,4 +79,7 @@ class Shipment implements CustomerScopedEntityInterface
     public function setLongitude(?float $longitude): void { $this->longitude = $longitude; }
     public function getNotes(): ?string { return $this->notes; }
     public function setNotes(?string $notes): void { $this->notes = $notes; }
+
+    public function getTrackingToken(): ?string { return $this->trackingToken; }
+    public function setTrackingToken(?string $trackingToken): void { $this->trackingToken = $trackingToken; }
 }
