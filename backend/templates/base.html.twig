@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="es" class="h-full bg-gray-50">
+<html lang="{{ app.request.locale }}" class="h-full bg-gray-50">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -77,7 +77,7 @@
       <div class="absolute right-0 top-0 -mr-12 pt-4">
         <button type="button" @click="sidebarOpen = false"
                 class="ml-1 flex h-10 w-10 items-center justify-center rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white">
-          <span class="sr-only">Cerrar menu</span>
+          <span class="sr-only">{{ 'a11y.close_menu'|trans }}</span>
           <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
           </svg>
@@ -103,7 +103,7 @@
 
       {# Mobile menu button #}
       <button type="button" @click="sidebarOpen = true" class="-m-2.5 p-2.5 text-gray-700 lg:hidden">
-        <span class="sr-only">Abrir menu</span>
+        <span class="sr-only">{{ 'a11y.open_menu'|trans }}</span>
         <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/>
         </svg>
@@ -163,6 +163,39 @@
         {# Notification bell + User dropdown #}
         <div class="flex items-center gap-x-4 lg:gap-x-6">
 
+          {# ── Language switcher ──────────────────────────────────── #}
+          <div x-data="{ langOpen: false }" class="relative">
+            <button type="button" @click="langOpen = !langOpen" @click.outside="langOpen = false"
+                    class="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors">
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 21l5.25-11.25L21 21m-9-3h7.5M3 5.621a48.474 48.474 0 016-.371m0 0c1.12 0 2.233.038 3.334.114M9 5.25V3m3.334 2.364C11.176 10.658 7.69 15.08 3 17.502m9.334-12.138c.896.061 1.785.147 2.666.257m-4.589 8.495a18.023 18.023 0 01-3.827-5.802"/>
+              </svg>
+              <span>{{ app.request.locale|upper }}</span>
+            </button>
+            <div x-show="langOpen"
+                 x-transition:enter="transition ease-out duration-100"
+                 x-transition:enter-start="transform opacity-0 scale-95"
+                 x-transition:enter-end="transform opacity-100 scale-100"
+                 x-transition:leave="transition ease-in duration-75"
+                 x-transition:leave-start="transform opacity-100 scale-100"
+                 x-transition:leave-end="transform opacity-0 scale-95"
+                 class="absolute right-0 z-10 mt-2 w-32 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-gray-900/5 focus:outline-none"
+                 style="display: none;">
+              <form method="post" action="{{ path('app_locale', {locale: 'es'}) }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('locale') }}">
+                <button type="submit" class="block w-full px-4 py-2 text-left text-sm {% if app.request.locale == 'es' %}text-brand-600 font-medium bg-gray-50{% else %}text-gray-700 hover:bg-gray-50{% endif %}">
+                  {{ 'locale.es'|trans }}
+                </button>
+              </form>
+              <form method="post" action="{{ path('app_locale', {locale: 'en'}) }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('locale') }}">
+                <button type="submit" class="block w-full px-4 py-2 text-left text-sm {% if app.request.locale == 'en' %}text-brand-600 font-medium bg-gray-50{% else %}text-gray-700 hover:bg-gray-50{% endif %}">
+                  {{ 'locale.en'|trans }}
+                </button>
+              </form>
+            </div>
+          </div>
+
           {# ── Notification bell ─────────────────────────────────── #}
           {% if app.user %}
           <div x-data="notificationBell()" x-init="fetchCount()" class="relative">
@@ -186,7 +219,7 @@
           <div x-data="{ open: false }" class="relative">
             <button type="button" @click="open = !open" @click.outside="open = false"
                     class="-m-1.5 flex items-center p-1.5">
-              <span class="sr-only">Menu de usuario</span>
+              <span class="sr-only">{{ 'a11y.user_menu'|trans }}</span>
               <span class="flex h-8 w-8 items-center justify-center rounded-full bg-brand-600 text-sm font-semibold text-white">
                 {{ app.user ? app.user.email|first|upper : '?' }}
               </span>
@@ -210,12 +243,12 @@
                  class="absolute right-0 z-10 mt-2.5 w-48 origin-top-right rounded-md bg-white py-2 shadow-lg ring-1 ring-gray-900/5 focus:outline-none"
                  style="display: none;">
               <div class="px-4 py-2 border-b border-gray-100">
-                <p class="text-xs text-gray-500">Conectado como</p>
+                <p class="text-xs text-gray-500">{{ 'sidebar.logged_as'|trans }}</p>
                 <p class="text-sm font-medium text-gray-900 truncate">{{ app.user ? app.user.email : '' }}</p>
               </div>
               <a href="{{ path('app_logout') }}"
                  class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                Cerrar sesion
+                {{ 'sidebar.close_session'|trans }}
               </a>
             </div>
           </div>
