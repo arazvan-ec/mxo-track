@@ -33,6 +33,8 @@ class RouteStop
     #[ORM\Column(length: 30, enumType: ExceptionCode::class, nullable: true)] private ?ExceptionCode $exceptionCode = null;
     #[ORM\Column(type: 'text', nullable: true)] private ?string $exceptionNotes = null;
     #[ORM\Column] private bool $isOrigin = false;
+    #[ORM\Column(type: 'time_immutable', nullable: true)] private ?DateTimeImmutable $deliveryWindowStart = null;
+    #[ORM\Column(type: 'time_immutable', nullable: true)] private ?DateTimeImmutable $deliveryWindowEnd = null;
 
     #[ORM\ManyToOne(targetEntity: Shipment::class)]
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
@@ -68,6 +70,10 @@ class RouteStop
     public function setShipment(?Shipment $shipment): void { $this->shipment = $shipment; }
     public function isOrigin(): bool { return $this->isOrigin; }
     public function setOrigin(bool $isOrigin): void { $this->isOrigin = $isOrigin; }
+    public function getDeliveryWindowStart(): ?DateTimeImmutable { return $this->deliveryWindowStart; }
+    public function setDeliveryWindowStart(?DateTimeImmutable $deliveryWindowStart): void { $this->deliveryWindowStart = $deliveryWindowStart; }
+    public function getDeliveryWindowEnd(): ?DateTimeImmutable { return $this->deliveryWindowEnd; }
+    public function setDeliveryWindowEnd(?DateTimeImmutable $deliveryWindowEnd): void { $this->deliveryWindowEnd = $deliveryWindowEnd; }
 
     public function markDelivered(): void
     {
