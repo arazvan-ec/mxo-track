@@ -1,0 +1,29 @@
+# MXO Track - Suggested crontab entries for production
+#
+# Install with: crontab /path/to/scripts/crontab.txt
+#
+# Assumes:
+# - Symfony console is at /app/backend/bin/console (Docker) or adjust path
+# - backup_db.sh is at /app/scripts/backup_db.sh
+# - Logs go to /var/log/mxo-track/
+#
+# SHELL=/bin/sh
+# PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# ── Traccar position ingestion (every 5 minutes, single cycle) ─────
+*/5 * * * * cd /app/backend && php bin/console app:traccar:stream --once >> /var/log/mxo-track/traccar-stream.log 2>&1
+
+# ── Position downsample (daily at 02:00) ───────────────────────────
+0 2 * * * cd /app/backend && php bin/console app:positions:downsample >> /var/log/mxo-track/downsample.log 2>&1
+
+# ── Position purge - 90 day retention (daily at 03:00) ─────────────
+0 3 * * * cd /app/backend && php bin/console app:positions:purge --days=90 >> /var/log/mxo-track/purge.log 2>&1
+
+# ── Database backup (daily at 04:00) ───────────────────────────────
+0 4 * * * /app/scripts/backup_db.sh /backups >> /var/log/mxo-track/backup.log 2>&1
+
+# ── System health check (every 10 minutes, quiet mode) ────────────
+*/10 * * * * cd /app/backend && php bin/console app:system:status --quiet-check >> /var/log/mxo-track/health.log 2>&1
+
+# ── Database maintenance (weekly, Sunday at 05:00) ─────────────────
+0 5 * * 0 cd /app/backend && php bin/console app:db:maintenance >> /var/log/mxo-track/db-maintenance.log 2>&1
