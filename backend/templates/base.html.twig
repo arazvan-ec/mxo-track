@@ -4,9 +4,19 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}MXO Track{% endblock %}</title>
+
+  {# Preconnect to external CDNs for faster resource loading #}
+  <link rel="preconnect" href="https://cdn.tailwindcss.com">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+
   <style>[x-cloak] { display: none !important; }</style>
+
+  {# Tailwind CSS: compiled build (~30-50KB) if available, CDN (~900KB) as fallback.
+     To build: cd backend && npm install && npm run build:css #}
+  <link rel="stylesheet" href="{{ asset('build/tailwind.css') }}" onerror="this.remove()">
+
+  {# CDN fallback — remove this block once compiled CSS is reliably built in CI/CD #}
   <script src="https://cdn.tailwindcss.com"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script>
     tailwind.config = {
       theme: {
@@ -34,6 +44,8 @@
       }
     }
   </script>
+
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
   {% block styles %}{% endblock %}
 </head>
 <body class="h-full" {% block body_attrs %}{% endblock %}>
@@ -101,24 +113,76 @@
       <div class="h-6 w-px bg-gray-200 lg:hidden" aria-hidden="true"></div>
 
       <div class="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
-        {# Breadcrumb area #}
-        <div class="flex flex-1 items-center">
-          <nav class="flex" aria-label="Breadcrumb">
-            <ol class="flex items-center space-x-2">
-              <li>
-                <div class="flex items-center">
-                  <svg class="h-5 w-5 shrink-0 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M9.293 2.293a1 1 0 011.414 0l7 7A1 1 0 0117 11h-1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-3a1 1 0 00-1-1H9a1 1 0 00-1 1v3a1 1 0 01-1 1H5a1 1 0 01-1-1v-6H3a1 1 0 01-.707-1.707l7-7z" clip-rule="evenodd"/>
-                  </svg>
-                </div>
-              </li>
-              {% block breadcrumbs %}{% endblock %}
-            </ol>
-          </nav>
+        {# Search bar #}
+        <div class="flex flex-1 items-center" x-data="searchAutocomplete()" @click.outside="showDropdown = false">
+          <div class="relative w-full max-w-md">
+            <form action="{{ path('app_search') }}" method="GET" class="relative">
+              <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                <svg class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>
+                </svg>
+              </div>
+              <input type="text" name="q" placeholder="Buscar envios, rutas, vehiculos..."
+                     class="block w-full rounded-lg border border-gray-200 bg-gray-50 py-2 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-brand-500"
+                     x-model="query" @input.debounce.300ms="fetchResults()" @focus="if(results.length) showDropdown = true"
+                     autocomplete="off">
+            </form>
+            {# Autocomplete dropdown #}
+            <div x-show="showDropdown && results.length > 0" x-cloak
+                 class="absolute left-0 top-full z-50 mt-1 w-full rounded-lg bg-white shadow-lg ring-1 ring-gray-200 max-h-80 overflow-y-auto">
+              <template x-for="result in results" :key="result.url">
+                <a :href="result.url" class="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0">
+                  <span class="shrink-0">
+                    <template x-if="result.type === 'shipment'">
+                      <span class="inline-flex h-6 w-6 items-center justify-center rounded bg-blue-100 text-blue-600">
+                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"/></svg>
+                      </span>
+                    </template>
+                    <template x-if="result.type === 'route'">
+                      <span class="inline-flex h-6 w-6 items-center justify-center rounded bg-amber-100 text-amber-600">
+                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z"/></svg>
+                      </span>
+                    </template>
+                    <template x-if="result.type === 'vehicle'">
+                      <span class="inline-flex h-6 w-6 items-center justify-center rounded bg-green-100 text-green-600">
+                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"/></svg>
+                      </span>
+                    </template>
+                  </span>
+                  <div class="min-w-0 flex-1">
+                    <p class="text-sm font-medium text-gray-900 truncate" x-text="result.label"></p>
+                    <p class="text-xs text-gray-500 truncate" x-text="result.extra"></p>
+                  </div>
+                  <span class="shrink-0 text-[10px] font-medium uppercase tracking-wider text-gray-400" x-text="result.type === 'shipment' ? 'Envio' : (result.type === 'route' ? 'Ruta' : 'Vehiculo')"></span>
+                </a>
+              </template>
+            </div>
+          </div>
         </div>
 
-        {# User dropdown #}
+        {# Notification bell + User dropdown #}
         <div class="flex items-center gap-x-4 lg:gap-x-6">
+
+          {# ── Notification bell ─────────────────────────────────── #}
+          {% if app.user %}
+          <div x-data="notificationBell()" x-init="fetchCount()" class="relative">
+            <a href="{{ path('notification_index') }}"
+               class="relative -m-2.5 p-2.5 text-gray-400 hover:text-gray-500 transition-colors">
+              <span class="sr-only">Ver notificaciones</span>
+              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"/>
+              </svg>
+              <span x-show="unreadCount > 0" x-cloak
+                    x-text="unreadCount > 99 ? '99+' : unreadCount"
+                    class="absolute -top-1 -right-1 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+              </span>
+            </a>
+          </div>
+
+          {# Separator #}
+          <div class="hidden lg:block lg:h-6 lg:w-px lg:bg-gray-200" aria-hidden="true"></div>
+          {% endif %}
+
           <div x-data="{ open: false }" class="relative">
             <button type="button" @click="open = !open" @click.outside="open = false"
                     class="-m-1.5 flex items-center p-1.5">
@@ -220,5 +284,52 @@
 </div>
 {% endblock %}
 {% block scripts %}{% endblock %}
+<script>
+function searchAutocomplete() {
+  return {
+    query: '',
+    results: [],
+    showDropdown: false,
+    fetchTimeout: null,
+    async fetchResults() {
+      if (this.query.length < 2) {
+        this.results = [];
+        this.showDropdown = false;
+        return;
+      }
+      try {
+        const resp = await fetch('/api/search?q=' + encodeURIComponent(this.query));
+        const data = await resp.json();
+        this.results = data.results || [];
+        this.showDropdown = this.results.length > 0;
+      } catch (e) {
+        this.results = [];
+        this.showDropdown = false;
+      }
+    }
+  };
+}
+
+function notificationBell() {
+  return {
+    unreadCount: 0,
+    polling: null,
+    async fetchCount() {
+      try {
+        const resp = await fetch('/api/notifications/unread-count');
+        const data = await resp.json();
+        this.unreadCount = data.unread_count || 0;
+      } catch (e) {
+        // silently ignore
+      }
+      // Poll every 30 seconds
+      this.polling = setInterval(() => this.fetchCount(), 30000);
+    },
+    destroy() {
+      if (this.polling) clearInterval(this.polling);
+    }
+  };
+}
+</script>
 </body>
 </html>
