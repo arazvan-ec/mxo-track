@@ -73,13 +73,15 @@ class PositionsPurgeCommand extends Command
         // Delete in batches
         $totalDeleted = 0;
 
+        $deleteSql = sprintf(
+            'DELETE FROM vehicle_positions WHERE id IN (
+                SELECT id FROM vehicle_positions WHERE device_time < :cutoff LIMIT %d
+            )',
+            $batchSize,
+        );
+
         do {
-            $deleted = (int) $this->connection->executeStatement(
-                'DELETE FROM vehicle_positions WHERE id IN (
-                    SELECT id FROM vehicle_positions WHERE device_time < :cutoff LIMIT :batch_limit
-                )',
-                ['cutoff' => $cutoffStr, 'batch_limit' => $batchSize],
-            );
+            $deleted = (int) $this->connection->executeStatement($deleteSql, ['cutoff' => $cutoffStr]);
             $totalDeleted += $deleted;
 
             if ($deleted > 0) {
