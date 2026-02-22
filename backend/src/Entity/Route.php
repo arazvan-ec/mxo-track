@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Entity;
 
 use App\Entity\Concerns\PublicIdTrait;
+use App\Entity\Concerns\SoftDeleteTrait;
 use App\Enum\RouteStatus;
 use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
@@ -12,10 +13,12 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: \App\Repository\RouteRepository::class)]
 #[ORM\Table(name: 'route_plan')]
 #[ORM\UniqueConstraint(name: 'uniq_route_public_id', columns: ['public_id'])]
+#[ORM\Index(name: 'idx_route_deleted_at', columns: ['deleted_at'])]
 #[ORM\HasLifecycleCallbacks]
-class Route
+class Route implements SoftDeletableInterface
 {
     use PublicIdTrait;
+    use SoftDeleteTrait;
 
     #[ORM\Column(length: 140)]
     private string $name;

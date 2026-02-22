@@ -14,6 +14,9 @@ doctrine:
       customer_tenant:
         class: App\Doctrine\CustomerTenantFilter
         enabled: false
+      soft_delete:
+        class: App\Doctrine\SoftDeleteFilter
+        enabled: true
     mappings:
       App:
         type: attribute

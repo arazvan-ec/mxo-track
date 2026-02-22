@@ -5,16 +5,19 @@ declare(strict_types=1);
 namespace App\Entity;
 
 use App\Entity\Concerns\PublicIdTrait;
+use App\Entity\Concerns\SoftDeleteTrait;
 use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: \App\Repository\ShipmentRepository::class)]
 #[ORM\UniqueConstraint(name: 'uniq_shipment_public_id', columns: ['public_id'])]
 #[ORM\UniqueConstraint(name: 'uniq_shipment_tracking_token', columns: ['tracking_token'])]
+#[ORM\Index(name: 'idx_shipment_deleted_at', columns: ['deleted_at'])]
 #[ORM\HasLifecycleCallbacks]
-class Shipment implements CustomerScopedEntityInterface
+class Shipment implements CustomerScopedEntityInterface, SoftDeletableInterface
 {
     use PublicIdTrait;
+    use SoftDeleteTrait;
 
     #[ORM\Column(length: 80, unique: true)]
     private string $reference;

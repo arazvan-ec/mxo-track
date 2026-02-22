@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Entity;
 
 use App\Entity\Concerns\PublicIdTrait;
+use App\Entity\Concerns\SoftDeleteTrait;
 use App\Enum\UserRole;
 use App\Repository\UserRepository;
 use Doctrine\DBAL\Types\Types;
@@ -16,10 +17,12 @@ use Symfony\Component\Security\Core\User\UserInterface;
 #[ORM\Table(name: 'user_account')]
 #[ORM\UniqueConstraint(name: 'uniq_user_public_id', columns: ['public_id'])]
 #[ORM\UniqueConstraint(name: 'uniq_user_email', columns: ['email'])]
+#[ORM\Index(name: 'idx_user_deleted_at', columns: ['deleted_at'])]
 #[ORM\HasLifecycleCallbacks]
-class User implements UserInterface, PasswordAuthenticatedUserInterface
+class User implements UserInterface, PasswordAuthenticatedUserInterface, SoftDeletableInterface
 {
     use PublicIdTrait;
+    use SoftDeleteTrait;
 
     #[ORM\Column(length: 180, unique: true)]
     private string $email;

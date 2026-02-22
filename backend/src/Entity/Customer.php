@@ -5,14 +5,17 @@ declare(strict_types=1);
 namespace App\Entity;
 
 use App\Entity\Concerns\PublicIdTrait;
+use App\Entity\Concerns\SoftDeleteTrait;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity]
 #[ORM\UniqueConstraint(name: 'uniq_customer_public_id', columns: ['public_id'])]
+#[ORM\Index(name: 'idx_customer_deleted_at', columns: ['deleted_at'])]
 #[ORM\HasLifecycleCallbacks]
-class Customer
+class Customer implements SoftDeletableInterface
 {
     use PublicIdTrait;
+    use SoftDeleteTrait;
 
     #[ORM\Column(length: 150)]
     private string $name;
