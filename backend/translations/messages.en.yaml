@@ -1,0 +1,177 @@
+# Navigation
+nav.dashboard: Dashboard
+nav.routes: Routes
+nav.vehicles: Vehicles
+nav.customers: Customers
+nav.drivers: Drivers
+nav.users: Users
+nav.reports: Reports
+nav.notifications: Notifications
+nav.map: Map
+nav.import_csv: Import CSV
+nav.billing: Billing
+nav.api_docs: API Docs
+
+# Sidebar sections
+sidebar.main: Main
+sidebar.operations: Operations
+sidebar.administration: Administration
+sidebar.tracking: Tracking
+sidebar.my_deliveries: My deliveries
+sidebar.driver: Driver
+
+# Sidebar labels
+sidebar.my_routes: My Routes
+sidebar.my_shipments: My Shipments
+sidebar.role.admin: Administrator
+sidebar.role.operator: Operator
+sidebar.role.customer: Customer
+sidebar.role.driver: Driver
+sidebar.close_session: Sign out
+sidebar.logged_as: Logged in as
+
+# Common actions
+action.create: Create
+action.edit: Edit
+action.delete: Delete
+action.save: Save
+action.cancel: Cancel
+action.search: Search
+action.filter: Filter
+action.export: Export
+action.import: Import
+action.back: Back
+action.confirm: Confirm
+action.close: Close
+action.next: Next
+action.previous: Previous
+action.all: All
+action.open_map: Open map
+action.new_route: New route
+
+# Route statuses
+route.status.planned: Planned
+route.status.active: Active
+route.status.done: Completed
+route.status.cancelled: Cancelled
+
+# Stop statuses
+stop.status.pending: Pending
+stop.status.delivered: Delivered
+stop.status.exception: Exception
+stop.status.skipped: Skipped
+
+# Shipment event types
+shipment.event.created: Created
+shipment.event.picked_up: Picked up
+shipment.event.in_hub: In hub
+shipment.event.in_transit: In transit
+shipment.event.out_for_delivery: Out for delivery
+shipment.event.delivered: Delivered
+shipment.event.exception: Exception
+
+# Flash messages
+flash.route_created: Route created successfully.
+flash.route_updated: Route updated successfully.
+flash.route_cancelled: Route cancelled successfully.
+flash.delivery_confirmed: Delivery confirmed.
+flash.processing_error: Error processing request.
+flash.stop_added: Stop added successfully.
+flash.stop_deleted: Stop deleted successfully.
+flash.invalid_csrf: Invalid CSRF token.
+flash.import_success: Import completed successfully.
+flash.import_error: Error during import.
+flash.locale_changed: Language changed successfully.
+
+# Dashboard labels
+dashboard.title: Dashboard
+dashboard.subtitle: Logistics tracking system overview
+dashboard.active_routes: Active routes
+dashboard.deliveries_today: Deliveries today
+dashboard.pending_stops: Pending stops
+dashboard.csv_imports_today: CSV imports today
+dashboard.positions_last_hour: Positions (last hour)
+dashboard.live_activity: Live activity
+dashboard.live: Live
+dashboard.disconnected: Disconnected
+dashboard.waiting_activity: Waiting for real-time activity...
+dashboard.positions_appear_here: Vehicle positions will appear here
+dashboard.reported_position: reported position
+dashboard.positions_received: positions received
+dashboard.traccar_connected: "Traccar API: Connected"
+dashboard.traccar_disconnected: "Traccar API: Disconnected"
+dashboard.mercure_connected: "Mercure Hub: Connected"
+dashboard.mercure_disconnected: "Mercure Hub: Disconnected"
+
+# Login
+login.title: Sign in
+login.subtitle: Enter your credentials to access the panel
+login.email: Email address
+login.password: Password
+login.submit: Sign in
+login.error: Invalid credentials. Please check your email and password.
+login.email_placeholder: user@company.com
+login.password_placeholder: Your password
+login.footer: "MXO Track — Logistics tracking platform"
+login.platform_description: Real-time logistics tracking platform
+login.feature.gps: Live GPS
+login.feature.routes: Routes
+login.feature.pod: Secure POD
+
+# Accessibility
+a11y.close_menu: Close menu
+a11y.open_menu: Open menu
+a11y.user_menu: User menu
+
+# Table headers
+table.name: Name
+table.customer: Customer
+table.vehicle: Vehicle
+table.driver: Driver
+table.status: Status
+table.progress: Progress
+table.actions: Actions
+table.period: Period
+table.shipments: Shipments
+table.deliveries: Deliveries
+table.exceptions: Exceptions
+table.billable: Billable
+table.no_routes: No routes registered.
+table.no_stops: No stops
+table.page_of: "Page %page% of %total%"
+
+# Operator dashboard
+operator.dashboard.title: Operations panel
+operator.dashboard.subtitle: Route, vehicle and delivery management
+
+# Billing
+billing.title: Billing
+billing.subtitle: Billing summary per customer and period
+billing.customer_summary: Customer summary
+billing.total_shipments: Total shipments
+billing.total_delivered: Total delivered
+billing.total_exceptions: Total exceptions
+billing.billable_deliveries: Billable deliveries
+billing.export_csv: Export CSV
+billing.date_from: From
+billing.date_to: To
+billing.no_data: No billing data for the selected period.
+
+# Route import
+route_import.title: Import routes from CSV
+route_import.subtitle: Upload a CSV file with routes and stops to import
+route_import.select_file: Select CSV file
+route_import.format_help: "CSV format: route_name, driver_email, vehicle_name, stop_address, stop_lat, stop_lng, stop_recipient_name, stop_recipient_phone, stop_sequence"
+route_import.submit: Import routes
+route_import.result.created: "%count% routes created"
+route_import.result.stops: "%count% total stops"
+route_import.result.errors: "%count% errors"
+
+# API Docs
+api_docs.title: API Documentation
+api_docs.subtitle: OpenAPI specification for MXO Track API
+
+# Language switcher
+locale.switch: Language
+locale.es: Spanish
+locale.en: English
