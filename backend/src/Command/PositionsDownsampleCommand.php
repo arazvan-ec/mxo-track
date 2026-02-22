@@ -46,13 +46,21 @@ class PositionsDownsampleCommand extends Command
         $totalBefore = $this->countPositions();
         $io->text(sprintf('Total positions before: %s', number_format($totalBefore)));
 
-        // Phase 1: Data older than 7 days — keep 1 position per 5-minute window
-        $deleted7d = $this->downsampleWindow($io, 7, 5, $batchSize, $dryRun);
-        $io->text(sprintf('Phase 1 (>7d, 5-min windows): %s rows %s', number_format($deleted7d), $dryRun ? 'would be deleted' : 'deleted'));
+        // Phase 1: Data older than 7 days -- keep 1 position per 5-minute window
+        $deleted7d = $this->downsampleWindow($io, 7, '5 minutes', $batchSize, $dryRun);
+        $io->text(sprintf(
+            'Phase 1 (>7d, 5-min windows): %s rows %s',
+            number_format($deleted7d),
+            $dryRun ? 'would be deleted' : 'deleted',
+        ));
 
-        // Phase 2: Data older than 24h (but <= 7d) — keep 1 position per 1-minute window
-        $deleted24h = $this->downsampleWindow($io, 1, 1, $batchSize, $dryRun);
-        $io->text(sprintf('Phase 2 (>24h, 1-min windows): %s rows %s', number_format($deleted24h), $dryRun ? 'would be deleted' : 'deleted'));
+        // Phase 2: Data older than 24h (but <=7d) -- keep 1 position per 1-minute window
+        $deleted24h = $this->downsampleWindow($io, 1, '1 minute', $batchSize, $dryRun);
+        $io->text(sprintf(
+            'Phase 2 (>24h, 1-min windows): %s rows %s',
+            number_format($deleted24h),
+            $dryRun ? 'would be deleted' : 'deleted',
+        ));
 
         $totalAfter = $dryRun ? $totalBefore : $this->countPositions();
         $totalDeleted = $deleted7d + $deleted24h;
@@ -70,30 +78,51 @@ class PositionsDownsampleCommand extends Command
 
     /**
      * Remove duplicate positions within time windows for data older than $daysOld days.
-     * Keeps the first position (lowest id) in each (vehicle_id, window) group.
+     * Keeps the first position (lowest id) in each (vehicle_id, time_bucket) group.
+     *
+     * Uses PostgreSQL date_bin() (PG 14+) to bucket timestamps into fixed intervals.
+     * Fallback: date_trunc + integer arithmetic for standard interval alignment.
      */
-    private function downsampleWindow(SymfonyStyle $io, int $daysOld, int $windowMinutes, int $batchSize, bool $dryRun): int
-    {
-        $cutoff = (new \DateTimeImmutable())->modify(sprintf('-%d days', $daysOld))->format('Y-m-d H:i:s');
+    private function downsampleWindow(
+        SymfonyStyle $io,
+        int $daysOld,
+        string $interval,
+        int $batchSize,
+        bool $dryRun,
+    ): int {
+        $cutoff = (new \DateTimeImmutable())
+            ->modify(sprintf('-%d days', $daysOld))
+            ->format('Y-m-d H:i:s');
 
-        // Count candidates for deletion
-        $countSql = sprintf("
-            SELECT COUNT(*) FROM vehicle_positions vp
-            WHERE vp.device_time < :cutoff
-              AND vp.id NOT IN (
+        // Build the time-bucketing expression using to_timestamp + floor/extract
+        // This groups device_time into $interval-sized buckets by truncating to epoch seconds
+        $intervalSeconds = $this->intervalToSeconds($interval);
+        $bucketExpr = sprintf(
+            "to_timestamp(floor(extract(epoch from device_time) / %d) * %d)",
+            $intervalSeconds,
+            $intervalSeconds,
+        );
+
+        // Count candidates: positions that are NOT the MIN(id) in their bucket
+        $countSql = "
+            SELECT COUNT(*) FROM vehicle_positions
+            WHERE device_time < :cutoff
+              AND id NOT IN (
                 SELECT MIN(id)
                 FROM vehicle_positions
-                WHERE device_time < :cutoff2
-                GROUP BY vehicle_id, date_trunc('minute', device_time - (EXTRACT(MINUTE FROM device_time)::int %% %d) * INTERVAL '1 minute')
+                WHERE device_time < :cutoff
+                GROUP BY vehicle_id, {$bucketExpr}
               )
-        ", $windowMinutes);
+        ";
 
-        $candidateCount = (int) $this->connection->fetchOne($countSql, [
-            'cutoff' => $cutoff,
-            'cutoff2' => $cutoff,
-        ]);
+        $candidateCount = (int) $this->connection->fetchOne($countSql, ['cutoff' => $cutoff]);
 
-        $io->text(sprintf('  Candidates for deletion (>%dd, %d-min window): %s', $daysOld, $windowMinutes, number_format($candidateCount)));
+        $io->text(sprintf(
+            '  Candidates for deletion (>%dd, %s window): %s',
+            $daysOld,
+            $interval,
+            number_format($candidateCount),
+        ));
 
         if ($dryRun || $candidateCount === 0) {
             return $candidateCount;
@@ -101,7 +130,7 @@ class PositionsDownsampleCommand extends Command
 
         // Delete in batches
         $totalDeleted = 0;
-        $deleteSql = sprintf("
+        $deleteSql = "
             DELETE FROM vehicle_positions
             WHERE id IN (
                 SELECT vp.id FROM vehicle_positions vp
@@ -109,19 +138,15 @@ class PositionsDownsampleCommand extends Command
                   AND vp.id NOT IN (
                     SELECT MIN(id)
                     FROM vehicle_positions
-                    WHERE device_time < :cutoff2
-                    GROUP BY vehicle_id, date_trunc('minute', device_time - (EXTRACT(MINUTE FROM device_time)::int %%%% %d) * INTERVAL '1 minute')
+                    WHERE device_time < :cutoff
+                    GROUP BY vehicle_id, {$bucketExpr}
                   )
-                LIMIT :batch_limit
+                LIMIT {$batchSize}
             )
-        ", $windowMinutes);
+        ";
 
         do {
-            $deleted = (int) $this->connection->executeStatement($deleteSql, [
-                'cutoff' => $cutoff,
-                'cutoff2' => $cutoff,
-                'batch_limit' => $batchSize,
-            ]);
+            $deleted = (int) $this->connection->executeStatement($deleteSql, ['cutoff' => $cutoff]);
             $totalDeleted += $deleted;
 
             if ($deleted > 0) {
@@ -130,6 +155,19 @@ class PositionsDownsampleCommand extends Command
         } while ($deleted >= $batchSize);
 
         return $totalDeleted;
+    }
+
+    private function intervalToSeconds(string $interval): int
+    {
+        return match ($interval) {
+            '1 minute' => 60,
+            '5 minutes' => 300,
+            '10 minutes' => 600,
+            '15 minutes' => 900,
+            '30 minutes' => 1800,
+            '1 hour' => 3600,
+            default => 60,
+        };
     }
 
     private function countPositions(): int
