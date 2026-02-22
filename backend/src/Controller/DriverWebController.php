@@ -11,6 +11,7 @@ use App\Entity\VehicleLastPosition;
 use App\Enum\RouteStatus;
 use App\Enum\RouteStopStatus;
 use App\Repository\RouteRepository;
+use App\Service\EtaService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -25,6 +26,7 @@ final class DriverWebController extends AbstractController
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly RouteRepository $routeRepository,
+        private readonly EtaService $etaService,
         #[Autowire('%env(MERCURE_PUBLIC_URL)%')] private readonly string $mercurePublicUrl,
     ) {}
 
@@ -132,6 +134,23 @@ final class DriverWebController extends AbstractController
             }
         }
 
+        // Calculate ETAs for active routes
+        $etas = [];
+        $etasJson = '{}';
+        if ($route->getStatus() === RouteStatus::ACTIVE) {
+            $etas = $this->etaService->calculateEtas($route);
+            $etasJsonData = [];
+            foreach ($etas as $stopPubId => $data) {
+                $etasJsonData[$stopPubId] = [
+                    'eta' => $data['eta']->format(\DATE_ATOM),
+                    'eta_formatted' => $data['eta']->format('H:i'),
+                    'remaining_minutes' => $data['remainingMinutes'],
+                    'distance_km' => $data['distanceKm'],
+                ];
+            }
+            $etasJson = json_encode($etasJsonData, \JSON_HEX_TAG | \JSON_HEX_APOS | \JSON_HEX_AMP | \JSON_THROW_ON_ERROR);
+        }
+
         return $this->render('driver/routes/show.html.twig', [
             'route' => $route,
             'stops' => $stops,
@@ -139,6 +158,9 @@ final class DriverWebController extends AbstractController
             'vehicle_position_json' => $vehiclePositionJson,
             'vehicle_public_id' => $vehiclePublicId,
             'mercure_public_url' => $this->mercurePublicUrl,
+            'etas' => $etas,
+            'etas_json' => $etasJson,
+            'route_public_id' => $route->getPublicIdString(),
         ]);
     }
 }

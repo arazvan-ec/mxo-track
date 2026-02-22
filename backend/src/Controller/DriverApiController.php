@@ -22,6 +22,7 @@ use App\Repository\ShipmentRepository;
 use App\Service\AuditLogger;
 use App\Service\DeliveryEvidenceFactory;
 use App\Service\DriverActionService;
+use App\Service\EtaService;
 use Doctrine\ORM\EntityManagerInterface;
 use JsonException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -309,6 +310,39 @@ class DriverApiController extends AbstractController
             'recipient_id_encoded' => $pod->getRecipientIdEncoded(),
             'confirmed_by_driver' => $pod->isConfirmedByDriver(),
         ]);
+    }
+
+    #[Route('/routes/{routePublicId}/etas', methods: ['GET'])]
+    public function etas(
+        string $routePublicId,
+        RouteRepository $routeRepository,
+        EtaService $etaService,
+        ApiErrorResponder $errorResponder,
+    ): JsonResponse {
+        $route = $routeRepository->findOneByPublicId($routePublicId);
+        if (!$route instanceof RouteEntity) {
+            return $errorResponder->notFound('route_not_found', 'Ruta no encontrada.');
+        }
+
+        /** @var User $driver */
+        $driver = $this->getUser();
+        if ($route->getDriver()?->getId() !== $driver->getId()) {
+            return $errorResponder->notFound('route_not_found', 'Ruta no encontrada.');
+        }
+
+        $etas = $etaService->calculateEtas($route);
+
+        $items = [];
+        foreach ($etas as $stopPublicId => $data) {
+            $items[$stopPublicId] = [
+                'eta' => $data['eta']->format(\DATE_ATOM),
+                'eta_formatted' => $data['eta']->format('H:i'),
+                'remaining_minutes' => $data['remainingMinutes'],
+                'distance_km' => $data['distanceKm'],
+            ];
+        }
+
+        return $this->json(['items' => $items]);
     }
 
     /**
