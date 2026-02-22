@@ -2,9 +2,11 @@
 set -e
 
 PORT="${PORT:-8000}"
+export APP_ENV="${APP_ENV:-prod}"
+export APP_DEBUG="${APP_DEBUG:-0}"
 
 echo "==> Running database migrations..."
-php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
+php bin/console doctrine:migrations:migrate --env=prod --no-interaction --allow-no-migration
 
 echo "==> Warming up cache..."
 php bin/console cache:warmup --env=prod

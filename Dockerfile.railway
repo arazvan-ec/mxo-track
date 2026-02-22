@@ -31,14 +31,10 @@ WORKDIR /app
 # Copy backend code
 COPY backend/ /app/
 
-# Install dependencies (no dev, optimized autoloader)
+# Install dependencies (production, deterministic, no app scripts during build)
 ENV APP_ENV=prod
-RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts \
-    && composer run-script post-install-cmd --no-interaction
-
-# Generate Doctrine proxy classes at build time
-RUN php bin/console doctrine:proxy:create-proxy-classes --env=prod 2>/dev/null || \
-    php bin/console cache:warmup --env=prod
+ENV APP_DEBUG=0
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
 
 # Copy nginx config and start script
 COPY docker/nginx-railway.conf /etc/nginx/nginx-railway.conf.template
