@@ -15,27 +15,105 @@
     {# Status filter tabs #}
     <div class="mb-6 border-b border-gray-200">
       <nav class="-mb-px flex space-x-6" aria-label="Filtros">
-        <a href="{{ path('admin_routes_index') }}"
+        {% set tabParams = filterParams|filter((v, k) => k != 'status') %}
+        <a href="{{ path('admin_routes_index', tabParams) }}"
            class="whitespace-nowrap border-b-2 pb-3 px-1 text-sm font-medium {% if currentStatus == '' %}border-blue-500 text-blue-600{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{% endif %}">
           Todas
         </a>
-        <a href="{{ path('admin_routes_index', {status: 'PLANNED'}) }}"
+        <a href="{{ path('admin_routes_index', tabParams|merge({status: 'PLANNED'})) }}"
            class="whitespace-nowrap border-b-2 pb-3 px-1 text-sm font-medium {% if currentStatus == 'PLANNED' %}border-blue-500 text-blue-600{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{% endif %}">
           Planificadas
         </a>
-        <a href="{{ path('admin_routes_index', {status: 'ACTIVE'}) }}"
+        <a href="{{ path('admin_routes_index', tabParams|merge({status: 'ACTIVE'})) }}"
            class="whitespace-nowrap border-b-2 pb-3 px-1 text-sm font-medium {% if currentStatus == 'ACTIVE' %}border-amber-500 text-amber-600{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{% endif %}">
           Activas
         </a>
-        <a href="{{ path('admin_routes_index', {status: 'DONE'}) }}"
+        <a href="{{ path('admin_routes_index', tabParams|merge({status: 'DONE'})) }}"
            class="whitespace-nowrap border-b-2 pb-3 px-1 text-sm font-medium {% if currentStatus == 'DONE' %}border-green-500 text-green-600{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{% endif %}">
           Completadas
         </a>
-        <a href="{{ path('admin_routes_index', {status: 'CANCELLED'}) }}"
+        <a href="{{ path('admin_routes_index', tabParams|merge({status: 'CANCELLED'})) }}"
            class="whitespace-nowrap border-b-2 pb-3 px-1 text-sm font-medium {% if currentStatus == 'CANCELLED' %}border-red-500 text-red-600{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{% endif %}">
           Canceladas
         </a>
       </nav>
+    </div>
+
+    {# Advanced filters #}
+    <div x-data="{ filtersOpen: {{ (dateFrom or dateTo or driverId or customerId) ? 'true' : 'false' }} }" class="mb-6">
+      <button @click="filtersOpen = !filtersOpen" type="button"
+              class="inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z"/>
+        </svg>
+        Filtros avanzados
+        <svg class="h-4 w-4 transition-transform" :class="filtersOpen ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
+        </svg>
+      </button>
+
+      <div x-show="filtersOpen" x-cloak x-transition class="mt-4 rounded-lg bg-white p-4 shadow ring-1 ring-gray-200">
+        <form action="{{ path('admin_routes_index') }}" method="GET" class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          {# Preserve status #}
+          {% if currentStatus %}
+            <input type="hidden" name="status" value="{{ currentStatus }}">
+          {% endif %}
+
+          {# Date from #}
+          <div>
+            <label for="date_from" class="block text-xs font-medium text-gray-600 mb-1">Fecha desde</label>
+            <input type="date" name="date_from" id="date_from" value="{{ dateFrom }}"
+                   class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500">
+          </div>
+
+          {# Date to #}
+          <div>
+            <label for="date_to" class="block text-xs font-medium text-gray-600 mb-1">Fecha hasta</label>
+            <input type="date" name="date_to" id="date_to" value="{{ dateTo }}"
+                   class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500">
+          </div>
+
+          {# Driver #}
+          <div>
+            <label for="driver" class="block text-xs font-medium text-gray-600 mb-1">Transportista</label>
+            <select name="driver" id="driver"
+                    class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500">
+              <option value="">Todos</option>
+              {% for driver in drivers %}
+                <option value="{{ driver.id }}" {% if driverId == driver.id %}selected{% endif %}>
+                  {{ driver.name ?? driver.email }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          {# Customer #}
+          <div>
+            <label for="customer" class="block text-xs font-medium text-gray-600 mb-1">Cliente</label>
+            <select name="customer" id="customer"
+                    class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500">
+              <option value="">Todos</option>
+              {% for customer in customers %}
+                <option value="{{ customer.id }}" {% if customerId == customer.id %}selected{% endif %}>
+                  {{ customer.name }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          {# Buttons #}
+          <div class="flex items-end gap-2">
+            <button type="submit"
+                    class="inline-flex items-center rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-500">
+              Aplicar
+            </button>
+            <a href="{{ path('admin_routes_index', currentStatus ? {status: currentStatus} : {}) }}"
+               class="inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+              Limpiar
+            </a>
+          </div>
+        </form>
+      </div>
     </div>
 
     {# Table #}
@@ -122,13 +200,13 @@
         </div>
         <div class="flex space-x-2">
           {% if page > 1 %}
-            <a href="{{ path('admin_routes_index', {page: page - 1, status: currentStatus}) }}"
+            <a href="{{ path('admin_routes_index', filterParams|merge({page: page - 1})) }}"
                class="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
               Anterior
             </a>
           {% endif %}
           {% if page < totalPages %}
-            <a href="{{ path('admin_routes_index', {page: page + 1, status: currentStatus}) }}"
+            <a href="{{ path('admin_routes_index', filterParams|merge({page: page + 1})) }}"
                class="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
               Siguiente
             </a>
