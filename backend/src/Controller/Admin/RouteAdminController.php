@@ -4,16 +4,20 @@ declare(strict_types=1);
 
 namespace App\Controller\Admin;
 
+use App\Entity\Customer;
 use App\Entity\Route;
 use App\Entity\RouteStop;
+use App\Entity\User;
 use App\Enum\RouteStatus;
 use App\Enum\RouteStopStatus;
 use App\Form\RouteStopType;
 use App\Form\RouteType;
 use App\Repository\RouteRepository;
 use App\Repository\RouteStopRepository;
+use App\Service\RouteOptimizationService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route as SymfonyRoute;
@@ -29,6 +33,7 @@ class RouteAdminController extends AbstractController
         private readonly EntityManagerInterface $em,
         private readonly RouteRepository $routeRepository,
         private readonly RouteStopRepository $routeStopRepository,
+        private readonly RouteOptimizationService $optimizationService,
     ) {}
 
     #[SymfonyRoute('', name: 'admin_routes_index', methods: ['GET'])]
@@ -37,32 +42,62 @@ class RouteAdminController extends AbstractController
         $page = max(1, $request->query->getInt('page', 1));
         $limit = self::ITEMS_PER_PAGE;
         $currentStatus = $request->query->getString('status', '');
+        $dateFrom = $request->query->getString('date_from', '');
+        $dateTo = $request->query->getString('date_to', '');
+        $driverId = $request->query->getString('driver', '');
+        $customerId = $request->query->getString('customer', '');
 
         $qb = $this->em->createQueryBuilder()
-            ->select('r', 'v', 'd')
+            ->select('r', 'v', 'd', 'c')
             ->from(Route::class, 'r')
             ->leftJoin('r.vehicle', 'v')
             ->leftJoin('r.driver', 'd')
+            ->leftJoin('r.customer', 'c')
             ->orderBy('r.id', 'DESC')
             ->setFirstResult(($page - 1) * $limit)
             ->setMaxResults($limit);
 
-        if ($currentStatus !== '' && RouteStatus::tryFrom($currentStatus) !== null) {
-            $qb->where('r.status = :status')
-                ->setParameter('status', $currentStatus);
-        }
-
-        $routes = $qb->getQuery()->getResult();
-
-        // Count query
         $countQb = $this->em->createQueryBuilder()
             ->select('COUNT(r.id)')
             ->from(Route::class, 'r');
 
+        // Apply filters to both query builders
         if ($currentStatus !== '' && RouteStatus::tryFrom($currentStatus) !== null) {
-            $countQb->where('r.status = :status')
-                ->setParameter('status', $currentStatus);
+            $qb->andWhere('r.status = :status')->setParameter('status', $currentStatus);
+            $countQb->andWhere('r.status = :status')->setParameter('status', $currentStatus);
         }
+
+        if ($dateFrom !== '') {
+            try {
+                $from = new \DateTimeImmutable($dateFrom . ' 00:00:00');
+                $qb->andWhere('r.startAt >= :dateFrom')->setParameter('dateFrom', $from);
+                $countQb->andWhere('r.startAt >= :dateFrom')->setParameter('dateFrom', $from);
+            } catch (\Exception) {
+                // ignore invalid date
+            }
+        }
+
+        if ($dateTo !== '') {
+            try {
+                $to = new \DateTimeImmutable($dateTo . ' 23:59:59');
+                $qb->andWhere('r.startAt <= :dateTo')->setParameter('dateTo', $to);
+                $countQb->andWhere('r.startAt <= :dateTo')->setParameter('dateTo', $to);
+            } catch (\Exception) {
+                // ignore invalid date
+            }
+        }
+
+        if ($driverId !== '') {
+            $qb->andWhere('d.id = :driverId')->setParameter('driverId', $driverId);
+            $countQb->leftJoin('r.driver', 'cd')->andWhere('cd.id = :driverId')->setParameter('driverId', $driverId);
+        }
+
+        if ($customerId !== '') {
+            $qb->andWhere('c.id = :customerId')->setParameter('customerId', $customerId);
+            $countQb->leftJoin('r.customer', 'cc')->andWhere('cc.id = :customerId')->setParameter('customerId', $customerId);
+        }
+
+        $routes = $qb->getQuery()->getResult();
 
         $total = (int) $countQb->getQuery()->getSingleScalarResult();
         $totalPages = max(1, (int) ceil($total / $limit));
@@ -88,12 +123,46 @@ class RouteAdminController extends AbstractController
             }
         }
 
+        // Load drivers and customers for filter dropdowns
+        $drivers = $this->em->createQueryBuilder()
+            ->select('u')
+            ->from(User::class, 'u')
+            ->where("u.roles LIKE :driverRole")
+            ->setParameter('driverRole', '%ROLE_DRIVER%')
+            ->orderBy('u.email', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        $customers = $this->em->createQueryBuilder()
+            ->select('cust')
+            ->from(Customer::class, 'cust')
+            ->where('cust.isActive = true')
+            ->orderBy('cust.name', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        // Build filter params for pagination links
+        $filterParams = array_filter([
+            'status' => $currentStatus,
+            'date_from' => $dateFrom,
+            'date_to' => $dateTo,
+            'driver' => $driverId,
+            'customer' => $customerId,
+        ], fn(string $v): bool => $v !== '');
+
         return $this->render('admin/route/index.html.twig', [
             'routes' => $routes,
             'stopCounts' => $stopCounts,
             'page' => $page,
             'totalPages' => $totalPages,
             'currentStatus' => $currentStatus,
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
+            'driverId' => $driverId,
+            'customerId' => $customerId,
+            'drivers' => $drivers,
+            'customers' => $customers,
+            'filterParams' => $filterParams,
         ]);
     }
 
@@ -162,11 +231,24 @@ class RouteAdminController extends AbstractController
             ]),
         ]);
 
+        // Calculate distances between consecutive stops
+        $segmentDistances = [];
+        $totalDistance = 0.0;
+        for ($i = 1, $count = \count($stops); $i < $count; $i++) {
+            $dist = $this->optimizationService->distanceBetweenStops($stops[$i - 1], $stops[$i]);
+            $segmentDistances[$stops[$i]->getPublicIdString()] = $dist;
+            if ($dist !== null) {
+                $totalDistance += $dist;
+            }
+        }
+
         return $this->render('admin/route/form.html.twig', [
             'form' => $form,
             'route' => $route,
             'stops' => $stops,
             'stopForm' => $stopForm,
+            'segmentDistances' => $segmentDistances,
+            'totalDistance' => $totalDistance,
         ]);
     }
 
@@ -285,6 +367,106 @@ class RouteAdminController extends AbstractController
         return $this->redirectToRoute('admin_routes_edit', [
             'publicId' => $route->getPublicIdString(),
         ]);
+    }
+
+    #[SymfonyRoute('/{publicId}/optimize', name: 'admin_routes_optimize', methods: ['POST'])]
+    public function optimize(string $publicId, Request $request): JsonResponse
+    {
+        $route = $this->routeRepository->findOneByPublicId($publicId);
+
+        if (!$route instanceof Route) {
+            return new JsonResponse(['error' => 'Ruta no encontrada.'], 404);
+        }
+
+        if (!$this->isCsrfTokenValid('optimize-route-' . $publicId, $request->request->getString('_token', $request->headers->get('X-CSRF-Token', '')))) {
+            return new JsonResponse(['error' => 'Token CSRF invalido.'], 403);
+        }
+
+        $result = $this->optimizationService->optimizeStopOrder($route);
+
+        $confirm = $request->request->getBoolean('confirm', false);
+
+        if ($confirm) {
+            $this->optimizationService->applyOptimizedOrder($result['optimized']);
+
+            return new JsonResponse([
+                'ok' => true,
+                'applied' => true,
+                'distanceBefore' => round($result['distanceBefore'], 2),
+                'distanceAfter' => round($result['distanceAfter'], 2),
+            ]);
+        }
+
+        // Preview mode: return the proposed order without applying
+        $preview = [];
+        foreach ($result['optimized'] as $item) {
+            $stop = $item['stop'];
+            $preview[] = [
+                'publicId' => $stop->getPublicIdString(),
+                'address' => $stop->getAddress(),
+                'currentSequence' => $stop->getSequence(),
+                'newSequence' => $item['newSequence'],
+                'isOrigin' => $stop->isOrigin(),
+            ];
+        }
+
+        return new JsonResponse([
+            'ok' => true,
+            'applied' => false,
+            'distanceBefore' => round($result['distanceBefore'], 2),
+            'distanceAfter' => round($result['distanceAfter'], 2),
+            'stops' => $preview,
+        ]);
+    }
+
+    #[SymfonyRoute('/{publicId}/stops/reorder', name: 'admin_routes_stops_reorder', methods: ['POST'])]
+    public function reorderStops(string $publicId, Request $request): JsonResponse
+    {
+        $route = $this->routeRepository->findOneByPublicId($publicId);
+
+        if (!$route instanceof Route) {
+            return new JsonResponse(['error' => 'Ruta no encontrada.'], 404);
+        }
+
+        if (!$this->isCsrfTokenValid('reorder-stops-' . $publicId, $request->request->getString('_token', $request->headers->get('X-CSRF-Token', '')))) {
+            return new JsonResponse(['error' => 'Token CSRF invalido.'], 403);
+        }
+
+        try {
+            $payload = json_decode((string) $request->getContent(), true, 512, \JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return new JsonResponse(['error' => 'JSON invalido.'], 400);
+        }
+
+        if (!isset($payload['order']) || !\is_array($payload['order'])) {
+            return new JsonResponse(['error' => 'Se requiere el campo "order".'], 400);
+        }
+
+        // Load all stops for this route
+        $stops = $this->em->createQueryBuilder()
+            ->select('s')
+            ->from(RouteStop::class, 's')
+            ->where('s.route = :route')
+            ->setParameter('route', $route)
+            ->getQuery()
+            ->getResult();
+
+        // Index by publicId
+        $stopsMap = [];
+        foreach ($stops as $stop) {
+            $stopsMap[$stop->getPublicIdString()] = $stop;
+        }
+
+        // Apply the new order
+        foreach ($payload['order'] as $seq => $stopPublicId) {
+            if (isset($stopsMap[$stopPublicId])) {
+                $stopsMap[$stopPublicId]->setSequence((int) $seq);
+            }
+        }
+
+        $this->em->flush();
+
+        return new JsonResponse(['ok' => true]);
     }
 
     private function createOriginStopIfNeeded(Route $route): void

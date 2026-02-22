@@ -25,4 +25,9 @@ final class ShipmentRepository extends ServiceEntityRepository
             return null;
         }
     }
+
+    public function findOneByTrackingToken(string $trackingToken): ?Shipment
+    {
+        return $this->findOneBy(['trackingToken' => $trackingToken]);
+    }
 }

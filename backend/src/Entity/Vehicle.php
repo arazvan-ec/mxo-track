@@ -5,16 +5,19 @@ declare(strict_types=1);
 namespace App\Entity;
 
 use App\Entity\Concerns\PublicIdTrait;
+use App\Entity\Concerns\SoftDeleteTrait;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: \App\Repository\VehicleRepository::class)]
 #[ORM\Table(name: 'vehicle')]
 #[ORM\UniqueConstraint(name: 'uniq_vehicle_public_id', columns: ['public_id'])]
+#[ORM\Index(name: 'idx_vehicle_deleted_at', columns: ['deleted_at'])]
 #[ORM\HasLifecycleCallbacks]
-class Vehicle
+class Vehicle implements SoftDeletableInterface
 {
     use PublicIdTrait;
+    use SoftDeleteTrait;
 
     #[ORM\Column(length: 120)]
     private string $name;

@@ -1,0 +1,21 @@
+# Operational alert thresholds for system monitoring.
+# These parameters can be overridden per-environment.
+
+parameters:
+  # Minutes without position update before a vehicle is considered offline
+  app.alerts.vehicle_offline_minutes: 30
+
+  # Maximum shipment exceptions per route before alerting
+  app.alerts.max_exceptions_per_route: 5
+
+  # Warn when vehicle_positions table exceeds this row count
+  app.alerts.position_table_warn_rows: 1000000
+
+  # Maximum hours since last backup before alerting
+  app.alerts.backup_max_age_hours: 25
+
+  # Latency thresholds (ms) for health check warnings
+  app.alerts.db_latency_warn_ms: 100
+  app.alerts.redis_latency_warn_ms: 50
+  app.alerts.traccar_latency_warn_ms: 500
+  app.alerts.mercure_latency_warn_ms: 500

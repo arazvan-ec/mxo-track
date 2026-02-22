@@ -27,6 +27,60 @@
     <h1 class="text-2xl font-bold text-gray-900">Mis envios</h1>
   </div>
 
+  {# ── Filters ─────────────────────────────────────────────────────── #}
+  <div class="mb-6 rounded-lg bg-white p-4 shadow ring-1 ring-gray-200">
+    <form action="{{ path('customer_shipments_index') }}" method="GET" class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      {# Search #}
+      <div>
+        <label for="q" class="block text-xs font-medium text-gray-600 mb-1">Buscar</label>
+        <input type="text" name="q" id="q" value="{{ searchQuery }}" placeholder="Referencia o destinatario..."
+               class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500">
+      </div>
+
+      {# Status #}
+      <div>
+        <label for="status" class="block text-xs font-medium text-gray-600 mb-1">Estado</label>
+        <select name="status" id="status"
+                class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500">
+          <option value="">Todos</option>
+          <option value="CREATED" {% if statusFilter == 'CREATED' %}selected{% endif %}>Creado</option>
+          <option value="PICKED_UP" {% if statusFilter == 'PICKED_UP' %}selected{% endif %}>Recogido</option>
+          <option value="IN_HUB" {% if statusFilter == 'IN_HUB' %}selected{% endif %}>En centro</option>
+          <option value="IN_TRANSIT" {% if statusFilter == 'IN_TRANSIT' %}selected{% endif %}>En transito</option>
+          <option value="OUT_FOR_DELIVERY" {% if statusFilter == 'OUT_FOR_DELIVERY' %}selected{% endif %}>En reparto</option>
+          <option value="DELIVERED" {% if statusFilter == 'DELIVERED' %}selected{% endif %}>Entregado</option>
+          <option value="EXCEPTION" {% if statusFilter == 'EXCEPTION' %}selected{% endif %}>Excepcion</option>
+        </select>
+      </div>
+
+      {# Date from #}
+      <div>
+        <label for="date_from" class="block text-xs font-medium text-gray-600 mb-1">Desde</label>
+        <input type="date" name="date_from" id="date_from" value="{{ dateFrom }}"
+               class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500">
+      </div>
+
+      {# Date to #}
+      <div>
+        <label for="date_to" class="block text-xs font-medium text-gray-600 mb-1">Hasta</label>
+        <input type="date" name="date_to" id="date_to" value="{{ dateTo }}"
+               class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500">
+      </div>
+
+      {# Buttons #}
+      <div class="flex items-end gap-2">
+        <button type="submit"
+                class="inline-flex items-center rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-500">
+          Filtrar
+        </button>
+        <a href="{{ path('customer_shipments_index') }}"
+           class="inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+          Limpiar
+        </a>
+      </div>
+    </form>
+  </div>
+
   {# ── Table ───────────────────────────────────────────────────────── #}
   <div class="bg-white shadow rounded-lg overflow-hidden">
     <table class="min-w-full divide-y divide-gray-200">
@@ -101,13 +155,13 @@
       </div>
       <div class="flex space-x-2">
         {% if page > 1 %}
-          <a href="{{ path('customer_shipments_index', {page: page - 1}) }}"
+          <a href="{{ path('customer_shipments_index', filterParams|merge({page: page - 1})) }}"
              class="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
             Anterior
           </a>
         {% endif %}
         {% if page < totalPages %}
-          <a href="{{ path('customer_shipments_index', {page: page + 1}) }}"
+          <a href="{{ path('customer_shipments_index', filterParams|merge({page: page + 1})) }}"
              class="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
             Siguiente
           </a>

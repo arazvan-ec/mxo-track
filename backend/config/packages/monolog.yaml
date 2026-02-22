@@ -1,0 +1,70 @@
+monolog:
+  channels:
+    - traccar
+    - mercure
+    - security
+    - api
+
+when@dev:
+  monolog:
+    handlers:
+      main:
+        type: stream
+        path: '%kernel.logs_dir%/%kernel.environment%.log'
+        level: debug
+        channels: ['!event']
+      console:
+        type: console
+        process_psr_3_messages: false
+        channels: ['!event', '!doctrine', '!console']
+
+when@prod:
+  monolog:
+    handlers:
+      main_json:
+        type: stream
+        path: '%kernel.logs_dir%/%kernel.environment%.log'
+        level: info
+        formatter: App\Logging\JsonFormatter
+        channels: ['!event']
+      traccar:
+        type: stream
+        path: '%kernel.logs_dir%/traccar.log'
+        level: info
+        channels: [traccar]
+        formatter: App\Logging\JsonFormatter
+      mercure:
+        type: stream
+        path: '%kernel.logs_dir%/mercure.log'
+        level: info
+        channels: [mercure]
+        formatter: App\Logging\JsonFormatter
+      security:
+        type: stream
+        path: '%kernel.logs_dir%/security.log'
+        level: warning
+        channels: [security]
+        formatter: App\Logging\JsonFormatter
+      api:
+        type: stream
+        path: '%kernel.logs_dir%/api.log'
+        level: info
+        channels: [api]
+        formatter: App\Logging\JsonFormatter
+      console:
+        type: console
+        process_psr_3_messages: false
+        channels: ['!event', '!doctrine']
+
+when@test:
+  monolog:
+    handlers:
+      main:
+        type: fingers_crossed
+        action_level: error
+        handler: nested
+        channels: ['!event']
+      nested:
+        type: stream
+        path: '%kernel.logs_dir%/%kernel.environment%.log'
+        level: debug

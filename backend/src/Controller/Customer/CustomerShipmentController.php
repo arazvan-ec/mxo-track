@@ -7,6 +7,7 @@ namespace App\Controller\Customer;
 use App\Entity\Customer;
 use App\Entity\Shipment;
 use App\Entity\ShipmentEvent;
+use App\Enum\ShipmentEventType;
 use App\Repository\ShipmentRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -37,6 +38,10 @@ class CustomerShipmentController extends AbstractController
 
         $page = max(1, $request->query->getInt('page', 1));
         $limit = self::ITEMS_PER_PAGE;
+        $searchQuery = $request->query->getString('q', '');
+        $statusFilter = $request->query->getString('status', '');
+        $dateFrom = $request->query->getString('date_from', '');
+        $dateTo = $request->query->getString('date_to', '');
 
         // Shipment implements CustomerScopedEntityInterface, so tenant filter is auto-applied
         $qb = $this->em->createQueryBuilder()
@@ -46,15 +51,58 @@ class CustomerShipmentController extends AbstractController
             ->setFirstResult(($page - 1) * $limit)
             ->setMaxResults($limit);
 
+        $countQb = $this->em->createQueryBuilder()
+            ->select('COUNT(s.id)')
+            ->from(Shipment::class, 's');
+
+        // Search filter
+        if ($searchQuery !== '') {
+            $pattern = '%' . mb_strtolower($searchQuery) . '%';
+            $qb->andWhere('LOWER(s.reference) LIKE :search OR LOWER(s.recipientName) LIKE :search')
+                ->setParameter('search', $pattern);
+            $countQb->andWhere('LOWER(s.reference) LIKE :search OR LOWER(s.recipientName) LIKE :search')
+                ->setParameter('search', $pattern);
+        }
+
+        // Date range filters
+        if ($dateFrom !== '') {
+            try {
+                $from = new \DateTimeImmutable($dateFrom . ' 00:00:00');
+                $qb->andWhere('s.createdAt >= :dateFrom')->setParameter('dateFrom', $from);
+                $countQb->andWhere('s.createdAt >= :dateFrom')->setParameter('dateFrom', $from);
+            } catch (\Exception) {
+                // ignore invalid date
+            }
+        }
+
+        if ($dateTo !== '') {
+            try {
+                $to = new \DateTimeImmutable($dateTo . ' 23:59:59');
+                $qb->andWhere('s.createdAt <= :dateTo')->setParameter('dateTo', $to);
+                $countQb->andWhere('s.createdAt <= :dateTo')->setParameter('dateTo', $to);
+            } catch (\Exception) {
+                // ignore invalid date
+            }
+        }
+
+        // Status filter (via subquery on latest event)
+        if ($statusFilter !== '' && ShipmentEventType::tryFrom($statusFilter) !== null) {
+            $qb->andWhere(
+                $qb->expr()->exists(
+                    'SELECT 1 FROM ' . ShipmentEvent::class . ' se_filter WHERE se_filter.shipment = s AND se_filter.eventType = :statusFilter AND se_filter.createdAt = (SELECT MAX(se_sub.createdAt) FROM ' . ShipmentEvent::class . ' se_sub WHERE se_sub.shipment = s)'
+                )
+            )->setParameter('statusFilter', $statusFilter);
+
+            $countQb->andWhere(
+                $countQb->expr()->exists(
+                    'SELECT 1 FROM ' . ShipmentEvent::class . ' se_filter2 WHERE se_filter2.shipment = s AND se_filter2.eventType = :statusFilter AND se_filter2.createdAt = (SELECT MAX(se_sub2.createdAt) FROM ' . ShipmentEvent::class . ' se_sub2 WHERE se_sub2.shipment = s)'
+                )
+            )->setParameter('statusFilter', $statusFilter);
+        }
+
         $shipments = $qb->getQuery()->getResult();
 
-        // Count query
-        $total = (int) $this->em->createQueryBuilder()
-            ->select('COUNT(s.id)')
-            ->from(Shipment::class, 's')
-            ->getQuery()
-            ->getSingleScalarResult();
-
+        $total = (int) $countQb->getQuery()->getSingleScalarResult();
         $totalPages = max(1, (int) ceil($total / $limit));
 
         // Fetch latest event for each shipment
@@ -78,11 +126,24 @@ class CustomerShipmentController extends AbstractController
             }
         }
 
+        // Build filter params for pagination links
+        $filterParams = array_filter([
+            'q' => $searchQuery,
+            'status' => $statusFilter,
+            'date_from' => $dateFrom,
+            'date_to' => $dateTo,
+        ], fn(string $v): bool => $v !== '');
+
         return $this->render('customer/shipment/index.html.twig', [
             'shipments' => $shipments,
             'latestEvents' => $latestEvents,
             'page' => $page,
             'totalPages' => $totalPages,
+            'searchQuery' => $searchQuery,
+            'statusFilter' => $statusFilter,
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
+            'filterParams' => $filterParams,
         ]);
     }
 

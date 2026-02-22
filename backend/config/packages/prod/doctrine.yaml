@@ -1,0 +1,4 @@
+doctrine:
+  orm:
+    auto_generate_proxy_classes: false
+    proxy_dir: '%kernel.project_dir%/var/cache/prod/doctrine/orm/Proxies'

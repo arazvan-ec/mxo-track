@@ -1,0 +1,11 @@
+{
+  "name": "mxo-track-backend",
+  "private": true,
+  "scripts": {
+    "build:css": "npx tailwindcss -i ./assets/styles/app.css -o ./public/build/tailwind.css --minify",
+    "watch:css": "npx tailwindcss -i ./assets/styles/app.css -o ./public/build/tailwind.css --watch"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4"
+  }
+}

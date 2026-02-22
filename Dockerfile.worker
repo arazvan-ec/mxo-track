@@ -24,6 +24,10 @@ ENV APP_ENV=prod
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts \
     && composer run-script post-install-cmd --no-interaction
 
+# Generate Doctrine proxy classes at build time
+RUN php bin/console doctrine:proxy:create-proxy-classes --env=prod 2>/dev/null || \
+    php bin/console cache:warmup --env=prod
+
 # Copy start script
 COPY scripts/railway-worker-start.sh /app/railway-worker-start.sh
 RUN chmod +x /app/railway-worker-start.sh

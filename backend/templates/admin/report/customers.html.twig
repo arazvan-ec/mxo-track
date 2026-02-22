@@ -1,0 +1,120 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Reporte por Cliente - MXO Track{% endblock %}
+
+{% block breadcrumbs %}
+  <li>
+    <div class="flex items-center">
+      <svg class="h-5 w-5 shrink-0 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd"/>
+      </svg>
+      <a href="{{ path('admin_reports_index') }}" class="ml-2 text-sm font-medium text-gray-500 hover:text-gray-700">Reportes</a>
+    </div>
+  </li>
+  <li>
+    <div class="flex items-center">
+      <svg class="h-5 w-5 shrink-0 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd"/>
+      </svg>
+      <span class="ml-2 text-sm font-medium text-gray-500">Clientes</span>
+    </div>
+  </li>
+{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+  <h1 class="text-2xl font-bold tracking-tight text-gray-900">Reporte por Cliente</h1>
+  <p class="mt-1 text-sm text-gray-500">Desglose de entregas, envios y excepciones por cada cliente.</p>
+</div>
+
+{# Date filter #}
+<form method="get" class="mb-8 flex flex-wrap items-end gap-3">
+  <div>
+    <label for="from" class="block text-xs font-medium text-gray-600 mb-1">Desde</label>
+    <input type="date" id="from" name="from" value="{{ from|date('Y-m-d') }}"
+           class="rounded-lg border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-brand-500">
+  </div>
+  <div>
+    <label for="to" class="block text-xs font-medium text-gray-600 mb-1">Hasta</label>
+    <input type="date" id="to" name="to" value="{{ to|date('Y-m-d') }}"
+           class="rounded-lg border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-brand-500">
+  </div>
+  <button type="submit"
+          class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-500 transition-colors">
+    Filtrar
+  </button>
+</form>
+
+{% if customer_reports|length > 0 %}
+  {# Customer cards grid #}
+  <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+    {% for item in customer_reports %}
+      {% set cr = item.report %}
+      {% set customer = item.customer %}
+      <div class="rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+          <div>
+            <h3 class="text-base font-semibold text-gray-900">{{ customer.name }}</h3>
+            {% if customer.contactPhone %}
+              <p class="text-xs text-gray-500">{{ customer.contactPhone }}</p>
+            {% endif %}
+          </div>
+          <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
+            {% if cr.completion_rate >= 90 %}bg-emerald-100 text-emerald-700
+            {% elseif cr.completion_rate >= 70 %}bg-amber-100 text-amber-700
+            {% else %}bg-red-100 text-red-700{% endif %}">
+            {{ cr.completion_rate }}% completado
+          </span>
+        </div>
+        <div class="p-6">
+          <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <div>
+              <p class="text-xs font-medium text-gray-500">Envios</p>
+              <p class="mt-1 text-xl font-bold text-gray-900">{{ cr.total_shipments }}</p>
+            </div>
+            <div>
+              <p class="text-xs font-medium text-gray-500">Entregados</p>
+              <p class="mt-1 text-xl font-bold text-emerald-600">{{ cr.delivered }}</p>
+            </div>
+            <div>
+              <p class="text-xs font-medium text-gray-500">Excepciones</p>
+              <p class="mt-1 text-xl font-bold text-red-600">{{ cr.exceptions }}</p>
+            </div>
+            <div>
+              <p class="text-xs font-medium text-gray-500">Pendientes</p>
+              <p class="mt-1 text-xl font-bold text-amber-600">{{ cr.pending }}</p>
+            </div>
+          </div>
+
+          {# Progress bar #}
+          {% set total_stops = cr.delivered + cr.exceptions + cr.pending %}
+          {% if total_stops > 0 %}
+            <div class="mt-4">
+              <div class="flex h-2 overflow-hidden rounded-full bg-gray-100">
+                {% if cr.delivered > 0 %}
+                  <div class="bg-emerald-500" style="width: {{ (cr.delivered / total_stops * 100)|round(1) }}%"></div>
+                {% endif %}
+                {% if cr.exceptions > 0 %}
+                  <div class="bg-red-500" style="width: {{ (cr.exceptions / total_stops * 100)|round(1) }}%"></div>
+                {% endif %}
+                {% if cr.pending > 0 %}
+                  <div class="bg-amber-400" style="width: {{ (cr.pending / total_stops * 100)|round(1) }}%"></div>
+                {% endif %}
+              </div>
+              <div class="mt-2 flex gap-4 text-[10px] text-gray-500">
+                <span class="flex items-center gap-1"><span class="inline-block h-2 w-2 rounded-full bg-emerald-500"></span> Entregados</span>
+                <span class="flex items-center gap-1"><span class="inline-block h-2 w-2 rounded-full bg-red-500"></span> Excepciones</span>
+                <span class="flex items-center gap-1"><span class="inline-block h-2 w-2 rounded-full bg-amber-400"></span> Pendientes</span>
+              </div>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5 px-6 py-12 text-center text-sm text-gray-500">
+    No hay clientes activos con datos para el periodo seleccionado.
+  </div>
+{% endif %}
+{% endblock %}

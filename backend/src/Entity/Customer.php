@@ -5,14 +5,17 @@ declare(strict_types=1);
 namespace App\Entity;
 
 use App\Entity\Concerns\PublicIdTrait;
+use App\Entity\Concerns\SoftDeleteTrait;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity]
 #[ORM\UniqueConstraint(name: 'uniq_customer_public_id', columns: ['public_id'])]
+#[ORM\Index(name: 'idx_customer_deleted_at', columns: ['deleted_at'])]
 #[ORM\HasLifecycleCallbacks]
-class Customer
+class Customer implements SoftDeletableInterface
 {
     use PublicIdTrait;
+    use SoftDeleteTrait;
 
     #[ORM\Column(length: 150)]
     private string $name;
@@ -22,6 +25,9 @@ class Customer
 
     #[ORM\Column(length: 30, nullable: true)]
     private ?string $contactPhone = null;
+
+    #[ORM\Column(length: 500, nullable: true)]
+    private ?string $webhookUrl = null;
 
     #[ORM\Column]
     private bool $isActive = true;
@@ -37,6 +43,8 @@ class Customer
     public function setAddress(?string $address): void { $this->address = $address; }
     public function getContactPhone(): ?string { return $this->contactPhone; }
     public function setContactPhone(?string $contactPhone): void { $this->contactPhone = $contactPhone; }
+    public function getWebhookUrl(): ?string { return $this->webhookUrl; }
+    public function setWebhookUrl(?string $webhookUrl): void { $this->webhookUrl = $webhookUrl; }
     public function isActive(): bool { return $this->isActive; }
     public function setActive(bool $isActive): void { $this->isActive = $isActive; }
 }

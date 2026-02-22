@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Service\AdminMetricsService;
+use App\Service\ReportingService;
 use App\Service\SystemHealthService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -19,10 +20,15 @@ class AdminController extends AbstractController
     public function dashboard(
         AdminMetricsService $metricsService,
         SystemHealthService $systemHealthService,
+        ReportingService $reportingService,
         #[Autowire('%env(MERCURE_PUBLIC_URL)%')] string $mercurePublicUrl,
     ): Response {
         $metrics = $metricsService->collect();
         $health = $systemHealthService->check();
+        $live = $systemHealthService->checkLive();
+
+        $dailyDeliveries = $reportingService->getDailyDeliveries(7);
+        $topDrivers = $reportingService->getTopDrivers(5, 7);
 
         return $this->render('admin/dashboard.html.twig', [
             'kpis' => [
@@ -35,7 +41,10 @@ class AdminController extends AbstractController
                 'positions_ingested_last_hour' => $metrics['positions_ingested_last_hour'],
             ],
             'health' => $health,
+            'live' => $live,
             'mercure_public_url' => $mercurePublicUrl,
+            'daily_deliveries' => $dailyDeliveries,
+            'top_drivers' => $topDrivers,
         ]);
     }
 
@@ -45,6 +54,7 @@ class AdminController extends AbstractController
         return $this->json([
             'status' => 'ok',
             'health' => $systemHealthService->check(),
+            'live' => $systemHealthService->checkLive(),
             'metrics' => $metricsService->collect(),
             'generated_at' => (new \DateTimeImmutable())->format(DATE_ATOM),
         ]);

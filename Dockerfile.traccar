@@ -2,4 +2,6 @@ FROM traccar/traccar:latest
 
 COPY docker/traccar-railway/traccar.xml /opt/traccar/conf/traccar.xml
 
-EXPOSE 8082
+# 8082 = API REST + Web UI (internal services)
+# 5055 = OsmAnd GPS protocol (Android app)
+EXPOSE 8082 5055
