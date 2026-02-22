@@ -292,7 +292,7 @@
 
     <div class="space-y-3 pb-6">
       {% for stop in stops %}
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden" id="stop-card-{{ stop.publicIdString }}">
           <div class="px-4 py-3">
             <div class="flex items-start gap-3">
               {# Sequence circle #}
@@ -331,6 +331,52 @@
                 {# Notes #}
                 {% if stop.notes %}
                   <p class="text-xs text-gray-400 mt-1 italic">{{ stop.notes }}</p>
+                {% endif %}
+
+                {# Delivery time window #}
+                {% if stop.deliveryWindowStart or stop.deliveryWindowEnd %}
+                  <div class="mt-1.5 flex items-center gap-1.5">
+                    <svg class="w-3.5 h-3.5 text-indigo-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <span class="text-xs font-medium time-window-badge" data-stop-id="{{ stop.publicIdString }}"
+                          data-window-start="{{ stop.deliveryWindowStart ? stop.deliveryWindowStart|date('H:i') : '' }}"
+                          data-window-end="{{ stop.deliveryWindowEnd ? stop.deliveryWindowEnd|date('H:i') : '' }}">
+                      Ventana:
+                      {% if stop.deliveryWindowStart and stop.deliveryWindowEnd %}
+                        {{ stop.deliveryWindowStart|date('H:i') }} - {{ stop.deliveryWindowEnd|date('H:i') }}
+                      {% elseif stop.deliveryWindowStart %}
+                        Desde {{ stop.deliveryWindowStart|date('H:i') }}
+                      {% elseif stop.deliveryWindowEnd %}
+                        Hasta {{ stop.deliveryWindowEnd|date('H:i') }}
+                      {% endif %}
+                    </span>
+                  </div>
+                {% endif %}
+
+                {# ETA indicator for pending stops #}
+                {% if stop.status.value == 'PENDING' and not stop.origin %}
+                  <div class="mt-1.5 flex items-center gap-2 eta-row" data-stop-id="{{ stop.publicIdString }}">
+                    {% if etas[stop.publicIdString] is defined %}
+                      <span class="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 rounded-full px-2 py-0.5 eta-badge">
+                        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        ETA: <span class="eta-time">{{ etas[stop.publicIdString].eta|date('H:i') }}</span>
+                      </span>
+                      <span class="text-xs text-gray-500 eta-remaining">
+                        ~<span class="eta-minutes">{{ etas[stop.publicIdString].remainingMinutes }}</span> min
+                        (<span class="eta-distance">{{ etas[stop.publicIdString].distanceKm }}</span> km)
+                      </span>
+                    {% else %}
+                      <span class="inline-flex items-center gap-1 text-xs text-gray-400 eta-badge">
+                        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        ETA: <span class="eta-time">--:--</span>
+                      </span>
+                    {% endif %}
+                  </div>
                 {% endif %}
 
                 {# Delivered info #}
@@ -639,6 +685,8 @@
 
           {% if route.status.value == 'ACTIVE' %}
           this.initMap();
+          this.initEtaRefresh();
+          this.updateTimeWindowColors();
           {% endif %}
         },
 
