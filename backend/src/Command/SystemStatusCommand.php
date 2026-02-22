@@ -134,7 +134,7 @@ class SystemStatusCommand extends Command
             $tenMinAgo = (new \DateTimeImmutable())->modify('-10 minutes')->format('Y-m-d H:i:s');
 
             return (int) $this->connection->fetchOne(
-                'SELECT COUNT(DISTINCT vehicle_id) FROM vehicle_last_position WHERE updated_at >= :since',
+                'SELECT COUNT(DISTINCT vehicle_id) FROM vehicle_last_position WHERE server_time >= :since',
                 ['since' => $tenMinAgo],
             );
         } catch (\Throwable) {
