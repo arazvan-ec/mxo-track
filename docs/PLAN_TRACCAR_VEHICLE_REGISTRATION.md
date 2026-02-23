@@ -103,3 +103,76 @@ Este plan resuelve ambos problemas:
 | `docker/traccar-railway/entrypoint.sh` | NUEVO — genera traccar.xml desde env vars |
 | `Dockerfile.traccar` | Usar entrypoint.sh |
 | `scripts/railway-setup-vars.sh` | Añadir TRACCAR_DATABASE_URL y variables |
+
+---
+
+## Referencia: Setup Traccar tras redeploy (H2 se borra)
+
+Mientras Traccar use H2 embebida, cada redeploy borra todo. Pasos para reconstruir:
+
+### 1. Crear admin user
+```bash
+curl -sf -X POST 'https://mxo-track-traccar-db4e.up.railway.app/api/users' \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"admin","email":"admin","password":"admin"}'
+```
+No incluir `"administrator"` en el JSON (provoca NullPointerException en Traccar vacío).
+
+### 2. Crear device
+```bash
+curl -sf -X POST 'https://mxo-track-traccar-db4e.up.railway.app/api/devices' \
+  -u admin:admin \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"Android Test","uniqueId":"1234567"}'
+```
+
+### 3. Verificar que acepta posiciones
+```bash
+curl -s -o /dev/null -w "%{http_code}" \
+  "http://shuttle.proxy.rlwy.net:28058/?id=1234567&lat=40.41&lon=-3.70&timestamp=$(date +%s)&speed=0"
+# Debe devolver 200
+```
+
+### 4. Actualizar credenciales en Railway
+Tras recrear Traccar, las credenciales vuelven a `admin`/`admin`. Actualizar `TRACCAR_PASSWORD=admin` en **app-mxo** y **worker-mxo**.
+
+### 5. Actualizar Vehicle en Symfony
+En `/admin/vehicles`, editar el vehiculo y poner `traccarDeviceId` = el **`id`** interno devuelto por Traccar (ej. `1`).
+
+---
+
+## Referencia: IDs de Traccar (importante)
+
+Traccar tiene **dos identificadores distintos** por device:
+
+| | `id` (interno) | `uniqueId` (identificador) |
+|---|---|---|
+| **Ejemplo** | `1` | `1234567` |
+| **Quién lo genera** | Traccar (auto-increment) | El usuario al crear el device |
+| **Quién lo usa** | API REST (`/api/positions?deviceId=1`) | App Android / protocolo OsmAnd (puerto 5055) |
+| **En Symfony** | `Vehicle.traccarDeviceId = 1` | No se guarda (solo existe en Traccar + app Android) |
+
+**El worker de Symfony usa la API REST**, que filtra por `id` interno:
+- `/api/positions?deviceId=1` → devuelve posiciones
+- `/api/positions?deviceId=1234567` → no encuentra nada
+
+**Regla**: `Vehicle.traccarDeviceId` siempre debe ser el `id` interno de Traccar, NO el `uniqueId`.
+
+---
+
+## Referencia: Configurar Traccar Client en Android
+
+- **Server URL**: `http://shuttle.proxy.rlwy.net`
+- **Port**: `28058`
+- **Device identifier**: `1234567` (debe coincidir con el `uniqueId` del device en Traccar)
+
+### URLs Railway
+
+| Servicio | URL |
+|----------|-----|
+| App | https://mxo-track-app.up.railway.app |
+| Traccar API (8082) | https://mxo-track-traccar-db4e.up.railway.app |
+| Traccar GPS (5055) | http://shuttle.proxy.rlwy.net:28058 |
+| Mercure | https://mxo-track-mercure.up.railway.app |
+| PostgreSQL | switchback.proxy.rlwy.net:44967 |
+| Redis | metro.proxy.rlwy.net:45436 |

@@ -32,6 +32,7 @@ class CustomerUserType extends AbstractType
             ->add('email', EmailType::class, [
                 'label' => 'Email',
                 'required' => true,
+                'empty_data' => '',
                 'attr' => [
                     'class' => 'w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm',
                     'placeholder' => 'usuario@ejemplo.com',

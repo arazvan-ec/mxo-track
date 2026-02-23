@@ -7,6 +7,7 @@ namespace App\Entity;
 use App\Entity\Concerns\PublicIdTrait;
 use App\Entity\Concerns\SoftDeleteTrait;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity]
 #[ORM\UniqueConstraint(name: 'uniq_customer_public_id', columns: ['public_id'])]
@@ -18,6 +19,8 @@ class Customer implements SoftDeletableInterface
     use SoftDeleteTrait;
 
     #[ORM\Column(length: 150)]
+    #[Assert\NotBlank(message: 'El nombre del cliente es obligatorio.')]
+    #[Assert\Length(max: 150)]
     private string $name;
 
     #[ORM\Column(length: 255, nullable: true)]

@@ -12,6 +12,7 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\Table(name: 'user_account')]
@@ -25,6 +26,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, SoftDel
     use SoftDeleteTrait;
 
     #[ORM\Column(length: 180, unique: true)]
+    #[Assert\NotBlank(message: 'El email es obligatorio.')]
+    #[Assert\Email(message: 'El email no es valido.')]
+    #[Assert\Length(max: 180)]
     private string $email;
 
     #[ORM\Column(length: 150, nullable: true)]

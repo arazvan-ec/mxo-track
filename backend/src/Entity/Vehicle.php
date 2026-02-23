@@ -8,6 +8,7 @@ use App\Entity\Concerns\PublicIdTrait;
 use App\Entity\Concerns\SoftDeleteTrait;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: \App\Repository\VehicleRepository::class)]
 #[ORM\Table(name: 'vehicle')]
@@ -20,6 +21,8 @@ class Vehicle implements SoftDeletableInterface
     use SoftDeleteTrait;
 
     #[ORM\Column(length: 120)]
+    #[Assert\NotBlank(message: 'El nombre del vehiculo es obligatorio.')]
+    #[Assert\Length(max: 120)]
     private string $name;
 
     #[ORM\Column(nullable: true)]

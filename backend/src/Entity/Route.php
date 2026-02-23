@@ -9,6 +9,7 @@ use App\Entity\Concerns\SoftDeleteTrait;
 use App\Enum\RouteStatus;
 use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: \App\Repository\RouteRepository::class)]
 #[ORM\Table(name: 'route_plan')]
@@ -21,6 +22,8 @@ class Route implements SoftDeletableInterface
     use SoftDeleteTrait;
 
     #[ORM\Column(length: 140)]
+    #[Assert\NotBlank(message: 'El nombre de la ruta es obligatorio.')]
+    #[Assert\Length(max: 140)]
     private string $name;
 
     #[ORM\Column(length: 20, enumType: RouteStatus::class)]
