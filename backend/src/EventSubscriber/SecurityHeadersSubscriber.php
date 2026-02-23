@@ -43,6 +43,7 @@ final class SecurityHeadersSubscriber implements EventSubscriberInterface
             "default-src 'self'",
             "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdn.tailwindcss.com https://cdn.jsdelivr.net",
             "style-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.tailwindcss.com",
+            "font-src 'self' data:",
             "img-src 'self' https://*.tile.openstreetmap.org https://*.basemaps.cartocdn.com https://unpkg.com data:",
             "connect-src 'self' https://unpkg.com https://nominatim.openstreetmap.org " . $this->mercureOrigin,
             "frame-ancestors 'self'",
