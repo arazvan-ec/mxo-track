@@ -94,20 +94,20 @@ final class TraccarApiClient
     /** @return list<array<string,mixed>> */
     private function requestJson(string $path, array $query = []): array
     {
-        if ($this->cookie === null) {
-            $this->login();
-        }
-
         try {
             $response = $this->httpClient->request('GET', rtrim($this->baseUrl, '/').$path, [
-                'headers' => $this->cookie ? ['Cookie' => $this->cookie] : [],
+                'auth_basic' => [$this->username, $this->password],
                 'query' => $query,
             ]);
 
+            $statusCode = $response->getStatusCode();
+            if ($statusCode >= 400) {
+                return [];
+            }
+
             $payload = $response->toArray(false);
             return is_array($payload) ? array_values($payload) : [];
-        } catch (TransportExceptionInterface) {
-            $this->cookie = null;
+        } catch (TransportExceptionInterface|\JsonException) {
             return [];
         }
     }
