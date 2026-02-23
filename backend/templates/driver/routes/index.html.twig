@@ -149,7 +149,7 @@
             <div class="mt-4 flex flex-wrap gap-2">
               {% if route.status.value == 'PLANNED' %}
                 <button
-                  @click="if(!loading){ loading=true; fetch('/api/driver/routes/{{ route.publicIdString }}/start',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'}}).then(r=>{if(r.ok){window.location.reload()}else{loading=false;alert('Error al iniciar la ruta')}}).catch(()=>{loading=false;alert('Error de conexion')}) }"
+                  @click="if(!loading){ loading=true; fetch('/api/driver/routes/{{ route.publicIdString }}/start',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json','X-Requested-With':'XMLHttpRequest'}}).then(r=>{if(r.ok){window.location.reload()}else{r.text().then(t=>{loading=false;alert('Error '+r.status+': '+t)})}}).catch(e=>{loading=false;alert('Error de conexion: '+e.message)}) }"
                   :disabled="loading"
                   class="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                   <template x-if="loading">
@@ -169,7 +169,7 @@
 
               {% if route.status.value == 'ACTIVE' %}
                 <button
-                  @click="if(!loading && confirm('Seguro que quieres finalizar esta ruta?')){ loading=true; fetch('/api/driver/routes/{{ route.publicIdString }}/finish',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'}}).then(r=>{if(r.ok){window.location.reload()}else{loading=false;alert('Error al finalizar la ruta')}}).catch(()=>{loading=false;alert('Error de conexion')}) }"
+                  @click="if(!loading && confirm('Seguro que quieres finalizar esta ruta?')){ loading=true; fetch('/api/driver/routes/{{ route.publicIdString }}/finish',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json','X-Requested-With':'XMLHttpRequest'}}).then(r=>{if(r.ok){window.location.reload()}else{r.text().then(t=>{loading=false;alert('Error '+r.status+': '+t)})}}).catch(e=>{loading=false;alert('Error de conexion: '+e.message)}) }"
                   :disabled="loading"
                   class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                   <template x-if="loading">

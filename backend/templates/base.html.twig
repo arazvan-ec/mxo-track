@@ -11,11 +11,7 @@
 
   <style>[x-cloak] { display: none !important; }</style>
 
-  {# Tailwind CSS: compiled build (~30-50KB) if available, CDN (~900KB) as fallback.
-     To build: cd backend && npm install && npm run build:css #}
-  <link rel="stylesheet" href="{{ asset('build/tailwind.css') }}" onerror="this.remove()">
-
-  {# CDN fallback — remove this block once compiled CSS is reliably built in CI/CD #}
+  {# Tailwind CSS via CDN (TODO: replace with compiled build via npm run build:css) #}
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -181,13 +177,13 @@
                  x-transition:leave-end="transform opacity-0 scale-95"
                  class="absolute right-0 z-10 mt-2 w-32 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-gray-900/5 focus:outline-none"
                  style="display: none;">
-              <form method="post" action="{{ path('app_locale', {locale: 'es'}) }}">
+              <form method="post" action="{{ path('app_locale_switch', {locale: 'es'}) }}">
                 <input type="hidden" name="_token" value="{{ csrf_token('locale') }}">
                 <button type="submit" class="block w-full px-4 py-2 text-left text-sm {% if app.request.locale == 'es' %}text-brand-600 font-medium bg-gray-50{% else %}text-gray-700 hover:bg-gray-50{% endif %}">
                   {{ 'locale.es'|trans }}
                 </button>
               </form>
-              <form method="post" action="{{ path('app_locale', {locale: 'en'}) }}">
+              <form method="post" action="{{ path('app_locale_switch', {locale: 'en'}) }}">
                 <input type="hidden" name="_token" value="{{ csrf_token('locale') }}">
                 <button type="submit" class="block w-full px-4 py-2 text-left text-sm {% if app.request.locale == 'en' %}text-brand-600 font-medium bg-gray-50{% else %}text-gray-700 hover:bg-gray-50{% endif %}">
                   {{ 'locale.en'|trans }}

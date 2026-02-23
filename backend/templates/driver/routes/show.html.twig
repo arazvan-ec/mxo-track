@@ -157,7 +157,7 @@
       <p class="mt-1 text-sm text-blue-700">Cuando estes listo, pulsa el boton para comenzar.</p>
       <button
         x-data="{ loading: false }"
-        @click="if(!loading){ loading=true; fetch('/api/driver/routes/{{ route.publicIdString }}/start',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'}}).then(r=>{if(r.ok){window.location.reload()}else{loading=false;alert('Error al iniciar la ruta')}}).catch(()=>{loading=false;alert('Error de conexion')}) }"
+        @click="if(!loading){ loading=true; fetch('/api/driver/routes/{{ route.publicIdString }}/start',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json','X-Requested-With':'XMLHttpRequest'}}).then(r=>{if(r.ok){window.location.reload()}else{r.text().then(t=>{loading=false;alert('Error '+r.status+': '+t)})}}).catch(e=>{loading=false;alert('Error de conexion: '+e.message)}) }"
         :disabled="loading"
         class="mt-4 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
         <template x-if="loading">
@@ -622,7 +622,7 @@
         try {
           const r = await fetch(action.url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
             body: JSON.stringify(action.payload),
             credentials: 'include'
           });
@@ -752,7 +752,7 @@
           try {
             const r = await fetch(url, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
               body: JSON.stringify(payload),
               credentials: 'include',
             });
@@ -805,7 +805,7 @@
           try {
             const r = await fetch(url, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
               body: JSON.stringify(payload),
               credentials: 'include',
             });

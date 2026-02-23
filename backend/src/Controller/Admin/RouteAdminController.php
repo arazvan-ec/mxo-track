@@ -127,7 +127,7 @@ class RouteAdminController extends AbstractController
         $drivers = $this->em->createQueryBuilder()
             ->select('u')
             ->from(User::class, 'u')
-            ->where("u.roles LIKE :driverRole")
+            ->where("JSON_TEXT(u.roles) LIKE :driverRole")
             ->setParameter('driverRole', '%ROLE_DRIVER%')
             ->orderBy('u.email', 'ASC')
             ->getQuery()
