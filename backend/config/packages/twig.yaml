@@ -2,6 +2,7 @@ twig:
   file_name_pattern: '*.twig'
   globals:
     app_name: 'transporte-tracking'
+    mercure_public_url: '%env(MERCURE_PUBLIC_URL)%'
 
 when@test:
   twig:

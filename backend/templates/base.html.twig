@@ -196,7 +196,8 @@
 
           {# ── Notification bell ─────────────────────────────────── #}
           {% if app.user %}
-          <div x-data="notificationBell()" x-init="fetchCount()" class="relative">
+          <div x-data="notificationBell()" x-init="init()" @beforeunload.window="destroy()"
+               data-user-id="{{ app.user.id }}" data-mercure-url="{{ mercure_public_url }}" class="relative">
             <a href="{{ path('notification_index') }}"
                class="relative -m-2.5 p-2.5 text-gray-400 hover:text-gray-500 transition-colors">
               <span class="sr-only">Ver notificaciones</span>
@@ -344,20 +345,47 @@ function searchAutocomplete() {
 function notificationBell() {
   return {
     unreadCount: 0,
-    polling: null,
-    async fetchCount() {
+    _eventSource: null,
+    async init() {
       try {
         const resp = await fetch('/api/notifications/unread-count');
-        const data = await resp.json();
-        this.unreadCount = data.unread_count || 0;
-      } catch (e) {
-        // silently ignore
-      }
-      // Poll every 30 seconds
-      this.polling = setInterval(() => this.fetchCount(), 30000);
+        if (resp.ok) {
+          const data = await resp.json();
+          this.unreadCount = data.unread_count || 0;
+        }
+      } catch (_) {}
+      this._connectSSE();
+    },
+    async _connectSSE() {
+      const userId = this.$el.dataset.userId;
+      const mercureBase = this.$el.dataset.mercureUrl;
+      if (!userId || !mercureBase) return;
+
+      try {
+        const tokenRes = await fetch('/api/mercure-token', { credentials: 'include' });
+        if (!tokenRes.ok) return;
+        const { token } = await tokenRes.json();
+
+        const hub = new URL(mercureBase);
+        hub.searchParams.append('topic', '/users/' + userId + '/notifications');
+        if (token) hub.searchParams.set('authorization', token);
+
+        this._eventSource = new EventSource(hub);
+        this._eventSource.onmessage = (e) => {
+          try {
+            const data = JSON.parse(e.data);
+            if (typeof data.unread_count === 'number') {
+              this.unreadCount = data.unread_count;
+            }
+          } catch (_) {}
+        };
+      } catch (_) {}
     },
     destroy() {
-      if (this.polling) clearInterval(this.polling);
+      if (this._eventSource) {
+        this._eventSource.close();
+        this._eventSource = null;
+      }
     }
   };
 }

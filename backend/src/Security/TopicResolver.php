@@ -32,11 +32,12 @@ class TopicResolver
                 ...$vehicleTopics,
                 sprintf('/customers/%s/routes', $customerPublicId),
                 sprintf('/customers/%s/shipments', $customerPublicId),
+                sprintf('/users/%s/notifications', $user->getId()),
             ];
         }
 
         if (in_array('ROLE_DRIVER', $roles, true)) {
-            $topics = [];
+            $topics = [sprintf('/users/%s/notifications', $user->getId())];
             foreach (array_unique($allowedVehiclePublicIds) as $publicId) {
                 $topics[] = sprintf('/vehicles/%s/position', $publicId);
             }
