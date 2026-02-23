@@ -2,7 +2,7 @@
 
 1. **Symfony 7.4 LTS estricta**
    - Se congela Symfony en `7.4.*` para todas las fases (sin componentes `8.x`).
-   - Se fuerza con `extra.symfony.require=7.4.*`, conflicto explícito para `symfony/symfony >=8.0` y guardia de lockfile (`scripts/check_symfony_74_lock.sh`) para bloquear propuestas con componentes 8.x.
+   - Se fuerza con `extra.symfony.require=7.4.*` y conflicto explícito para `symfony/symfony >=8.0`.
 
 2. **Symfony Flex + recetas como estándar**
    - Se adopta Flex/recipes como forma oficial de bootstrap y mantenimiento de configuración del backend.
@@ -40,8 +40,7 @@
 
 
 12. **Criterio operativo de “Symfony funcionando”**
-   - Se valida de forma manual local con `bash scripts/symfony_e2e_boot_check.sh` levantando `db/redis/mercure` en Docker Compose.
-   - Por ahora no es gate obligatorio de CI.
+   - Se valida con `php bin/console about` levantando servicios en Docker Compose.
 
 
 13. **Enfoque de fase actual**

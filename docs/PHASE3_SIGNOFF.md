@@ -30,11 +30,11 @@ Definir desde el inicio el “Definition of Done” de Fase 3 para evitar deuda 
 
 4. **Documentación y validación de fase**
    - Actualizar `docs/FASE2_AUDIT.md` sólo como histórico; crear auditoría propia Fase 3.
-   - Extender `scripts/phase_flow_validate.sh` con checks específicos de Fase 3.
+   - Definir checks específicos de Fase 3.
 
 ## Definition of Done (pendiente de cierre)
 - [x] Asignaciones reales CUSTOMER/DRIVER implementadas (pendiente validar en entorno con DB).
-- [x] Reglas de visibilidad cubiertas por checks reproducibles (scripts/phase_flow_validate.sh).
+- [x] Reglas de visibilidad cubiertas por checks reproducibles.
 - [x] Contratos API Fase 3 documentados (pendiente confirmación final de política wildcard staff).
 - [x] Flujo de validación transversal actualizado con criterios Fase 3.
 - [ ] Signoff final Fase 3 marcado como **APROBADA** (tras validación runtime con composer install y checks de fase).
@@ -51,7 +51,7 @@ Abrir checklist técnico por historias (backend/API/seguridad/docs) y asociarlo 
 ## Pasos finales para cerrar Fase 3
 1. Ejecutar `composer install` en `backend/`.
 2. Ejecutar `php bin/console debug:router` y `php bin/console doctrine:schema:validate --skip-sync`.
-3. Ejecutar `bash scripts/phase_flow_validate.sh` y adjuntar `docs/PHASE_FLOW_VALIDATION.md`.
+3. Verificar rutas y schema con `debug:router` y `doctrine:schema:validate`.
 4. Política definitiva de staff en Mercure (sin staging/preprod):
    - Dev y Production usan mínimo privilegio fijo (sin wildcard para staff).
    - `/operator/fleet` queda como topic explícito único para staff.

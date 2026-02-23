@@ -14,7 +14,6 @@ Fase 1: bootstrap seguro base sobre Symfony **7.4 LTS** para portal logístico.
 
 ## Estructura monorepo
 - `backend/` Symfony
-- `infra/` placeholders de infraestructura
 - `docs/` documentación técnica
 
 ## Comandos base solicitados para la fase
@@ -92,13 +91,6 @@ Credenciales iniciales:
 - email: `admin@transporte.local`
 - password: `ChangeMe_123!` (cambiar en primer arranque)
 
-## Mini-paso de verificación local (sin E2E)
-```bash
-bash scripts/phase1_signoff.sh
-```
-
-Este script valida: composer, consola Symfony, migraciones, fixtures y chequeo Redis (`sess:transporte:*`) cuando `redis-cli` está disponible.
-
 ## Checklist aceptación Fase 1
 - [ ] composer install OK
 - [ ] symfony console funciona
@@ -107,14 +99,6 @@ Este script valida: composer, consola Symfony, migraciones, fixtures y chequeo R
 - [ ] Redis guarda sesiones (`sess:transporte:*`)
 - [ ] Turbo activo globalmente
 - [ ] Mercure opcional validado manualmente
-
-
-## Verificación E2E local (criterio manual de Symfony funcionando)
-```bash
-bash scripts/symfony_e2e_boot_check.sh
-```
-
-Este check levanta `db`, `redis`, `mercure` y `traccar` con `docker-compose.local.yml`, ejecuta `composer install`, valida consola Symfony y migraciones en contenedor `app`, y comprueba respuesta de Mercure.
 
 ### Traccar (GPS tracking local)
 
@@ -145,14 +129,6 @@ php bin/console about
 En esta etapa nos enfocamos en tener la aplicación Symfony arrancando correctamente; la estrategia de testing/CI se definirá en fases posteriores.
 
 
-
-
-## Flujo de validación entre fases (continuidad + decisiones)
-```bash
-bash scripts/phase_flow_validate.sh
-```
-
-Este flujo revisa encaje entre decisiones de fases previas y estado actual (Symfony 7.4, contratos de Fase 2, rutas críticas, realtime map/Mercure) y genera un reporte con recomendaciones en `docs/PHASE_FLOW_VALIDATION.md`.
 
 
 ## Cierre formal de Fase 2

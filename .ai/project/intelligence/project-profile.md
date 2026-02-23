@@ -38,8 +38,8 @@
 
 ### Infrastructure
 - **Container**: Docker Compose (5 services: app, db, redis, mercure, traccar)
-- **CI/CD**: Scripts (`scripts/phase_flow_validate.sh`, `scripts/check_symfony_74_lock.sh`)
-- **Cloud**: Hetzner VPS (3 servers: web, db, traccar)
+- **CI/CD**: GitHub Actions (lint + Symfony boot validation)
+- **Cloud**: Railway (auto-deploy from main)
 - **Sessions**: Redis 7
 
 ---
@@ -66,9 +66,8 @@ mxo-track/
 │   ├── config/           # Symfony configuration
 │   ├── migrations/       # 2 Doctrine migrations
 │   └── templates/        # Twig templates
-├── infra/                # Server provisioning (3 VPS)
-├── docs/                 # Project documentation (9 files)
-├── scripts/              # Utility scripts (4 files)
+├── docs/                 # Project documentation
+├── scripts/              # Railway entry point scripts (3 files)
 └── docker-compose.local.yml
 ```
 
@@ -205,7 +204,7 @@ When implementing new features, use these as templates:
 - TraccarApiClient has no interface/port (DIP violation)
 - Vendor types from Traccar API are used directly (no ACL/response mapping)
 - DriverApiController is the largest controller (286 lines) — could be decomposed
-- No CI/CD pipeline (GitHub Actions not configured)
+- CI pipeline is basic (lint + boot check only, no tests)
 
 ### Technical Debt
 | Item | Severity | Location |
@@ -258,9 +257,6 @@ php bin/console doctrine:fixtures:load -n
 
 # PHP syntax lint
 make lint
-
-# E2E boot check
-make e2e-symfony
 
 # Docker local dev
 docker compose -f docker-compose.local.yml up -d --build

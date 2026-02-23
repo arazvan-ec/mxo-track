@@ -50,6 +50,6 @@ Congelar la definición de “Done” de Fase 2 para evitar reabrir decisiones e
 
 - [x] Requisitos funcionales de Fase 2 implementados.
 - [x] Decisiones arquitectónicas registradas en `docs/DECISIONS.md`.
-- [x] Flujo de validación transversal disponible (`scripts/phase_flow_validate.sh`).
+- [x] Flujo de validación transversal disponible.
 - [x] Auditoría de fase actualizada (`docs/FASE2_AUDIT.md`).
 

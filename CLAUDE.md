@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**transporte-tracking** (mxo-track) — Logistics tracking portal built on **Symfony 7.4 LTS** (strict lock, no 8.x components). Monorepo with `backend/` (Symfony), `infra/` (server provisioning), and `docs/`.
+**transporte-tracking** (mxo-track) — Logistics tracking portal built on **Symfony 7.4 LTS** (strict lock, no 8.x components). Monorepo with `backend/` (Symfony) and `docs/`. Deployed on Railway.
 
 The system tracks vehicles via Traccar integration, manages delivery routes with driver proof-of-delivery (POD), and provides real-time position updates via Mercure. Multi-tenant via `customer_id` Doctrine SQL filter.
 
@@ -33,15 +33,6 @@ php bin/console doctrine:fixtures:load -n
 
 # PHP syntax lint (all src files)
 make lint
-
-# E2E boot check (starts Docker services)
-make e2e-symfony
-
-# Phase validation script
-bash scripts/phase_flow_validate.sh
-
-# Verify Symfony 7.4 lock is respected
-bash scripts/check_symfony_74_lock.sh
 ```
 
 ### Docker (local development)
