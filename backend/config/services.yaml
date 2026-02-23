@@ -1,7 +1,5 @@
 parameters:
   mercure.subscriber.ttl: '%env(int:MERCURE_SUBSCRIBER_TOKEN_TTL)%'
-  app.rate_limit.api_max_requests: 60
-  app.rate_limit.api_window_seconds: 60
   app.rate_limit.login_max_failures: 10
   app.rate_limit.login_window_seconds: 3600
 
