@@ -59,6 +59,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, SoftDel
 
     public function getUserIdentifier(): string { return $this->email; }
     public function getEmail(): string { return $this->email; }
+    public function setEmail(string $email): void { $this->email = mb_strtolower($email); }
 
     public function getName(): ?string { return $this->name; }
     public function setName(?string $name): void { $this->name = $name; }
