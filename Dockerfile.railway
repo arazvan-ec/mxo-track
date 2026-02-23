@@ -31,10 +31,9 @@ WORKDIR /app
 # Copy backend code
 COPY backend/ /app/
 
-# Install dependencies (production, deterministic, no app scripts during build)
-ENV APP_ENV=prod
-RUN APP_ENV=prod APP_DEBUG=0 composer install --no-dev --optimize-autoloader --no-interaction --no-scripts \
-    && APP_ENV=prod APP_DEBUG=0 composer run-script post-install-cmd --no-interaction
+# Install dependencies (production, deterministic)
+ENV APP_ENV=prod COMPOSER_ALLOW_SUPERUSER=1
+RUN composer install --no-dev --optimize-autoloader --no-interaction
 
 # Generate Doctrine proxy classes at build time
 RUN php bin/console doctrine:proxy:create-proxy-classes --env=prod 2>/dev/null || \
