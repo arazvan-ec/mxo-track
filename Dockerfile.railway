@@ -40,6 +40,9 @@ RUN APP_ENV=prod APP_DEBUG=0 composer install --no-dev --optimize-autoloader --n
 RUN php bin/console doctrine:proxy:create-proxy-classes --env=prod 2>/dev/null || \
     php bin/console cache:warmup --env=prod
 
+# Ensure var/ is writable by PHP-FPM (www-data)
+RUN mkdir -p /app/var/log /app/var/cache && chown -R www-data:www-data /app/var
+
 # Copy nginx config and start script
 COPY docker/nginx-railway.conf /etc/nginx/nginx-railway.conf.template
 COPY scripts/railway-start.sh /app/railway-start.sh
