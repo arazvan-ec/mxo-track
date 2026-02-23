@@ -460,9 +460,13 @@ function adminDashboard() {
     },
 
     async init() {
-      // Load vehicle names for the activity feed
+      // Load vehicle names and Mercure token for the activity feed
       try {
-        await fetch('/api/mercure-token', { credentials: 'include' });
+        const tokenRes = await fetch('/api/mercure-token', { credentials: 'include' });
+        if (tokenRes.ok) {
+          const tokenData = await tokenRes.json();
+          this._mercureToken = tokenData.token;
+        }
         const res = await fetch('/api/vehicles', { credentials: 'include' });
         if (res.ok) {
           const data = await res.json();
@@ -496,7 +500,11 @@ function adminDashboard() {
           return;
         }
 
-        this._eventSource = new EventSource(hub, { withCredentials: true });
+        if (this._mercureToken) {
+          hub.searchParams.set('authorization', this._mercureToken);
+        }
+
+        this._eventSource = new EventSource(hub);
 
         this._eventSource.onopen = () => {
           this.sseConnected = true;

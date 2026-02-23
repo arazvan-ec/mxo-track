@@ -527,7 +527,11 @@ function fleetMap() {
 
     async fetchMercureToken() {
       try {
-        await fetch('/api/mercure-token', { credentials: 'include' });
+        const res = await fetch('/api/mercure-token', { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          this._mercureToken = data.token;
+        }
       } catch (_) { /* silent */ }
     },
 
@@ -544,7 +548,11 @@ function fleetMap() {
       });
       hub.searchParams.append('topic', '/operator/fleet');
 
-      this.eventSource = new EventSource(hub.toString(), { withCredentials: true });
+      if (this._mercureToken) {
+        hub.searchParams.set('authorization', this._mercureToken);
+      }
+
+      this.eventSource = new EventSource(hub.toString());
 
       this.eventSource.onopen = () => {
         this.sseConnected = true;

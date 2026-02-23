@@ -237,7 +237,13 @@ function customerDashboard() {
 
     async _connectSSE() {
       try {
-        await fetch('/api/mercure-token', { credentials: 'include' });
+        const tokenRes = await fetch('/api/mercure-token', { credentials: 'include' });
+        let mercureToken = null;
+        if (tokenRes.ok) {
+          const tokenData = await tokenRes.json();
+          mercureToken = tokenData.token;
+        }
+
         const res = await fetch('/api/vehicles', { credentials: 'include' });
         if (!res.ok) return;
 
@@ -250,7 +256,11 @@ function customerDashboard() {
           hub.searchParams.append('topic', '/vehicles/' + v.public_id + '/position');
         });
 
-        this._eventSource = new EventSource(hub, { withCredentials: true });
+        if (mercureToken) {
+          hub.searchParams.set('authorization', mercureToken);
+        }
+
+        this._eventSource = new EventSource(hub);
         this._eventSource.onopen = () => { this.sseConnected = true; };
         this._eventSource.onerror = () => { this.sseConnected = false; };
 

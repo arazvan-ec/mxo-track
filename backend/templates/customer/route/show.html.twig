@@ -316,11 +316,16 @@
 
       // Mercure real-time vehicle tracking
       if (vehiclePublicId) {
-        fetch('/api/mercure-token', { credentials: 'include' }).then(function () {
+        fetch('/api/mercure-token', { credentials: 'include' }).then(function (res) {
+          return res.json();
+        }).then(function (data) {
           var hub = new URL('{{ mercure_public_url }}');
           hub.searchParams.set('topic', '/vehicles/' + vehiclePublicId + '/position');
+          if (data.token) {
+            hub.searchParams.set('authorization', data.token);
+          }
 
-          var es = new EventSource(hub, { withCredentials: true });
+          var es = new EventSource(hub);
           es.onmessage = function (e) {
             try {
               var d = JSON.parse(e.data);

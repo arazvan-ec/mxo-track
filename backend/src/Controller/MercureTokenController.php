@@ -8,7 +8,6 @@ use App\Entity\User;
 use App\Service\MercureJwtFactory;
 use App\Service\VisibilityScopeService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -66,14 +65,6 @@ class MercureTokenController extends AbstractController
 
         $token = $factory->createSubscriberToken($user, $effectiveVehiclePublicIds);
 
-        $response = new JsonResponse(['ok' => true]);
-        $response->headers->setCookie(Cookie::create('mercureAuthorization')
-            ->withValue($token)
-            ->withHttpOnly(true)
-            ->withSecure($request->isSecure() || 'prod' === ($_ENV['APP_ENV'] ?? null))
-            ->withSameSite('lax')
-            ->withPath('/.well-known/mercure'));
-
-        return $response;
+        return new JsonResponse(['ok' => true, 'token' => $token]);
     }
 }
