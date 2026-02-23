@@ -20,9 +20,8 @@ WORKDIR /app
 COPY backend/ /app/
 
 # Install dependencies (no dev, optimized autoloader)
-ENV APP_ENV=prod
-RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts \
-    && composer run-script post-install-cmd --no-interaction
+ENV APP_ENV=prod COMPOSER_ALLOW_SUPERUSER=1
+RUN composer install --no-dev --optimize-autoloader --no-interaction
 
 # Generate Doctrine proxy classes at build time
 RUN php bin/console doctrine:proxy:create-proxy-classes --env=prod 2>/dev/null || \
