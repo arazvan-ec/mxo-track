@@ -5,8 +5,28 @@ PORT="${PORT:-8000}"
 export APP_ENV="${APP_ENV:-prod}"
 export APP_DEBUG="${APP_DEBUG:-0}"
 
-echo "==> Running database migrations..."
-php bin/console doctrine:migrations:migrate --env=prod --no-interaction --allow-no-migration
+# Wait for database to be reachable (Railway internal DNS can take a moment)
+echo "==> Waiting for database connection..."
+for i in $(seq 1 15); do
+    if php -r "
+        \$url = getenv('DATABASE_URL');
+        if (!preg_match('#//([^:]+):([^@]+)@([^:/]+):?(\d+)?/([^?]+)#', \$url, \$m)) exit(1);
+        try { new PDO(\"pgsql:host={\$m[3]};port=\" . (\$m[4] ?: '5432') . \";dbname={\$m[5]}\", \$m[1], \$m[2], [PDO::ATTR_TIMEOUT => 3]); exit(0); }
+        catch (Exception \$e) { exit(1); }
+    " 2>/dev/null; then
+        echo "    Database is reachable."
+        break
+    fi
+    if [ "$i" -eq 15 ]; then
+        echo "    ERROR: Could not connect to database after 15 attempts."
+        exit 1
+    fi
+    echo "    Waiting for database... (attempt $i/15)"
+    sleep 2
+done
+
+echo "==> Updating database schema..."
+php bin/console doctrine:schema:update --force --env=prod --no-interaction
 
 echo "==> Warming up cache..."
 php bin/console cache:warmup --env=prod
