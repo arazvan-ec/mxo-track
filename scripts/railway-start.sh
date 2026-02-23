@@ -13,8 +13,12 @@ php -r "
     \$url = getenv('DATABASE_URL');
     if (!\$url) { echo \"    ERROR: DATABASE_URL is not set\n\"; exit(1); }
     \$p = parse_url(\$url);
-    if (!\$p || empty(\$p['host'])) { echo \"    ERROR: Cannot parse DATABASE_URL\n\"; exit(1); }
-    echo '    Target: ' . \$p['host'] . ':' . (\$p['port'] ?? '5432') . ltrim(\$p['path'] ?? '', '/') . \"\n\";
+    if (!\$p || empty(\$p['host'])) { echo \"    ERROR: Cannot parse DATABASE_URL (raw scheme: \" . substr(\$url, 0, 20) . \"...)\n\"; exit(1); }
+    \$host = \$p['host'];
+    \$port = \$p['port'] ?? 5432;
+    \$db = ltrim(\$p['path'] ?? '', '/');
+    \$query = \$p['query'] ?? '';
+    echo \"    Target: \$host:\$port/\$db\" . (\$query ? \"?\$query\" : '') . \"\n\";
 " || { echo "    FATAL: DATABASE_URL is missing or unparseable. Exiting."; exit 1; }
 
 MAX_ATTEMPTS=30
@@ -28,8 +32,14 @@ for i in $(seq 1 $MAX_ATTEMPTS); do
         \$dbname = ltrim(\$p['path'] ?? '', '/');
         \$user = urldecode(\$p['user'] ?? '');
         \$pass = urldecode(\$p['pass'] ?? '');
+        // Parse query params for sslmode
+        parse_str(\$p['query'] ?? '', \$params);
+        \$dsn = \"pgsql:host=\$host;port=\$port;dbname=\$dbname\";
+        if (!empty(\$params['sslmode'])) {
+            \$dsn .= ';sslmode=' . \$params['sslmode'];
+        }
         try {
-            new PDO(\"pgsql:host=\$host;port=\$port;dbname=\$dbname\", \$user, \$pass, [PDO::ATTR_TIMEOUT => 3]);
+            new PDO(\$dsn, \$user, \$pass, [PDO::ATTR_TIMEOUT => 5]);
             echo 'OK';
         } catch (Exception \$e) {
             echo 'FAIL:' . \$e->getMessage();
