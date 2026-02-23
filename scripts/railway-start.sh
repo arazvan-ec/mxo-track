@@ -7,21 +7,46 @@ export APP_DEBUG="${APP_DEBUG:-0}"
 
 # Wait for database to be reachable (Railway internal DNS can take a moment)
 echo "==> Waiting for database connection..."
-for i in $(seq 1 15); do
-    if php -r "
+
+# Debug: show parsed connection target (no password)
+php -r "
+    \$url = getenv('DATABASE_URL');
+    if (!\$url) { echo \"    ERROR: DATABASE_URL is not set\n\"; exit(1); }
+    \$p = parse_url(\$url);
+    if (!\$p || empty(\$p['host'])) { echo \"    ERROR: Cannot parse DATABASE_URL\n\"; exit(1); }
+    echo '    Target: ' . \$p['host'] . ':' . (\$p['port'] ?? '5432') . ltrim(\$p['path'] ?? '', '/') . \"\n\";
+" || { echo "    FATAL: DATABASE_URL is missing or unparseable. Exiting."; exit 1; }
+
+MAX_ATTEMPTS=30
+for i in $(seq 1 $MAX_ATTEMPTS); do
+    RESULT=$(php -r "
         \$url = getenv('DATABASE_URL');
-        if (!preg_match('#//([^:]+):([^@]+)@([^:/]+):?(\d+)?/([^?]+)#', \$url, \$m)) exit(1);
-        try { new PDO(\"pgsql:host={\$m[3]};port=\" . (\$m[4] ?: '5432') . \";dbname={\$m[5]}\", \$m[1], \$m[2], [PDO::ATTR_TIMEOUT => 3]); exit(0); }
-        catch (Exception \$e) { exit(1); }
-    " 2>/dev/null; then
-        echo "    Database is reachable."
+        \$p = parse_url(\$url);
+        if (!\$p || empty(\$p['host'])) { echo 'PARSE_ERROR'; exit(1); }
+        \$host = \$p['host'];
+        \$port = \$p['port'] ?? 5432;
+        \$dbname = ltrim(\$p['path'] ?? '', '/');
+        \$user = urldecode(\$p['user'] ?? '');
+        \$pass = urldecode(\$p['pass'] ?? '');
+        try {
+            new PDO(\"pgsql:host=\$host;port=\$port;dbname=\$dbname\", \$user, \$pass, [PDO::ATTR_TIMEOUT => 3]);
+            echo 'OK';
+        } catch (Exception \$e) {
+            echo 'FAIL:' . \$e->getMessage();
+        }
+    " 2>&1)
+
+    if [ "$RESULT" = "OK" ]; then
+        echo "    Database is reachable (attempt $i/$MAX_ATTEMPTS)."
         break
     fi
-    if [ "$i" -eq 15 ]; then
-        echo "    ERROR: Could not connect to database after 15 attempts."
+
+    if [ "$i" -eq "$MAX_ATTEMPTS" ]; then
+        echo "    ERROR: Could not connect to database after $MAX_ATTEMPTS attempts."
+        echo "    Last error: $RESULT"
         exit 1
     fi
-    echo "    Waiting for database... (attempt $i/15)"
+    echo "    Waiting for database... (attempt $i/$MAX_ATTEMPTS) [$RESULT]"
     sleep 2
 done
 

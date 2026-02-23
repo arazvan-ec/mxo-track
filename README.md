@@ -46,7 +46,7 @@ php -S 0.0.0.0:8000 -t public                  # arranca el servidor web
 ### Arranque en una línea (sin entrar al contenedor)
 
 ```bash
-docker compose -f docker-compose.local.yml up -d --build
+docker compose -f docker-compose.local.yml up --build
 docker compose -f docker-compose.local.yml exec app bash -c \
   "composer install && php bin/console doctrine:migrations:migrate -n && php -S 0.0.0.0:8000 -t public"
 ```
