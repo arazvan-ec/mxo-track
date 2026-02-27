@@ -1,7 +1,7 @@
 # Preguntas Abiertas — Pendientes de Resolver
 
 > Fecha: 2026-02-27
-> Estado: Pendiente de respuestas del cliente
+> Estado: En revisión — respuestas parciales recibidas, análisis en curso
 
 ---
 
@@ -10,33 +10,30 @@
 ### Q1: Tipos de Servicio Completos
 **Pregunta:** Mencionas paquetería entrega, entrega+recogida, devolución, y que "en la web hay más ejemplos". ¿Cuáles son TODOS los tipos de servicio que necesitamos soportar?
 **Impacto:** Define la entidad ServiceType y los flujos de cada uno.
-**Respuesta:**
+**Respuesta del cliente (2026-02-27):** "Con esa me vale, pero tú puedes investigar y recomendarme más?"
+**Acción:** Investigación en curso — análisis de tipos de servicio de SEUR, MRW, GLS, DHL, UPS, Correos Express. Ver documento `06-RESEARCH-SERVICE-TYPES.md`.
+**Estado:** 🔄 Investigando
 
 ---
 
 ### Q2: Estados de Bultos/Entregas — Lista completa
 **Pregunta:** Mencionas "cargado, en ruta, entregado, ausencia, etc." — ¿cuál es la lista COMPLETA de estados? ¿Cada bulto tiene su propio estado independiente, o todos los bultos de un envío comparten estado?
 **Impacto:** Define el modelo de estados y las transiciones válidas.
-**Propuesta:**
-```
-PENDING → LOADED → IN_ROUTE → OUT_FOR_DELIVERY → DELIVERED
-                                                 → ABSENT (reintento)
-                                                 → REFUSED
-                                                 → DAMAGED
-                                                 → RETURNED
-```
-**Respuesta:**
+**Respuesta del cliente (2026-02-27):** "Entrega, ausente, dañado — tú me puedes recomendar?"
+**Acción:** Investigación en curso — análisis de máquinas de estado de operadores logísticos españoles/europeos. Ver documento `07-RESEARCH-STATUSES.md`.
+**Estado:** 🔄 Investigando
 
 ---
 
 ### Q3: Modelo de Costes
 **Pregunta:** Mencionas €/ruta y €/bulto. ¿Cómo se calcula el coste?
-- ¿Es un coste fijo por ruta + variable por bulto?
-- ¿Incluye coste por km?
-- ¿Coste por hora del transportista?
-- ¿Se factura al cliente o es un coste interno?
-**Impacto:** Define las métricas del dashboard y el módulo ERP/Costes.
-**Respuesta:**
+**Respuesta del cliente (2026-02-27):** "Si es agent-native eso no debería importar, deberíamos ser capaces de hacerlo de múltiples formas y actualizar su impacto en otras partes de forma correcta."
+**Resolución:** ✅ **RESUELTO** — El cliente tiene razón. En un sistema agent-native, el modelo de costes NO se hardcodea. Se implementa como:
+- **Tools atómicos** de datos: `get_route_distance_km`, `get_driver_hours`, `get_fuel_cost`, `count_parcels`, `get_tolls`, etc.
+- **El agente compone** la fórmula según la petición: "coste por ruta", "coste por cliente", "comparar real vs presupuestado"
+- **Nuevos factores de coste** = nuevo tool + actualizar prompt, sin tocar código del calculador
+- Esto permite múltiples modelos de coste simultáneos (por cliente, por zona, por tipo de servicio)
+**Estado:** ✅ Resuelto — enfoque agent-native
 
 ---
 
@@ -45,20 +42,19 @@ PENDING → LOADED → IN_ROUTE → OUT_FOR_DELIVERY → DELIVERED
 - **Opción A:** Un LLM (Claude/GPT) que recibe peticiones en lenguaje natural y ejecuta tools
 - **Opción B:** Un sistema de reglas automatizado que procesa lógica de negocio
 - **Opción C:** Ambos — IA para decisiones complejas, reglas para flujos predecibles
-**Impacto:** Define toda la capa agent y la inversión en infraestructura IA.
-**Respuesta:**
+**Respuesta del cliente (2026-02-27):** "¿Cuál es la diferencia entre las operaciones? Hazme un análisis para saber elegir."
+**Acción:** Análisis comparativo en curso. Ver documento `08-RESEARCH-AGENT-TYPES.md`.
+**Estado:** 🔄 Investigando
 
 ---
 
 ## 🟡 IMPORTANTES (afectan diseño)
 
 ### Q5: SGA — Alcance del Módulo de Almacén
-**Pregunta:** Mencionas "entrada de mercancía" en el SGA. ¿Esto implica:
-- ¿Gestión de inventario (stock)?
-- ¿O solo registro de entrada/salida de bultos para entregas?
-- ¿Hay almacén(es) físico(s) que gestionar?
-**Impacto:** Si es un SGA completo, es un módulo enorme. Si es solo registro de bultos, es mucho más simple.
-**Respuesta:**
+**Pregunta:** Mencionas "entrada de mercancía" en el SGA. ¿Esto implica gestión completa o solo registro?
+**Respuesta del cliente (2026-02-27):** "Mejor gestión completa. Analízame las características de ambas opciones para que pueda leerlo luego."
+**Acción:** Análisis comparativo en curso. Ver documento `09-RESEARCH-SGA-WMS.md`.
+**Estado:** 🔄 Investigando
 
 ---
 
@@ -70,6 +66,7 @@ PENDING → LOADED → IN_ROUTE → OUT_FOR_DELIVERY → DELIVERED
 **Impacto:** Coste, precisión, dependencia de terceros.
 **Propuesta:** Empezar con OpenRouteService (ya integrado) y migrar si es necesario.
 **Respuesta:**
+**Estado:** ⬜ Pendiente
 
 ---
 
@@ -82,6 +79,7 @@ PENDING → LOADED → IN_ROUTE → OUT_FOR_DELIVERY → DELIVERED
 - WhatsApp ❓
 **Impacto:** Integraciones con terceros, costes.
 **Respuesta:**
+**Estado:** ⬜ Pendiente
 
 ---
 
@@ -97,6 +95,7 @@ PENDING → LOADED → IN_ROUTE → OUT_FOR_DELIVERY → DELIVERED
 reference,service_type,recipient_name,address,lat,lng,phone,parcels_count,total_weight_kg,total_volume_m3,preferred_window_start,preferred_window_end,notes
 ```
 **Respuesta:**
+**Estado:** ⬜ Pendiente
 
 ---
 
@@ -108,6 +107,7 @@ reference,service_type,recipient_name,address,lat,lng,phone,parcels_count,total_
 - ¿Tiene numeración secuencial?
 **Impacto:** Define el módulo de documentos.
 **Respuesta:**
+**Estado:** ⬜ Pendiente
 
 ---
 
@@ -119,6 +119,7 @@ reference,service_type,recipient_name,address,lat,lng,phone,parcels_count,total_
 - ¿Ratio de excepciones?
 **Impacto:** Define el dashboard de productividad.
 **Respuesta:**
+**Estado:** ⬜ Pendiente
 
 ---
 
@@ -128,6 +129,7 @@ reference,service_type,recipient_name,address,lat,lng,phone,parcels_count,total_
 **Pregunta:** ¿Los clientes tienen un solo punto de origen o varios almacenes?
 **Nota:** Ya existe `CustomerLocation` que soporta múltiples ubicaciones.
 **Respuesta:**
+**Estado:** ⬜ Pendiente
 
 ---
 
@@ -138,6 +140,7 @@ reference,service_type,recipient_name,address,lat,lng,phone,parcels_count,total_
 - Time-window based (priorizar ventanas horarias)
 - Hybrid (isócronas + distancia)
 **Respuesta:**
+**Estado:** ⬜ Pendiente
 
 ---
 
@@ -148,12 +151,14 @@ reference,service_type,recipient_name,address,lat,lng,phone,parcels_count,total_
 - ¿Cuántos vehículos en total?
 **Impacto:** Arquitectura (monolito vs microservicios), infra, colas.
 **Respuesta:**
+**Estado:** ⬜ Pendiente
 
 ---
 
 ### Q14: Página Web de Servicios
 **Pregunta:** Mencionas que "en la página web hay ejemplos de servicios". ¿Puedes compartir la URL o capturas? Necesito entender todos los tipos de servicio.
 **Respuesta:**
+**Estado:** ⬜ Pendiente
 
 ---
 
@@ -163,12 +168,17 @@ reference,service_type,recipient_name,address,lat,lng,phone,parcels_count,total_
 - ¿SMS a un número que se procesa?
 - ¿Esto es un requisito de fase 1 o futuro?
 **Respuesta:**
+**Estado:** ⬜ Pendiente
 
 ---
 
 ## Historial de Preguntas y Respuestas
 
-| Fecha | Pregunta | Respuesta |
+| Fecha | Pregunta | Respuesta del Cliente |
 |-------|----------|-----------|
-| 2026-02-27 | Documento inicial creado | Pendiente de revisión |
-| | | |
+| 2026-02-27 | Documento inicial creado | — |
+| 2026-02-27 | Q1: Tipos de servicio | "Con esa me vale, recomiéndame más" → Investigando |
+| 2026-02-27 | Q2: Estados | "Entrega, ausente, dañado, recomiéndame" → Investigando |
+| 2026-02-27 | Q3: Modelo de costes | "Agent-native = múltiples formas" → ✅ RESUELTO |
+| 2026-02-27 | Q4: Tipo de agente | "Hazme análisis comparativo" → Investigando |
+| 2026-02-27 | Q5: SGA alcance | "Gestión completa, analízame ambas opciones" → Investigando |
