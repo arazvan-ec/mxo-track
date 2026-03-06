@@ -51,6 +51,9 @@ class Shipment implements CustomerScopedEntityInterface, SoftDeletableInterface
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $notes = null;
 
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $description = null;
+
     #[ORM\Column(length: 30, enumType: ServiceType::class)]
     private ServiceType $serviceType = ServiceType::DELIVERY;
 
@@ -127,6 +130,9 @@ class Shipment implements CustomerScopedEntityInterface, SoftDeletableInterface
     public function setLongitude(?float $longitude): void { $this->longitude = $longitude; }
     public function getNotes(): ?string { return $this->notes; }
     public function setNotes(?string $notes): void { $this->notes = $notes; }
+
+    public function getDescription(): ?string { return $this->description; }
+    public function setDescription(?string $description): void { $this->description = $description; }
 
     public function getServiceTimeSeconds(): ?int { return $this->serviceTimeSeconds; }
     public function setServiceTimeSeconds(?int $serviceTimeSeconds): void { $this->serviceTimeSeconds = $serviceTimeSeconds; }

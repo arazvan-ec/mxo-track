@@ -18,7 +18,8 @@ framework:
                 dsn: 'doctrine://default?queue_name=failed'
             sync: 'sync://'
 
-        routing: {}
+        routing:
+            'App\Message\PostRouteAnalysisMessage': ml
 
 when@test:
     framework:

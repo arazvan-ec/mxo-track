@@ -66,6 +66,9 @@ class Route implements SoftDeletableInterface
     #[ORM\Column(nullable: true)]
     private ?int $estimatedDurationMinutes = null;
 
+    #[ORM\Column(type: 'json', nullable: true)]
+    private ?array $aiAnalysis = null;
+
     public function __construct(string $name)
     {
         $this->name = $name;
@@ -98,6 +101,11 @@ class Route implements SoftDeletableInterface
     public function setTotalDistanceKm(?float $v): void { $this->totalDistanceKm = $v !== null ? (string) $v : null; }
     public function getEstimatedDurationMinutes(): ?int { return $this->estimatedDurationMinutes; }
     public function setEstimatedDurationMinutes(?int $v): void { $this->estimatedDurationMinutes = $v; }
+
+    /** @return array<string, mixed>|null */
+    public function getAiAnalysis(): ?array { return $this->aiAnalysis; }
+    /** @param array<string, mixed>|null $aiAnalysis */
+    public function setAiAnalysis(?array $aiAnalysis): void { $this->aiAnalysis = $aiAnalysis; }
 
     public function start(): void
     {
