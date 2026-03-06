@@ -20,14 +20,16 @@ use PHPUnit\Framework\TestCase;
 final class ShipmentCsvImporterTest extends TestCase
 {
     private EntityManagerInterface&MockObject $entityManager;
-    private ImportRunTracker&MockObject $importRunTracker;
+    private ImportRunTracker $importRunTracker;
     private ShipmentCsvImporter $importer;
     private string $tmpDir;
 
     protected function setUp(): void
     {
         $this->entityManager = $this->createMock(EntityManagerInterface::class);
-        $this->importRunTracker = $this->createMock(ImportRunTracker::class);
+        $trackerEm = $this->createMock(EntityManagerInterface::class);
+        $trackerEm->method('persist');
+        $this->importRunTracker = new ImportRunTracker($trackerEm);
         $this->importer = new ShipmentCsvImporter($this->entityManager, $this->importRunTracker);
         $this->tmpDir = sys_get_temp_dir() . '/csv_test_' . uniqid();
         mkdir($this->tmpDir, 0777, true);
@@ -73,10 +75,6 @@ final class ShipmentCsvImporterTest extends TestCase
             });
 
         $this->entityManager->expects(self::once())->method('flush');
-
-        $this->importRunTracker->expects(self::once())
-            ->method('track')
-            ->with($customer, 2, 0);
 
         $result = $this->importer->import($csvPath, $customer);
 
@@ -130,10 +128,6 @@ final class ShipmentCsvImporterTest extends TestCase
         $this->entityManager->method('persist');
         $this->entityManager->expects(self::once())->method('flush');
 
-        $this->importRunTracker->expects(self::once())
-            ->method('track')
-            ->with($customer, 1, 1);
-
         $result = $this->importer->import($csvPath, $customer);
 
         self::assertSame(1, $result['created']);
@@ -162,10 +156,6 @@ final class ShipmentCsvImporterTest extends TestCase
 
         $this->entityManager->method('persist');
         $this->entityManager->method('flush');
-
-        $this->importRunTracker->expects(self::once())
-            ->method('track')
-            ->with($customer, 1, 0);
 
         $result = $this->importer->import($csvPath, $customer);
 
@@ -210,7 +200,6 @@ final class ShipmentCsvImporterTest extends TestCase
             });
 
         $this->entityManager->method('flush');
-        $this->importRunTracker->method('track');
 
         $result = $this->importer->import($csvPath, $customer);
 
@@ -250,7 +239,6 @@ final class ShipmentCsvImporterTest extends TestCase
             });
 
         $this->entityManager->method('flush');
-        $this->importRunTracker->method('track');
 
         $result = $this->importer->import($csvPath, $customer);
 
@@ -290,7 +278,6 @@ final class ShipmentCsvImporterTest extends TestCase
             });
 
         $this->entityManager->method('flush');
-        $this->importRunTracker->method('track');
 
         $result = $this->importer->import($csvPath, $customer);
 

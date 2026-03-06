@@ -72,9 +72,10 @@ final class MercureJwtFactoryTest extends TestCase
         $decoded = JWT::decode($token, new Key(self::SUBSCRIBER_KEY, 'HS256'));
 
         $topics = $decoded->mercure->subscribe;
-        self::assertCount(2, $topics);
+        self::assertCount(3, $topics);
         self::assertContains('/vehicles/01HX1234ABCDEF5678900000/position', $topics);
         self::assertContains('/vehicles/01HX5678ABCDEF1234560000/position', $topics);
+        self::assertContains(sprintf('/users/%s/notifications', $user->getId()), $topics);
     }
 
     #[Test]
@@ -140,7 +141,7 @@ final class MercureJwtFactoryTest extends TestCase
     }
 
     #[Test]
-    public function driverWithNoVehiclesGetsEmptyTopics(): void
+    public function driverWithNoVehiclesGetsNotificationsOnly(): void
     {
         $topicResolver = new TopicResolver();
         $factory = new MercureJwtFactory($topicResolver, self::SUBSCRIBER_KEY, self::TTL_SECONDS);
@@ -151,7 +152,8 @@ final class MercureJwtFactoryTest extends TestCase
         $token = $factory->createSubscriberToken($user);
         $decoded = JWT::decode($token, new Key(self::SUBSCRIBER_KEY, 'HS256'));
 
-        self::assertEmpty($decoded->mercure->subscribe);
+        self::assertCount(1, $decoded->mercure->subscribe);
+        self::assertContains(sprintf('/users/%s/notifications', $user->getId()), $decoded->mercure->subscribe);
     }
 
     #[Test]

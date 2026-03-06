@@ -1,0 +1,17 @@
+{
+    "$schema": "vendor/infection/infection/resources/schema.json",
+    "source": {
+        "directories": [
+            "src"
+        ]
+    },
+    "logs": {
+        "text": "var/infection/infection.log",
+        "summary": "var/infection/summary.log"
+    },
+    "minMsi": 100,
+    "minCoveredMsi": 100,
+    "testFramework": "phpunit",
+    "testFrameworkOptions": "--testsuite=Unit",
+    "tmpDir": "var/infection"
+}

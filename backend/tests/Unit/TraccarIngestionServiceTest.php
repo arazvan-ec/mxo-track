@@ -38,6 +38,7 @@ final class TraccarIngestionServiceTest extends TestCase
     public function ingestCreatesPositionForNewData(): void
     {
         $vehicle = new Vehicle('Test Truck');
+        $vehicle->initializePublicId();
 
         $routeRepo = $this->createMock(EntityRepository::class);
         $routeRepo->method('findOneBy')
@@ -153,6 +154,7 @@ final class TraccarIngestionServiceTest extends TestCase
     public function ingestCreatesMultiplePositions(): void
     {
         $vehicle = new Vehicle('Multi Truck');
+        $vehicle->initializePublicId();
 
         $routeRepo = $this->createMock(EntityRepository::class);
         $routeRepo->method('findOneBy')->willReturn(null);
@@ -210,6 +212,7 @@ final class TraccarIngestionServiceTest extends TestCase
     public function ingestAssociatesPositionWithActiveRoute(): void
     {
         $vehicle = new Vehicle('Route Truck');
+        $vehicle->initializePublicId();
         $activeRoute = new Route('Test Route');
         $activeRoute->setStatus(RouteStatus::ACTIVE);
 
@@ -274,6 +277,7 @@ final class TraccarIngestionServiceTest extends TestCase
     public function ingestContinuesOnMercureFailure(): void
     {
         $vehicle = new Vehicle('Mercure Fail Truck');
+        $vehicle->initializePublicId();
 
         $routeRepo = $this->createMock(EntityRepository::class);
         $routeRepo->method('findOneBy')->willReturn(null);

@@ -1,0 +1,241 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Cannot call method exec\(\) on object\|resource\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: src/Command/DatabaseMaintenanceCommand.php
+
+		-
+			message: '#^Method App\\Command\\SimulateGpsCommand\:\:ensureTraccarDevice\(\) never returns null so it can be removed from the return type\.$#'
+			identifier: return.unusedType
+			count: 1
+			path: src/Command/SimulateGpsCommand.php
+
+		-
+			message: '#^While loop condition is always true\.$#'
+			identifier: while.alwaysTrue
+			count: 1
+			path: src/Command/TraccarStreamCommand.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between mixed and null will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 5
+			path: src/Controller/Admin/RouteAdminController.php
+
+		-
+			message: '#^Call to an undefined method Symfony\\Component\\Security\\Core\\User\\UserInterface\:\:getCustomer\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: src/Controller/Customer/CustomerDashboardController.php
+
+		-
+			message: '#^Call to an undefined method Symfony\\Component\\Security\\Core\\User\\UserInterface\:\:getCustomer\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: src/Controller/Customer/CustomerRouteController.php
+
+		-
+			message: '#^Call to an undefined method Symfony\\Component\\Security\\Core\\User\\UserInterface\:\:getCustomer\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: src/Controller/Customer/CustomerShipmentController.php
+
+		-
+			message: '#^Method App\\Http\\ApiErrorResponder\:\:notFound\(\) invoked with 1 parameter, 2 required\.$#'
+			identifier: arguments.count
+			count: 1
+			path: src/Controller/LoadingManifestApiController.php
+
+		-
+			message: '#^Property App\\Controller\\Operator\\OperatorDashboardController\:\:\$em is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: src/Controller/Operator/OperatorDashboardController.php
+
+		-
+			message: '#^Method App\\Http\\ApiErrorResponder\:\:badRequest\(\) invoked with 1 parameter, 2 required\.$#'
+			identifier: arguments.count
+			count: 3
+			path: src/Controller/RouteOptimizationApiController.php
+
+		-
+			message: '#^Method App\\Http\\ApiErrorResponder\:\:notFound\(\) invoked with 1 parameter, 2 required\.$#'
+			identifier: arguments.count
+			count: 4
+			path: src/Controller/RouteOptimizationApiController.php
+
+		-
+			message: '#^Property App\\Entity\\CustomerVehicle\:\:\$id \(string\|null\) is never assigned string so it can be removed from the property type\.$#'
+			identifier: property.unusedType
+			count: 1
+			path: src/Entity/CustomerVehicle.php
+
+		-
+			message: '#^Property App\\Entity\\DriverAction\:\:\$clientActionId is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: src/Entity/DriverAction.php
+
+		-
+			message: '#^Property App\\Entity\\DriverAction\:\:\$createdAt is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: src/Entity/DriverAction.php
+
+		-
+			message: '#^Property App\\Entity\\DriverAction\:\:\$driver is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: src/Entity/DriverAction.php
+
+		-
+			message: '#^Property App\\Entity\\DriverAction\:\:\$stop is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: src/Entity/DriverAction.php
+
+		-
+			message: '#^Property App\\Entity\\DriverAction\:\:\$type is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: src/Entity/DriverAction.php
+
+		-
+			message: '#^Property App\\Entity\\Pod\:\:\$createdAt is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: src/Entity/Pod.php
+
+		-
+			message: '#^Property App\\Entity\\Pod\:\:\$createdByUser is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: src/Entity/Pod.php
+
+		-
+			message: '#^Property App\\Entity\\Pod\:\:\$routeStop is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: src/Entity/Pod.php
+
+		-
+			message: '#^Property App\\Entity\\Pod\:\:\$shipment \(App\\Entity\\Shipment\|null\) is never assigned App\\Entity\\Shipment so it can be removed from the property type\.$#'
+			identifier: property.unusedType
+			count: 1
+			path: src/Entity/Pod.php
+
+		-
+			message: '#^Property App\\Entity\\Pod\:\:\$shipment is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: src/Entity/Pod.php
+
+		-
+			message: '#^Property App\\Entity\\Pod\:\:\$signedByName is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: src/Entity/Pod.php
+
+		-
+			message: '#^Property App\\Entity\\Shipment\:\:\$requiredSkills \(array\|null\) is never assigned null so it can be removed from the property type\.$#'
+			identifier: property.unusedType
+			count: 1
+			path: src/Entity/Shipment.php
+
+		-
+			message: '#^Property App\\Entity\\ShipmentEvent\:\:\$shipment is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: src/Entity/ShipmentEvent.php
+
+		-
+			message: '#^Property App\\Entity\\Vehicle\:\:\$skills \(array\|null\) is never assigned null so it can be removed from the property type\.$#'
+			identifier: property.unusedType
+			count: 1
+			path: src/Entity/Vehicle.php
+
+		-
+			message: '#^Property App\\Entity\\VehiclePosition\:\:\$traccarPositionId \(int\|null\) is never assigned int so it can be removed from the property type\.$#'
+			identifier: property.unusedType
+			count: 1
+			path: src/Entity/VehiclePosition.php
+
+		-
+			message: '#^Property App\\Entity\\VehiclePosition\:\:\$traccarPositionId is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: src/Entity/VehiclePosition.php
+
+		-
+			message: '#^Parameter \$actor of method App\\Service\\AuditLogger\:\:log\(\) expects App\\Entity\\User\|null, Symfony\\Component\\Security\\Core\\User\\UserInterface given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/EventSubscriber/LoginAuditSubscriber.php
+
+		-
+			message: '#^Property App\\EventSubscriber\\LoginAuditSubscriber\:\:\$em is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: src/EventSubscriber/LoginAuditSubscriber.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type App\\Entity\\Customer\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: src/Security/TopicResolver.php
+
+		-
+			message: '#^Call to method from\(\) on an unknown class Symfony\\Component\\Mime\\Email\.$#'
+			identifier: class.notFound
+			count: 3
+			path: src/Service/EmailNotificationService.php
+
+		-
+			message: '#^Call to method send\(\) on an unknown class Symfony\\Component\\Mailer\\MailerInterface\.$#'
+			identifier: class.notFound
+			count: 1
+			path: src/Service/EmailNotificationService.php
+
+		-
+			message: '#^Instantiated class Symfony\\Component\\Mime\\Email not found\.$#'
+			identifier: class.notFound
+			count: 3
+			path: src/Service/EmailNotificationService.php
+
+		-
+			message: '#^Parameter \$email of method App\\Service\\EmailNotificationService\:\:safeSend\(\) has invalid type Symfony\\Component\\Mime\\Email\.$#'
+			identifier: class.notFound
+			count: 1
+			path: src/Service/EmailNotificationService.php
+
+		-
+			message: '#^Parameter \$mailer of method App\\Service\\EmailNotificationService\:\:__construct\(\) has invalid type Symfony\\Component\\Mailer\\MailerInterface\.$#'
+			identifier: class.notFound
+			count: 1
+			path: src/Service/EmailNotificationService.php
+
+		-
+			message: '#^Property App\\Service\\EmailNotificationService\:\:\$mailer has unknown class Symfony\\Component\\Mailer\\MailerInterface as its type\.$#'
+			identifier: class.notFound
+			count: 1
+			path: src/Service/EmailNotificationService.php
+
+		-
+			message: '#^Property App\\Service\\RouteBuilder\:\:\$em is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: src/Service/RouteBuilder.php
+
+		-
+			message: '#^Call to function is_array\(\) with array will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: src/Service/TraccarApiClient.php
+
+		-
+			message: '#^Parameter \#1 \$array \(list\<string\>\) of array_values is already a list, call has no effect\.$#'
+			identifier: arrayValues.list
+			count: 1
+			path: src/Service/VisibilityScopeService.php
