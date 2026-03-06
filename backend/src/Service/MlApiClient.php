@@ -5,86 +5,106 @@ declare(strict_types=1);
 namespace App\Service;
 
 use Psr\Log\LoggerInterface;
+use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
- * HTTP client for the ML sidecar (FastAPI) service.
+ * HTTP client for the Python ML sidecar service.
  */
 final class MlApiClient
 {
     public function __construct(
         private readonly HttpClientInterface $httpClient,
-        private readonly string $baseUrl,
+        private readonly string $mlServiceUrl,
         private readonly LoggerInterface $logger,
-    ) {}
+    ) {
+    }
 
     /**
-     * Call a prediction endpoint on the ML service.
+     * Request a prediction from the ML service.
      *
-     * @param array<string, mixed> $payload
-     * @return array<string, mixed>|null Null on failure (caller should use fallback).
+     * @param array<string, mixed> $features
+     * @return array<string, mixed>
      */
-    public function predict(string $endpoint, array $payload): ?array
+    public function predict(string $model, array $features): array
     {
-        $url = rtrim($this->baseUrl, '/') . '/' . ltrim($endpoint, '/');
+        return $this->postJson("/predict/{$model}", $features);
+    }
 
+    /**
+     * Trigger model training on the ML service.
+     *
+     * @param array<string, mixed> $params
+     * @return array<string, mixed>
+     */
+    public function train(string $model, array $params = []): array
+    {
+        return $this->postJson("/train/{$model}", $params);
+    }
+
+    /**
+     * Check the health of the ML service.
+     *
+     * @return array<string, mixed>
+     */
+    public function health(): array
+    {
         try {
-            $response = $this->httpClient->request('POST', $url, [
-                'json' => $payload,
-                'timeout' => 10,
-            ]);
+            $response = $this->httpClient->request('GET', $this->baseUrl('/health'));
+            $statusCode = $response->getStatusCode();
 
-            if ($response->getStatusCode() !== 200) {
-                $this->logger->warning('ML service returned non-200', [
-                    'endpoint' => $endpoint,
-                    'status' => $response->getStatusCode(),
-                ]);
-
-                return null;
+            if ($statusCode >= 400) {
+                return ['status' => 'error', 'code' => $statusCode];
             }
 
-            return $response->toArray();
-        } catch (\Throwable $e) {
-            $this->logger->error('ML service call failed', [
-                'endpoint' => $endpoint,
-                'error' => $e->getMessage(),
+            /** @var array<string, mixed> */
+            return $response->toArray(false);
+        } catch (TransportExceptionInterface $e) {
+            $this->logger->warning('ML service health check failed: {message}', [
+                'message' => $e->getMessage(),
             ]);
 
-            return null;
+            return ['status' => 'unreachable', 'error' => $e->getMessage()];
         }
     }
 
     /**
-     * Trigger model training.
-     *
-     * @return array<string, mixed>|null Null on failure.
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>
      */
-    public function train(string $endpoint): ?array
+    private function postJson(string $path, array $payload): array
     {
-        $url = rtrim($this->baseUrl, '/') . '/' . ltrim($endpoint, '/');
-
         try {
-            $response = $this->httpClient->request('POST', $url, [
-                'timeout' => 120,
+            $response = $this->httpClient->request('POST', $this->baseUrl($path), [
+                'json' => $payload,
+                'timeout' => 30,
             ]);
 
-            if ($response->getStatusCode() !== 200) {
-                $this->logger->warning('ML training returned non-200', [
-                    'endpoint' => $endpoint,
-                    'status' => $response->getStatusCode(),
+            $statusCode = $response->getStatusCode();
+
+            if ($statusCode >= 400) {
+                $this->logger->error('ML service returned error {code} for {path}', [
+                    'code' => $statusCode,
+                    'path' => $path,
                 ]);
 
-                return null;
+                return [];
             }
 
-            return $response->toArray();
-        } catch (\Throwable $e) {
-            $this->logger->error('ML training call failed', [
-                'endpoint' => $endpoint,
-                'error' => $e->getMessage(),
+            /** @var array<string, mixed> */
+            return $response->toArray(false);
+        } catch (TransportExceptionInterface $e) {
+            $this->logger->error('ML service request failed for {path}: {message}', [
+                'path' => $path,
+                'message' => $e->getMessage(),
             ]);
 
-            return null;
+            return [];
         }
+    }
+
+    private function baseUrl(string $path): string
+    {
+        return rtrim($this->mlServiceUrl, '/') . $path;
     }
 }

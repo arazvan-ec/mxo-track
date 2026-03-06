@@ -21,6 +21,7 @@ services:
       TRACCAR_PASSWORD: admin
       VROOM_URL: http://vroom:3000
       OSRM_URL: http://osrm:5000
+      ML_SERVICE_URL: http://ml:5200
     depends_on:
       - db
       - redis
@@ -114,6 +115,7 @@ services:
       TRACCAR_PASSWORD: admin
       VROOM_URL: http://vroom:3000
       OSRM_URL: http://osrm:5000
+      ML_SERVICE_URL: http://ml:5200
     depends_on:
       - db
       - redis
@@ -129,6 +131,16 @@ services:
       - traccar_pgdata:/var/lib/postgresql/data
     ports:
       - "5433:5432"
+
+  ml:
+    build: ./ml-service
+    ports:
+      - "5200:5200"
+    environment:
+      DATABASE_URL: postgresql://mxo:mxo@db:5432/mxo_track
+    depends_on:
+      - db
+    restart: unless-stopped
 
 volumes:
   pgdata_local:
