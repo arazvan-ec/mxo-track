@@ -35,44 +35,41 @@ class RouteOptimizationApiController extends AbstractController
     ) {}
 
     /**
-     * Optimize stop order for a route.
-     * Supports ?strategy=nearest (default) or ?strategy=farthest
+     * Optimize stop order for a route using VROOM + OSRM.
      */
     #[Route('/routes/{publicId}/optimize', name: 'api_route_optimize', methods: ['POST'])]
     #[IsGranted('ROLE_OPERATOR')]
-    public function optimizeRoute(string $publicId, Request $request): JsonResponse
+    public function optimizeRoute(string $publicId): JsonResponse
     {
         $route = $this->findRouteByPublicId($publicId);
         if ($route === null) {
             return $this->errorResponder->notFound('Ruta no encontrada.');
         }
 
-        $strategy = $request->query->getString('strategy', 'nearest');
-
-        $result = match ($strategy) {
-            'farthest' => $this->optimizer->optimizeFarthestFirst($route),
-            default => $this->optimizer->optimizeStopOrder($route),
-        };
-
+        $result = $this->optimizer->optimizeStopOrder($route);
         $this->optimizer->applyOptimizedOrder($result['optimized']);
 
-        // Update route distance
+        // Update route with VROOM's real road distance
         $route->setTotalDistanceKm($result['distanceAfter']);
 
-        // Calculate timing
-        $timing = $this->optimizer->estimateRouteTiming($route);
-        $route->setEstimatedDurationMinutes((int) round($timing['totalTimeMinutes']));
+        // Estimate duration from VROOM distance + service time
+        $deliveryStops = array_filter(
+            $result['optimized'],
+            static fn (array $item): bool => !$item['stop']->isOrigin(),
+        );
+        $durationMinutes = (int) round(($result['distanceAfter'] / 40.0) * 60)
+            + \count($deliveryStops) * 5;
+        $route->setEstimatedDurationMinutes($durationMinutes);
 
         $this->em->flush();
 
         return new JsonResponse([
-            'strategy' => $strategy,
             'distanceBefore' => round($result['distanceBefore'], 2),
             'distanceAfter' => round($result['distanceAfter'], 2),
             'improvement' => $result['distanceBefore'] > 0
                 ? round((1 - $result['distanceAfter'] / $result['distanceBefore']) * 100, 1)
                 : 0,
-            'timing' => $timing,
+            'estimatedDurationMinutes' => $durationMinutes,
             'stops' => array_map(static fn (array $item): array => [
                 'publicId' => $item['stop']->getPublicIdString(),
                 'sequence' => $item['newSequence'],

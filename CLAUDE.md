@@ -84,6 +84,18 @@ docker compose -f docker-compose.local.yml exec app bash -c \
 | PostgreSQL (app) | localhost:5432 | User: `mxo`, DB: `mxo_track` |
 | PostgreSQL (traccar) | localhost:5433 | User: `traccar`, DB: `traccar` |
 | Redis | localhost:6379 | Sesiones |
+| OSRM (routing engine) | (internal only, port 5000) | Necesita mapa preparado previamente |
+| VROOM (VRP optimizer) | http://localhost:5100 | API de optimización de rutas |
+
+#### Preparación OSRM (primera vez)
+
+Antes del primer arranque, hay que descargar y procesar el mapa de Madrid para OSRM:
+
+```bash
+./docker/osrm/prepare-map.sh
+```
+
+Esto descarga ~75 MB de Geofabrik y genera los ficheros `.osrm.*` en `docker/osrm/data/`. Solo es necesario ejecutarlo una vez (o cuando se quiera actualizar el mapa).
 
 #### Notas
 
@@ -91,7 +103,7 @@ docker compose -f docker-compose.local.yml exec app bash -c \
 - Traccar usa **PostgreSQL dedicado** (`traccar_db`, puerto 5433 en host). La configuración se monta desde `docker/traccar-local/traccar.xml`. **No crea usuario admin automáticamente** (ver sección "Inicialización de Traccar" más abajo). La app se conecta vía `TRACCAR_BASE_URL=http://traccar:8082`.
 - Si se cierra la terminal, el servidor PHP se detiene. Para arrancarlo de nuevo: entrar al contenedor y ejecutar `php -S 0.0.0.0:8000 -t public`.
 
-Services: `app` (PHP 8.4, puerto 8000), `db` (postgres:16, puerto 5432), `redis` (redis:7, puerto 6379), `mercure` (dunglas/mercure, puerto 3000), `traccar` (traccar/traccar, puerto 8082 API/Web + 5055 GPS), `traccar_db` (postgres:16, puerto 5433 — BD dedicada para Traccar).
+Services: `app` (PHP 8.4, puerto 8000), `db` (postgres:16, puerto 5432), `redis` (redis:7, puerto 6379), `mercure` (dunglas/mercure, puerto 3000), `traccar` (traccar/traccar, puerto 8082 API/Web + 5055 GPS), `traccar_db` (postgres:16, puerto 5433 — BD dedicada para Traccar), `osrm` (osrm/osrm-backend, puerto 5000 interno — routing engine), `vroom` (ghcr.io/vroom-project/vroom-docker, puerto 5100 host / 3000 interno — optimizador VRP).
 
 ## Architecture
 
@@ -127,6 +139,17 @@ Defined in `UserRole` enum. Access control: `/admin` requires ADMIN or OPERATOR;
 - **Pod** (Proof of Delivery): Linked to RouteStop, stores recipient ID and driver confirmation
 - **DriverAction**: Idempotency tracking for driver operations via `clientActionId`
 - **AuditLog**: Structured audit trail for security-sensitive operations
+
+### Route Optimization (VROOM + OSRM)
+
+- `RouteBuilder`: Builds optimized routes using VROOM VRP solver. Distributes shipments across vehicles and orders stops optimally using real road distances.
+- `VroomApiClient`: HTTP client for VROOM Express API (POST JSON with vehicles + jobs)
+- `VroomRequestMapper`: Converts domain entities (Vehicle, Shipment) to VROOM format. Note: VROOM uses `[longitude, latitude]` coordinate order and integer capacities (grams, cm³, parcels).
+- `VroomResponseMapper`: Converts VROOM response back to Route/RouteStop entities
+- `RouteOptimizationService`: Re-optimizes stop order of existing routes via VROOM. Keeps Haversine distance helpers for UI display.
+- `RouteCapacityValidator`: Validates vehicle capacity constraints (weight, volume, parcels)
+- VROOM capacity dimensions: `[weight_grams, volume_cm3, parcels]` (3 dimensions)
+- OSRM provides the road network routing (distances, durations) used by VROOM
 
 ### Traccar Integration
 

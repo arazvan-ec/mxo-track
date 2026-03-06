@@ -19,11 +19,13 @@ services:
       TRACCAR_WS_URL: ws://traccar:8082/api/socket
       TRACCAR_USERNAME: admin
       TRACCAR_PASSWORD: admin
+      VROOM_URL: http://vroom:3000
     depends_on:
       - db
       - redis
       - mercure
       - traccar
+      - vroom
     ports:
       - "8000:8000"
     tty: true
@@ -67,6 +69,24 @@ services:
     ports:
       - "8082:8082"
       - "5055:5055"
+
+  osrm:
+    image: osrm/osrm-backend
+    volumes:
+      - ./docker/osrm/data:/data:ro
+    command: osrm-routed --algorithm mld /data/comunidad-de-madrid-latest.osrm
+    restart: unless-stopped
+
+  vroom:
+    image: ghcr.io/vroom-project/vroom-docker:v1.15.0
+    volumes:
+      - ./docker/vroom/config.yml:/conf/config.yml:ro
+    environment:
+      VROOM_ROUTER: osrm
+    depends_on:
+      - osrm
+    ports:
+      - "5100:3000"
 
   traccar_db:
     image: postgres:16-alpine

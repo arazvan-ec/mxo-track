@@ -41,6 +41,10 @@ services:
     arguments:
       $mercureInternalUrl: '%env(MERCURE_URL)%'
 
+  App\Service\VroomApiClient:
+    arguments:
+      $vroomUrl: '%env(VROOM_URL)%'
+
   App\Service\WebhookNotificationService:
     arguments:
       $webhookSecret: '%env(default::WEBHOOK_SECRET)%'

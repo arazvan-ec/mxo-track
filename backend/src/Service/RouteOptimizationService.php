@@ -8,14 +8,19 @@ use App\Entity\Route;
 use App\Entity\RouteStop;
 use Doctrine\ORM\EntityManagerInterface;
 
+/**
+ * Re-optimizes the stop order of an existing route using VROOM.
+ * Also provides Haversine-based distance calculations for UI display.
+ */
 final class RouteOptimizationService
 {
     public function __construct(
         private readonly EntityManagerInterface $em,
+        private readonly VroomApiClient $vroomClient,
     ) {}
 
     /**
-     * Optimizes the stop order of a route using nearest-neighbor heuristic.
+     * Optimizes the stop order of a route using VROOM + OSRM.
      *
      * @return array{
      *     optimized: list<array{stop: RouteStop, newSequence: int}>,
@@ -27,7 +32,6 @@ final class RouteOptimizationService
     {
         $stops = $this->getStopsForRoute($route);
 
-        // Separate origin stop from delivery stops
         $originStop = null;
         $deliveryStops = [];
 
@@ -39,70 +43,60 @@ final class RouteOptimizationService
             }
         }
 
-        // Calculate distance before optimization
         $distanceBefore = $this->calculateTotalDistance($stops);
 
-        // If we have fewer than 2 delivery stops, no optimization needed
         if (\count($deliveryStops) < 2) {
-            $result = [];
-            $seq = 0;
-
-            if ($originStop !== null) {
-                $result[] = ['stop' => $originStop, 'newSequence' => $seq];
-                $seq++;
-            }
-
-            foreach ($deliveryStops as $stop) {
-                $result[] = ['stop' => $stop, 'newSequence' => $seq];
-                $seq++;
-            }
-
-            return [
-                'optimized' => $result,
-                'distanceBefore' => $distanceBefore,
-                'distanceAfter' => $distanceBefore,
-            ];
+            return $this->buildResult($originStop, $deliveryStops, $distanceBefore, $distanceBefore);
         }
 
-        // Determine start point for nearest-neighbor
-        $startLat = null;
-        $startLng = null;
+        // Build VROOM request: single vehicle with all stops as jobs
+        $originLat = $originStop?->getLatitude();
+        $originLng = $originStop?->getLongitude();
 
-        if ($originStop !== null && $originStop->getLatitude() !== null && $originStop->getLongitude() !== null) {
-            $startLat = $originStop->getLatitude();
-            $startLng = $originStop->getLongitude();
-        } elseif (\count($deliveryStops) > 0) {
-            // Use first delivery stop as start
-            $startLat = $deliveryStops[0]->getLatitude();
-            $startLng = $deliveryStops[0]->getLongitude();
-        }
-
-        // Apply nearest-neighbor heuristic
-        $optimizedDeliveries = $this->nearestNeighbor($deliveryStops, $startLat, $startLng);
-
-        // Build result with origin first
-        $result = [];
-        $seq = 0;
-
-        if ($originStop !== null) {
-            $result[] = ['stop' => $originStop, 'newSequence' => $seq];
-            $seq++;
-        }
-
-        foreach ($optimizedDeliveries as $stop) {
-            $result[] = ['stop' => $stop, 'newSequence' => $seq];
-            $seq++;
-        }
-
-        // Calculate distance after optimization
-        $optimizedStops = array_map(static fn (array $item): RouteStop => $item['stop'], $result);
-        $distanceAfter = $this->calculateTotalDistance($optimizedStops);
-
-        return [
-            'optimized' => $result,
-            'distanceBefore' => $distanceBefore,
-            'distanceAfter' => $distanceAfter,
+        $vehicle = [
+            'id' => 0,
         ];
+
+        if ($originLat !== null && $originLng !== null) {
+            $coords = [$originLng, $originLat]; // VROOM uses [lon, lat]
+            $vehicle['start'] = $coords;
+            $vehicle['end'] = $coords;
+        }
+
+        $jobs = [];
+        $stopMap = [];
+
+        foreach ($deliveryStops as $index => $stop) {
+            if ($stop->getLatitude() === null || $stop->getLongitude() === null) {
+                continue;
+            }
+
+            $jobs[] = [
+                'id' => $index,
+                'location' => [$stop->getLongitude(), $stop->getLatitude()],
+                'service' => 300,
+            ];
+            $stopMap[$index] = $stop;
+        }
+
+        if (\count($jobs) < 2) {
+            return $this->buildResult($originStop, $deliveryStops, $distanceBefore, $distanceBefore);
+        }
+
+        $vroomResponse = $this->vroomClient->optimize([$vehicle], $jobs);
+
+        // Extract optimized order from VROOM response
+        $optimizedDeliveries = [];
+        foreach ($vroomResponse['routes'][0]['steps'] ?? [] as $step) {
+            if ($step['type'] === 'job' && isset($stopMap[$step['id']])) {
+                $optimizedDeliveries[] = $stopMap[$step['id']];
+            }
+        }
+
+        // Distance from VROOM (meters to km)
+        $distanceAfter = ($vroomResponse['routes'][0]['distance'] ?? 0) / 1000.0;
+
+        return $this->buildResult($originStop, $optimizedDeliveries, $distanceBefore, $distanceAfter);
     }
 
     /**
@@ -167,7 +161,6 @@ final class RouteOptimizationService
 
     /**
      * Calculates distance between two consecutive stops.
-     * Returns null if coordinates are missing.
      */
     public function distanceBetweenStops(RouteStop $a, RouteStop $b): ?float
     {
@@ -182,144 +175,6 @@ final class RouteOptimizationService
             $b->getLatitude(),
             $b->getLongitude(),
         );
-    }
-
-    /**
-     * Nearest-neighbor heuristic: from the start point, always visit the closest unvisited stop.
-     *
-     * @param list<RouteStop> $stops
-     * @return list<RouteStop>
-     */
-    private function nearestNeighbor(array $stops, ?float $startLat, ?float $startLng): array
-    {
-        if (\count($stops) === 0) {
-            return [];
-        }
-
-        // If no start coordinates, return stops unchanged
-        if ($startLat === null || $startLng === null) {
-            return $stops;
-        }
-
-        $unvisited = $stops;
-        $ordered = [];
-        $currentLat = $startLat;
-        $currentLng = $startLng;
-
-        while (\count($unvisited) > 0) {
-            $nearestIndex = 0;
-            $nearestDistance = PHP_FLOAT_MAX;
-
-            foreach ($unvisited as $index => $stop) {
-                if ($stop->getLatitude() === null || $stop->getLongitude() === null) {
-                    // Stops without coordinates go to the end; treat as very far
-                    $distance = PHP_FLOAT_MAX - 1;
-                } else {
-                    $distance = $this->calculateDistance(
-                        $currentLat,
-                        $currentLng,
-                        $stop->getLatitude(),
-                        $stop->getLongitude(),
-                    );
-                }
-
-                if ($distance < $nearestDistance) {
-                    $nearestDistance = $distance;
-                    $nearestIndex = $index;
-                }
-            }
-
-            $nearest = $unvisited[$nearestIndex];
-            $ordered[] = $nearest;
-
-            if ($nearest->getLatitude() !== null && $nearest->getLongitude() !== null) {
-                $currentLat = $nearest->getLatitude();
-                $currentLng = $nearest->getLongitude();
-            }
-
-            array_splice($unvisited, $nearestIndex, 1);
-        }
-
-        return $ordered;
-    }
-
-    /**
-     * Farthest-first optimization: start from the farthest point and work back to origin.
-     * Better for delivery routes where you want to deliver the farthest point first
-     * and return via the closest stops.
-     *
-     * @return array{
-     *     optimized: list<array{stop: RouteStop, newSequence: int}>,
-     *     distanceBefore: float,
-     *     distanceAfter: float,
-     * }
-     */
-    public function optimizeFarthestFirst(Route $route): array
-    {
-        $stops = $this->getStopsForRoute($route);
-
-        $originStop = null;
-        $deliveryStops = [];
-
-        foreach ($stops as $stop) {
-            if ($stop->isOrigin()) {
-                $originStop = $stop;
-            } else {
-                $deliveryStops[] = $stop;
-            }
-        }
-
-        $distanceBefore = $this->calculateTotalDistance($stops);
-
-        if (\count($deliveryStops) < 2) {
-            return $this->buildResultNoOptimization($originStop, $deliveryStops, $distanceBefore);
-        }
-
-        $startLat = $originStop?->getLatitude();
-        $startLng = $originStop?->getLongitude();
-
-        if ($startLat === null || $startLng === null) {
-            return $this->buildResultNoOptimization($originStop, $deliveryStops, $distanceBefore);
-        }
-
-        // Sort by distance from origin (farthest first)
-        $stopsWithDistance = [];
-        foreach ($deliveryStops as $stop) {
-            $dist = 0.0;
-            if ($stop->getLatitude() !== null && $stop->getLongitude() !== null) {
-                $dist = $this->calculateDistance($startLat, $startLng, $stop->getLatitude(), $stop->getLongitude());
-            }
-            $stopsWithDistance[] = ['stop' => $stop, 'distance' => $dist];
-        }
-
-        usort($stopsWithDistance, static fn (array $a, array $b): int => $b['distance'] <=> $a['distance']);
-
-        // Now from the farthest point, use nearest-neighbor to return efficiently
-        $farthestFirst = array_map(static fn (array $item): RouteStop => $item['stop'], $stopsWithDistance);
-        $optimizedDeliveries = $this->nearestNeighborFromFirst($farthestFirst);
-
-        // Build result
-        $result = [];
-        $seq = 0;
-
-        if ($originStop !== null) {
-            $result[] = ['stop' => $originStop, 'newSequence' => $seq];
-            $seq++;
-        }
-
-        foreach ($optimizedDeliveries as $stop) {
-            $result[] = ['stop' => $stop, 'newSequence' => $seq];
-            $seq++;
-        }
-
-        $optimizedStops = array_map(static fn (array $item): RouteStop => $item['stop'], $result);
-        $distanceAfter = $this->calculateTotalDistance($optimizedStops);
-
-        return [
-            'optimized' => $result,
-            'distanceBefore' => $distanceBefore,
-            'distanceAfter' => $distanceAfter,
-        ];
     }
 
     /**
@@ -356,14 +211,9 @@ final class RouteOptimizationService
     }
 
     /**
-     * @param list<RouteStop> $stops
-     * @return array{
-     *     optimized: list<array{stop: RouteStop, newSequence: int}>,
-     *     distanceBefore: float,
-     *     distanceAfter: float,
-     * }
+     * @return list<array{stop: RouteStop, newSequence: int}>
      */
-    private function buildResultNoOptimization(?RouteStop $originStop, array $stops, float $distance): array
+    private function buildResult(?RouteStop $originStop, array $deliveryStops, float $distanceBefore, float $distanceAfter): array
     {
         $result = [];
         $seq = 0;
@@ -373,43 +223,16 @@ final class RouteOptimizationService
             $seq++;
         }
 
-        foreach ($stops as $stop) {
+        foreach ($deliveryStops as $stop) {
             $result[] = ['stop' => $stop, 'newSequence' => $seq];
             $seq++;
         }
 
         return [
             'optimized' => $result,
-            'distanceBefore' => $distance,
-            'distanceAfter' => $distance,
+            'distanceBefore' => $distanceBefore,
+            'distanceAfter' => $distanceAfter,
         ];
-    }
-
-    /**
-     * From the first stop in the list, apply nearest-neighbor to the remaining.
-     *
-     * @param list<RouteStop> $stops
-     * @return list<RouteStop>
-     */
-    private function nearestNeighborFromFirst(array $stops): array
-    {
-        if (\count($stops) <= 1) {
-            return $stops;
-        }
-
-        $first = $stops[0];
-        $rest = \array_slice($stops, 1);
-
-        $startLat = $first->getLatitude();
-        $startLng = $first->getLongitude();
-
-        if ($startLat === null || $startLng === null) {
-            return $stops;
-        }
-
-        $optimizedRest = $this->nearestNeighbor($rest, $startLat, $startLng);
-
-        return array_merge([$first], $optimizedRest);
     }
 
     /**
