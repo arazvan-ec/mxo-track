@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Entity\RouteStop;
 use App\Entity\ShipmentEvent;
+use App\Enum\RouteStopStatus;
 use App\Enum\ShipmentEventType;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -84,5 +86,120 @@ final class ExceptionPatternService
         $patterns = $this->getPatterns();
 
         return array_slice($patterns, 0, $limit);
+    }
+
+    /**
+     * Analyze exception patterns within a date range (route-stop based analysis for AI assistant).
+     *
+     * @return array{
+     *     total_exceptions: int,
+     *     by_exception_code: list<array{code: string, count: int}>,
+     *     by_driver: list<array{driver_name: string, driver_email: string, exceptions: int}>,
+     *     by_time_of_day: list<array{hour_range: string, count: int}>,
+     *     top_addresses: list<array{address: string, count: int}>
+     * }
+     */
+    public function analyzePatterns(
+        ?\DateTimeInterface $from = null,
+        ?\DateTimeInterface $to = null,
+    ): array {
+        // Total exceptions
+        $qb = $this->em->createQueryBuilder()
+            ->select('COUNT(rs.id)')
+            ->from(RouteStop::class, 'rs')
+            ->join('rs.route', 'r')
+            ->where('rs.status = :exception')
+            ->andWhere('rs.isOrigin = false')
+            ->setParameter('exception', RouteStopStatus::EXCEPTION);
+
+        if ($from !== null) {
+            $qb->andWhere('r.startAt >= :from')->setParameter('from', $from);
+        }
+        if ($to !== null) {
+            $qb->andWhere('r.startAt <= :to')->setParameter('to', $to);
+        }
+
+        $totalExceptions = (int) $qb->getQuery()->getSingleScalarResult();
+
+        // By exception code
+        $codeQb = $this->em->createQueryBuilder()
+            ->select('rs.exceptionCode as code', 'COUNT(rs.id) as cnt')
+            ->from(RouteStop::class, 'rs')
+            ->join('rs.route', 'r')
+            ->where('rs.status = :exception')
+            ->andWhere('rs.isOrigin = false')
+            ->setParameter('exception', RouteStopStatus::EXCEPTION)
+            ->groupBy('rs.exceptionCode')
+            ->orderBy('cnt', 'DESC');
+
+        if ($from !== null) {
+            $codeQb->andWhere('r.startAt >= :from')->setParameter('from', $from);
+        }
+        if ($to !== null) {
+            $codeQb->andWhere('r.startAt <= :to')->setParameter('to', $to);
+        }
+
+        $byCode = array_map(fn(array $row) => [
+            'code' => (string) ($row['code'] ?? 'sin_codigo'),
+            'count' => (int) $row['cnt'],
+        ], $codeQb->getQuery()->getResult());
+
+        // By driver
+        $driverQb = $this->em->createQueryBuilder()
+            ->select('COALESCE(d.name, d.email) as driver_name', 'd.email as driver_email', 'COUNT(rs.id) as exceptions')
+            ->from(RouteStop::class, 'rs')
+            ->join('rs.route', 'r')
+            ->join('r.driver', 'd')
+            ->where('rs.status = :exception')
+            ->andWhere('rs.isOrigin = false')
+            ->setParameter('exception', RouteStopStatus::EXCEPTION)
+            ->groupBy('d.id, d.name, d.email')
+            ->orderBy('exceptions', 'DESC')
+            ->setMaxResults(10);
+
+        if ($from !== null) {
+            $driverQb->andWhere('r.startAt >= :from')->setParameter('from', $from);
+        }
+        if ($to !== null) {
+            $driverQb->andWhere('r.startAt <= :to')->setParameter('to', $to);
+        }
+
+        $byDriver = array_map(fn(array $row) => [
+            'driver_name' => (string) $row['driver_name'],
+            'driver_email' => (string) $row['driver_email'],
+            'exceptions' => (int) $row['exceptions'],
+        ], $driverQb->getQuery()->getResult());
+
+        // Top addresses with exceptions
+        $addrQb = $this->em->createQueryBuilder()
+            ->select('rs.address', 'COUNT(rs.id) as cnt')
+            ->from(RouteStop::class, 'rs')
+            ->join('rs.route', 'r')
+            ->where('rs.status = :exception')
+            ->andWhere('rs.isOrigin = false')
+            ->setParameter('exception', RouteStopStatus::EXCEPTION)
+            ->groupBy('rs.address')
+            ->orderBy('cnt', 'DESC')
+            ->setMaxResults(10);
+
+        if ($from !== null) {
+            $addrQb->andWhere('r.startAt >= :from')->setParameter('from', $from);
+        }
+        if ($to !== null) {
+            $addrQb->andWhere('r.startAt <= :to')->setParameter('to', $to);
+        }
+
+        $topAddresses = array_map(fn(array $row) => [
+            'address' => (string) $row['address'],
+            'count' => (int) $row['cnt'],
+        ], $addrQb->getQuery()->getResult());
+
+        return [
+            'total_exceptions' => $totalExceptions,
+            'by_exception_code' => $byCode,
+            'by_driver' => $byDriver,
+            'by_time_of_day' => [], // Simplified for MVP
+            'top_addresses' => $topAddresses,
+        ];
     }
 }
