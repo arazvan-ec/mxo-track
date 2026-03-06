@@ -60,3 +60,7 @@ services:
   App\Service\MlApiClient:
     arguments:
       $mlServiceUrl: '%env(ML_SERVICE_URL)%'
+
+  App\Service\OpenAiApiClient:
+    arguments:
+      $openaiApiKey: '%env(default::OPENAI_API_KEY)%'
