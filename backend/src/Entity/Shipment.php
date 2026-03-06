@@ -7,6 +7,7 @@ namespace App\Entity;
 use App\Entity\Concerns\PublicIdTrait;
 use App\Entity\Concerns\SoftDeleteTrait;
 use App\Enum\ServiceType;
+use App\Enum\ShipmentPriority;
 use App\Enum\VehicleSkill;
 use DateTimeImmutable;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -80,6 +81,9 @@ class Shipment implements CustomerScopedEntityInterface, SoftDeletableInterface
     /** @var Collection<int, Parcel> */
     #[ORM\OneToMany(targetEntity: Parcel::class, mappedBy: 'shipment', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $parcels;
+
+    #[ORM\Column(type: 'smallint', enumType: ShipmentPriority::class)]
+    private ShipmentPriority $priority = ShipmentPriority::NORMAL;
 
     #[ORM\Column(length: 20, nullable: true, unique: true)]
     private ?string $trackingToken = null;
@@ -198,4 +202,7 @@ class Shipment implements CustomerScopedEntityInterface, SoftDeletableInterface
             $requiredSkills,
         );
     }
+
+    public function getPriority(): ShipmentPriority { return $this->priority; }
+    public function setPriority(ShipmentPriority $priority): void { $this->priority = $priority; }
 }

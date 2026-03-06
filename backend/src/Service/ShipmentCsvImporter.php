@@ -10,6 +10,7 @@ use App\Entity\Shipment;
 use App\Entity\ShipmentEvent;
 use App\Enum\ServiceType;
 use App\Enum\ShipmentEventType;
+use App\Enum\ShipmentPriority;
 use Doctrine\ORM\EntityManagerInterface;
 
 final class ShipmentCsvImporter
@@ -29,6 +30,7 @@ final class ShipmentCsvImporter
         'ean',
         'description',
         'service_time_seconds',
+        'priority',
     ];
 
     public function __construct(
@@ -182,6 +184,15 @@ final class ShipmentCsvImporter
                 $this->entityManager->persist($parcel);
             }
 
+            // priority (column 14, optional)
+            $priorityRaw = strtolower(trim((string) ($row[14] ?? '')));
+            if ($priorityRaw !== '') {
+                $priority = self::parsePriority($priorityRaw);
+                if ($priority !== null) {
+                    $shipment->setPriority($priority);
+                }
+            }
+
             $this->entityManager->persist($shipment);
             $this->entityManager->persist(
                 new ShipmentEvent($shipment, ShipmentEventType::CREATED, ['source' => 'csv_import']),
@@ -194,5 +205,16 @@ final class ShipmentCsvImporter
         $this->entityManager->flush();
 
         return ['created' => $created, 'skipped' => $skipped, 'errors' => $errors];
+    }
+
+    private static function parsePriority(string $name): ?ShipmentPriority
+    {
+        foreach (ShipmentPriority::cases() as $case) {
+            if (strtolower($case->name) === $name) {
+                return $case;
+            }
+        }
+
+        return null;
     }
 }

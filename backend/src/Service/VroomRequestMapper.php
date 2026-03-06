@@ -89,6 +89,7 @@ final class VroomRequestMapper
                     $this->m3ToCm3($shipment->getTotalVolumeM3()),
                     $shipment->getTotalParcels(),
                 ],
+                'priority' => $shipment->getPriority()->toVroomPriority(),
             ];
 
             // Add time windows if the shipment has delivery preferences
