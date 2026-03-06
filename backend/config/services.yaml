@@ -44,3 +44,11 @@ services:
   App\Service\WebhookNotificationService:
     arguments:
       $webhookSecret: '%env(default::WEBHOOK_SECRET)%'
+
+  App\Service\MlApiClient:
+    arguments:
+      $baseUrl: '%env(ML_SERVICE_URL)%'
+
+  App\Service\OpenAiApiClient:
+    arguments:
+      $openaiApiKey: '%env(default::OPENAI_API_KEY)%'
