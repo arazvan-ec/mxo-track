@@ -183,6 +183,9 @@ class Shipment implements CustomerScopedEntityInterface, SoftDeletableInterface
         $this->totalParcels = $this->parcels->count();
     }
 
+    public function getPriority(): ShipmentPriority { return $this->priority; }
+    public function setPriority(ShipmentPriority $priority): void { $this->priority = $priority; }
+
     /** @return VehicleSkill[] */
     public function getRequiredSkills(): array
     {
