@@ -25,8 +25,11 @@ Documento de referencia que describe todos los flujos del sistema, las decisione
 17. [Flujo: Albarán de entrega](#17-flujo-albarán-de-entrega)
 18. [Flujo: Vista del cliente](#18-flujo-vista-del-cliente)
 19. [Flujo: Tracking público](#19-flujo-tracking-público)
-20. [Auditoría y seguridad](#20-auditoría-y-seguridad)
-21. [Infraestructura y servicios](#21-infraestructura-y-servicios)
+20. [Flujo: Reporting y dashboards](#20-flujo-reporting-y-dashboards)
+21. [Flujo: Búsqueda global](#21-flujo-búsqueda-global)
+22. [Flujo: Facturación](#22-flujo-facturación)
+23. [Auditoría y seguridad](#23-auditoría-y-seguridad)
+24. [Infraestructura y servicios](#24-infraestructura-y-servicios)
 
 ---
 
@@ -731,22 +734,74 @@ El frontend recibe actualizaciones en tiempo real vía Server-Sent Events:
 
 ## 16. Flujo: Notificaciones
 
-### 16.1 Webhooks
+El sistema tiene tres canales de notificación independientes. Los tres se disparan ante los mismos eventos (entrega, excepción, asignación de ruta) pero llegan por vías distintas.
 
-Si el cliente tiene configurado `webhookUrl`, el sistema envía notificaciones HTTP POST automáticas cuando hay eventos relevantes (entrega, excepción).
+### 16.1 Webhooks (integración externa)
 
-**Servicio:** WebhookNotificationService
-**Seguridad:** Las llamadas se firman con `WEBHOOK_SECRET` para que el receptor pueda verificar la autenticidad.
+**Servicio:** `WebhookNotificationService`
+**Cuándo se envía:** Cuando un evento relevante ocurre y el cliente tiene `webhookUrl` configurado.
+
+**Proceso:**
+
+1. Se construye el payload JSON con `event` (tipo), `timestamp` (ISO 8601) y `data` (detalles del evento)
+2. Se calcula la firma HMAC-SHA256 del body completo usando `WEBHOOK_SECRET`
+3. Se envía POST HTTP al `webhookUrl` del cliente con headers:
+   - `Content-Type: application/json`
+   - `X-MxoTrack-Signature: sha256={hmac_hex}` — Para verificación de autenticidad
+   - `X-MxoTrack-Event: {tipo_evento}` — Para routing en el receptor
+4. Timeout: 10 segundos. Si falla, se loguea el error pero no se reintenta (fire-and-forget)
+
+**Verificación en el receptor:**
+
+```python
+# Ejemplo: el cliente puede verificar la firma así
+import hmac, hashlib
+expected = hmac.new(webhook_secret.encode(), body, hashlib.sha256).hexdigest()
+assert request.headers['X-MxoTrack-Signature'] == f'sha256={expected}'
+```
+
+**Decisión de diseño:** Si `WEBHOOK_SECRET` no está configurado, se usa un valor por defecto (`mxo-track-webhook-default`). Esto permite funcionar en desarrollo sin configuración adicional, pero en producción debe configurarse un secreto real.
 
 ### 16.2 Email
 
-**Servicio:** EmailNotificationService
-Envía emails para eventos configurados.
+**Servicio:** `EmailNotificationService`
+**Dependencias:** Symfony Mailer (`MailerInterface`) + Twig para plantillas HTML
 
-### 16.3 Notificaciones in-app
+**Emails disponibles:**
 
-**Servicio:** NotificationService → Notification entity
-**Endpoint:** `/api/notifications` (lectura), `/api/notifications/{id}/read` (marcar leída)
+| Evento | Template Twig | Destinatario | Asunto |
+|--------|--------------|-------------|--------|
+| Entrega exitosa | `email/delivery_notification.html.twig` | Cliente del envío | "Su envío {ref} ha sido entregado" |
+| Excepción/incidencia | `email/exception_notification.html.twig` | Cliente del envío | "Incidencia en su envío {ref}" |
+| Ruta asignada | `email/route_assigned.html.twig` | Conductor asignado | "Nueva ruta asignada: {nombre}" |
+
+**Decisión de diseño:** Los emails se envían de forma síncrona con manejo de errores silencioso (`safeSend`). Si falla el envío (SMTP caído, etc.), se loguea el error y la operación principal continúa sin interrumpirse. Esto evita que un fallo de email bloquee una entrega.
+
+### 16.3 Notificaciones in-app (Mercure realtime)
+
+**Servicio:** `NotificationService`
+**Entidad:** `Notification` (user, type, title, message, channel, payload, isRead, createdAt)
+**Endpoint lectura:** `/api/notifications`
+**Endpoint marcar leída:** `/api/notifications/{id}/read`
+
+**Proceso:**
+
+1. Se crea la entidad `Notification` asociada al usuario destino
+2. Se persiste en base de datos (PostgreSQL)
+3. Se publica una actualización Mercure al topic `/users/{userId}/notifications` con:
+   ```json
+   {
+     "type": "notification_count",
+     "unread_count": 5
+   }
+   ```
+4. El frontend recibe el SSE y actualiza el contador de notificaciones sin recargar la página
+
+**Notificación a todos los usuarios de un cliente:**
+
+`notifyCustomerUsers()` busca todos los User con el customer dado, crea una Notification para cada uno, y publica actualizaciones Mercure individuales. Útil para eventos que afectan al cliente completo (ej: ruta completada).
+
+**Decisión de diseño:** Si Mercure falla al publicar, la notificación ya está guardada en BD. El usuario la verá al recargar la página, aunque no reciba el push en tiempo real. La excepción se silencia intencionalmente.
 
 ---
 
@@ -797,33 +852,281 @@ Permite a destinatarios consultar el estado de su envío usando el token de trac
 
 ---
 
-## 20. Auditoría y seguridad
+## 20. Flujo: Reporting y dashboards
 
-### 20.1 Audit Log
+**Quién:** ROLE_ADMIN
+**Servicio:** `ReportingService`
 
-**Servicios:** AuditLogger → AuditLog entity, AuditSubscriber
+El sistema de reporting proporciona métricas operativas para toma de decisiones. Todas las consultas se hacen directamente a PostgreSQL con Doctrine QueryBuilder.
 
-Registra automáticamente operaciones sensibles:
-- Entregas (quién, cuándo, qué parada)
-- Excepciones (motivo, comentario)
-- Cambios de estado de ruta
-- Login/logout
+### 20.1 Informe de entregas (`getDeliveryReport`)
 
-Cada registro incluye: usuario, acción, entidad afectada, IP, timestamp, datos adicionales (JSON).
+**Filtros disponibles:** Rango de fechas (`from`/`to`), cliente específico, conductor específico.
 
-### 20.2 Seguridad
+**Métricas calculadas:**
 
-- **Sessions:** Redis con prefijo `sess:transporte:` y TTL configurable
-- **Login:** form_login con CSRF + rate limiting (máximo 10 intentos por hora)
-- **UserChecker:** Verifica que el usuario esté activo antes de autenticar
-- **Headers de seguridad:** X-Frame-Options, Content-Security-Policy, etc. vía SecurityHeadersSubscriber
-- **Soft delete:** Las entidades no se borran físicamente, se marcan con `deleted_at`
+| Métrica | Descripción | Fórmula |
+|---------|-------------|---------|
+| `total_deliveries` | Paradas entregadas exitosamente | COUNT(RouteStop.status = DELIVERED) |
+| `total_exceptions` | Paradas con incidencia | COUNT(RouteStop.status = EXCEPTION) |
+| `success_rate` | Porcentaje de éxito | deliveries / (deliveries + exceptions) × 100 |
+| `avg_deliveries_per_route` | Entregas promedio por ruta | deliveries / rutas_completadas |
+
+**Desgloses incluidos:**
+
+- **Por conductor:** driver_name, deliveries, exceptions, routes — ordenados por entregas descendente
+- **Por cliente:** customer_name, deliveries, exceptions, routes — ordenados por entregas descendente
+
+### 20.2 Rendimiento de conductor (`getDriverPerformance`)
+
+**Parámetros:** Conductor, rango de fechas.
+
+| Métrica | Descripción |
+|---------|-------------|
+| `routes_completed` | Rutas finalizadas (status = DONE) en el período |
+| `stops_delivered` | Paradas entregadas con éxito |
+| `stops_exception` | Paradas con incidencia |
+| `avg_stops_per_hour` | Velocidad de entrega — se calcula con la duración real de las rutas (endAt - startAt) |
+| `exception_rate` | Porcentaje de incidencias |
+
+**Decisión de diseño:** `avg_stops_per_hour` usa tiempos reales de inicio/fin de ruta, no estimaciones. Esto mide la eficiencia real del conductor incluyendo paradas, tráfico, y descansos.
+
+### 20.3 Informe de cliente (`getCustomerReport`)
+
+**Parámetros:** Cliente, rango de fechas.
+
+Proporciona una vista desde la perspectiva del cliente:
+- Total de envíos creados en el período
+- Envíos entregados, con excepción, y pendientes
+- Tasa de completitud (`completion_rate`)
+
+### 20.4 Tendencias temporales (`getTrendData`)
+
+**Parámetros:** Período (`week` o `month`), número de períodos (por defecto 12).
+
+Genera una serie temporal con entregas, excepciones y rutas completadas por período. Útil para gráficos de evolución en el dashboard.
+
+**Ejemplo de salida (últimas 4 semanas):**
+```json
+[
+  {"period_label": "10 Feb", "deliveries": 145, "exceptions": 12, "routes_completed": 8},
+  {"period_label": "17 Feb", "deliveries": 162, "exceptions": 9, "routes_completed": 10},
+  {"period_label": "24 Feb", "deliveries": 138, "exceptions": 15, "routes_completed": 7},
+  {"period_label": "03 Mar", "deliveries": 171, "exceptions": 8, "routes_completed": 11}
+]
+```
+
+### 20.5 Métricas de dashboard
+
+| Método | Uso | Datos |
+|--------|-----|-------|
+| `getDailyDeliveries(days)` | Mini gráfico de barras (últimos 7 días por defecto) | fecha + entregas por día |
+| `getTopDrivers(limit, days)` | Ranking de conductores más productivos | nombre, email, entregas |
+| `getDriverRanking(from, to)` | Tabla completa de rendimiento de todos los conductores | deliveries, exceptions, success_rate, routes |
+| `getStopStatusDistribution(from, to)` | Gráfico de tarta de estados de paradas | delivered, exception, pending, skipped |
 
 ---
 
-## 21. Infraestructura y servicios
+## 21. Flujo: Búsqueda global
 
-### 21.1 Stack de servicios (desarrollo local)
+**Servicio:** `SearchService`
+**Dependencias:** Doctrine EntityManager, UrlGenerator
+
+La búsqueda global permite encontrar envíos, rutas y vehículos desde una barra de búsqueda unificada. Los resultados se filtran según el rol del usuario.
+
+### 21.1 Alcance por rol
+
+| Rol | Busca en |
+|-----|----------|
+| ROLE_ADMIN | Envíos + Rutas + Vehículos (todos) |
+| ROLE_CUSTOMER | Envíos propios + Rutas propias (filtrado por customer) |
+| ROLE_DRIVER | No tiene acceso a búsqueda global |
+
+### 21.2 Proceso de búsqueda
+
+1. Se valida que el query tenga al menos 2 caracteres
+2. Se busca por coincidencia parcial (LIKE) en campos clave:
+   - **Envíos:** `reference`, `recipientName` — URL de resultado: detalle del envío
+   - **Rutas:** `name` — URL de resultado: edición (admin) o detalle (customer)
+   - **Vehículos:** `name` — URL de resultado: edición del vehículo (solo admin)
+3. Máximo 10 resultados por tipo (30 resultados totales máximo)
+4. Ordenados por fecha de creación descendente (más recientes primero)
+
+**Formato de resultado:**
+```json
+[
+  {"type": "shipment", "label": "REF-2026-001", "url": "/customer/shipments/01H...", "extra": "María García"},
+  {"type": "route", "label": "Ruta Madrid Centro", "url": "/admin/routes/01H.../edit", "extra": "ACTIVE"},
+  {"type": "vehicle", "label": "Furgoneta-01", "url": "/admin/vehicles/01H.../edit", "extra": "Activo"}
+]
+```
+
+**Decisión de diseño:** La búsqueda es case-insensitive (LOWER en ambos lados). No usa índices full-text de PostgreSQL — para el volumen actual, LIKE con índices B-tree es suficiente. Si el volumen crece, se puede migrar a `pg_trgm` o Elasticsearch.
+
+---
+
+## 22. Flujo: Facturación
+
+**Servicio:** `BillingService`
+
+Proporciona resúmenes de facturación por cliente y período. Actualmente genera datos para facturación manual — no emite facturas automáticamente.
+
+### 22.1 Resumen de cliente (`getCustomerSummary`)
+
+**Parámetros:** Cliente, rango de fechas (`from`, `to`).
+
+**Métricas:**
+
+| Campo | Descripción | Fuente |
+|-------|-------------|--------|
+| `total_shipments` | Envíos creados en el período | Tabla `shipment` (por `created_at`) |
+| `total_delivered` | Envíos entregados | Tabla `shipment_event` (event_type = DELIVERED) |
+| `total_exceptions` | Envíos con incidencia | Tabla `shipment_event` (event_type = EXCEPTION) |
+| `billable_deliveries` | Entregas facturables | Actualmente = `total_delivered` |
+
+**Decisión de diseño:** `billable_deliveries` es igual a `total_delivered` por ahora. El campo existe separado para permitir en el futuro reglas de facturación más complejas (ej: no facturar reenvíos, descuentos por volumen, etc.).
+
+**Implementación técnica:** A diferencia del ReportingService que usa Doctrine QueryBuilder (DQL), BillingService usa SQL nativo vía `$em->getConnection()` para consultas más directas y eficientes contra `shipment_event`.
+
+---
+
+## 23. Auditoría y seguridad
+
+### 23.1 Audit Log automático (Doctrine Listener)
+
+**Servicio:** `AuditSubscriber` (Doctrine event listener)
+**Eventos escuchados:** `preUpdate`, `postPersist`, `postUpdate`, `postRemove`
+
+El sistema registra automáticamente cada CREATE, UPDATE y DELETE en entidades auditadas, sin intervención del código de negocio.
+
+**Entidades auditadas:**
+- `User` — Creación/modificación de usuarios
+- `Route` — Cambios de estado, asignación de conductor/vehículo
+- `Shipment` — Modificaciones de envíos
+- `Customer` — Cambios en datos de clientes
+
+**Tracking de cambios a nivel de campo:**
+
+En operaciones UPDATE, el sistema captura el changeset completo de Doctrine: qué campos cambiaron, valor anterior y valor nuevo.
+
+```json
+{
+  "action": "UPDATE",
+  "entityType": "Route",
+  "entityId": "01HXYZ...",
+  "changes": {
+    "status": {"old": "PLANNED", "new": "ACTIVE"},
+    "startAt": {"old": null, "new": "2026-03-06T09:00:00+01:00"}
+  }
+}
+```
+
+**Normalización de valores:** El subscriber normaliza automáticamente:
+- `DateTimeInterface` → formato ISO 8601 (ATOM)
+- `BackedEnum` → su valor string/int
+- Entidades con `getPublicIdString()` → su public_id
+- Campo `passwordHash` → se enmascara como `***` (nunca se registra el hash real)
+
+**Protección anti-recursión:** Los registros `AuditLog` no se auditan a sí mismos (evita loop infinito).
+
+### 23.2 Audit Log manual (AuditLogger service)
+
+**Servicio:** `AuditLogger`
+
+Para operaciones que no son simples CRUD de Doctrine (entregas, excepciones, acciones de conductor), los servicios llaman manualmente a `AuditLogger::log()`:
+
+```php
+$auditLogger->log(
+    actor: $driver,
+    action: 'DELIVER_STOP',
+    entityType: 'RouteStop',
+    entityId: $stop->getPublicIdString(),
+    payload: ['shipment_ref' => $shipment->getReference()],
+    changes: null,
+);
+```
+
+**Datos registrados por cada entrada:**
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `actor` | User (nullable) | Usuario que realizó la acción (null para acciones del sistema) |
+| `action` | string | Tipo: CREATE, UPDATE, DELETE, DELIVER_STOP, EXCEPTION_STOP, etc. |
+| `entityType` | string | Nombre corto de la entidad (sin namespace) |
+| `entityId` | string | Public ID de la entidad afectada |
+| `payload` | JSON | Datos adicionales específicos de la acción |
+| `changes` | JSON (nullable) | Changeset campo a campo (solo en UPDATEs) |
+| `ipAddress` | string (nullable) | IP del cliente (extraída de RequestStack) |
+| `createdAt` | DateTimeImmutable | Timestamp del evento |
+
+**Índices para consulta eficiente:**
+- `idx_audit_log_entity` → `(entity_type, entity_id)` — buscar historial de una entidad
+- `idx_audit_log_action` → `(action)` — filtrar por tipo de acción
+- `idx_audit_log_created_at` → `(created_at)` — ordenar cronológicamente
+
+### 23.3 Seguridad de sesiones
+
+| Aspecto | Configuración |
+|---------|--------------|
+| **Storage** | Redis (`RedisSessionHandler`) |
+| **Prefijo** | `sess:transporte:` |
+| **Cookie secure** | `auto` (HTTPS en producción, HTTP en desarrollo) |
+| **Cookie httponly** | `true` (no accesible desde JavaScript) |
+| **Cookie samesite** | `lax` (protección CSRF parcial) |
+| **TTL** | 43200 segundos (12 horas) |
+| **GC maxlifetime** | 43200 segundos |
+
+### 23.4 Protección de login
+
+**Mecanismo:** Symfony `login_throttling` + rate limiter con sliding window.
+
+| Parámetro | Valor |
+|-----------|-------|
+| Máximo intentos | 5 por ventana |
+| Ventana | Sliding window de 1 minuto |
+| CSRF | Habilitado (`enable_csrf: true`) |
+
+**Flujo de login:**
+1. El usuario envía email + contraseña + token CSRF a `POST /login`
+2. `UserChecker` verifica que la cuenta esté activa (`isActive = true`)
+3. Si el usuario ha excedido 5 intentos en el último minuto → HTTP 429 (Too Many Requests)
+4. Si las credenciales son correctas → sesión creada en Redis
+5. Si falla → se incrementa el contador del rate limiter
+
+### 23.5 Headers de seguridad
+
+**Servicio:** `SecurityHeadersSubscriber` (kernel.response event)
+
+Se añaden automáticamente a cada respuesta HTTP:
+
+| Header | Valor | Protección |
+|--------|-------|------------|
+| `X-Frame-Options` | `DENY` | Previene clickjacking (iframes) |
+| `X-Content-Type-Options` | `nosniff` | Previene MIME sniffing |
+| `Referrer-Policy` | `strict-origin-when-cross-origin` | Controla qué info se envía en Referer |
+| `Content-Security-Policy` | Ver detalle abajo | Previene XSS e inyección de recursos |
+
+**Detalle de Content-Security-Policy:**
+
+```
+default-src 'self';
+script-src 'self' 'unsafe-inline' 'unsafe-eval' unpkg.com cdn.tailwindcss.com cdn.jsdelivr.net;
+style-src 'self' 'unsafe-inline' unpkg.com cdn.tailwindcss.com;
+font-src 'self' data:;
+img-src 'self' *.tile.openstreetmap.org *.basemaps.cartocdn.com unpkg.com data:;
+connect-src 'self' unpkg.com nominatim.openstreetmap.org {mercure_origin};
+frame-ancestors 'self';
+object-src 'none';
+base-uri 'self';
+```
+
+**Decisión de diseño:** `script-src` permite `unsafe-inline` y `unsafe-eval` porque Twig y Turbo generan scripts inline. `img-src` permite tiles de OpenStreetMap y CartoDB para los mapas de Leaflet. `connect-src` incluye el origen de Mercure para SSE y Nominatim para geocodificación inversa.
+
+---
+
+## 24. Infraestructura y servicios
+
+### 24.1 Stack de servicios (desarrollo local)
 
 | Servicio | Imagen Docker | Puerto host | Función |
 |----------|--------------|-------------|---------|
@@ -836,7 +1139,7 @@ Cada registro incluye: usuario, acción, entidad afectada, IP, timestamp, datos 
 | osrm | osrm/osrm-backend | 5000 | Motor de rutas por carretera |
 | vroom | ghcr.io/vroom-project/vroom-docker | 5100 | Optimizador VRP |
 
-### 21.2 Flujo de datos entre servicios
+### 24.2 Flujo de datos entre servicios
 
 ```
                     ┌──────────────────────────────────────────┐
@@ -855,7 +1158,7 @@ Cada registro incluye: usuario, acción, entidad afectada, IP, timestamp, datos 
                                     (carreteras)
 ```
 
-### 21.3 Preparación del entorno
+### 24.3 Preparación del entorno
 
 ```bash
 # 1. Preparar mapa OSRM (solo primera vez, ~5 min)
