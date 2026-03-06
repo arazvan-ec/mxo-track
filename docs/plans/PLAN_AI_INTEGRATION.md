@@ -21,7 +21,7 @@
 | B | B2 | AI Delivery Notes (historial → notas sintetizadas) | **DONE** | 5 |
 | B | B3 | Skill Detection from Shipment Description | **DONE** | 5 |
 | B | B4 | Driver Briefing al inicio de ruta | **DONE** | 5-6 |
-| B | B5 | Smart Loading Manifest con notas ML | Pendiente | 6 |
+| B | B5 | Smart Loading Manifest con notas ML | **DONE** | 6 |
 | B | B6 | Post-Route Analysis | **DONE** | 6 |
 | B | B7 | Webhook Enrichment (mensajes contextuales) | **DONE** | 6 |
 | B | B8 | Asistente Conversacional (MVP: 3-5 tools) | **DONE** | 7 |
