@@ -4,133 +4,70 @@ declare(strict_types=1);
 
 namespace App\Service;
 
-use App\Entity\AddressRisk;
-use App\Enum\RouteStopStatus;
-use App\Repository\AddressRiskRepository;
-use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
 
+/**
+ * Evaluates delivery risk based on historical address data.
+ *
+ * Checks whether an address (or nearby addresses) has a history of
+ * failed deliveries (exceptions).
+ */
 final class AddressRiskService
 {
-    private const MAX_LAST_EXCEPTION_CODES = 10;
+    /** Exception rate above this threshold flags the address as risky. */
+    private const float RISK_THRESHOLD = 0.3;
+
+    /** Minimum number of past deliveries at the address to consider it. */
+    private const int MIN_SAMPLES = 3;
 
     public function __construct(
-        private readonly EntityManagerInterface $entityManager,
-        private readonly AddressRiskRepository $addressRiskRepository,
-    ) {
-    }
+        private readonly EntityManagerInterface $em,
+        private readonly LoggerInterface $logger,
+    ) {}
 
     /**
-     * Look up the risk profile for a given address.
-     */
-    public function checkAddress(string $address): ?AddressRisk
-    {
-        $normalized = $this->normalizeAddress($address);
-        $hash = hash('sha256', $normalized);
-
-        return $this->addressRiskRepository->findByAddressHash($hash);
-    }
-
-    /**
-     * Recalculate ALL address risk scores from RouteStop history.
+     * Check whether an address has a high historical failure rate.
      *
-     * Returns the number of addresses updated.
+     * @return array{is_risky: bool, exception_rate: float, sample_count: int}
      */
-    public function updateRiskScores(): int
+    public function checkAddress(string $address): array
     {
-        $conn = $this->entityManager->getConnection();
-
-        // Query all RouteStops with DELIVERED or EXCEPTION status, grouped by address
         $sql = <<<'SQL'
             SELECT
-                rs.address,
-                COUNT(*) AS total_deliveries,
-                COUNT(*) FILTER (WHERE rs.status = :exception) AS exception_count
+                COUNT(*)                                                     AS total,
+                COUNT(*) FILTER (WHERE rs.status = 'EXCEPTION')              AS exceptions
             FROM route_stop rs
-            WHERE rs.status IN (:delivered, :exception)
+            WHERE LOWER(rs.address) = LOWER(:address)
+              AND rs.status IN ('DELIVERED', 'EXCEPTION')
               AND rs.is_origin = false
-            GROUP BY rs.address
-            SQL;
+        SQL;
 
-        $rows = $conn->fetchAllAssociative($sql, [
-            'delivered' => RouteStopStatus::DELIVERED->value,
-            'exception' => RouteStopStatus::EXCEPTION->value,
-        ]);
+        try {
+            $conn = $this->em->getConnection();
+            $result = $conn->executeQuery($sql, ['address' => $address])->fetchAssociative();
 
-        // For addresses with exceptions, fetch the last N exception codes
-        $exceptionCodesSql = <<<'SQL'
-            SELECT rs.exception_code
-            FROM route_stop rs
-            WHERE rs.address = :address
-              AND rs.status = :exception
-              AND rs.exception_code IS NOT NULL
-            ORDER BY rs.id DESC
-            LIMIT :limit
-            SQL;
+            $total = (int) ($result['total'] ?? 0);
+            $exceptions = (int) ($result['exceptions'] ?? 0);
 
-        $updatedCount = 0;
-
-        foreach ($rows as $row) {
-            $address = $row['address'];
-            $totalDeliveries = (int) $row['total_deliveries'];
-            $exceptionCount = (int) $row['exception_count'];
-
-            $normalized = $this->normalizeAddress($address);
-            $hash = hash('sha256', $normalized);
-            $exceptionRate = $totalDeliveries > 0 ? $exceptionCount / $totalDeliveries : 0.0;
-
-            // Fetch last exception codes if there are exceptions
-            $lastExceptionCodes = null;
-            if ($exceptionCount > 0) {
-                $codeRows = $conn->fetchAllAssociative($exceptionCodesSql, [
-                    'address' => $address,
-                    'exception' => RouteStopStatus::EXCEPTION->value,
-                    'limit' => self::MAX_LAST_EXCEPTION_CODES,
-                ]);
-                $lastExceptionCodes = array_column($codeRows, 'exception_code');
+            if ($total < self::MIN_SAMPLES) {
+                return ['is_risky' => false, 'exception_rate' => 0.0, 'sample_count' => $total];
             }
 
-            // Upsert: find existing or create new
-            $addressRisk = $this->addressRiskRepository->findByAddressHash($hash);
+            $rate = $exceptions / $total;
 
-            if ($addressRisk === null) {
-                $addressRisk = new AddressRisk($hash, $address);
-                $this->entityManager->persist($addressRisk);
-            }
+            return [
+                'is_risky' => $rate >= self::RISK_THRESHOLD,
+                'exception_rate' => round($rate, 4),
+                'sample_count' => $total,
+            ];
+        } catch (\Throwable $e) {
+            $this->logger->error('AddressRiskService query failed', [
+                'address' => $address,
+                'error' => $e->getMessage(),
+            ]);
 
-            $addressRisk->setTotalDeliveries($totalDeliveries);
-            $addressRisk->setExceptionCount($exceptionCount);
-            $addressRisk->setExceptionRate($exceptionRate);
-            $addressRisk->setLastExceptionCodes($lastExceptionCodes);
-            $addressRisk->setLastUpdated(new DateTimeImmutable());
-
-            $updatedCount++;
+            return ['is_risky' => false, 'exception_rate' => 0.0, 'sample_count' => 0];
         }
-
-        $this->entityManager->flush();
-
-        return $updatedCount;
-    }
-
-    /**
-     * Normalize an address string: lowercase, trim, collapse whitespace, remove accents.
-     */
-    public function normalizeAddress(string $address): string
-    {
-        $address = trim($address);
-        $address = mb_strtolower($address, 'UTF-8');
-
-        // Remove accents using transliterator
-        if (\function_exists('transliterator_transliterate')) {
-            $transliterated = transliterator_transliterate('NFD; [:Nonspacing Mark:] Remove; NFC', $address);
-            if ($transliterated !== false) {
-                $address = $transliterated;
-            }
-        }
-
-        // Collapse whitespace
-        $address = (string) preg_replace('/\s+/', ' ', $address);
-
-        return $address;
     }
 }
