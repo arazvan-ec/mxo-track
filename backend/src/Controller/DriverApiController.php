@@ -24,6 +24,7 @@ use App\Repository\ShipmentRepository;
 use App\Service\AuditLogger;
 use App\Service\DeliveryEvidenceFactory;
 use App\Service\DriverActionService;
+use App\Service\DriverBriefingService;
 use App\Service\EtaService;
 use Doctrine\ORM\EntityManagerInterface;
 use JsonException;
@@ -405,6 +406,29 @@ class DriverApiController extends AbstractController
             'ok' => true,
             'feedback_public_id' => $feedback->getPublicIdString(),
         ], 201);
+    }
+
+    #[Route('/routes/{routePublicId}/briefing', methods: ['GET'])]
+    public function briefing(
+        string $routePublicId,
+        RouteRepository $routeRepository,
+        DriverBriefingService $briefingService,
+        ApiErrorResponder $errorResponder,
+    ): JsonResponse {
+        $route = $routeRepository->findOneByPublicId($routePublicId);
+        if (!$route instanceof RouteEntity) {
+            return $errorResponder->notFound('route_not_found', 'Ruta no encontrada.');
+        }
+
+        /** @var User $driver */
+        $driver = $this->getUser();
+        if ($route->getDriver()?->getId() !== $driver->getId()) {
+            return $errorResponder->notFound('route_not_found', 'Ruta no encontrada.');
+        }
+
+        $briefing = $briefingService->generateBriefing($route);
+
+        return $this->json($briefing->toArray());
     }
 
     /**
