@@ -25,15 +25,15 @@
 | B | B6 | Post-Route Analysis | **DONE** | 6 |
 | B | B7 | Webhook Enrichment (mensajes contextuales) | **DONE** | 6 |
 | B | B8 | Asistente Conversacional (MVP: 3-5 tools) | **DONE** | 7 |
-| C | C0 | Python FastAPI Sidecar setup | Pendiente | 6 |
-| C | C1 | Service Time Prediction (LightGBM) | Pendiente | 7-8 |
-| C | C2 | ETA Predictivo (reemplaza +120s) | Pendiente | 8 |
-| C | C3 | Delivery Risk Score | Pendiente | 9 |
-| C | C4 | Demand Forecast (Prophet) | Pendiente | 10 |
-| C | C5 | Zone Clustering (K-means) | Pendiente | 10 |
-| C | C6 | Driver-Zone Affinity (como VROOM skills) | Pendiente | 11 |
-| C | C7 | Fleet Anomaly Detection | Pendiente | 12 |
-| C | C8 | Búsqueda Semántica (pgvector) | Pendiente | 13 |
+| C | C0 | Python FastAPI Sidecar setup | **DONE** | 6 |
+| C | C1 | Service Time Prediction (LightGBM) | **DONE** | 7-8 |
+| C | C2 | ETA Predictivo (reemplaza +120s) | **DONE** | 8 |
+| C | C3 | Delivery Risk Score | **DONE** | 9 |
+| C | C4 | Demand Forecast (Prophet) | **DONE** | 10 |
+| C | C5 | Zone Clustering (K-means) | **DONE** | 10 |
+| C | C6 | Driver-Zone Affinity (como VROOM skills) | **DONE** | 11 |
+| C | C7 | Fleet Anomaly Detection | **DONE** | 12 |
+| C | C8 | Búsqueda Semántica (pgvector) | **DONE** | 13 |
 | D | D1 | Pre-delivery SMS/WhatsApp (30 min antes) | Pendiente | — |
 | D | D2 | Delivery slot selection en tracking page | Pendiente | — |
 | D | D3 | Post-delivery rating por destinatario | Pendiente | — |
