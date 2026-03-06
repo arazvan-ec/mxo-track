@@ -72,6 +72,9 @@ class Shipment implements CustomerScopedEntityInterface, SoftDeletableInterface
     #[ORM\Column(type: 'time_immutable', nullable: true)]
     private ?DateTimeImmutable $preferredWindowEnd = null;
 
+    #[ORM\Column(type: 'integer', nullable: true)]
+    private ?int $serviceTimeSeconds = null;
+
     /** @var Collection<int, Parcel> */
     #[ORM\OneToMany(targetEntity: Parcel::class, mappedBy: 'shipment', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $parcels;
@@ -115,6 +118,9 @@ class Shipment implements CustomerScopedEntityInterface, SoftDeletableInterface
     public function setLongitude(?float $longitude): void { $this->longitude = $longitude; }
     public function getNotes(): ?string { return $this->notes; }
     public function setNotes(?string $notes): void { $this->notes = $notes; }
+
+    public function getServiceTimeSeconds(): ?int { return $this->serviceTimeSeconds; }
+    public function setServiceTimeSeconds(?int $serviceTimeSeconds): void { $this->serviceTimeSeconds = $serviceTimeSeconds; }
 
     public function getTrackingToken(): ?string { return $this->trackingToken; }
     public function setTrackingToken(?string $trackingToken): void { $this->trackingToken = $trackingToken; }

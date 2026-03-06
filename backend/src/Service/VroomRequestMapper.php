@@ -18,7 +18,8 @@ use App\Entity\Vehicle;
  */
 final class VroomRequestMapper
 {
-    private const SERVICE_TIME_SECONDS = 300; // 5 minutes per delivery stop
+    /** Default service time in seconds when a shipment does not specify one. */
+    public const DEFAULT_SERVICE_TIME_SECONDS = 300; // 5 minutes per delivery stop
 
     /**
      * @param list<Vehicle> $vehicles
@@ -76,7 +77,7 @@ final class VroomRequestMapper
             $job = [
                 'id' => $index,
                 'location' => [$shipment->getLongitude(), $shipment->getLatitude()],
-                'service' => self::SERVICE_TIME_SECONDS,
+                'service' => $shipment->getServiceTimeSeconds() ?? self::DEFAULT_SERVICE_TIME_SECONDS,
                 'amount' => [
                     $this->kgToGrams($shipment->getTotalWeightKg()),
                     $this->m3ToCm3($shipment->getTotalVolumeM3()),

@@ -28,6 +28,7 @@ final class ShipmentCsvImporter
         'num_parcels',
         'ean',
         'description',
+        'service_time_seconds',
     ];
 
     public function __construct(
@@ -149,6 +150,15 @@ final class ShipmentCsvImporter
 
             // description (column 12)
             $parcelDescription = trim((string) ($row[12] ?? ''));
+
+            // service_time_seconds (column 13, optional)
+            $serviceTimeRaw = trim((string) ($row[13] ?? ''));
+            if ($serviceTimeRaw !== '') {
+                $serviceTime = filter_var($serviceTimeRaw, FILTER_VALIDATE_INT);
+                if ($serviceTime !== false && $serviceTime > 0) {
+                    $shipment->setServiceTimeSeconds($serviceTime);
+                }
+            }
 
             if ($weight !== false && $weight > 0) {
                 $shipment->setTotalWeightKg((float) $weight);
