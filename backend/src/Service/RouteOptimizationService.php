@@ -10,13 +10,14 @@ use Doctrine\ORM\EntityManagerInterface;
 
 /**
  * Re-optimizes the stop order of an existing route using VROOM.
- * Also provides Haversine-based distance calculations for UI display.
+ * Uses OSRM for real road distances and durations.
  */
 final class RouteOptimizationService
 {
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly VroomApiClient $vroomClient,
+        private readonly OsrmClient $osrmClient,
     ) {}
 
     /**
@@ -26,6 +27,7 @@ final class RouteOptimizationService
      *     optimized: list<array{stop: RouteStop, newSequence: int}>,
      *     distanceBefore: float,
      *     distanceAfter: float,
+     *     durationMinutes: int,
      * }
      */
     public function optimizeStopOrder(Route $route): array
@@ -43,22 +45,17 @@ final class RouteOptimizationService
             }
         }
 
-        $distanceBefore = $this->calculateTotalDistance($stops);
+        $distanceBefore = $this->calculateTotalRoadDistance($stops);
 
         if (\count($deliveryStops) < 2) {
             return $this->buildResult($originStop, $deliveryStops, $distanceBefore, $distanceBefore);
         }
 
         // Build VROOM request: single vehicle with all stops as jobs
-        $originLat = $originStop?->getLatitude();
-        $originLng = $originStop?->getLongitude();
+        $vehicle = ['id' => 0];
 
-        $vehicle = [
-            'id' => 0,
-        ];
-
-        if ($originLat !== null && $originLng !== null) {
-            $coords = [$originLng, $originLat]; // VROOM uses [lon, lat]
+        if ($originStop !== null && $originStop->getLatitude() !== null && $originStop->getLongitude() !== null) {
+            $coords = [$originStop->getLongitude(), $originStop->getLatitude()];
             $vehicle['start'] = $coords;
             $vehicle['end'] = $coords;
         }
@@ -93,10 +90,11 @@ final class RouteOptimizationService
             }
         }
 
-        // Distance from VROOM (meters to km)
+        // Distance and duration from VROOM — real road values
         $distanceAfter = ($vroomResponse['routes'][0]['distance'] ?? 0) / 1000.0;
+        $durationMinutes = (int) round(($vroomResponse['routes'][0]['duration'] ?? 0) / 60.0);
 
-        return $this->buildResult($originStop, $optimizedDeliveries, $distanceBefore, $distanceAfter);
+        return $this->buildResult($originStop, $optimizedDeliveries, $distanceBefore, $distanceAfter, $durationMinutes);
     }
 
     /**
@@ -114,53 +112,7 @@ final class RouteOptimizationService
     }
 
     /**
-     * Calculates the Haversine distance between two coordinates in kilometers.
-     */
-    public function calculateDistance(float $lat1, float $lng1, float $lat2, float $lng2): float
-    {
-        $earthRadiusKm = 6371.0;
-
-        $dLat = deg2rad($lat2 - $lat1);
-        $dLng = deg2rad($lng2 - $lng1);
-
-        $a = sin($dLat / 2) * sin($dLat / 2)
-            + cos(deg2rad($lat1)) * cos(deg2rad($lat2))
-            * sin($dLng / 2) * sin($dLng / 2);
-
-        $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
-
-        return $earthRadiusKm * $c;
-    }
-
-    /**
-     * Calculates total route distance in km from an ordered list of stops.
-     *
-     * @param list<RouteStop> $stops
-     */
-    public function calculateTotalDistance(array $stops): float
-    {
-        $total = 0.0;
-
-        for ($i = 1, $count = \count($stops); $i < $count; $i++) {
-            $prev = $stops[$i - 1];
-            $curr = $stops[$i];
-
-            if ($prev->getLatitude() !== null && $prev->getLongitude() !== null
-                && $curr->getLatitude() !== null && $curr->getLongitude() !== null) {
-                $total += $this->calculateDistance(
-                    $prev->getLatitude(),
-                    $prev->getLongitude(),
-                    $curr->getLatitude(),
-                    $curr->getLongitude(),
-                );
-            }
-        }
-
-        return $total;
-    }
-
-    /**
-     * Calculates distance between two consecutive stops.
+     * Gets real road distance between two stops via OSRM.
      */
     public function distanceBetweenStops(RouteStop $a, RouteStop $b): ?float
     {
@@ -169,16 +121,28 @@ final class RouteOptimizationService
             return null;
         }
 
-        return $this->calculateDistance(
+        $result = $this->osrmClient->getRoute(
             $a->getLatitude(),
             $a->getLongitude(),
             $b->getLatitude(),
             $b->getLongitude(),
         );
+
+        return $result['distanceKm'];
     }
 
     /**
-     * Estimates route timing: driving time + delivery time per stop.
+     * Gets real road distance and duration between two coordinates via OSRM.
+     *
+     * @return array{distanceKm: float, durationSeconds: float}
+     */
+    public function getRoadDistance(float $fromLat, float $fromLng, float $toLat, float $toLng): array
+    {
+        return $this->osrmClient->getRoute($fromLat, $fromLng, $toLat, $toLng);
+    }
+
+    /**
+     * Estimates route timing using OSRM real road distances and durations.
      *
      * @return array{
      *     totalDistanceKm: float,
@@ -198,12 +162,31 @@ final class RouteOptimizationService
             }
         }
 
-        $totalDistance = $this->calculateTotalDistance($stops);
-        $drivingTime = ($totalDistance / $avgSpeedKmh) * 60;
+        // Build waypoints for OSRM route calculation
+        $waypoints = [];
+        foreach ($stops as $stop) {
+            if ($stop->getLatitude() !== null && $stop->getLongitude() !== null) {
+                $waypoints[] = ['lat' => $stop->getLatitude(), 'lng' => $stop->getLongitude()];
+            }
+        }
+
+        if (\count($waypoints) < 2) {
+            $deliveryTime = $deliveryCount * $deliveryMinutesPerStop;
+            return [
+                'totalDistanceKm' => 0.0,
+                'drivingTimeMinutes' => 0.0,
+                'deliveryTimeMinutes' => $deliveryTime,
+                'totalTimeMinutes' => $deliveryTime,
+            ];
+        }
+
+        $osrmResult = $this->osrmClient->getRouteWithWaypoints($waypoints);
+
+        $drivingTime = $osrmResult['totalDurationSeconds'] / 60.0;
         $deliveryTime = $deliveryCount * $deliveryMinutesPerStop;
 
         return [
-            'totalDistanceKm' => round($totalDistance, 2),
+            'totalDistanceKm' => round($osrmResult['totalDistanceKm'], 2),
             'drivingTimeMinutes' => round($drivingTime, 1),
             'deliveryTimeMinutes' => $deliveryTime,
             'totalTimeMinutes' => round($drivingTime + $deliveryTime, 1),
@@ -211,9 +194,37 @@ final class RouteOptimizationService
     }
 
     /**
-     * @return list<array{stop: RouteStop, newSequence: int}>
+     * Calculates total road distance for a list of stops via OSRM.
+     *
+     * @param list<RouteStop> $stops
      */
-    private function buildResult(?RouteStop $originStop, array $deliveryStops, float $distanceBefore, float $distanceAfter): array
+    private function calculateTotalRoadDistance(array $stops): float
+    {
+        $waypoints = [];
+        foreach ($stops as $stop) {
+            if ($stop->getLatitude() !== null && $stop->getLongitude() !== null) {
+                $waypoints[] = ['lat' => $stop->getLatitude(), 'lng' => $stop->getLongitude()];
+            }
+        }
+
+        if (\count($waypoints) < 2) {
+            return 0.0;
+        }
+
+        $result = $this->osrmClient->getRouteWithWaypoints($waypoints);
+
+        return $result['totalDistanceKm'];
+    }
+
+    /**
+     * @return array{
+     *     optimized: list<array{stop: RouteStop, newSequence: int}>,
+     *     distanceBefore: float,
+     *     distanceAfter: float,
+     *     durationMinutes: int,
+     * }
+     */
+    private function buildResult(?RouteStop $originStop, array $deliveryStops, float $distanceBefore, float $distanceAfter, int $durationMinutes = 0): array
     {
         $result = [];
         $seq = 0;
@@ -232,6 +243,7 @@ final class RouteOptimizationService
             'optimized' => $result,
             'distanceBefore' => $distanceBefore,
             'distanceAfter' => $distanceAfter,
+            'durationMinutes' => $durationMinutes,
         ];
     }
 

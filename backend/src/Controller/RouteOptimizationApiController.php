@@ -49,17 +49,9 @@ class RouteOptimizationApiController extends AbstractController
         $result = $this->optimizer->optimizeStopOrder($route);
         $this->optimizer->applyOptimizedOrder($result['optimized']);
 
-        // Update route with VROOM's real road distance
+        // Update route with VROOM's real road distance and duration
         $route->setTotalDistanceKm($result['distanceAfter']);
-
-        // Estimate duration from VROOM distance + service time
-        $deliveryStops = array_filter(
-            $result['optimized'],
-            static fn (array $item): bool => !$item['stop']->isOrigin(),
-        );
-        $durationMinutes = (int) round(($result['distanceAfter'] / 40.0) * 60)
-            + \count($deliveryStops) * 5;
-        $route->setEstimatedDurationMinutes($durationMinutes);
+        $route->setEstimatedDurationMinutes($result['durationMinutes']);
 
         $this->em->flush();
 
@@ -69,7 +61,7 @@ class RouteOptimizationApiController extends AbstractController
             'improvement' => $result['distanceBefore'] > 0
                 ? round((1 - $result['distanceAfter'] / $result['distanceBefore']) * 100, 1)
                 : 0,
-            'estimatedDurationMinutes' => $durationMinutes,
+            'estimatedDurationMinutes' => $result['durationMinutes'],
             'stops' => array_map(static fn (array $item): array => [
                 'publicId' => $item['stop']->getPublicIdString(),
                 'sequence' => $item['newSequence'],

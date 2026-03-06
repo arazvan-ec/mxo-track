@@ -20,6 +20,7 @@ services:
       TRACCAR_USERNAME: admin
       TRACCAR_PASSWORD: admin
       VROOM_URL: http://vroom:3000
+      OSRM_URL: http://osrm:5000
     depends_on:
       - db
       - redis
@@ -75,6 +76,8 @@ services:
     volumes:
       - ./docker/osrm/data:/data:ro
     command: osrm-routed --algorithm mld /data/comunidad-de-madrid-latest.osrm
+    ports:
+      - "5000:5000"
     restart: unless-stopped
 
   vroom:
