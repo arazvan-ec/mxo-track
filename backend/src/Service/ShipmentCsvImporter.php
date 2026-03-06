@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Entity\Customer;
+use App\Entity\Parcel;
 use App\Entity\Shipment;
 use App\Entity\ShipmentEvent;
+use App\Enum\ServiceType;
 use App\Enum\ShipmentEventType;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -20,6 +22,12 @@ final class ShipmentCsvImporter
         'longitude',
         'phone',
         'notes',
+        'service_type',
+        'weight_kg',
+        'volume_m3',
+        'num_parcels',
+        'ean',
+        'description',
     ];
 
     public function __construct(
@@ -114,6 +122,54 @@ final class ShipmentCsvImporter
             $notes = trim((string) ($row[6] ?? ''));
             if ($notes !== '') {
                 $shipment->setNotes($notes);
+            }
+
+            // service_type (column 7)
+            $serviceTypeRaw = strtoupper(trim((string) ($row[7] ?? '')));
+            $serviceType = ServiceType::tryFrom($serviceTypeRaw);
+            if ($serviceType !== null) {
+                $shipment->setServiceType($serviceType);
+            }
+
+            // weight_kg (column 8)
+            $weightRaw = trim((string) ($row[8] ?? ''));
+            $weight = $weightRaw !== '' ? filter_var($weightRaw, FILTER_VALIDATE_FLOAT) : false;
+
+            // volume_m3 (column 9)
+            $volumeRaw = trim((string) ($row[9] ?? ''));
+            $volume = $volumeRaw !== '' ? filter_var($volumeRaw, FILTER_VALIDATE_FLOAT) : false;
+
+            // num_parcels (column 10)
+            $numParcelsRaw = trim((string) ($row[10] ?? ''));
+            $numParcels = $numParcelsRaw !== '' ? filter_var($numParcelsRaw, FILTER_VALIDATE_INT) : false;
+            $numParcels = ($numParcels !== false && $numParcels > 0) ? (int) $numParcels : 1;
+
+            // ean (column 11)
+            $ean = trim((string) ($row[11] ?? ''));
+
+            // description (column 12)
+            $parcelDescription = trim((string) ($row[12] ?? ''));
+
+            if ($weight !== false && $weight > 0) {
+                $shipment->setTotalWeightKg((float) $weight);
+            }
+            if ($volume !== false && $volume > 0) {
+                $shipment->setTotalVolumeM3((float) $volume);
+            }
+            $shipment->setTotalParcels($numParcels);
+
+            // Create parcel entities
+            $parcelWeight = ($weight !== false && $weight > 0) ? (float) $weight / $numParcels : 0.1;
+            $parcelVolume = ($volume !== false && $volume > 0) ? (float) $volume / $numParcels : 0.001;
+            for ($p = 1; $p <= $numParcels; $p++) {
+                $parcel = new Parcel($shipment, $p, $parcelWeight, $parcelVolume);
+                if ($ean !== '') {
+                    $parcel->setEan($ean);
+                }
+                if ($parcelDescription !== '') {
+                    $parcel->setDescription($parcelDescription);
+                }
+                $this->entityManager->persist($parcel);
             }
 
             $this->entityManager->persist($shipment);
