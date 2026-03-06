@@ -15,6 +15,7 @@ final class WebhookNotificationService
     public function __construct(
         private readonly HttpClientInterface $httpClient,
         private readonly LoggerInterface $logger,
+        private readonly WebhookMessageEnricher $messageEnricher,
         private readonly string $webhookSecret = '',
     ) {
     }
@@ -24,6 +25,16 @@ final class WebhookNotificationService
         $webhookUrl = $customer->getWebhookUrl();
         if ($webhookUrl === null || $webhookUrl === '') {
             return;
+        }
+
+        // Enrich payload with customer-friendly message (never blocks webhook delivery)
+        try {
+            $payload = $this->messageEnricher->enrichPayload($eventType, $payload);
+        } catch (\Throwable $e) {
+            $this->logger->warning('Webhook enrichment failed for event {event}, sending without customer_message: {error}', [
+                'event' => $eventType,
+                'error' => $e->getMessage(),
+            ]);
         }
 
         $body = json_encode([
