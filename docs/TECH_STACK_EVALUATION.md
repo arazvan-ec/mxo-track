@@ -453,3 +453,21 @@ La migración a **Go + React/Next.js** elimina las fricciones fundamentales del 
 - **Abstracción de tracking** preparada para evolucionar más allá de Traccar
 
 El roadmap de ~10-14 semanas permite una migración incremental manteniendo el sistema actual en producción hasta que el nuevo esté listo.
+
+---
+
+## 12. Interacción con el Plan de IA (`PLAN_AI_INTEGRATION.md`)
+
+> Actualizado 2026-03-06 tras análisis socrático.
+
+El plan de IA se ha diseñado para ser **compatible con ambos stacks** (ver decisión D7 en PLAN_AI_INTEGRATION.md):
+
+| Componente IA | PHP/Symfony | Go |
+|---------------|------------|-----|
+| Tablas ML, feature store | PostgreSQL (idéntico) | PostgreSQL (idéntico) |
+| Python sidecar | HTTP client → FastAPI | HTTP client → FastAPI |
+| Claude/OpenAI API | HTTP JSON simple | HTTP JSON simple |
+| Messenger async | Doctrine transport | goroutines + river/pgq |
+| pgvector | Doctrine type | sqlc + raw SQL |
+
+**Recomendación**: Implementar Tracks A y B del plan IA en PHP actual (valor inmediato, semanas 1-7). Track C (ML real) puede iniciarse en Go si la migración ya comenzó para entonces. El sidecar Python es stack-agnostic.
