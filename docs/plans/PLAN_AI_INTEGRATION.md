@@ -13,14 +13,14 @@
 | A | A1 | Geocodificación dual (coordenadas + calle) | Pendiente | 1-2 |
 | A | A2 | Window Violation Detection (ETA vs deliveryWindow) | **DONE** | 2 |
 | A | A3 | CSV Quality Score (reglas, integrado en CsvImportRun) | **DONE** | 2-3 |
-| A | A4 | Address Risk desde historial (SQL puro) | En progreso | 3 |
-| A | A5 | Predictive Dashboard (media móvil del trend data) | En progreso | 3-4 |
-| A | A6 | Driver Feedback Endpoint (captura conocimiento) | En progreso | 4 |
+| A | A4 | Address Risk desde historial (SQL puro) | **DONE** | 3 |
+| A | A5 | Predictive Dashboard (media móvil del trend data) | **DONE** | 3-4 |
+| A | A6 | Driver Feedback Endpoint (captura conocimiento) | **DONE** | 4 |
 | — | I0 | Infraestructura Base (Messenger Doctrine, tablas ML, clientes API) | **DONE** (falta `composer require symfony/doctrine-messenger`) | 1 |
-| B | B1 | NLP Exception Classification (Claude API) | Pendiente | 4-5 |
-| B | B2 | AI Delivery Notes (historial → notas sintetizadas) | Pendiente | 5 |
-| B | B3 | Skill Detection from Shipment Description | Pendiente | 5 |
-| B | B4 | Driver Briefing al inicio de ruta | Pendiente | 5-6 |
+| B | B1 | NLP Exception Classification (Claude API) | En progreso | 4-5 |
+| B | B2 | AI Delivery Notes (historial → notas sintetizadas) | En progreso | 5 |
+| B | B3 | Skill Detection from Shipment Description | En progreso | 5 |
+| B | B4 | Driver Briefing al inicio de ruta | En progreso | 5-6 |
 | B | B5 | Smart Loading Manifest con notas ML | Pendiente | 6 |
 | B | B6 | Post-Route Analysis | Pendiente | 6 |
 | B | B7 | Webhook Enrichment (mensajes contextuales) | Pendiente | 6 |
