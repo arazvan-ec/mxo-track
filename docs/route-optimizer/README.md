@@ -7,12 +7,12 @@
 
 | # | Plan | Estado | Prioridad | Fichero |
 |---|------|--------|-----------|---------|
-| 5 | Tiempo de servicio variable | 📋 Planificado | Alta | [PLAN_05_SERVICIO_VARIABLE.md](PLAN_05_SERVICIO_VARIABLE.md) |
-| 10 | Max paradas por ruta (VROOM max_tasks) | 📋 Planificado | Media | [PLAN_10_MAX_PARADAS_VROOM.md](PLAN_10_MAX_PARADAS_VROOM.md) |
-| 11 | Manifiesto de carga LIFO | 📋 Planificado | Media | [PLAN_11_CARGA_LIFO.md](PLAN_11_CARGA_LIFO.md) |
-| 12 | Análisis de rutas históricas | 📋 Planificado | Baja | [PLAN_12_RUTAS_HISTORICAS.md](PLAN_12_RUTAS_HISTORICAS.md) |
-| B | Prioridad de envíos (VROOM priority) | 📋 Planificado | Alta | [PLAN_B_PRIORIDAD_ENVIOS.md](PLAN_B_PRIORIDAD_ENVIOS.md) |
-| C | Skills/restricciones de vehículo | 📋 Planificado | Media | [PLAN_C_SKILLS_VEHICULO.md](PLAN_C_SKILLS_VEHICULO.md) |
+| 5 | Tiempo de servicio variable | ✅ Completado | Alta | [PLAN_05_SERVICIO_VARIABLE.md](PLAN_05_SERVICIO_VARIABLE.md) |
+| 10 | Max paradas por ruta (VROOM max_tasks) | ✅ Completado | Media | [PLAN_10_MAX_PARADAS_VROOM.md](PLAN_10_MAX_PARADAS_VROOM.md) |
+| 11 | Manifiesto de carga LIFO | ✅ Completado | Media | [PLAN_11_CARGA_LIFO.md](PLAN_11_CARGA_LIFO.md) |
+| 12 | Análisis de rutas históricas | ✅ Completado | Baja | [PLAN_12_RUTAS_HISTORICAS.md](PLAN_12_RUTAS_HISTORICAS.md) |
+| B | Prioridad de envíos (VROOM priority) | ✅ Completado | Alta | [PLAN_B_PRIORIDAD_ENVIOS.md](PLAN_B_PRIORIDAD_ENVIOS.md) |
+| C | Skills/restricciones de vehículo | ✅ Completado | Media | [PLAN_C_SKILLS_VEHICULO.md](PLAN_C_SKILLS_VEHICULO.md) |
 
 ## Leyenda de Estados
 

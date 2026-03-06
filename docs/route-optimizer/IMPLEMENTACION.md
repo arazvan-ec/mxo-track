@@ -6,12 +6,12 @@
 
 | # | Plan | Estado | Agente | Archivos clave |
 |---|------|--------|--------|----------------|
-| 5 | Servicio Variable | 🔲 Pendiente | Worktree 1 | Shipment.php, VroomRequestMapper.php |
-| 10 | Max Paradas VROOM | 🔲 Pendiente | Worktree 2 | VroomRequestMapper.php, RouteBuilder.php |
-| 11 | Carga LIFO | 🔲 Pendiente | Worktree 3 | LoadingManifestGenerator.php (nuevo) |
-| 12 | Rutas Históricas | 🔲 Pendiente | Worktree 4 | RouteAnalysisService.php (nuevo) |
-| B | Prioridad Envíos | 🔲 Pendiente | Worktree 5 | ShipmentPriority.php (nuevo), Shipment.php |
-| C | Skills Vehículo | 🔲 Pendiente | Worktree 6 | VehicleSkill.php (nuevo), Vehicle.php, Shipment.php |
+| 5 | Servicio Variable | ✅ Completado | Worktree 1 | Shipment.php, VroomRequestMapper.php |
+| 10 | Max Paradas VROOM | ✅ Completado | Worktree 2 | VroomRequestMapper.php, RouteBuilder.php |
+| 11 | Carga LIFO | ✅ Completado | Worktree 3 | LoadingManifestGenerator.php (nuevo) |
+| 12 | Rutas Históricas | ✅ Completado | Worktree 4 | RouteAnalysisService.php (nuevo) |
+| B | Prioridad Envíos | ✅ Completado | Worktree 5 | ShipmentPriority.php (nuevo), Shipment.php |
+| C | Skills Vehículo | ✅ Completado | Worktree 6 | VehicleSkill.php (nuevo), Vehicle.php, Shipment.php |
 
 ## Leyenda
 
