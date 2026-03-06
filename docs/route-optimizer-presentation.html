@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MXO Track — Optimizador de Rutas</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+        :root {
+            --bg: #0a0a0f;
+            --bg-card: #12121a;
+            --bg-card-hover: #1a1a26;
+            --border: #1e1e2e;
+            --border-accent: #2d2d44;
+            --text: #e4e4ef;
+            --text-muted: #8888a0;
+            --text-dim: #55556a;
+            --accent: #6366f1;
+            --accent-light: #818cf8;
+            --accent-glow: rgba(99, 102, 241, 0.15);
+            --green: #22c55e;
+            --green-glow: rgba(34, 197, 94, 0.15);
+            --amber: #f59e0b;
+            --amber-glow: rgba(245, 158, 11, 0.15);
+            --red: #ef4444;
+            --red-glow: rgba(239, 68, 68, 0.15);
+            --cyan: #06b6d4;
+            --cyan-glow: rgba(6, 182, 212, 0.15);
+            --pink: #ec4899;
+            --radius: 12px;
+            --radius-sm: 8px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html {
+            scroll-behavior: smooth;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border-accent) transparent;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.65;
+            overflow-x: hidden;
+        }
+
+        /* ── Ambient background ── */
+        .ambient {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            overflow: hidden;
+        }
+        .ambient::before {
+            content: '';
+            position: absolute;
+            width: 600px; height: 600px;
+            top: -200px; left: -100px;
+            background: radial-gradient(circle, rgba(99,102,241,0.08), transparent 70%);
+            animation: float 20s ease-in-out infinite;
+        }
+        .ambient::after {
+            content: '';
+            position: absolute;
+            width: 500px; height: 500px;
+            bottom: -100px; right: -100px;
+            background: radial-gradient(circle, rgba(6,182,212,0.06), transparent 70%);
+            animation: float 25s ease-in-out infinite reverse;
+        }
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(60px, -40px) scale(1.1); }
+            66% { transform: translate(-40px, 30px) scale(0.95); }
+        }
+
+        /* ── Navigation ── */
+        nav {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 100;
+            background: rgba(10, 10, 15, 0.85);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            padding: 0 2rem;
+        }
+        nav .nav-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            height: 56px;
+            gap: 2rem;
+        }
+        nav .logo {
+            font-weight: 700;
+            font-size: 0.95rem;
+            letter-spacing: -0.02em;
+            color: var(--accent-light);
+            white-space: nowrap;
+        }
+        nav .nav-links {
+            display: flex;
+            gap: 0.25rem;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+        nav .nav-links::-webkit-scrollbar { display: none; }
+        nav a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.8rem;
+            font-weight: 500;
+            padding: 0.4rem 0.75rem;
+            border-radius: 6px;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+        nav a:hover { color: var(--text); background: var(--accent-glow); }
+
+        /* ── Main content ── */
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 5rem 2rem 4rem;
+        }
+
+        /* ── Hero ── */
+        .hero {
+            text-align: center;
+            padding: 4rem 0 3rem;
+        }
+        .hero .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--accent-glow);
+            border: 1px solid rgba(99,102,241,0.25);
+            color: var(--accent-light);
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.35rem 1rem;
+            border-radius: 100px;
+            margin-bottom: 1.5rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+        .hero h1 {
+            font-size: clamp(2.2rem, 5vw, 3.5rem);
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            line-height: 1.15;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--text) 0%, var(--text-muted) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .hero p {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            max-width: 640px;
+            margin: 0 auto;
+            line-height: 1.7;
+        }
+
+        /* ── Sections ── */
+        section { padding: 3rem 0; }
+        section h2 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: 0.5rem;
+        }
+        section .subtitle {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-bottom: 2rem;
+            max-width: 600px;
+        }
+
+        /* ── Cards ── */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.75rem;
+            transition: all 0.3s ease;
+        }
+        .card:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--border-accent);
+        }
+
+        /* ── Architecture Overview ── */
+        .arch-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        .arch-card {
+            position: relative;
+            overflow: hidden;
+        }
+        .arch-card .icon-circle {
+            width: 44px; height: 44px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+        }
+        .arch-card h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.4rem;
+        }
+        .arch-card p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+        .arch-card .tech {
+            margin-top: 0.75rem;
+            display: inline-block;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            background: rgba(255,255,255,0.04);
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+        }
+
+        .icon-vroom { background: var(--accent-glow); color: var(--accent-light); }
+        .icon-osrm  { background: var(--cyan-glow); color: var(--cyan); }
+        .icon-symfony { background: var(--green-glow); color: var(--green); }
+        .icon-db { background: var(--amber-glow); color: var(--amber); }
+
+        /* ── Flow Diagram ── */
+        .flow-container {
+            position: relative;
+            padding: 2rem 0;
+        }
+        .flow-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            position: relative;
+        }
+        .flow-step {
+            display: grid;
+            grid-template-columns: 56px 1fr;
+            gap: 1.5rem;
+            position: relative;
+        }
+        .flow-step .step-indicator {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .flow-step .step-number {
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            font-weight: 700;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 2;
+        }
+        .flow-step .step-line {
+            width: 2px;
+            flex: 1;
+            min-height: 20px;
+        }
+        .flow-step:last-child .step-line { display: none; }
+        .flow-step .step-content {
+            padding-bottom: 2rem;
+        }
+        .flow-step .step-content h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.35rem;
+        }
+        .flow-step .step-content p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.65;
+        }
+
+        .step-receive .step-number { background: var(--accent-glow); color: var(--accent-light); border: 2px solid rgba(99,102,241,0.3); }
+        .step-receive .step-line { background: linear-gradient(to bottom, var(--accent), var(--cyan)); }
+        .step-map .step-number { background: var(--cyan-glow); color: var(--cyan); border: 2px solid rgba(6,182,212,0.3); }
+        .step-map .step-line { background: linear-gradient(to bottom, var(--cyan), var(--green)); }
+        .step-optimize .step-number { background: var(--green-glow); color: var(--green); border: 2px solid rgba(34,197,94,0.3); }
+        .step-optimize .step-line { background: linear-gradient(to bottom, var(--green), var(--amber)); }
+        .step-validate .step-number { background: var(--amber-glow); color: var(--amber); border: 2px solid rgba(245,158,11,0.3); }
+        .step-validate .step-line { background: linear-gradient(to bottom, var(--amber), var(--accent)); }
+        .step-persist .step-number { background: var(--accent-glow); color: var(--accent-light); border: 2px solid rgba(99,102,241,0.3); }
+
+        /* ── Code blocks ── */
+        .code-block {
+            background: #0d0d14;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            margin-top: 1rem;
+        }
+        .code-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.6rem 1rem;
+            background: rgba(255,255,255,0.02);
+            border-bottom: 1px solid var(--border);
+        }
+        .code-header span {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            color: var(--text-dim);
+        }
+        .code-header .lang {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--accent-light);
+            background: var(--accent-glow);
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+        }
+        .code-block pre {
+            padding: 1rem 1.25rem;
+            overflow-x: auto;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border-accent) transparent;
+        }
+        .code-block code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.78rem;
+            line-height: 1.7;
+            color: var(--text-muted);
+        }
+        .code-block .kw { color: var(--accent-light); }
+        .code-block .fn { color: var(--cyan); }
+        .code-block .str { color: var(--green); }
+        .code-block .num { color: var(--amber); }
+        .code-block .cmt { color: var(--text-dim); font-style: italic; }
+        .code-block .type { color: var(--pink); }
+
+        /* ── Capacity section ── */
+        .capacity-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        @media (max-width: 640px) {
+            .capacity-grid { grid-template-columns: 1fr; }
+        }
+        .cap-card {
+            text-align: center;
+            padding: 2rem 1.5rem;
+        }
+        .cap-card .cap-icon {
+            font-size: 2rem;
+            margin-bottom: 0.75rem;
+        }
+        .cap-card h3 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        .cap-card .cap-detail {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+        .cap-card .cap-conversion {
+            margin-top: 0.75rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            color: var(--text-dim);
+            background: rgba(255,255,255,0.03);
+            padding: 0.4rem 0.75rem;
+            border-radius: 6px;
+            display: inline-block;
+        }
+
+        /* ── Diagram: visual pipeline ── */
+        .pipeline {
+            display: flex;
+            align-items: stretch;
+            gap: 0;
+            margin: 2rem 0;
+            overflow-x: auto;
+            padding-bottom: 0.5rem;
+        }
+        .pipeline-node {
+            flex: 1;
+            min-width: 180px;
+            padding: 1.25rem 1rem;
+            text-align: center;
+            position: relative;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+        }
+        .pipeline-node:first-child { border-radius: var(--radius) 0 0 var(--radius); }
+        .pipeline-node:last-child  { border-radius: 0 var(--radius) var(--radius) 0; }
+        .pipeline-node:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            right: -1px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 0; height: 0;
+            border-top: 10px solid transparent;
+            border-bottom: 10px solid transparent;
+            border-left: 10px solid var(--border-accent);
+            z-index: 2;
+        }
+        .pipeline-node h4 {
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 0.3rem;
+        }
+        .pipeline-node p {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+        .pipeline-node .pipe-icon {
+            font-size: 1.4rem;
+            margin-bottom: 0.5rem;
+        }
+
+        /* ── Data table ── */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1.5rem;
+            font-size: 0.85rem;
+        }
+        .data-table th {
+            text-align: left;
+            padding: 0.75rem 1rem;
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-dim);
+            border-bottom: 1px solid var(--border);
+        }
+        .data-table td {
+            padding: 0.65rem 1rem;
+            border-bottom: 1px solid rgba(30,30,46,0.5);
+            color: var(--text-muted);
+        }
+        .data-table tr:hover td {
+            background: rgba(255,255,255,0.02);
+        }
+        .data-table code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            background: rgba(255,255,255,0.04);
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+        }
+
+        /* ── Sequence diagram ── */
+        .sequence {
+            background: #0d0d14;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 2rem;
+            margin-top: 1.5rem;
+            overflow-x: auto;
+        }
+        .seq-row {
+            display: grid;
+            grid-template-columns: 120px 1fr;
+            gap: 1rem;
+            align-items: center;
+            min-height: 44px;
+        }
+        .seq-actor {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            font-weight: 500;
+            color: var(--accent-light);
+            text-align: right;
+            padding-right: 0.5rem;
+        }
+        .seq-message {
+            position: relative;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            border-left: 2px solid var(--border-accent);
+        }
+        .seq-message.call { border-left-color: var(--accent); }
+        .seq-message.response { border-left-color: var(--green); }
+        .seq-message.internal { border-left-color: var(--amber); }
+        .seq-message .arrow {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-dim);
+            margin-right: 0.5rem;
+        }
+
+        /* ── Utilization bars ── */
+        .util-demo {
+            margin-top: 1.5rem;
+        }
+        .util-item {
+            margin-bottom: 1.25rem;
+        }
+        .util-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.4rem;
+        }
+        .util-header .label {
+            font-size: 0.82rem;
+            font-weight: 500;
+        }
+        .util-header .value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+        .util-bar {
+            height: 8px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .util-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .util-fill.green { background: linear-gradient(90deg, var(--green), #4ade80); }
+        .util-fill.amber { background: linear-gradient(90deg, var(--amber), #fbbf24); }
+        .util-fill.red   { background: linear-gradient(90deg, var(--red), #f87171); }
+
+        /* ── Coord note ── */
+        .coord-note {
+            display: flex;
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        .coord-note .correct, .coord-note .wrong {
+            flex: 1;
+            padding: 1.25rem;
+            border-radius: var(--radius-sm);
+        }
+        .correct {
+            background: rgba(34,197,94,0.06);
+            border: 1px solid rgba(34,197,94,0.2);
+        }
+        .wrong {
+            background: rgba(239,68,68,0.06);
+            border: 1px solid rgba(239,68,68,0.2);
+        }
+        .coord-note h4 {
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        .correct h4 { color: var(--green); }
+        .wrong h4 { color: var(--red); }
+        .coord-note code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.78rem;
+            display: block;
+            color: var(--text-muted);
+        }
+
+        /* ── Footer ── */
+        footer {
+            text-align: center;
+            padding: 3rem 0;
+            border-top: 1px solid var(--border);
+            margin-top: 2rem;
+        }
+        footer p {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 768px) {
+            main { padding: 4.5rem 1rem 3rem; }
+            .pipeline { flex-direction: column; }
+            .pipeline-node { border-radius: 0 !important; }
+            .pipeline-node:first-child { border-radius: var(--radius) var(--radius) 0 0 !important; }
+            .pipeline-node:last-child { border-radius: 0 0 var(--radius) var(--radius) !important; }
+            .pipeline-node:not(:last-child)::after { display: none; }
+            .coord-note { flex-direction: column; }
+            .arch-grid { grid-template-columns: 1fr 1fr; }
+        }
+
+        /* ── Animation on scroll ── */
+        .reveal {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <div class="ambient"></div>
+
+    <nav>
+        <div class="nav-inner">
+            <div class="logo">MXO Track</div>
+            <div class="nav-links">
+                <a href="#overview">Arquitectura</a>
+                <a href="#flow">Flujo</a>
+                <a href="#mapping">Mapping</a>
+                <a href="#capacity">Capacidad</a>
+                <a href="#coordinates">Coordenadas</a>
+                <a href="#reoptimize">Re-optimizar</a>
+                <a href="#sequence">Secuencia</a>
+                <a href="#files">Archivos</a>
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        <!-- ═══════ HERO ═══════ -->
+        <div class="hero reveal">
+            <div class="badge">Documentacion Tecnica</div>
+            <h1>Optimizador de Rutas</h1>
+            <p>
+                Sistema de optimizacion de rutas de entrega basado en <strong>VROOM</strong> (Vehicle Routing Problem solver)
+                y <strong>OSRM</strong> (Open Source Routing Machine) para calcular distancias reales por carretera.
+            </p>
+        </div>
+
+        <!-- ═══════ ARCHITECTURE OVERVIEW ═══════ -->
+        <section id="overview" class="reveal">
+            <h2>Arquitectura del Sistema</h2>
+            <p class="subtitle">Cuatro componentes principales trabajan en conjunto para distribuir envios entre vehiculos y optimizar el orden de paradas.</p>
+
+            <div class="arch-grid">
+                <div class="card arch-card">
+                    <div class="icon-circle icon-symfony">&#9881;</div>
+                    <h3>RouteBuilder</h3>
+                    <p>Orquestador principal. Recibe envios y vehiculos, coordina el mapping, llama a VROOM y construye las entidades Route/RouteStop.</p>
+                    <span class="tech">RouteBuilder.php</span>
+                </div>
+                <div class="card arch-card">
+                    <div class="icon-circle icon-vroom">&#9733;</div>
+                    <h3>VROOM (VRP Solver)</h3>
+                    <p>Motor de optimizacion que resuelve el Vehicle Routing Problem. Distribuye jobs entre vehiculos respetando capacidades y ventanas horarias.</p>
+                    <span class="tech">http://vroom:3000</span>
+                </div>
+                <div class="card arch-card">
+                    <div class="icon-circle icon-osrm">&#9741;</div>
+                    <h3>OSRM (Routing)</h3>
+                    <p>Motor de rutas sobre red vial real (OpenStreetMap). Calcula distancias y duraciones reales entre puntos &mdash; sin linea recta ni Haversine.</p>
+                    <span class="tech">http://osrm:5000</span>
+                </div>
+                <div class="card arch-card">
+                    <div class="icon-circle icon-db">&#9850;</div>
+                    <h3>PostgreSQL</h3>
+                    <p>Persistencia de Route, RouteStop, Shipment y Vehicle. Doctrine ORM con atributos PHP 8.4 y filtro multi-tenant.</p>
+                    <span class="tech">db:5432 / mxo_track</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══════ VISUAL PIPELINE ═══════ -->
+        <section class="reveal">
+            <h2>Pipeline de Datos</h2>
+            <p class="subtitle">El flujo de datos a traves de los servicios, desde la entrada del usuario hasta las rutas persistidas.</p>
+
+            <div class="pipeline">
+                <div class="pipeline-node">
+                    <div class="pipe-icon">&#128230;</div>
+                    <h4>Envios + Vehiculos</h4>
+                    <p>El operador selecciona shipments y vehiculos disponibles</p>
+                </div>
+                <div class="pipeline-node">
+                    <div class="pipe-icon">&#128260;</div>
+                    <h4>VroomRequestMapper</h4>
+                    <p>Convierte entidades Symfony a formato VROOM (JSON)</p>
+                </div>
+                <div class="pipeline-node">
+                    <div class="pipe-icon">&#9889;</div>
+                    <h4>VROOM + OSRM</h4>
+                    <p>Resuelve VRP con distancias reales por carretera</p>
+                </div>
+                <div class="pipeline-node">
+                    <div class="pipe-icon">&#128260;</div>
+                    <h4>VroomResponseMapper</h4>
+                    <p>Convierte respuesta VROOM a entidades Route/RouteStop</p>
+                </div>
+                <div class="pipeline-node">
+                    <div class="pipe-icon">&#9989;</div>
+                    <h4>Validacion + Persist</h4>
+                    <p>Verifica capacidades y guarda en PostgreSQL</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══════ STEP-BY-STEP FLOW ═══════ -->
+        <section id="flow" class="reveal">
+            <h2>Flujo Paso a Paso</h2>
+            <p class="subtitle">Que sucede internamente cuando el operador solicita construir rutas optimizadas.</p>
+
+            <div class="flow-container">
+                <div class="flow-steps">
+                    <!-- Step 1 -->
+                    <div class="flow-step step-receive">
+                        <div class="step-indicator">
+                            <div class="step-number">1</div>
+                            <div class="step-line"></div>
+                        </div>
+                        <div class="step-content">
+                            <h3>Recepcion de la solicitud</h3>
+                            <p>
+                                El controlador <code>RouteOptimizationApiController</code> recibe un POST con los IDs publicos
+                                de los envios, vehiculos y opcionalmente un origen (almacen). Carga las entidades desde la base de datos
+                                aplicando el filtro multi-tenant del customer.
+                            </p>
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span>POST /api/routes/build</span>
+                                    <span class="lang">JSON</span>
+                                </div>
+                                <pre><code>{
+  <span class="str">"shipment_ids"</span>: [<span class="str">"01JEXAMPLE1"</span>, <span class="str">"01JEXAMPLE2"</span>, ...],
+  <span class="str">"vehicle_ids"</span>:  [<span class="str">"01JVEHICLE1"</span>],
+  <span class="str">"origin_id"</span>:    <span class="str">"01JWAREHOUSE"</span>,
+  <span class="str">"max_stops_per_route"</span>: <span class="num">30</span>
+}</code></pre>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2 -->
+                    <div class="flow-step step-map">
+                        <div class="step-indicator">
+                            <div class="step-number">2</div>
+                            <div class="step-line"></div>
+                        </div>
+                        <div class="step-content">
+                            <h3>Mapping a formato VROOM</h3>
+                            <p>
+                                <code>VroomRequestMapper</code> transforma vehiculos en "vehicles" con capacidad
+                                tridimensional <strong>[peso_g, volumen_cm3, bultos]</strong>, y envios en "jobs"
+                                con ubicacion, cantidad y ventanas horarias. Las coordenadas se envian en orden
+                                <strong>[longitud, latitud]</strong> (formato VROOM/OSRM).
+                            </p>
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span>VroomRequestMapper.php</span>
+                                    <span class="lang">PHP</span>
+                                </div>
+                                <pre><code><span class="cmt">// Vehicle -> VROOM vehicle</span>
+[
+  <span class="str">"id"</span>       => <span class="num">0</span>,
+  <span class="str">"capacity"</span> => [<span class="num">2500</span>, <span class="num">20000</span>, <span class="num">30</span>],  <span class="cmt">// 2.5kg, 0.02m3, 30 bultos</span>
+  <span class="str">"start"</span>    => [<span class="num">-3.7038</span>, <span class="num">40.4168</span>],    <span class="cmt">// [lng, lat] Madrid</span>
+  <span class="str">"end"</span>      => [<span class="num">-3.7038</span>, <span class="num">40.4168</span>]     <span class="cmt">// retorno al origen</span>
+]
+
+<span class="cmt">// Shipment -> VROOM job</span>
+[
+  <span class="str">"id"</span>       => <span class="num">0</span>,
+  <span class="str">"location"</span> => [<span class="num">-3.6883</span>, <span class="num">40.4530</span>],
+  <span class="str">"service"</span>  => <span class="num">300</span>,                   <span class="cmt">// 5 min por entrega</span>
+  <span class="str">"amount"</span>   => [<span class="num">500</span>, <span class="num">3000</span>, <span class="num">2</span>],
+  <span class="str">"time_windows"</span> => [[<span class="num">32400</span>, <span class="num">43200</span>]]  <span class="cmt">// 09:00-12:00</span>
+]</code></pre>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 3 -->
+                    <div class="flow-step step-optimize">
+                        <div class="step-indicator">
+                            <div class="step-number">3</div>
+                            <div class="step-line"></div>
+                        </div>
+                        <div class="step-content">
+                            <h3>Optimizacion VROOM + OSRM</h3>
+                            <p>
+                                <code>VroomApiClient</code> envia un POST a VROOM con los vehiculos y jobs.
+                                VROOM internamente consulta OSRM para obtener la matriz de distancias/tiempos reales
+                                entre todos los puntos, y resuelve el VRP (Vehicle Routing Problem) con restricciones
+                                de capacidad y ventanas horarias. Devuelve la asignacion optima de jobs a vehiculos
+                                y el orden de paradas dentro de cada ruta.
+                            </p>
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span>Respuesta VROOM (simplificada)</span>
+                                    <span class="lang">JSON</span>
+                                </div>
+                                <pre><code>{
+  <span class="str">"code"</span>: <span class="num">0</span>,  <span class="cmt">// exito</span>
+  <span class="str">"routes"</span>: [{
+    <span class="str">"vehicle"</span>: <span class="num">0</span>,
+    <span class="str">"steps"</span>: [
+      { <span class="str">"type"</span>: <span class="str">"start"</span> },
+      { <span class="str">"type"</span>: <span class="str">"job"</span>, <span class="str">"id"</span>: <span class="num">3</span> },  <span class="cmt">// shipment 3 primero</span>
+      { <span class="str">"type"</span>: <span class="str">"job"</span>, <span class="str">"id"</span>: <span class="num">0</span> },  <span class="cmt">// luego shipment 0</span>
+      { <span class="str">"type"</span>: <span class="str">"job"</span>, <span class="str">"id"</span>: <span class="num">1</span> },
+      { <span class="str">"type"</span>: <span class="str">"end"</span> }
+    ],
+    <span class="str">"distance"</span>: <span class="num">42500</span>,  <span class="cmt">// metros</span>
+    <span class="str">"duration"</span>: <span class="num">10800</span>   <span class="cmt">// segundos</span>
+  }],
+  <span class="str">"unassigned"</span>: [{ <span class="str">"id"</span>: <span class="num">5</span> }]  <span class="cmt">// no cabe en ningun vehiculo</span>
+}</code></pre>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 4 -->
+                    <div class="flow-step step-validate">
+                        <div class="step-indicator">
+                            <div class="step-number">4</div>
+                            <div class="step-line"></div>
+                        </div>
+                        <div class="step-content">
+                            <h3>Mapping inverso y validacion</h3>
+                            <p>
+                                <code>VroomResponseMapper</code> reconstruye las entidades de dominio: crea un <code>Route</code>
+                                por cada ruta VROOM, con un <code>RouteStop</code> de origen (secuencia 0) y los stops de entrega
+                                en el orden optimizado. <code>RouteCapacityValidator</code> verifica que el peso, volumen
+                                y bultos totales no excedan la capacidad del vehiculo, y calcula los porcentajes de utilizacion.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Step 5 -->
+                    <div class="flow-step step-persist">
+                        <div class="step-indicator">
+                            <div class="step-number">5</div>
+                            <div class="step-line"></div>
+                        </div>
+                        <div class="step-content">
+                            <h3>Persistencia y respuesta</h3>
+                            <p>
+                                Se persisten las entidades en PostgreSQL via Doctrine. La respuesta incluye cada ruta creada
+                                con su vehiculo asignado, distancia total (km), duracion estimada (min), numero de paradas
+                                y resultado de validacion de capacidad.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══════ MAPPING DETAIL ═══════ -->
+        <section id="mapping" class="reveal">
+            <h2>Mapping Dominio &harr; VROOM</h2>
+            <p class="subtitle">Como se transforman las entidades de Symfony al formato que espera el solver VRP.</p>
+
+            <div class="card" style="overflow-x: auto;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Entidad Symfony</th>
+                            <th>Propiedad</th>
+                            <th>VROOM</th>
+                            <th>Conversion</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Vehicle</td>
+                            <td><code>maxWeightKg</code></td>
+                            <td><code>capacity[0]</code></td>
+                            <td>kg &times; 1000 &rarr; gramos</td>
+                        </tr>
+                        <tr>
+                            <td>Vehicle</td>
+                            <td><code>maxVolumeM3</code></td>
+                            <td><code>capacity[1]</code></td>
+                            <td>m&sup3; &times; 1,000,000 &rarr; cm&sup3;</td>
+                        </tr>
+                        <tr>
+                            <td>Vehicle</td>
+                            <td><code>maxParcels</code></td>
+                            <td><code>capacity[2]</code></td>
+                            <td>entero directo</td>
+                        </tr>
+                        <tr>
+                            <td>Shipment</td>
+                            <td><code>totalWeightKg</code></td>
+                            <td><code>amount[0]</code></td>
+                            <td>kg &times; 1000 &rarr; gramos</td>
+                        </tr>
+                        <tr>
+                            <td>Shipment</td>
+                            <td><code>totalVolumeM3</code></td>
+                            <td><code>amount[1]</code></td>
+                            <td>m&sup3; &times; 1,000,000 &rarr; cm&sup3;</td>
+                        </tr>
+                        <tr>
+                            <td>Shipment</td>
+                            <td><code>totalParcels</code></td>
+                            <td><code>amount[2]</code></td>
+                            <td>entero directo</td>
+                        </tr>
+                        <tr>
+                            <td>Shipment</td>
+                            <td><code>latitude, longitude</code></td>
+                            <td><code>location</code></td>
+                            <td><code>[lng, lat]</code> (invertido)</td>
+                        </tr>
+                        <tr>
+                            <td>Shipment</td>
+                            <td><code>preferredWindow*</code></td>
+                            <td><code>time_windows</code></td>
+                            <td>HH:MM &rarr; segundos desde medianoche</td>
+                        </tr>
+                        <tr>
+                            <td>VROOM result</td>
+                            <td><code>distance</code></td>
+                            <td>Route.totalDistanceKm</td>
+                            <td>metros &divide; 1000 &rarr; km</td>
+                        </tr>
+                        <tr>
+                            <td>VROOM result</td>
+                            <td><code>duration</code></td>
+                            <td>Route.estimatedDurationMinutes</td>
+                            <td>segundos &divide; 60 &rarr; minutos</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ═══════ CAPACITY ═══════ -->
+        <section id="capacity" class="reveal">
+            <h2>Modelo de Capacidad Tridimensional</h2>
+            <p class="subtitle">VROOM maneja 3 dimensiones de capacidad simultaneamente para cada vehiculo.</p>
+
+            <div class="capacity-grid">
+                <div class="card cap-card">
+                    <div class="cap-icon">&#9878;</div>
+                    <h3>Peso</h3>
+                    <div class="cap-detail">Peso total en kilogramos</div>
+                    <div class="cap-conversion">kg &times; 1000 = gramos</div>
+                </div>
+                <div class="card cap-card">
+                    <div class="cap-icon">&#9634;</div>
+                    <h3>Volumen</h3>
+                    <div class="cap-detail">Espacio en metros cubicos</div>
+                    <div class="cap-conversion">m&sup3; &times; 1M = cm&sup3;</div>
+                </div>
+                <div class="card cap-card">
+                    <div class="cap-icon">&#128230;</div>
+                    <h3>Bultos</h3>
+                    <div class="cap-detail">Cantidad de paquetes</div>
+                    <div class="cap-conversion">entero directo</div>
+                </div>
+            </div>
+
+            <div class="card" style="margin-top: 1.5rem;">
+                <h3 style="font-size: 0.95rem; margin-bottom: 1rem;">Ejemplo: Validacion de capacidad</h3>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+                    <code>RouteCapacityValidator</code> suma los envios de una ruta y verifica contra el vehiculo asignado.
+                </p>
+
+                <div class="util-demo">
+                    <div class="util-item">
+                        <div class="util-header">
+                            <span class="label">Peso &mdash; 450 kg / 600 kg</span>
+                            <span class="value">75%</span>
+                        </div>
+                        <div class="util-bar">
+                            <div class="util-fill green" style="width: 75%;"></div>
+                        </div>
+                    </div>
+                    <div class="util-item">
+                        <div class="util-header">
+                            <span class="label">Volumen &mdash; 1.8 m&sup3; / 2.0 m&sup3;</span>
+                            <span class="value">90%</span>
+                        </div>
+                        <div class="util-bar">
+                            <div class="util-fill amber" style="width: 90%;"></div>
+                        </div>
+                    </div>
+                    <div class="util-item">
+                        <div class="util-header">
+                            <span class="label">Bultos &mdash; 28 / 30</span>
+                            <span class="value">93%</span>
+                        </div>
+                        <div class="util-bar">
+                            <div class="util-fill red" style="width: 93%;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══════ COORDINATES ═══════ -->
+        <section id="coordinates" class="reveal">
+            <h2>Formato de Coordenadas</h2>
+            <p class="subtitle">Detalle critico: VROOM y OSRM usan orden [longitud, latitud], no [lat, lng].</p>
+
+            <div class="coord-note">
+                <div class="correct">
+                    <h4>&#10003; Correcto</h4>
+                    <code>$location = [</code>
+                    <code>&nbsp;&nbsp;$shipment->getLongitude(),</code>
+                    <code>&nbsp;&nbsp;$shipment->getLatitude()</code>
+                    <code>];</code>
+                    <br>
+                    <code style="font-size: 0.72rem; color: var(--text-dim); margin-top: 0.5rem;">
+                        // [-3.7038, 40.4168] = Madrid
+                    </code>
+                </div>
+                <div class="wrong">
+                    <h4>&#10007; Incorrecto</h4>
+                    <code>$location = [</code>
+                    <code>&nbsp;&nbsp;$shipment->getLatitude(),</code>
+                    <code>&nbsp;&nbsp;$shipment->getLongitude()</code>
+                    <code>];</code>
+                    <br>
+                    <code style="font-size: 0.72rem; color: var(--text-dim); margin-top: 0.5rem;">
+                        // [40.4168, -3.7038] = punto en mar
+                    </code>
+                </div>
+            </div>
+
+            <div class="code-block" style="margin-top: 1.25rem;">
+                <div class="code-header">
+                    <span>OSRM URL format</span>
+                    <span class="lang">HTTP</span>
+                </div>
+                <pre><code><span class="fn">GET</span> http://osrm:5000/route/v1/driving/<span class="num">{lng1},{lat1}</span>;<span class="num">{lng2},{lat2}</span>;<span class="num">{lng3},{lat3}</span>?overview=false
+
+<span class="cmt">// Ejemplo real:</span>
+<span class="fn">GET</span> http://osrm:5000/route/v1/driving/<span class="num">-3.7038,40.4168</span>;<span class="num">-3.6883,40.4530</span>?overview=false</code></pre>
+            </div>
+        </section>
+
+        <!-- ═══════ RE-OPTIMIZATION ═══════ -->
+        <section id="reoptimize" class="reveal">
+            <h2>Re-optimizacion de Rutas Existentes</h2>
+            <p class="subtitle">Cuando una ruta ya existe, se puede re-optimizar el orden de paradas sin redistribuir envios.</p>
+
+            <div class="card">
+                <h3 style="font-size: 0.95rem; margin-bottom: 1rem;">RouteOptimizationService</h3>
+
+                <div class="flow-steps">
+                    <div class="flow-step step-receive">
+                        <div class="step-indicator">
+                            <div class="step-number">1</div>
+                            <div class="step-line"></div>
+                        </div>
+                        <div class="step-content">
+                            <h3>Medir distancia actual</h3>
+                            <p>Usa OSRM con todos los waypoints actuales para calcular <code>distanceBefore</code> (km reales por carretera).</p>
+                        </div>
+                    </div>
+                    <div class="flow-step step-map">
+                        <div class="step-indicator">
+                            <div class="step-number">2</div>
+                            <div class="step-line"></div>
+                        </div>
+                        <div class="step-content">
+                            <h3>Construir request VROOM (1 vehiculo)</h3>
+                            <p>Se crea un unico vehiculo con start/end en el origen y todos los delivery stops como jobs. Sin restricciones de capacidad (ya estan asignados).</p>
+                        </div>
+                    </div>
+                    <div class="flow-step step-optimize">
+                        <div class="step-indicator">
+                            <div class="step-number">3</div>
+                            <div class="step-line"></div>
+                        </div>
+                        <div class="step-content">
+                            <h3>VROOM re-ordena las paradas</h3>
+                            <p>VROOM optimiza el TSP (Travelling Salesman Problem): encuentra el orden de paradas que minimiza distancia y tiempo total.</p>
+                        </div>
+                    </div>
+                    <div class="flow-step step-validate">
+                        <div class="step-indicator">
+                            <div class="step-number">4</div>
+                            <div class="step-line"></div>
+                        </div>
+                        <div class="step-content">
+                            <h3>Aplicar nuevo orden</h3>
+                            <p>Se actualizan los <code>sequence</code> de cada RouteStop y se recalculan <code>totalDistanceKm</code> y <code>estimatedDurationMinutes</code>. Se reporta el % de mejora.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="code-block" style="margin-top: 1.25rem;">
+                <div class="code-header">
+                    <span>POST /api/routes/{publicId}/optimize &mdash; Respuesta</span>
+                    <span class="lang">JSON</span>
+                </div>
+                <pre><code>{
+  <span class="str">"distanceBefore"</span>: <span class="num">55.3</span>,        <span class="cmt">// km antes</span>
+  <span class="str">"distanceAfter"</span>:  <span class="num">42.5</span>,        <span class="cmt">// km despues</span>
+  <span class="str">"improvement"</span>:    <span class="num">23.1</span>,        <span class="cmt">// % reduccion</span>
+  <span class="str">"estimatedDurationMinutes"</span>: <span class="num">180</span>,
+  <span class="str">"stops"</span>: [
+    { <span class="str">"sequence"</span>: <span class="num">0</span>, <span class="str">"address"</span>: <span class="str">"Almacen Central, Madrid"</span> },
+    { <span class="str">"sequence"</span>: <span class="num">1</span>, <span class="str">"address"</span>: <span class="str">"C/ Gran Via 42"</span> },
+    { <span class="str">"sequence"</span>: <span class="num">2</span>, <span class="str">"address"</span>: <span class="str">"C/ Alcala 15"</span> },
+    ...
+  ]
+}</code></pre>
+            </div>
+        </section>
+
+        <!-- ═══════ SEQUENCE DIAGRAM ═══════ -->
+        <section id="sequence" class="reveal">
+            <h2>Diagrama de Secuencia</h2>
+            <p class="subtitle">Interaccion entre componentes durante la construccion de rutas.</p>
+
+            <div class="sequence">
+                <div class="seq-row">
+                    <div class="seq-actor">Operador</div>
+                    <div class="seq-message call"><span class="arrow">&rarr;</span> POST /api/routes/build {shipment_ids, vehicle_ids, origin_id}</div>
+                </div>
+                <div class="seq-row">
+                    <div class="seq-actor">Controller</div>
+                    <div class="seq-message internal"><span class="arrow">&bull;</span> Carga Shipments, Vehicles, CustomerLocation via Doctrine</div>
+                </div>
+                <div class="seq-row">
+                    <div class="seq-actor">Controller</div>
+                    <div class="seq-message call"><span class="arrow">&rarr;</span> RouteBuilder->buildRoutes($shipments, $vehicles, $customer, $origin)</div>
+                </div>
+                <div class="seq-row">
+                    <div class="seq-actor">RouteBuilder</div>
+                    <div class="seq-message call"><span class="arrow">&rarr;</span> VroomRequestMapper->mapVehicles($vehicles, $origin)</div>
+                </div>
+                <div class="seq-row">
+                    <div class="seq-actor">RouteBuilder</div>
+                    <div class="seq-message call"><span class="arrow">&rarr;</span> VroomRequestMapper->mapJobs($shipments)</div>
+                </div>
+                <div class="seq-row">
+                    <div class="seq-actor">RouteBuilder</div>
+                    <div class="seq-message call"><span class="arrow">&rarr;</span> VroomApiClient->optimize($vroomVehicles, $vroomJobs)</div>
+                </div>
+                <div class="seq-row">
+                    <div class="seq-actor">VroomClient</div>
+                    <div class="seq-message call"><span class="arrow">&rarr;</span> POST http://vroom:3000 &mdash; VROOM consulta OSRM internamente</div>
+                </div>
+                <div class="seq-row">
+                    <div class="seq-actor">VroomClient</div>
+                    <div class="seq-message response"><span class="arrow">&larr;</span> {code: 0, routes: [...], unassigned: [...]}</div>
+                </div>
+                <div class="seq-row">
+                    <div class="seq-actor">RouteBuilder</div>
+                    <div class="seq-message call"><span class="arrow">&rarr;</span> VroomResponseMapper->mapToRoutes($response, $vehicleMap, $shipmentMap)</div>
+                </div>
+                <div class="seq-row">
+                    <div class="seq-actor">ResponseMapper</div>
+                    <div class="seq-message internal"><span class="arrow">&bull;</span> Crea Route + RouteStops por cada ruta VROOM</div>
+                </div>
+                <div class="seq-row">
+                    <div class="seq-actor">ResponseMapper</div>
+                    <div class="seq-message call"><span class="arrow">&rarr;</span> RouteCapacityValidator->validate($route)</div>
+                </div>
+                <div class="seq-row">
+                    <div class="seq-actor">Validator</div>
+                    <div class="seq-message response"><span class="arrow">&larr;</span> {valid: true, weightUtilization: 75%, volumeUtilization: 90%}</div>
+                </div>
+                <div class="seq-row">
+                    <div class="seq-actor">Controller</div>
+                    <div class="seq-message internal"><span class="arrow">&bull;</span> EntityManager->flush() &mdash; persiste todo en PostgreSQL</div>
+                </div>
+                <div class="seq-row">
+                    <div class="seq-actor">Controller</div>
+                    <div class="seq-message response"><span class="arrow">&larr;</span> 200 OK {routesCreated: 2, routes: [...]}</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══════ FILES ═══════ -->
+        <section id="files" class="reveal">
+            <h2>Archivos del Sistema</h2>
+            <p class="subtitle">Referencia rapida de los archivos clave que componen el optimizador.</p>
+
+            <div class="card" style="overflow-x: auto;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Archivo</th>
+                            <th>Responsabilidad</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>Service/RouteBuilder.php</code></td>
+                            <td>Orquestador principal &mdash; coordina mapper, VROOM y response mapper</td>
+                        </tr>
+                        <tr>
+                            <td><code>Service/VroomApiClient.php</code></td>
+                            <td>Cliente HTTP para VROOM Express API (POST JSON, timeout 30s)</td>
+                        </tr>
+                        <tr>
+                            <td><code>Service/VroomRequestMapper.php</code></td>
+                            <td>Dominio &rarr; VROOM (vehicles con capacity, jobs con amount/time_windows)</td>
+                        </tr>
+                        <tr>
+                            <td><code>Service/VroomResponseMapper.php</code></td>
+                            <td>VROOM &rarr; Dominio (Route, RouteStop, distancias en km)</td>
+                        </tr>
+                        <tr>
+                            <td><code>Service/RouteOptimizationService.php</code></td>
+                            <td>Re-optimiza orden de paradas en rutas existentes via VROOM TSP</td>
+                        </tr>
+                        <tr>
+                            <td><code>Service/RouteCapacityValidator.php</code></td>
+                            <td>Valida peso/volumen/bultos y calcula % de utilizacion</td>
+                        </tr>
+                        <tr>
+                            <td><code>Service/OsrmClient.php</code></td>
+                            <td>Cliente HTTP para OSRM &mdash; distancias y duraciones reales por carretera</td>
+                        </tr>
+                        <tr>
+                            <td><code>Service/EtaService.php</code></td>
+                            <td>Calcula ETAs usando OSRM para distancias reales</td>
+                        </tr>
+                        <tr>
+                            <td><code>Controller/RouteOptimizationApiController.php</code></td>
+                            <td>Endpoints API: build routes, optimize existing route</td>
+                        </tr>
+                        <tr>
+                            <td><code>Entity/Route.php</code></td>
+                            <td>Ruta con vehiculo, distancia total, duracion estimada</td>
+                        </tr>
+                        <tr>
+                            <td><code>Entity/RouteStop.php</code></td>
+                            <td>Parada con secuencia, coordenadas, ventana de entrega</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <footer>
+            <p>MXO Track &mdash; Route Optimization System &mdash; Symfony 7.4 LTS + VROOM + OSRM</p>
+        </footer>
+    </main>
+
+    <script>
+        // Reveal on scroll
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+        // Smooth scroll for nav links
+        document.querySelectorAll('nav a[href^="#"]').forEach(a => {
+            a.addEventListener('click', e => {
+                e.preventDefault();
+                const target = document.querySelector(a.getAttribute('href'));
+                if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        });
+    </script>
+</body>
+</html>
