@@ -45,7 +45,7 @@ final class RouteBuilder
         }
 
         // Convert domain entities to VROOM format
-        $vehicleData = $this->requestMapper->mapVehicles($vehicles, $origin);
+        $vehicleData = $this->requestMapper->mapVehicles($vehicles, $origin, $maxStopsPerRoute);
         $jobData = $this->requestMapper->mapJobs($shipments);
 
         if (\count($jobData['vroomJobs']) === 0) {

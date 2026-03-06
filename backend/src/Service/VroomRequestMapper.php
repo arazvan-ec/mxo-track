@@ -24,7 +24,7 @@ final class VroomRequestMapper
      * @param list<Vehicle> $vehicles
      * @return array{vroomVehicles: list<array>, vehicleMap: array<int, Vehicle>}
      */
-    public function mapVehicles(array $vehicles, ?CustomerLocation $origin): array
+    public function mapVehicles(array $vehicles, ?CustomerLocation $origin, ?int $maxTasks = null): array
     {
         $vroomVehicles = [];
         $vehicleMap = [];
@@ -38,6 +38,10 @@ final class VroomRequestMapper
                     $vehicle->getMaxParcels() ?? 9999,
                 ],
             ];
+
+            if ($maxTasks !== null) {
+                $vroomVehicle['max_tasks'] = $maxTasks;
+            }
 
             if ($origin !== null && $origin->getLatitude() !== null && $origin->getLongitude() !== null) {
                 $coords = [$origin->getLongitude(), $origin->getLatitude()];
