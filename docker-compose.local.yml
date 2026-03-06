@@ -91,6 +91,34 @@ services:
     ports:
       - "5100:3000"
 
+  worker:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    working_dir: /app/backend
+    command: php bin/console messenger:consume async ml failed --time-limit=3600 --memory-limit=128M -v
+    volumes:
+      - ./:/app
+    environment:
+      APP_ENV: dev
+      APP_SECRET: local-dev-secret-change-me
+      DATABASE_URL: postgresql://mxo:mxo@db:5432/mxo_track?serverVersion=16&charset=utf8
+      REDIS_URL: redis://redis:6379
+      MERCURE_URL: http://mercure/.well-known/mercure
+      MERCURE_PUBLIC_URL: http://localhost:3000/.well-known/mercure
+      MERCURE_PUBLISHER_JWT_KEY: local-mercure-jwt-key-change-me-dev
+      MERCURE_SUBSCRIBER_JWT_KEY: local-mercure-jwt-key-change-me-dev
+      TRACCAR_BASE_URL: http://traccar:8082
+      TRACCAR_WS_URL: ws://traccar:8082/api/socket
+      TRACCAR_USERNAME: admin
+      TRACCAR_PASSWORD: admin
+      VROOM_URL: http://vroom:3000
+      OSRM_URL: http://osrm:5000
+    depends_on:
+      - db
+      - redis
+    restart: unless-stopped
+
   traccar_db:
     image: postgres:16-alpine
     environment:
