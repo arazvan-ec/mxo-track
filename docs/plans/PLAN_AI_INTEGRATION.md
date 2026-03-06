@@ -17,14 +17,14 @@
 | A | A5 | Predictive Dashboard (media móvil del trend data) | **DONE** | 3-4 |
 | A | A6 | Driver Feedback Endpoint (captura conocimiento) | **DONE** | 4 |
 | — | I0 | Infraestructura Base (Messenger Doctrine, tablas ML, clientes API) | **DONE** (falta `composer require symfony/doctrine-messenger`) | 1 |
-| B | B1 | NLP Exception Classification (Claude API) | En progreso | 4-5 |
-| B | B2 | AI Delivery Notes (historial → notas sintetizadas) | En progreso | 5 |
-| B | B3 | Skill Detection from Shipment Description | En progreso | 5 |
-| B | B4 | Driver Briefing al inicio de ruta | En progreso | 5-6 |
+| B | B1 | NLP Exception Classification (Claude API) | **DONE** | 4-5 |
+| B | B2 | AI Delivery Notes (historial → notas sintetizadas) | **DONE** | 5 |
+| B | B3 | Skill Detection from Shipment Description | **DONE** | 5 |
+| B | B4 | Driver Briefing al inicio de ruta | **DONE** | 5-6 |
 | B | B5 | Smart Loading Manifest con notas ML | Pendiente | 6 |
-| B | B6 | Post-Route Analysis | Pendiente | 6 |
-| B | B7 | Webhook Enrichment (mensajes contextuales) | Pendiente | 6 |
-| B | B8 | Asistente Conversacional (MVP: 3-5 tools) | Pendiente | 7 |
+| B | B6 | Post-Route Analysis | **DONE** | 6 |
+| B | B7 | Webhook Enrichment (mensajes contextuales) | **DONE** | 6 |
+| B | B8 | Asistente Conversacional (MVP: 3-5 tools) | **DONE** | 7 |
 | C | C0 | Python FastAPI Sidecar setup | Pendiente | 6 |
 | C | C1 | Service Time Prediction (LightGBM) | Pendiente | 7-8 |
 | C | C2 | ETA Predictivo (reemplaza +120s) | Pendiente | 8 |
