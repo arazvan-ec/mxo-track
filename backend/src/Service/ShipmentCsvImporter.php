@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Dto\CsvQualityReport;
 use App\Entity\Customer;
 use App\Entity\Parcel;
 use App\Entity\Shipment;
@@ -36,35 +37,48 @@ final class ShipmentCsvImporter
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly ImportRunTracker $importRunTracker,
+        private readonly CsvQualityAnalyzer $qualityAnalyzer,
     ) {
     }
 
-    /** @return array{created: int, skipped: int, errors: int} */
+    /** @return array{created: int, skipped: int, errors: int, quality_report: CsvQualityReport|null} */
     public function import(string $csvPath, Customer $customer): array
     {
         $created = 0;
         $skipped = 0;
         $errors = 0;
+        $qualityReport = null;
 
         if (!is_file($csvPath)) {
-            return ['created' => 0, 'skipped' => 0, 'errors' => 0];
+            return ['created' => 0, 'skipped' => 0, 'errors' => 0, 'quality_report' => null];
         }
 
         $fh = fopen($csvPath, 'rb');
         if ($fh === false) {
-            return ['created' => 0, 'skipped' => 0, 'errors' => 0];
+            return ['created' => 0, 'skipped' => 0, 'errors' => 0, 'quality_report' => null];
         }
 
+        // Read all data rows (skip header) for quality analysis
+        $dataRows = [];
         $lineNumber = 0;
 
         while (($row = fgetcsv($fh, 0, ',')) !== false) {
             $lineNumber++;
 
-            // Skip header row
             if ($lineNumber === 1) {
-                continue;
+                continue; // Skip header
             }
 
+            $dataRows[] = $row;
+        }
+
+        fclose($fh);
+
+        // Run quality analysis before import
+        $qualityReport = $this->qualityAnalyzer->analyze($dataRows);
+
+        // Process each data row
+        foreach ($dataRows as $row) {
             // Pad row to expected column count so optional columns default to empty
             $row = array_pad($row, count(self::EXPECTED_COLUMNS), '');
 
@@ -200,11 +214,10 @@ final class ShipmentCsvImporter
             $created++;
         }
 
-        fclose($fh);
-        $this->importRunTracker->track($customer, $created, $skipped);
+        $this->importRunTracker->track($customer, $created, $skipped, $qualityReport->score);
         $this->entityManager->flush();
 
-        return ['created' => $created, 'skipped' => $skipped, 'errors' => $errors];
+        return ['created' => $created, 'skipped' => $skipped, 'errors' => $errors, 'quality_report' => $qualityReport];
     }
 
     private static function parsePriority(string $name): ?ShipmentPriority

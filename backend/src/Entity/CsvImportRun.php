@@ -26,6 +26,9 @@ class CsvImportRun implements CustomerScopedEntityInterface
     #[ORM\Column]
     private int $skippedCount = 0;
 
+    #[ORM\Column(nullable: true)]
+    private ?int $qualityScore = null;
+
     #[ORM\Column]
     private DateTimeImmutable $createdAt;
 
@@ -40,5 +43,7 @@ class CsvImportRun implements CustomerScopedEntityInterface
     public function getCustomer(): Customer { return $this->customer; }
     public function getCreatedCount(): int { return $this->createdCount; }
     public function getSkippedCount(): int { return $this->skippedCount; }
+    public function getQualityScore(): ?int { return $this->qualityScore; }
+    public function setQualityScore(?int $qualityScore): void { $this->qualityScore = $qualityScore; }
     public function getCreatedAt(): DateTimeImmutable { return $this->createdAt; }
 }

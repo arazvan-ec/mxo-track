@@ -14,8 +14,14 @@ final class ImportRunTracker
     {
     }
 
-    public function track(Customer $customer, int $created, int $skipped): void
+    public function track(Customer $customer, int $created, int $skipped, ?int $qualityScore = null): void
     {
-        $this->entityManager->persist(new CsvImportRun($customer, $created, $skipped));
+        $run = new CsvImportRun($customer, $created, $skipped);
+
+        if ($qualityScore !== null) {
+            $run->setQualityScore($qualityScore);
+        }
+
+        $this->entityManager->persist($run);
     }
 }
