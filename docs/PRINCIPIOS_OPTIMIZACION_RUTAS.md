@@ -162,10 +162,42 @@
 
 ---
 
+## 11. Carga LIFO (Last In, First Out)
+
+**Concepto**: Los paquetes de la primera entrega deben cargarse **al final** (más accesibles). El orden de carga en el vehículo es el inverso al orden de entrega.
+
+**Por qué funciona**:
+- El conductor no tiene que descargar y recargar paquetes para acceder a los del fondo
+- Reduce el tiempo de servicio por parada (menos manipulación)
+- Minimiza riesgo de daño por manipulación repetida
+- Es especialmente crítico en vehículos con acceso trasero único
+
+**Implementación**: Tras generar la ruta optimizada, generar un "manifiesto de carga" con el orden inverso de paradas. La primera parada se carga última, la última parada se carga primera.
+
+**Estado**: 🔲 No implementado — Requiere generar listado de carga ordenado inversamente al itinerario
+
+---
+
+## 12. Aprender de Rutas Históricas
+
+**Concepto**: Las rutas ejecutadas por conductores experimentados contienen conocimiento implícito que los algoritmos no capturan: calles cortadas, dificultad de aparcamiento, accesos complicados, horarios de carga/descarga de comercios.
+
+**Referencia**: Amazon desarrolló un sistema (MIT partnership) que aprende de rutas reales ejecutadas por conductores para ajustar la optimización algorítmica.
+
+**Aplicación práctica**:
+- Registrar la secuencia real de entregas (ya se hace via RouteStop + ShipmentEvent)
+- Comparar ruta planificada vs ruta ejecutada
+- Identificar desviaciones recurrentes → posibles mejoras al modelo
+- Ajustar tiempos de servicio por zona/dirección basándose en datos históricos
+
+**Estado**: 🔲 No implementado — Los datos base ya se capturan, falta el análisis
+
+---
+
 ## Principios Avanzados (Fase Futura)
 
 ### A. Zonificación Pre-asignada
-Dividir el área de cobertura en zonas fijas. Cada zona tiene vehículos/conductores asignados. La optimización opera dentro de cada zona. Útil cuando la flota crece y los conductores se especializan por barrio/municipio.
+Dividir el área de cobertura en zonas fijas. Cada zona tiene vehículos/conductores asignados. La optimización opera dentro de cada zona. Útil cuando la flota crece y los conductores se especializan por barrio/municipio. Se puede implementar con clustering previo (DBSCAN/HDBSCAN) que ha demostrado 30-40% reducción en tiempo de planificación.
 
 ### B. Peso de Prioridad
 Envíos urgentes o de alto valor tienen prioridad en la secuencia. VROOM soporta `priority` en jobs (1-100). Implementar mapeando el nivel de prioridad del `Shipment`.
@@ -178,6 +210,9 @@ Cuando hay múltiples almacenes, cada vehículo parte del más cercano a su zona
 
 ### E. Predicción de Tráfico
 Integrar datos históricos de tráfico para ajustar los tiempos OSRM según hora del día. OSRM soporta perfiles custom con speed profiles temporales.
+
+### F. Ordenación de Dimensiones de Capacidad
+La dimensión más restrictiva debe ir primero en el vector de capacidad VROOM. Si el peso es el factor limitante más frecuente, poner peso como `capacity[0]`. Esto mejora la eficiencia del solver. Actualmente: `[peso, volumen, bultos]` — validar con datos reales cuál es el más restrictivo.
 
 ---
 
@@ -195,5 +230,7 @@ Integrar datos históricos de tráfico para ajustar los tiempos OSRM según hora
 | 8 | Re-optimización | ✅ | `RouteOptimizationService.php` |
 | 9 | Retorno al origen | ✅ | `VroomRequestMapper.php` |
 | 10 | Max paradas | ⚠️ Parcial | `RouteBuilder.php` |
+| 11 | Carga LIFO | 🔲 No implementado | — |
+| 12 | Aprender de rutas históricas | 🔲 No implementado | ShipmentEvent (datos base) |
 
 **Stack tecnológico**: VROOM (VRP solver) + OSRM (routing engine) + PostgreSQL + Symfony 7.4
