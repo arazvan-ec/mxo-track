@@ -17,5 +17,9 @@ final class LoadingManifestItem
         public readonly ?float $weightKg,
         public readonly ?float $volumeM3,
         public readonly ?int $parcels,
+        public readonly ?int $serviceTimeSeconds = null,
+        public readonly array $requiredSkills = [],
+        public readonly ?string $aiNotes = null,
+        public readonly array $warnings = [],
     ) {}
 }

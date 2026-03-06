@@ -42,6 +42,15 @@ final class LoadingManifestGenerator
         foreach ($reversed as $stop) {
             $shipment = $stop->getShipment();
 
+            $warnings = [];
+            $skills = $shipment->getRequiredSkills();
+            if (!empty($skills)) {
+                $warnings[] = 'Requiere: ' . implode(', ', array_map(fn ($s) => $s->value, $skills));
+            }
+            if ($shipment->getTotalWeightKg() !== null && $shipment->getTotalWeightKg() > 50.0) {
+                $warnings[] = 'Paquete pesado (' . number_format($shipment->getTotalWeightKg(), 1) . ' kg) — usar carretilla';
+            }
+
             $manifest[] = new LoadingManifestItem(
                 loadingOrder: $loadingOrder,
                 deliverySequence: $stop->getSequence(),
@@ -53,6 +62,10 @@ final class LoadingManifestGenerator
                 weightKg: $shipment->getTotalWeightKg(),
                 volumeM3: $shipment->getTotalVolumeM3(),
                 parcels: $shipment->getTotalParcels(),
+                serviceTimeSeconds: $shipment->getServiceTimeSeconds(),
+                requiredSkills: array_map(fn ($s) => $s->value, $skills),
+                aiNotes: $stop->getAiNotes(),
+                warnings: $warnings,
             );
 
             $loadingOrder++;
