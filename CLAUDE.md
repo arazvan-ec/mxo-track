@@ -81,16 +81,17 @@ docker compose -f docker-compose.local.yml exec app bash -c \
 | Backend (Symfony) | http://localhost:8000 | Built-in PHP server |
 | Traccar Web UI / API | http://localhost:8082 | Credenciales: `admin`/`admin` |
 | Mercure Hub | http://localhost:3000/.well-known/mercure | SSE realtime |
-| PostgreSQL | localhost:5432 | User: `mxo`, DB: `mxo_track` |
+| PostgreSQL (app) | localhost:5432 | User: `mxo`, DB: `mxo_track` |
+| PostgreSQL (traccar) | localhost:5433 | User: `traccar`, DB: `traccar` |
 | Redis | localhost:6379 | Sesiones |
 
 #### Notas
 
 - El servidor PHP built-in es **single-threaded** y solo para desarrollo. No usar en producción.
-- Traccar usa H2 embebida (sin MariaDB) — suficiente para desarrollo. **No crea usuario admin automáticamente** (ver sección "Inicialización de Traccar" más abajo). La app se conecta vía `TRACCAR_BASE_URL=http://traccar:8082`.
+- Traccar usa **PostgreSQL dedicado** (`traccar_db`, puerto 5433 en host). La configuración se monta desde `docker/traccar-local/traccar.xml`. **No crea usuario admin automáticamente** (ver sección "Inicialización de Traccar" más abajo). La app se conecta vía `TRACCAR_BASE_URL=http://traccar:8082`.
 - Si se cierra la terminal, el servidor PHP se detiene. Para arrancarlo de nuevo: entrar al contenedor y ejecutar `php -S 0.0.0.0:8000 -t public`.
 
-Services: `app` (PHP 8.4, puerto 8000), `db` (postgres:16, puerto 5432), `redis` (redis:7, puerto 6379), `mercure` (dunglas/mercure, puerto 3000), `traccar` (traccar/traccar, puerto 8082 API/Web + 5055 GPS).
+Services: `app` (PHP 8.4, puerto 8000), `db` (postgres:16, puerto 5432), `redis` (redis:7, puerto 6379), `mercure` (dunglas/mercure, puerto 3000), `traccar` (traccar/traccar, puerto 8082 API/Web + 5055 GPS), `traccar_db` (postgres:16, puerto 5433 — BD dedicada para Traccar).
 
 ## Architecture
 
