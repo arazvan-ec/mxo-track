@@ -16,11 +16,16 @@ final class LoadingManifestGenerator
     ) {}
 
     /**
+     * Generate a LIFO loading manifest for a route.
+     *
+     * Delivery stops are returned in reverse sequence order so that the last
+     * delivery is loaded first (closest to the truck door).
+     *
      * @return list<LoadingManifestItem>
      */
     public function generateManifest(Route $route): array
     {
-        /** @var RouteStop[] $stops */
+        /** @var list<RouteStop> $stops */
         $stops = $this->em->createQuery(
             'SELECT rs FROM App\Entity\RouteStop rs
              WHERE rs.route = :route AND rs.isOrigin = false AND rs.shipment IS NOT NULL
@@ -29,7 +34,6 @@ final class LoadingManifestGenerator
             ->setParameter('route', $route)
             ->getResult();
 
-        // Reverse: last delivery loaded first (LIFO)
         $reversed = array_reverse($stops);
 
         $manifest = [];
@@ -37,21 +41,18 @@ final class LoadingManifestGenerator
 
         foreach ($reversed as $stop) {
             $shipment = $stop->getShipment();
-            if ($shipment === null) {
-                continue;
-            }
 
             $manifest[] = new LoadingManifestItem(
                 loadingOrder: $loadingOrder,
                 deliverySequence: $stop->getSequence(),
-                shipmentPublicId: (string) $shipment->getPublicId(),
+                shipmentPublicId: $shipment->getPublicIdString(),
                 shipmentReference: $shipment->getReference(),
                 recipientName: $stop->getRecipientName(),
                 address: $stop->getAddress(),
                 recipientPhone: $stop->getRecipientPhone(),
-                weightKg: null,
-                volumeM3: null,
-                parcels: null,
+                weightKg: $shipment->getTotalWeightKg(),
+                volumeM3: $shipment->getTotalVolumeM3(),
+                parcels: $shipment->getTotalParcels(),
             );
 
             $loadingOrder++;
