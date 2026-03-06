@@ -6,6 +6,8 @@ namespace App\Controller;
 
 use App\Dto\Driver\DeliverStopInput;
 use App\Dto\Driver\ExceptionStopInput;
+use App\Dto\Driver\StopFeedbackInput;
+use App\Entity\DriverFeedback;
 use App\Entity\Pod;
 use App\Entity\Route as RouteEntity;
 use App\Entity\RouteStop;
@@ -343,6 +345,66 @@ class DriverApiController extends AbstractController
         }
 
         return $this->json(['items' => $items]);
+    }
+
+    #[Route('/routes/{routePublicId}/stops/{stopPublicId}/feedback', methods: ['POST'])]
+    public function stopFeedback(
+        string $routePublicId,
+        string $stopPublicId,
+        Request $request,
+        RouteRepository $routeRepository,
+        RouteStopRepository $routeStopRepository,
+        EntityManagerInterface $entityManager,
+        ApiErrorResponder $errorResponder,
+        ValidatorInterface $validator,
+    ): JsonResponse {
+        $payload = $this->decodePayload($request, $errorResponder);
+        if ($payload instanceof JsonResponse) {
+            return $payload;
+        }
+
+        $input = StopFeedbackInput::fromArray($payload);
+        $violations = $validator->validate($input);
+        if (count($violations) > 0) {
+            return $errorResponder->unprocessableEntity('validation_failed', $violations);
+        }
+
+        $route = $routeRepository->findOneByPublicId($routePublicId);
+        if (!$route instanceof RouteEntity) {
+            return $errorResponder->notFound('route_not_found', 'Ruta no encontrada.');
+        }
+
+        /** @var User $driver */
+        $driver = $this->getUser();
+        if ($route->getDriver()?->getId() !== $driver->getId()) {
+            return $errorResponder->notFound('route_not_found', 'Ruta no encontrada.');
+        }
+
+        $stop = $routeStopRepository->findOneByPublicId($stopPublicId);
+        if (!$stop instanceof RouteStop) {
+            return $errorResponder->notFound('stop_not_found', 'Parada no encontrada.');
+        }
+
+        if ($stop->getRoute()->getDriver()?->getId() !== $driver->getId()) {
+            return $errorResponder->notFound('stop_not_found', 'Parada no encontrada.');
+        }
+
+        $feedback = new DriverFeedback(
+            driver: $driver,
+            stop: $stop,
+            correctedLat: $input->correctedLat,
+            correctedLng: $input->correctedLng,
+            accessNotes: $input->accessNotes,
+            actualServiceTimeSeconds: $input->actualServiceTimeSeconds,
+            comment: $input->comment,
+        );
+        $entityManager->persist($feedback);
+        $entityManager->flush();
+
+        return $this->json([
+            'ok' => true,
+            'feedback_public_id' => $feedback->getPublicIdString(),
+        ], 201);
     }
 
     /**
