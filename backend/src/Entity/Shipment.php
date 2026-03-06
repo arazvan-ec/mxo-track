@@ -205,7 +205,4 @@ class Shipment implements CustomerScopedEntityInterface, SoftDeletableInterface
             $requiredSkills,
         );
     }
-
-    public function getPriority(): ShipmentPriority { return $this->priority; }
-    public function setPriority(ShipmentPriority $priority): void { $this->priority = $priority; }
 }
