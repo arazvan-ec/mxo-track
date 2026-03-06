@@ -69,6 +69,12 @@ Conductor finaliza ruta → Cliente ve estado en tiempo real
 | **ShipmentEvent** | Evento en la línea de tiempo del envío | shipment, eventType, payload, createdAt |
 | **DriverAction** | Idempotencia de acciones del conductor | driver, clientActionId, actionType |
 | **User** | Usuario del sistema | email, name, role (ADMIN/CUSTOMER/DRIVER), customer |
+| **CustomerVehicle** | Asociación cliente ↔ vehículo (multi-tenant) | customer, vehicle (unique pair, sin public_id) |
+| **VehiclePosition** | Histórico completo de posiciones GPS | vehicle, route, lat, lng, speed, course, accuracy, deviceTime |
+| **VehicleLastPosition** | Última posición conocida (desnormalizada) | vehicle (1:1), lat, lng, speed, course, deviceTime |
+| **VehicleCheckpoint** | Progreso de ingesta desde Traccar | vehicle (1:1), lastDeviceTime, lastTraccarPositionId |
+| **AuditLog** | Registro de auditoría | user, action, entityType, entityId, ip, payload, createdAt |
+| **Notification** | Notificación in-app | user, title, body, isRead, createdAt |
 
 ### Patrón de identidad
 
@@ -161,15 +167,48 @@ Las ubicaciones se usan como **punto de origen** de las rutas. El vehículo sale
 
 **Decisión de diseño:** Las tres dimensiones de capacidad (peso, volumen, bultos) son independientes. Un envío debe caber en las tres para ser asignado al vehículo. Si un vehículo no tiene configurada alguna dimensión (null), esa restricción no se aplica.
 
-### 6.2 Vincular vehículo con Traccar (GPS)
+### 6.2 Visibilidad de vehículos (multi-tenant)
 
-**Quién:** Sistema automático
+La visibilidad de vehículos se controla por `VisibilityScopeService` según el rol:
+
+| Rol | Vehículos visibles |
+|-----|-------------------|
+| ROLE_ADMIN | Todos |
+| ROLE_CUSTOMER | Solo los asociados vía `CustomerVehicle` |
+| ROLE_DRIVER | Solo los asignados a sus rutas activas |
+
+La tabla `CustomerVehicle` es una asociación N:M entre Customer y Vehicle. No tiene `public_id` (solo uso interno). Constraint único: `(customer_id, vehicle_id)`.
+
+### 6.3 Vincular vehículo con Traccar (GPS)
+
+**Quién:** Sistema automático o admin
 **Servicios:** TraccarSyncDevicesCommand, TraccarApiClient
 
 El vehículo se vincula a un dispositivo GPS en Traccar mediante `traccarDeviceId`. Esto permite:
 - Recibir posiciones GPS del vehículo en tiempo real
 - Mostrar el vehículo en el mapa de flota
 - Calcular ETAs basadas en la posición real
+
+**Método A — Sincronización por nombre:**
+```bash
+php bin/console app:traccar:sync-devices --apply
+```
+Busca coincidencias por nombre (case-insensitive) entre vehículos locales y dispositivos Traccar. Los que coinciden se vinculan automáticamente.
+
+**Método B — Simulación GPS (desarrollo):**
+```bash
+php bin/console app:dev:simulate-gps --points=20 --interval=2 --ingest
+```
+Crea un dispositivo en Traccar con `uniqueId=sim-{nombre}`, vincula el vehículo, y envía posiciones simuladas por el centro de Madrid.
+
+### 6.4 API de vehículos
+
+| Endpoint | Método | Rol | Descripción |
+|----------|--------|-----|-------------|
+| `/api/vehicles` | GET | Autenticado | Lista vehículos (filtrados por visibilidad) |
+| `/api/vehicles/{publicId}/last-position` | GET | Autenticado | Última posición GPS |
+| `/api/vehicles/{publicId}/positions` | GET | Autenticado | Histórico de posiciones (paginado, filtro por fecha) |
+| `/api/vehicles/{publicId}/positions.csv` | GET | Autenticado | Exportar posiciones a CSV |
 
 ---
 
@@ -620,13 +659,62 @@ TraccarStreamCommand (polling cada 2-5 seg) ◀───────────
         ▼
 TraccarIngestionService
         │
-        ├── Crea/actualiza VehiclePosition (histórico)
-        ├── Crea/actualiza VehicleLastPosition (última posición)
+        ├── Crea VehiclePosition (histórico append-only)
+        ├── Actualiza VehicleLastPosition (1:1 por vehículo)
+        ├── Actualiza VehicleCheckpoint (progreso de ingesta)
         └── Publica a Mercure → /vehicles/{public_id}/position
                                   /operator/fleet
 ```
 
-### 15.2 Mercure (realtime SSE)
+**Servicios:**
+- `TraccarStreamCommand` — Proceso de larga duración que consulta Traccar periódicamente
+- `TraccarApiClient` — Cliente HTTP para la API REST de Traccar
+- `TraccarIngestionService` — Procesa posiciones y las almacena en PostgreSQL
+
+**Modos de operación del stream:**
+
+| Modo | Comando | Descripción |
+|------|---------|-------------|
+| Polling continuo | `app:traccar:stream --sleep=2` | Consulta Traccar cada N segundos (por defecto) |
+| WebSocket | `app:traccar:stream --mode=ws` | Recibe posiciones en near real-time vía WS |
+| Una sola vez | `app:traccar:stream --once` | Ejecuta un ciclo de polling y termina |
+
+**Proceso de ingesta por cada posición:**
+
+1. **Deduplicación:** Constraint único `(vehicle_id, device_time)` previene duplicados
+2. **VehiclePosition:** Se crea una entrada de histórico (append-only). Si el vehículo tiene una ruta activa, se asocia la posición a la ruta
+3. **VehicleLastPosition:** Se crea (primera vez) o actualiza (refresh) la posición desnormalizada. Es un registro 1:1 por vehículo para consultas rápidas del mapa de flota
+4. **VehicleCheckpoint:** Registra `lastDeviceTime` y `lastTraccarPositionId` para saber desde dónde reanudar el polling tras un reinicio (evita re-ingestar posiciones antiguas)
+5. **Mercure:** Publica JSON con lat, lng, speed, course, accuracy, deviceTime al topic `/vehicles/{publicId}/position`
+6. **Errores:** Si falla la inserción por constraint violation (race condition), se limpia el EntityManager y se continúa. Si falla Mercure, se loguea y se continúa (no se pierde la posición)
+
+**Datos de cada posición publicada por Mercure:**
+```json
+{
+  "vehicleId": "01HVEH...",
+  "lat": 40.4168,
+  "lng": -3.7038,
+  "speed": 25.5,
+  "course": 180.0,
+  "accuracy": 5.0,
+  "deviceTime": "2026-03-06T14:30:00+01:00"
+}
+```
+
+### 15.2 Mapa de flota
+
+**Quién:** ROLE_ADMIN
+**Endpoint:** `/fleet/map`
+**Servicios:** FleetMapController → VehicleLastPosition → Mercure SSE
+
+El mapa de flota muestra todos los vehículos activos con su última posición. Se actualiza en tiempo real vía Mercure SSE (Server-Sent Events).
+
+**Datos mostrados por vehículo:**
+- Posición actual (lat, lng), velocidad, dirección, hora del último GPS fix
+- Rutas activas asignadas con progreso de entregas (entregadas / total)
+- Paradas pendientes con ubicación
+
+### 15.3 Mercure (realtime SSE)
 
 El frontend recibe actualizaciones en tiempo real vía Server-Sent Events:
 
