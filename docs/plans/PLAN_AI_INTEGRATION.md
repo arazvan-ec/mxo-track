@@ -9,14 +9,14 @@
 
 | Track | ID | Descripción | Estado | Semana |
 |-------|----|-------------|--------|--------|
-| A | A0 | Fix bugs conocidos (ETA 120s, service time inconsistencia) | Pendiente | 1 |
+| A | A0 | Fix bugs conocidos (ETA 120s, service time inconsistencia) | **DONE** | 1 |
 | A | A1 | Geocodificación dual (coordenadas + calle) | Pendiente | 1-2 |
-| A | A2 | Window Violation Detection (ETA vs deliveryWindow) | Pendiente | 2 |
-| A | A3 | CSV Quality Score (reglas, integrado en CsvImportRun) | Pendiente | 2-3 |
-| A | A4 | Address Risk desde historial (SQL puro) | Pendiente | 3 |
-| A | A5 | Predictive Dashboard (media móvil del trend data) | Pendiente | 3-4 |
-| A | A6 | Driver Feedback Endpoint (captura conocimiento) | Pendiente | 4 |
-| — | I0 | Infraestructura Base (Messenger Doctrine, tablas ML, clientes API) | Pendiente | 1 |
+| A | A2 | Window Violation Detection (ETA vs deliveryWindow) | **DONE** | 2 |
+| A | A3 | CSV Quality Score (reglas, integrado en CsvImportRun) | **DONE** | 2-3 |
+| A | A4 | Address Risk desde historial (SQL puro) | En progreso | 3 |
+| A | A5 | Predictive Dashboard (media móvil del trend data) | En progreso | 3-4 |
+| A | A6 | Driver Feedback Endpoint (captura conocimiento) | En progreso | 4 |
+| — | I0 | Infraestructura Base (Messenger Doctrine, tablas ML, clientes API) | **DONE** (falta `composer require symfony/doctrine-messenger`) | 1 |
 | B | B1 | NLP Exception Classification (Claude API) | Pendiente | 4-5 |
 | B | B2 | AI Delivery Notes (historial → notas sintetizadas) | Pendiente | 5 |
 | B | B3 | Skill Detection from Shipment Description | Pendiente | 5 |
