@@ -1,7 +1,15 @@
 FROM traccar/traccar:latest
 
+# Install PostgreSQL client for pg_isready and createdb
+RUN apt-get update && apt-get install -y --no-install-recommends postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY docker/traccar-railway/traccar.xml /opt/traccar/conf/traccar.xml
+COPY scripts/traccar-start.sh /opt/traccar-start.sh
+RUN chmod +x /opt/traccar-start.sh
 
 # 8082 = API REST + Web UI (internal services)
 # 5055 = OsmAnd GPS protocol (Android app)
 EXPOSE 8082 5055
+
+ENTRYPOINT ["/opt/traccar-start.sh"]
