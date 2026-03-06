@@ -13,6 +13,8 @@ use Doctrine\ORM\EntityManagerInterface;
 
 final class EtaService
 {
+    public const int DEFAULT_SERVICE_TIME_SECONDS = 300;
+
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly OsrmClient $osrmClient,
@@ -116,8 +118,9 @@ final class EtaService
             $currentLat = $stop->getLatitude();
             $currentLng = $stop->getLongitude();
 
-            // Add stop time (2 minutes per delivery)
-            $accumulatedSeconds += 120;
+            // Add service time per delivery (from shipment config or default)
+            $serviceTime = $stop->getShipment()?->getServiceTimeSeconds() ?? self::DEFAULT_SERVICE_TIME_SECONDS;
+            $accumulatedSeconds += $serviceTime;
         }
 
         return $etas;
