@@ -7,6 +7,7 @@ namespace App\Service;
 use App\Entity\CustomerLocation;
 use App\Entity\Shipment;
 use App\Entity\Vehicle;
+use App\Enum\VehicleSkill;
 
 /**
  * Converts domain entities to VROOM API request format.
@@ -48,6 +49,11 @@ final class VroomRequestMapper
                 $coords = [$origin->getLongitude(), $origin->getLatitude()];
                 $vroomVehicle['start'] = $coords;
                 $vroomVehicle['end'] = $coords; // return to origin
+            }
+
+            $vehicleSkills = array_map(fn (VehicleSkill $s) => $s->value, $vehicle->getSkills());
+            if (!empty($vehicleSkills)) {
+                $vroomVehicle['skills'] = $vehicleSkills;
             }
 
             $vroomVehicles[] = $vroomVehicle;
@@ -94,6 +100,11 @@ final class VroomRequestMapper
                     $this->timeToSeconds($windowStart),
                     $this->timeToSeconds($windowEnd),
                 ]];
+            }
+
+            $requiredSkills = array_map(fn (VehicleSkill $s) => $s->value, $shipment->getRequiredSkills());
+            if (!empty($requiredSkills)) {
+                $job['skills'] = $requiredSkills;
             }
 
             $vroomJobs[] = $job;

@@ -7,9 +7,11 @@ namespace App\Entity;
 use App\Entity\Concerns\PublicIdTrait;
 use App\Entity\Concerns\SoftDeleteTrait;
 use App\Enum\ServiceType;
+use App\Enum\VehicleSkill;
 use DateTimeImmutable;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
 
@@ -81,6 +83,9 @@ class Shipment implements CustomerScopedEntityInterface, SoftDeletableInterface
 
     #[ORM\Column(length: 20, nullable: true, unique: true)]
     private ?string $trackingToken = null;
+
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $requiredSkills = [];
 
     #[ORM\Column]
     private DateTimeImmutable $createdAt;
@@ -172,5 +177,25 @@ class Shipment implements CustomerScopedEntityInterface, SoftDeletableInterface
         $this->totalWeightKg = (string) $totalWeight;
         $this->totalVolumeM3 = (string) $totalVolume;
         $this->totalParcels = $this->parcels->count();
+    }
+
+    /** @return VehicleSkill[] */
+    public function getRequiredSkills(): array
+    {
+        return array_filter(
+            array_map(
+                static fn (int $v): ?VehicleSkill => VehicleSkill::tryFrom($v),
+                $this->requiredSkills ?? [],
+            ),
+        );
+    }
+
+    /** @param VehicleSkill[] $requiredSkills */
+    public function setRequiredSkills(array $requiredSkills): void
+    {
+        $this->requiredSkills = array_map(
+            static fn (VehicleSkill $s): int => $s->value,
+            $requiredSkills,
+        );
     }
 }

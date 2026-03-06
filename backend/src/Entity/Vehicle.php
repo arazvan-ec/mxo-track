@@ -6,6 +6,7 @@ namespace App\Entity;
 
 use App\Entity\Concerns\PublicIdTrait;
 use App\Entity\Concerns\SoftDeleteTrait;
+use App\Enum\VehicleSkill;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -46,6 +47,9 @@ class Vehicle implements SoftDeletableInterface
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $updatedAt;
 
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $skills = [];
+
     public function __construct(string $name)
     {
         $now = new \DateTimeImmutable();
@@ -68,6 +72,26 @@ class Vehicle implements SoftDeletableInterface
     public function setActive(bool $isActive): void { $this->isActive = $isActive; }
     public function getCreatedAt(): \DateTimeImmutable { return $this->createdAt; }
     public function getUpdatedAt(): \DateTimeImmutable { return $this->updatedAt; }
+
+    /** @return VehicleSkill[] */
+    public function getSkills(): array
+    {
+        return array_filter(
+            array_map(
+                static fn (int $v): ?VehicleSkill => VehicleSkill::tryFrom($v),
+                $this->skills ?? [],
+            ),
+        );
+    }
+
+    /** @param VehicleSkill[] $skills */
+    public function setSkills(array $skills): void
+    {
+        $this->skills = array_map(
+            static fn (VehicleSkill $s): int => $s->value,
+            $skills,
+        );
+    }
 
     #[ORM\PrePersist]
     public function touchCreatedAt(): void
