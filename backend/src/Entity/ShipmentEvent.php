@@ -40,5 +40,6 @@ class ShipmentEvent
 
     public function getEventType(): ShipmentEventType { return $this->eventType; }
     public function getPayload(): array { return $this->payload; }
+    public function setPayload(array $payload): void { $this->payload = $payload; }
     public function getCreatedAt(): DateTimeImmutable { return $this->createdAt; }
 }
