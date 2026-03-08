@@ -6,8 +6,8 @@
 |------|--------|-------|
 | 1 — Routing (OSRM) | ✅ Completada | 2026-03-08 |
 | 2 — Route Optimization (VROOM) | ✅ Completada | 2026-03-08 |
-| 3 — GPS Tracking (Traccar) | Pendiente | — |
-| 4 — AI/LLM (Claude+OpenAI) | Pendiente | — |
+| 3 — GPS Tracking (Traccar) | ✅ Completada | 2026-03-08 |
+| 4 — AI/LLM (Claude+OpenAI) | ✅ Completada | 2026-03-08 |
 | 5 — Realtime (Mercure) | Pendiente | — |
 | 6 — ML Prediction | Pendiente | — |
 | 7 — Repositories (incremental) | Pendiente | — |
