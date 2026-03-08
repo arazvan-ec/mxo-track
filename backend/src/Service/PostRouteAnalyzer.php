@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Ai\LlmClientInterface;
+use App\Ai\LlmRequest;
 use App\Entity\Route;
 use App\Entity\RouteStop;
 use App\Enum\RouteStopStatus;
@@ -18,7 +20,7 @@ use Psr\Log\LoggerInterface;
 final class PostRouteAnalyzer
 {
     public function __construct(
-        private readonly ClaudeApiClient $claudeApiClient,
+        private readonly LlmClientInterface $llmClient,
         private readonly RateLimitedApiClient $rateLimitedApiClient,
         private readonly EntityManagerInterface $entityManager,
         private readonly ?LoggerInterface $logger = null,
@@ -159,9 +161,7 @@ PROMPT;
 
         /** @var string $response */
         $response = $this->rateLimitedApiClient->call(
-            fn () => $this->claudeApiClient->extractText(
-                $this->claudeApiClient->complete($systemPrompt, $userMessage, maxTokens: 1500),
-            ),
+            fn () => $this->llmClient->complete(new LlmRequest($systemPrompt, $userMessage, maxTokens: 1500))->content,
         );
 
         return $this->parseAnalysisResponse($response, $stats);

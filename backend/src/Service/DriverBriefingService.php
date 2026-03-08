@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Ai\LlmClientInterface;
+use App\Ai\LlmRequest;
 use App\Dto\DriverBriefing;
 use App\Entity\AddressRisk;
 use App\Entity\Route;
@@ -18,7 +20,7 @@ use Psr\Log\LoggerInterface;
 final class DriverBriefingService
 {
     public function __construct(
-        private readonly ClaudeApiClient $claudeApi,
+        private readonly LlmClientInterface $llmClient,
         private readonly RateLimitedApiClient $rateLimiter,
         private readonly AddressRiskService $addressRisk,
         private readonly EntityManagerInterface $em,
@@ -194,9 +196,9 @@ PROMPT;
         try {
             /** @var string|null $text */
             $text = $this->rateLimiter->call(
-                fn (): string => $this->claudeApi->extractText(
-                    $this->claudeApi->complete($systemPrompt, $userMessage, maxTokens: 512),
-                ),
+                fn (): string => $this->llmClient->complete(
+                    new LlmRequest($systemPrompt, $userMessage, maxTokens: 512),
+                )->content,
                 maxPerMinute: 30,
                 clientName: 'claude-briefing',
             );

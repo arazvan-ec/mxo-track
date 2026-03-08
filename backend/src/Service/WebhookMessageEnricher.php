@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Ai\LlmClientInterface;
+use App\Ai\LlmRequest;
 use App\Enum\ShipmentEventType;
 use Psr\Log\LoggerInterface;
 
@@ -12,7 +14,7 @@ final class WebhookMessageEnricher
     private const int RATE_LIMIT_PER_MINUTE = 30;
 
     public function __construct(
-        private readonly ClaudeApiClient $claudeApiClient,
+        private readonly LlmClientInterface $llmClient,
         private readonly RateLimitedApiClient $rateLimitedApiClient,
         private readonly LoggerInterface $logger,
     ) {
@@ -66,20 +68,14 @@ Siempre menciona que se programará un nuevo intento de entrega.
 Responde SOLO con el mensaje, sin comillas ni formato adicional.
 PROMPT;
 
-        /** @var array<string, mixed> $response */
-        $response = $this->rateLimitedApiClient->call(
-            fn (): array => $this->claudeApiClient->complete(
-                $systemPrompt,
-                $userMessage,
-                'claude-sonnet-4-20250514',
-                0.4,
-                256,
-            ),
+        /** @var string $text */
+        $text = $this->rateLimitedApiClient->call(
+            fn (): string => $this->llmClient->complete(
+                new LlmRequest($systemPrompt, $userMessage, temperature: 0.4, maxTokens: 256),
+            )->content,
             self::RATE_LIMIT_PER_MINUTE,
             'webhook_enrichment',
         );
-
-        $text = $this->claudeApiClient->extractText($response);
 
         if ($text === '') {
             $this->logger->warning('Claude returned empty text for exception message, using fallback', [

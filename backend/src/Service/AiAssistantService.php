@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Ai\LlmClientInterface;
+use App\Ai\ToolDefinition;
 use App\Entity\Route;
 use App\Entity\RouteStop;
 use App\Entity\User;
@@ -20,7 +22,7 @@ final class AiAssistantService
     private static array $rateLimitBuckets = [];
 
     public function __construct(
-        private readonly ClaudeApiClient $claudeApiClient,
+        private readonly LlmClientInterface $llmClient,
         private readonly SearchService $searchService,
         private readonly ReportingService $reportingService,
         private readonly AlertService $alertService,
@@ -56,7 +58,7 @@ final class AiAssistantService
         };
 
         try {
-            $result = $this->claudeApiClient->completeWithToolLoop(
+            $result = $this->llmClient->completeWithToolLoop(
                 $messages,
                 $systemPrompt,
                 $tools,
@@ -64,8 +66,8 @@ final class AiAssistantService
             );
 
             return [
-                'response' => $result['response'],
-                'tools_used' => $result['tools_used'],
+                'response' => $result->content,
+                'tools_used' => $result->rawResponse['tools_used'] ?? [],
             ];
         } catch (\Throwable $e) {
             $this->logger->error('AI Assistant error: ' . $e->getMessage());
@@ -100,85 +102,45 @@ Contexto del sistema:
 PROMPT;
     }
 
-    /**
-     * @return list<array{name: string, description: string, input_schema: array<string, mixed>}>
-     */
+    /** @return list<ToolDefinition> */
     private function buildToolDefinitions(): array
     {
         return [
-            [
-                'name' => 'search_shipments',
-                'description' => 'Buscar envios por numero de referencia, nombre del destinatario o direccion',
-                'input_schema' => [
-                    'type' => 'object',
-                    'properties' => [
-                        'query' => [
-                            'type' => 'string',
-                            'description' => 'Termino de busqueda (referencia, nombre o direccion)',
-                        ],
-                    ],
-                    'required' => ['query'],
+            new ToolDefinition('search_shipments', 'Buscar envios por numero de referencia, nombre del destinatario o direccion', [
+                'type' => 'object',
+                'properties' => [
+                    'query' => ['type' => 'string', 'description' => 'Termino de busqueda (referencia, nombre o direccion)'],
                 ],
-            ],
-            [
-                'name' => 'get_delivery_report',
-                'description' => 'Obtener reporte de entregas con totales, tasa de exito, desglose por conductor y cliente. Util para preguntas como "cuantas entregas hubo esta semana" o "cual es la tasa de exito".',
-                'input_schema' => [
-                    'type' => 'object',
-                    'properties' => [
-                        'from_date' => [
-                            'type' => 'string',
-                            'description' => 'Fecha inicio en formato YYYY-MM-DD (opcional)',
-                        ],
-                        'to_date' => [
-                            'type' => 'string',
-                            'description' => 'Fecha fin en formato YYYY-MM-DD (opcional)',
-                        ],
-                    ],
-                    'required' => [],
+                'required' => ['query'],
+            ]),
+            new ToolDefinition('get_delivery_report', 'Obtener reporte de entregas con totales, tasa de exito, desglose por conductor y cliente.', [
+                'type' => 'object',
+                'properties' => [
+                    'from_date' => ['type' => 'string', 'description' => 'Fecha inicio en formato YYYY-MM-DD (opcional)'],
+                    'to_date' => ['type' => 'string', 'description' => 'Fecha fin en formato YYYY-MM-DD (opcional)'],
                 ],
-            ],
-            [
-                'name' => 'get_route_details',
-                'description' => 'Obtener detalles de una ruta especifica incluyendo sus paradas, conductor asignado, estado y progreso',
-                'input_schema' => [
-                    'type' => 'object',
-                    'properties' => [
-                        'route_public_id' => [
-                            'type' => 'string',
-                            'description' => 'ID publico de la ruta (ULID)',
-                        ],
-                    ],
-                    'required' => ['route_public_id'],
+                'required' => [],
+            ]),
+            new ToolDefinition('get_route_details', 'Obtener detalles de una ruta especifica incluyendo sus paradas, conductor asignado, estado y progreso', [
+                'type' => 'object',
+                'properties' => [
+                    'route_public_id' => ['type' => 'string', 'description' => 'ID publico de la ruta (ULID)'],
                 ],
-            ],
-            [
-                'name' => 'get_active_alerts',
-                'description' => 'Obtener alertas activas del sistema: vehiculos offline y rutas con excepciones excesivas',
-                'input_schema' => [
-                    'type' => 'object',
-                    'properties' => [],
-                    'required' => [],
+                'required' => ['route_public_id'],
+            ]),
+            new ToolDefinition('get_active_alerts', 'Obtener alertas activas del sistema: vehiculos offline y rutas con excepciones excesivas', [
+                'type' => 'object',
+                'properties' => [],
+                'required' => [],
+            ]),
+            new ToolDefinition('get_exception_patterns', 'Analizar patrones de excepciones en entregas: por codigo, por conductor, por direccion.', [
+                'type' => 'object',
+                'properties' => [
+                    'from_date' => ['type' => 'string', 'description' => 'Fecha inicio en formato YYYY-MM-DD (opcional)'],
+                    'to_date' => ['type' => 'string', 'description' => 'Fecha fin en formato YYYY-MM-DD (opcional)'],
                 ],
-            ],
-            [
-                'name' => 'get_exception_patterns',
-                'description' => 'Analizar patrones de excepciones en entregas: por codigo, por conductor, por direccion. Util para preguntas como "que rutas tienen mas excepciones" o "cuales son los problemas mas comunes".',
-                'input_schema' => [
-                    'type' => 'object',
-                    'properties' => [
-                        'from_date' => [
-                            'type' => 'string',
-                            'description' => 'Fecha inicio en formato YYYY-MM-DD (opcional)',
-                        ],
-                        'to_date' => [
-                            'type' => 'string',
-                            'description' => 'Fecha fin en formato YYYY-MM-DD (opcional)',
-                        ],
-                    ],
-                    'required' => [],
-                ],
-            ],
+                'required' => [],
+            ]),
         ];
     }
 

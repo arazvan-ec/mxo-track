@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service;
 
-use Doctrine\ORM\EntityManagerInterface;
+use App\Ai\LlmClientInterface;
+use App\Ai\LlmRequest;
 use Psr\Log\LoggerInterface;
 
 final class ExceptionClassifierService
@@ -24,9 +25,8 @@ final class ExceptionClassifierService
     ];
 
     public function __construct(
-        private readonly ClaudeApiClient $claudeApi,
+        private readonly LlmClientInterface $llmClient,
         private readonly RateLimitedApiClient $rateLimiter,
-        private readonly EntityManagerInterface $em,
         private readonly LoggerInterface $logger,
     ) {
     }
@@ -52,8 +52,10 @@ final class ExceptionClassifierService
         $prompt = $this->buildPrompt($exceptionNotes, $exceptionCode);
 
         try {
-            $response = $this->rateLimiter->execute(
-                fn () => $this->claudeApi->sendMessage($prompt),
+            $response = $this->rateLimiter->call(
+                fn () => $this->llmClient->complete(
+                    new LlmRequest($prompt, 'Clasifica esta excepcion.', maxTokens: 512),
+                )->content,
                 self::RATE_LIMIT_MAX_REQUESTS,
             );
 

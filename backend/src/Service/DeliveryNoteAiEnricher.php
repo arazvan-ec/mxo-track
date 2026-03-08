@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Ai\LlmClientInterface;
+use App\Ai\LlmRequest;
 use App\Entity\Route;
 use App\Entity\RouteStop;
 use App\Entity\ShipmentEvent;
@@ -27,7 +29,7 @@ Responde SOLO con la nota, sin comillas ni explicaciones adicionales.
 PROMPT;
 
     public function __construct(
-        private readonly ClaudeApiClient $claudeApi,
+        private readonly LlmClientInterface $llmClient,
         private readonly RateLimitedApiClient $rateLimiter,
         private readonly EntityManagerInterface $em,
         private readonly DriverFeedbackRepository $feedbackRepo,
@@ -53,13 +55,11 @@ PROMPT;
             $context,
         );
 
-        $claudeApi = $this->claudeApi;
-        /** @var array<string, mixed> $response */
-        $response = $this->rateLimiter->call(
-            fn (): array => $claudeApi->complete(self::SYSTEM_PROMPT, $userMessage, maxTokens: 150),
+        $note = $this->rateLimiter->call(
+            fn (): string => $this->llmClient->complete(
+                new LlmRequest(self::SYSTEM_PROMPT, $userMessage, maxTokens: 150),
+            )->content,
         );
-
-        $note = $this->claudeApi->extractText($response);
 
         if ($note === '') {
             return null;

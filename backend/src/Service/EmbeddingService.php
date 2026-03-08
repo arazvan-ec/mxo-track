@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Ai\EmbeddingClientInterface;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
@@ -19,7 +20,7 @@ final class EmbeddingService
     private const string TABLE = 'ml_embedding';
 
     public function __construct(
-        private readonly OpenAiApiClient $openAiClient,
+        private readonly EmbeddingClientInterface $embeddingClient,
         private readonly EntityManagerInterface $em,
         private readonly LoggerInterface $logger,
     ) {}
@@ -29,7 +30,7 @@ final class EmbeddingService
      */
     public function embedAndStore(string $entityType, int $entityId, string $text): void
     {
-        $embedding = $this->openAiClient->embed($text);
+        $embedding = $this->embeddingClient->embed($text);
         if ($embedding === null || \count($embedding) === 0) {
             $this->logger->warning('Failed to generate embedding', [
                 'entityType' => $entityType,
@@ -68,7 +69,7 @@ final class EmbeddingService
      */
     public function search(string $query, string $entityType, int $limit = 10): array
     {
-        $queryEmbedding = $this->openAiClient->embed($query);
+        $queryEmbedding = $this->embeddingClient->embed($query);
         if ($queryEmbedding === null || \count($queryEmbedding) === 0) {
             $this->logger->warning('Failed to generate query embedding');
 

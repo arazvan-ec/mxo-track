@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Ai\LlmClientInterface;
+use App\Ai\LlmRequest;
 use App\Entity\Shipment;
 use App\Enum\VehicleSkill;
 use Psr\Log\LoggerInterface;
@@ -19,7 +21,7 @@ final class ShipmentSkillDetector
     private const HEAVY_LOAD_THRESHOLD_KG = 50.0;
 
     public function __construct(
-        private readonly ClaudeApiClient $claudeApiClient,
+        private readonly LlmClientInterface $llmClient,
         private readonly RateLimitedApiClient $rateLimitedApiClient,
         private readonly ?LoggerInterface $logger = null,
     ) {
@@ -62,9 +64,7 @@ PROMPT;
         try {
             /** @var string $response */
             $response = $this->rateLimitedApiClient->call(
-                fn () => $this->claudeApiClient->extractText(
-                    $this->claudeApiClient->complete($systemPrompt, $userMessage, maxTokens: 100),
-                ),
+                fn () => $this->llmClient->complete(new LlmRequest($systemPrompt, $userMessage, maxTokens: 100))->content,
             );
 
             $skills = $this->parseSkillsResponse($response);
