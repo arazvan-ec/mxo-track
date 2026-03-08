@@ -4,49 +4,36 @@ declare(strict_types=1);
 
 namespace App\Service;
 
-use Symfony\Contracts\HttpClient\HttpClientInterface;
+use App\Routing\Coordinate;
+use App\Routing\OsrmRoutingEngine;
 
 /**
- * Client for OSRM routing engine. Provides real road distances and durations.
- *
- * OSRM uses [longitude, latitude] coordinate order in URLs.
- * Returns distances in meters and durations in seconds.
+ * @deprecated Use App\Routing\RoutingEngineInterface instead.
  */
 final class OsrmClient
 {
     public function __construct(
-        private readonly HttpClientInterface $httpClient,
-        private readonly string $osrmUrl,
-    ) {}
+        private readonly OsrmRoutingEngine $engine,
+    ) {
+    }
 
     /**
-     * Gets the road distance (km) and duration (seconds) between two points.
+     * @deprecated Use RoutingEngineInterface::route() instead.
      *
      * @return array{distanceKm: float, durationSeconds: float}
      */
     public function getRoute(float $fromLat, float $fromLng, float $toLat, float $toLng): array
     {
-        $coords = sprintf('%f,%f;%f,%f', $fromLng, $fromLat, $toLng, $toLat);
-        $url = sprintf('%s/route/v1/driving/%s?overview=false', $this->osrmUrl, $coords);
-
-        $response = $this->httpClient->request('GET', $url, ['timeout' => 10]);
-        $data = $response->toArray();
-
-        if (($data['code'] ?? '') !== 'Ok' || empty($data['routes'])) {
-            return ['distanceKm' => 0.0, 'durationSeconds' => 0.0];
-        }
-
-        $route = $data['routes'][0];
+        $result = $this->engine->route($fromLat, $fromLng, $toLat, $toLng);
 
         return [
-            'distanceKm' => ($route['distance'] ?? 0) / 1000.0,
-            'durationSeconds' => (float) ($route['duration'] ?? 0),
+            'distanceKm' => $result->distanceKm,
+            'durationSeconds' => $result->durationSeconds,
         ];
     }
 
     /**
-     * Gets road distances and durations for multiple consecutive waypoints.
-     * Uses OSRM route service with all waypoints in one request.
+     * @deprecated Use RoutingEngineInterface::routeWithWaypoints() instead.
      *
      * @param list<array{lat: float, lng: float}> $waypoints At least 2 points
      * @return array{
@@ -57,41 +44,21 @@ final class OsrmClient
      */
     public function getRouteWithWaypoints(array $waypoints): array
     {
-        if (\count($waypoints) < 2) {
-            return ['totalDistanceKm' => 0.0, 'totalDurationSeconds' => 0.0, 'legs' => []];
-        }
-
-        $coordParts = [];
-        foreach ($waypoints as $wp) {
-            $coordParts[] = sprintf('%f,%f', $wp['lng'], $wp['lat']);
-        }
-
-        $url = sprintf(
-            '%s/route/v1/driving/%s?overview=false&steps=false',
-            $this->osrmUrl,
-            implode(';', $coordParts),
+        $coordinates = array_map(
+            static fn(array $wp) => new Coordinate($wp['lat'], $wp['lng']),
+            $waypoints,
         );
 
-        $response = $this->httpClient->request('GET', $url, ['timeout' => 15]);
-        $data = $response->toArray();
+        $result = $this->engine->routeWithWaypoints($coordinates);
 
-        if (($data['code'] ?? '') !== 'Ok' || empty($data['routes'])) {
-            return ['totalDistanceKm' => 0.0, 'totalDurationSeconds' => 0.0, 'legs' => []];
-        }
-
-        $route = $data['routes'][0];
-        $legs = [];
-
-        foreach ($route['legs'] ?? [] as $leg) {
-            $legs[] = [
-                'distanceKm' => ($leg['distance'] ?? 0) / 1000.0,
-                'durationSeconds' => (float) ($leg['duration'] ?? 0),
-            ];
-        }
+        $legs = array_map(
+            static fn($leg) => ['distanceKm' => $leg->distanceKm, 'durationSeconds' => $leg->durationSeconds],
+            $result->legs,
+        );
 
         return [
-            'totalDistanceKm' => ($route['distance'] ?? 0) / 1000.0,
-            'totalDurationSeconds' => (float) ($route['duration'] ?? 0),
+            'totalDistanceKm' => $result->totalDistanceKm,
+            'totalDurationSeconds' => $result->totalDurationSeconds,
             'legs' => $legs,
         ];
     }

@@ -45,9 +45,13 @@ services:
     arguments:
       $vroomUrl: '%env(VROOM_URL)%'
 
-  App\Service\OsrmClient:
+  # Routing (Ports & Adapters)
+  App\Routing\OsrmRoutingEngine:
     arguments:
       $osrmUrl: '%env(OSRM_URL)%'
+
+  App\Routing\RoutingEngineInterface:
+    alias: App\Routing\OsrmRoutingEngine
 
   App\Service\WebhookNotificationService:
     arguments:
