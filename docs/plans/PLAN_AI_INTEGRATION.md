@@ -34,9 +34,9 @@
 | C | C6 | Driver-Zone Affinity (como VROOM skills) | **DONE** | 11 |
 | C | C7 | Fleet Anomaly Detection | **DONE** | 12 |
 | C | C8 | Búsqueda Semántica (pgvector) | **DONE** | 13 |
-| D | D1 | Pre-delivery SMS/WhatsApp (30 min antes) | Pendiente | — |
-| D | D2 | Delivery slot selection en tracking page | Pendiente | — |
-| D | D3 | Post-delivery rating por destinatario | Pendiente | — |
+| D | D1 | Pre-delivery SMS/WhatsApp (30 min antes) | **DONE** | — |
+| D | D2 | Delivery slot selection en tracking page | **DONE** | — |
+| D | D3 | Post-delivery rating por destinatario | **DONE** | — |
 
 ---
 
