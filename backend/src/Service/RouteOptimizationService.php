@@ -6,21 +6,26 @@ namespace App\Service;
 
 use App\Entity\Route;
 use App\Entity\RouteStop;
+use App\RouteOptimization\OptimizableJob;
+use App\RouteOptimization\OptimizableVehicle;
+use App\RouteOptimization\RouteOptimizerInterface;
 use App\Routing\Coordinate;
 use App\Routing\RoutingEngineInterface;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * Re-optimizes the stop order of an existing route using VROOM.
- * Uses OSRM for real road distances and durations.
+ * Re-optimizes the stop order of an existing route.
+ * Uses RouteOptimizerInterface for stop sequencing and RoutingEngineInterface
+ * for real road distances and durations.
  */
 final class RouteOptimizationService
 {
     public function __construct(
         private readonly EntityManagerInterface $em,
-        private readonly VroomApiClient $vroomClient,
+        private readonly RouteOptimizerInterface $routeOptimizer,
         private readonly RoutingEngineInterface $routingEngine,
-    ) {}
+    ) {
+    }
 
     /**
      * Optimizes the stop order of a route using VROOM + OSRM.
@@ -53,16 +58,16 @@ final class RouteOptimizationService
             return $this->buildResult($originStop, $deliveryStops, $distanceBefore, $distanceBefore);
         }
 
-        // Build VROOM request: single vehicle with all stops as jobs
-        $vehicle = ['id' => 0];
+        // Build optimizer-neutral vehicle and jobs
+        $optimizableVehicle = new OptimizableVehicle(
+            id: 0,
+            startLatitude: $originStop?->getLatitude(),
+            startLongitude: $originStop?->getLongitude(),
+            endLatitude: $originStop?->getLatitude(),
+            endLongitude: $originStop?->getLongitude(),
+        );
 
-        if ($originStop !== null && $originStop->getLatitude() !== null && $originStop->getLongitude() !== null) {
-            $coords = [$originStop->getLongitude(), $originStop->getLatitude()];
-            $vehicle['start'] = $coords;
-            $vehicle['end'] = $coords;
-        }
-
-        $jobs = [];
+        $optimizableJobs = [];
         $stopMap = [];
 
         foreach ($deliveryStops as $index => $stop) {
@@ -70,31 +75,38 @@ final class RouteOptimizationService
                 continue;
             }
 
-            $jobs[] = [
-                'id' => $index,
-                'location' => [$stop->getLongitude(), $stop->getLatitude()],
-                'service' => 300,
-            ];
+            $optimizableJobs[] = new OptimizableJob(
+                id: $index,
+                latitude: $stop->getLatitude(),
+                longitude: $stop->getLongitude(),
+                serviceTimeSeconds: 300,
+            );
             $stopMap[$index] = $stop;
         }
 
-        if (\count($jobs) < 2) {
+        if (\count($optimizableJobs) < 2) {
             return $this->buildResult($originStop, $deliveryStops, $distanceBefore, $distanceBefore);
         }
 
-        $vroomResponse = $this->vroomClient->optimize([$vehicle], $jobs);
+        $result = $this->routeOptimizer->optimize([$optimizableVehicle], $optimizableJobs);
 
-        // Extract optimized order from VROOM response
+        // Extract optimized order from result
         $optimizedDeliveries = [];
-        foreach ($vroomResponse['routes'][0]['steps'] ?? [] as $step) {
-            if ($step['type'] === 'job' && isset($stopMap[$step['id']])) {
-                $optimizedDeliveries[] = $stopMap[$step['id']];
+        if (isset($result->routes[0])) {
+            foreach ($result->routes[0]->steps as $step) {
+                if ($step->type === 'job' && isset($stopMap[$step->jobId])) {
+                    $optimizedDeliveries[] = $stopMap[$step->jobId];
+                }
             }
         }
 
-        // Distance and duration from VROOM — real road values
-        $distanceAfter = ($vroomResponse['routes'][0]['distance'] ?? 0) / 1000.0;
-        $durationMinutes = (int) round(($vroomResponse['routes'][0]['duration'] ?? 0) / 60.0);
+        // Distance and duration from optimizer
+        $distanceAfter = isset($result->routes[0])
+            ? $result->routes[0]->distanceMeters / 1000.0
+            : $distanceBefore;
+        $durationMinutes = isset($result->routes[0])
+            ? (int) round($result->routes[0]->durationSeconds / 60.0)
+            : 0;
 
         return $this->buildResult($originStop, $optimizedDeliveries, $distanceBefore, $distanceAfter, $durationMinutes);
     }
