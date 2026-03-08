@@ -76,3 +76,35 @@ services:
 
   App\Geocoding\GeocoderInterface:
     alias: App\Geocoding\CachedGeocoder
+
+  # --- Recipient Notification System (Track D) ---
+
+  # Notification channels (tagged for injection)
+  App\Notification\Channel\SmsChannel:
+    tags: ['app.notification_channel']
+  App\Notification\Channel\WhatsAppChannel:
+    tags: ['app.notification_channel']
+  App\Notification\Channel\LogChannel:
+    tags: ['app.notification_channel']
+
+  App\Notification\RecipientNotificationService:
+    arguments:
+      $channels: !tagged_iterator app.notification_channel
+
+  # Provider wiring — default to Null for dev, swap to Twilio in prod
+  App\Notification\Provider\SmsProviderInterface:
+    alias: App\Notification\Provider\NullSmsProvider
+  App\Notification\Provider\WhatsAppProviderInterface:
+    alias: App\Notification\Provider\NullWhatsAppProvider
+
+  # Twilio config (ready to activate by changing aliases above)
+  App\Notification\Provider\TwilioSmsProvider:
+    arguments:
+      $accountSid: '%env(default::TWILIO_ACCOUNT_SID)%'
+      $authToken: '%env(default::TWILIO_AUTH_TOKEN)%'
+      $fromNumber: '%env(default::TWILIO_FROM_NUMBER)%'
+  App\Notification\Provider\TwilioWhatsAppProvider:
+    arguments:
+      $accountSid: '%env(default::TWILIO_ACCOUNT_SID)%'
+      $authToken: '%env(default::TWILIO_AUTH_TOKEN)%'
+      $fromNumber: '%env(default::TWILIO_WHATSAPP_FROM)%'
