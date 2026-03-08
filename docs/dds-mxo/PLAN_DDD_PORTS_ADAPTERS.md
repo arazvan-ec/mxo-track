@@ -4,7 +4,7 @@
 
 | Fase | Estado | Fecha |
 |------|--------|-------|
-| 1 — Routing (OSRM) | Pendiente | — |
+| 1 — Routing (OSRM) | ✅ Completada | 2026-03-08 |
 | 2 — Route Optimization (VROOM) | Pendiente | — |
 | 3 — GPS Tracking (Traccar) | Pendiente | — |
 | 4 — AI/LLM (Claude+OpenAI) | Pendiente | — |
