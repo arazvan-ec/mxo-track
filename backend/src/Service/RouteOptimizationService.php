@@ -6,6 +6,8 @@ namespace App\Service;
 
 use App\Entity\Route;
 use App\Entity\RouteStop;
+use App\Routing\Coordinate;
+use App\Routing\RoutingEngineInterface;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
@@ -17,7 +19,7 @@ final class RouteOptimizationService
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly VroomApiClient $vroomClient,
-        private readonly OsrmClient $osrmClient,
+        private readonly RoutingEngineInterface $routingEngine,
     ) {}
 
     /**
@@ -121,14 +123,14 @@ final class RouteOptimizationService
             return null;
         }
 
-        $result = $this->osrmClient->getRoute(
+        $result = $this->routingEngine->route(
             $a->getLatitude(),
             $a->getLongitude(),
             $b->getLatitude(),
             $b->getLongitude(),
         );
 
-        return $result['distanceKm'];
+        return $result->distanceKm;
     }
 
     /**
@@ -138,7 +140,9 @@ final class RouteOptimizationService
      */
     public function getRoadDistance(float $fromLat, float $fromLng, float $toLat, float $toLng): array
     {
-        return $this->osrmClient->getRoute($fromLat, $fromLng, $toLat, $toLng);
+        $result = $this->routingEngine->route($fromLat, $fromLng, $toLat, $toLng);
+
+        return ['distanceKm' => $result->distanceKm, 'durationSeconds' => $result->durationSeconds];
     }
 
     /**
@@ -162,11 +166,11 @@ final class RouteOptimizationService
             }
         }
 
-        // Build waypoints for OSRM route calculation
+        // Build waypoints for routing engine
         $waypoints = [];
         foreach ($stops as $stop) {
             if ($stop->getLatitude() !== null && $stop->getLongitude() !== null) {
-                $waypoints[] = ['lat' => $stop->getLatitude(), 'lng' => $stop->getLongitude()];
+                $waypoints[] = new Coordinate($stop->getLatitude(), $stop->getLongitude());
             }
         }
 
@@ -180,13 +184,13 @@ final class RouteOptimizationService
             ];
         }
 
-        $osrmResult = $this->osrmClient->getRouteWithWaypoints($waypoints);
+        $routeResult = $this->routingEngine->routeWithWaypoints($waypoints);
 
-        $drivingTime = $osrmResult['totalDurationSeconds'] / 60.0;
+        $drivingTime = $routeResult->totalDurationSeconds / 60.0;
         $deliveryTime = $deliveryCount * $deliveryMinutesPerStop;
 
         return [
-            'totalDistanceKm' => round($osrmResult['totalDistanceKm'], 2),
+            'totalDistanceKm' => round($routeResult->totalDistanceKm, 2),
             'drivingTimeMinutes' => round($drivingTime, 1),
             'deliveryTimeMinutes' => $deliveryTime,
             'totalTimeMinutes' => round($drivingTime + $deliveryTime, 1),
@@ -203,7 +207,7 @@ final class RouteOptimizationService
         $waypoints = [];
         foreach ($stops as $stop) {
             if ($stop->getLatitude() !== null && $stop->getLongitude() !== null) {
-                $waypoints[] = ['lat' => $stop->getLatitude(), 'lng' => $stop->getLongitude()];
+                $waypoints[] = new Coordinate($stop->getLatitude(), $stop->getLongitude());
             }
         }
 
@@ -211,9 +215,9 @@ final class RouteOptimizationService
             return 0.0;
         }
 
-        $result = $this->osrmClient->getRouteWithWaypoints($waypoints);
+        $result = $this->routingEngine->routeWithWaypoints($waypoints);
 
-        return $result['totalDistanceKm'];
+        return $result->totalDistanceKm;
     }
 
     /**

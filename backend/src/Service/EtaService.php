@@ -8,6 +8,7 @@ use App\Entity\Route;
 use App\Entity\RouteStop;
 use App\Entity\VehicleLastPosition;
 use App\Enum\RouteStopStatus;
+use App\Routing\RoutingEngineInterface;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -17,7 +18,7 @@ final class EtaService
 
     public function __construct(
         private readonly EntityManagerInterface $em,
-        private readonly OsrmClient $osrmClient,
+        private readonly RoutingEngineInterface $routingEngine,
     ) {}
 
     /**
@@ -96,22 +97,22 @@ final class EtaService
                 continue;
             }
 
-            // Use OSRM for real road distance and duration
-            $roadResult = $this->osrmClient->getRoute(
+            // Use routing engine for real road distance and duration
+            $roadResult = $this->routingEngine->route(
                 $currentLat,
                 $currentLng,
                 $stop->getLatitude(),
                 $stop->getLongitude(),
             );
 
-            $accumulatedSeconds += (int) $roadResult['durationSeconds'];
+            $accumulatedSeconds += (int) $roadResult->durationSeconds;
 
             $eta = $currentTime->modify('+' . $accumulatedSeconds . ' seconds');
 
             $etas[$stop->getPublicIdString()] = [
                 'eta' => $eta,
                 'remainingMinutes' => (int) ceil($accumulatedSeconds / 60),
-                'distanceKm' => round($roadResult['distanceKm'], 2),
+                'distanceKm' => round($roadResult->distanceKm, 2),
             ];
 
             // Move current position to this stop for next calculation
@@ -135,8 +136,8 @@ final class EtaService
         float $toLat,
         float $toLng,
     ): DateTimeImmutable {
-        $roadResult = $this->osrmClient->getRoute($fromLat, $fromLng, $toLat, $toLng);
+        $roadResult = $this->routingEngine->route($fromLat, $fromLng, $toLat, $toLng);
 
-        return (new DateTimeImmutable())->modify('+' . (int) $roadResult['durationSeconds'] . ' seconds');
+        return (new DateTimeImmutable())->modify('+' . (int) $roadResult->durationSeconds . ' seconds');
     }
 }
