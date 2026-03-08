@@ -64,17 +64,24 @@ services:
     arguments:
       $webhookSecret: '%env(default::WEBHOOK_SECRET)%'
 
-  App\Service\ClaudeApiClient:
+  # AI / LLM (Ports & Adapters)
+  App\Ai\ClaudeLlmClient:
     arguments:
       $claudeApiKey: '%env(CLAUDE_API_KEY)%'
+
+  App\Ai\LlmClientInterface:
+    alias: App\Ai\ClaudeLlmClient
+
+  App\Ai\OpenAiEmbeddingClient:
+    arguments:
+      $openaiApiKey: '%env(default::OPENAI_API_KEY)%'
+
+  App\Ai\EmbeddingClientInterface:
+    alias: App\Ai\OpenAiEmbeddingClient
 
   App\Service\MlApiClient:
     arguments:
       $mlServiceUrl: '%env(ML_SERVICE_URL)%'
-
-  App\Service\OpenAiApiClient:
-    arguments:
-      $openaiApiKey: '%env(default::OPENAI_API_KEY)%'
 
   # Geocoding (Ports & Adapters)
   App\Geocoding\NominatimGeocoder:
