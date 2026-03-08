@@ -6,8 +6,9 @@ namespace App\Command;
 
 use App\Entity\Vehicle;
 use App\Entity\VehicleCheckpoint;
-use App\Service\TraccarApiClient;
 use App\Service\TraccarIngestionService;
+use App\Tracking\DevicePosition;
+use App\Tracking\GpsDeviceProviderInterface;
 use App\Service\TraccarWebSocketClient;
 use DateInterval;
 use DateTimeImmutable;
@@ -25,7 +26,7 @@ class TraccarStreamCommand extends Command
 
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
-        private readonly TraccarApiClient $traccarApiClient,
+        private readonly GpsDeviceProviderInterface $gpsProvider,
         private readonly TraccarIngestionService $ingestionService,
         private readonly TraccarWebSocketClient $webSocketClient,
     ) {
@@ -141,7 +142,7 @@ class TraccarStreamCommand extends Command
                 $from = (new DateTimeImmutable())->sub(new DateInterval('PT30M'));
             }
 
-            $positions = $this->traccarApiClient->getPositions($deviceId, $from);
+            $positions = $this->gpsProvider->getPositions($deviceId, $from);
             $ingested += $this->ingestionService->ingestForVehicle($vehicle, $positions);
         }
 
@@ -210,7 +211,23 @@ class TraccarStreamCommand extends Command
                 $deviceMap[$deviceId] = $vehicle;
             }
 
-            $totalIngested += $this->ingestionService->ingestForVehicle($vehicle, $devicePositions);
+            // Convert raw WS arrays to DevicePosition VOs
+            $positionVOs = array_map(
+                static fn(array $p) => new DevicePosition(
+                    latitude: (float) ($p['latitude'] ?? 0.0),
+                    longitude: (float) ($p['longitude'] ?? 0.0),
+                    speed: (float) ($p['speed'] ?? 0.0),
+                    course: (float) ($p['course'] ?? 0.0),
+                    accuracy: (float) ($p['accuracy'] ?? 0.0),
+                    deviceTime: new \DateTimeImmutable((string) ($p['deviceTime'] ?? 'now')),
+                    serverTime: new \DateTimeImmutable((string) ($p['serverTime'] ?? 'now')),
+                    rawId: isset($p['id']) ? (int) $p['id'] : null,
+                    deviceId: isset($p['deviceId']) ? (int) $p['deviceId'] : null,
+                ),
+                $devicePositions,
+            );
+
+            $totalIngested += $this->ingestionService->ingestForVehicle($vehicle, $positionVOs);
         }
 
         return $totalIngested;

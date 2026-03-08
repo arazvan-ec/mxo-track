@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Command;
 
 use App\Entity\Vehicle;
-use App\Service\TraccarApiClient;
+use App\Tracking\GpsDeviceProviderInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -18,7 +18,7 @@ class TraccarSyncDevicesCommand extends Command
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
-        private readonly TraccarApiClient $traccarApiClient,
+        private readonly GpsDeviceProviderInterface $gpsProvider,
     ) {
         parent::__construct();
     }
@@ -31,7 +31,7 @@ class TraccarSyncDevicesCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $apply = (bool) $input->getOption('apply');
-        $devices = $this->traccarApiClient->getDevices();
+        $devices = $this->gpsProvider->getDevices();
         $vehicles = $this->entityManager->getRepository(Vehicle::class)->findAll();
 
         $changes = 0;
@@ -41,11 +41,10 @@ class TraccarSyncDevicesCommand extends Command
             }
 
             foreach ($devices as $device) {
-                $name = mb_strtolower((string) ($device['name'] ?? ''));
-                if ($name === mb_strtolower($vehicle->getName())) {
-                    $vehicle->setTraccarDeviceId((int) $device['id']);
+                if (mb_strtolower($device->name) === mb_strtolower($vehicle->getName())) {
+                    $vehicle->setTraccarDeviceId($device->id);
                     $changes++;
-                    $output->writeln(sprintf('match: %s -> device #%d', $vehicle->getName(), (int) $device['id']));
+                    $output->writeln(sprintf('match: %s -> device #%d', $vehicle->getName(), $device->id));
                     break;
                 }
             }
