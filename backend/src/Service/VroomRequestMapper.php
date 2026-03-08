@@ -12,10 +12,9 @@ use App\Enum\VehicleSkill;
 /**
  * Converts domain entities to VROOM API request format.
  *
- * VROOM uses:
- * - [longitude, latitude] coordinate order
- * - Integer capacities (we use grams, cm³, parcels)
- * - Time in seconds
+ * @deprecated Use App\RouteOptimization\RouteOptimizerInterface instead.
+ *             The VroomRouteOptimizer adapter handles all VROOM-specific
+ *             format conversions internally.
  */
 final class VroomRequestMapper
 {

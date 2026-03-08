@@ -14,6 +14,9 @@ use Doctrine\ORM\EntityManagerInterface;
 
 /**
  * Converts VROOM API response into domain entities (Route, RouteStop).
+ *
+ * @deprecated Entity creation from optimization results is now handled
+ *             directly in RouteBuilder using OptimizationResult value objects.
  */
 final class VroomResponseMapper
 {

@@ -41,9 +41,13 @@ services:
     arguments:
       $mercureInternalUrl: '%env(MERCURE_URL)%'
 
-  App\Service\VroomApiClient:
+  # Route Optimization (Ports & Adapters)
+  App\RouteOptimization\VroomRouteOptimizer:
     arguments:
       $vroomUrl: '%env(VROOM_URL)%'
+
+  App\RouteOptimization\RouteOptimizerInterface:
+    alias: App\RouteOptimization\VroomRouteOptimizer
 
   # Routing (Ports & Adapters)
   App\Routing\OsrmRoutingEngine:
