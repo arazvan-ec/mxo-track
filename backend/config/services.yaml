@@ -64,3 +64,15 @@ services:
   App\Service\OpenAiApiClient:
     arguments:
       $openaiApiKey: '%env(default::OPENAI_API_KEY)%'
+
+  # Geocoding (Ports & Adapters)
+  App\Geocoding\NominatimGeocoder:
+    arguments:
+      $nominatimUrl: '%env(default::NOMINATIM_URL)%'
+
+  App\Geocoding\CachedGeocoder:
+    arguments:
+      $inner: '@App\Geocoding\NominatimGeocoder'
+
+  App\Geocoding\GeocoderInterface:
+    alias: App\Geocoding\CachedGeocoder
