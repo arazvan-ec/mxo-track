@@ -8,6 +8,7 @@ use App\Domain\Event\RouteCompleted;
 use App\Domain\Event\RouteStarted;
 use App\Entity\Route;
 use App\Entity\User;
+use App\Entity\VehicleInspection;
 use App\Repository\RouteRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
@@ -23,10 +24,16 @@ final readonly class RouteLifecycleService
     /**
      * @throws RouteNotFoundException
      * @throws RouteNotOwnedException
+     * @throws InspectionNotCompletedException
      */
     public function startRoute(string $routePublicId, User $driver): Route
     {
         $route = $this->resolveRouteForDriver($routePublicId, $driver);
+
+        $inspection = $this->em->getRepository(VehicleInspection::class)->findOneBy(['route' => $route]);
+        if (!$inspection instanceof VehicleInspection || !$inspection->allItemsChecked()) {
+            throw new InspectionNotCompletedException();
+        }
 
         $route->start();
         $this->em->flush();

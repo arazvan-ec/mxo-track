@@ -9,6 +9,7 @@ use App\Application\Delivery\DeliveryService;
 use App\Application\Delivery\DriverConfirmationRequiredException;
 use App\Application\Delivery\DriverNotOwnerException;
 use App\Application\Delivery\StopNotFoundException;
+use App\Application\Route\InspectionNotCompletedException;
 use App\Application\Route\RouteLifecycleService;
 use App\Application\Route\RouteNotFoundException;
 use App\Application\Route\RouteNotOwnedException;
@@ -69,6 +70,13 @@ class DriverApiController extends AbstractController
             $route = $lifecycleService->startRoute($routePublicId, $driver);
         } catch (RouteNotFoundException|RouteNotOwnedException) {
             return $errorResponder->notFound('route_not_found', 'Ruta no encontrada.');
+        } catch (InspectionNotCompletedException) {
+            return new JsonResponse([
+                'error' => [
+                    'code' => 'inspection_not_completed',
+                    'message' => 'Debe completar la inspección del vehículo.',
+                ],
+            ], 422);
         }
 
         return $this->json(['ok' => true, 'status' => $route->getStatus()->value]);
