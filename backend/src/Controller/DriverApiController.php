@@ -15,6 +15,7 @@ use App\Application\Route\RouteNotOwnedException;
 use App\Dto\Driver\DeliverStopInput;
 use App\Dto\Driver\ExceptionStopInput;
 use App\Dto\Driver\StopFeedbackInput;
+use App\Dto\Driver\VehicleInspectionInput;
 use App\Entity\DriverFeedback;
 use App\Entity\Route as RouteEntity;
 use App\Entity\RouteStop;
@@ -26,6 +27,7 @@ use App\Repository\RouteRepository;
 use App\Repository\RouteStopRepository;
 use App\Service\DriverBriefingService;
 use App\Service\EtaService;
+use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use JsonException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -58,26 +60,10 @@ class DriverApiController extends AbstractController
     public function start(
         string $routePublicId,
         RouteLifecycleService $lifecycleService,
-        RouteRepository $routeRepository,
-        EntityManagerInterface $entityManager,
         ApiErrorResponder $errorResponder,
     ): JsonResponse {
         /** @var User $driver */
         $driver = $this->getUser();
-
-        // Check vehicle inspection is completed before allowing route start
-        $route = $routeRepository->findOneByPublicId($routePublicId);
-        if ($route instanceof RouteEntity) {
-            $inspection = $entityManager->getRepository(VehicleInspection::class)
-                ->findOneBy(['route' => $route]);
-
-            if ($inspection === null || !$inspection->isCompleted()) {
-                return $errorResponder->badRequest(
-                    'inspection_required',
-                    'Debe completar la inspeccion del vehiculo antes de iniciar la ruta.',
-                );
-            }
-        }
 
         try {
             $route = $lifecycleService->startRoute($routePublicId, $driver);
@@ -380,6 +366,14 @@ class DriverApiController extends AbstractController
         return $this->json($briefing->toArray());
     }
 
+    private const array DEFAULT_INSPECTION_ITEMS = [
+        ['name' => 'Neumáticos', 'checked' => false],
+        ['name' => 'Luces', 'checked' => false],
+        ['name' => 'Carga asegurada', 'checked' => false],
+        ['name' => 'Documentación vehículo', 'checked' => false],
+        ['name' => 'Nivel combustible/carga', 'checked' => false],
+    ];
+
     #[Route('/routes/{routePublicId}/inspection', methods: ['GET'])]
     public function getInspection(
         string $routePublicId,
@@ -398,31 +392,22 @@ class DriverApiController extends AbstractController
             return $errorResponder->notFound('route_not_found', 'Ruta no encontrada.');
         }
 
-        $inspection = $entityManager->getRepository(VehicleInspection::class)
-            ->findOneBy(['route' => $route]);
+        $inspection = $entityManager->getRepository(VehicleInspection::class)->findOneBy(['route' => $route]);
 
-        if ($inspection !== null) {
+        if ($inspection instanceof VehicleInspection) {
             return $this->json([
                 'public_id' => $inspection->getPublicIdString(),
                 'items' => $inspection->getItems(),
-                'completed' => $inspection->isCompleted(),
                 'completed_at' => $inspection->getCompletedAt()?->format(\DATE_ATOM),
-                'notes' => $inspection->getNotes(),
+                'created_at' => $inspection->getCreatedAt()->format(\DATE_ATOM),
             ]);
         }
 
-        // Return default checklist template
-        $defaultItems = array_map(
-            static fn(string $name) => ['name' => $name, 'checked' => false],
-            VehicleInspection::defaultChecklistItems(),
-        );
-
         return $this->json([
             'public_id' => null,
-            'items' => $defaultItems,
-            'completed' => false,
+            'items' => self::DEFAULT_INSPECTION_ITEMS,
             'completed_at' => null,
-            'notes' => null,
+            'created_at' => null,
         ]);
     }
 
@@ -433,7 +418,19 @@ class DriverApiController extends AbstractController
         RouteRepository $routeRepository,
         EntityManagerInterface $entityManager,
         ApiErrorResponder $errorResponder,
+        ValidatorInterface $validator,
     ): JsonResponse {
+        $payload = $this->decodePayload($request, $errorResponder);
+        if ($payload instanceof JsonResponse) {
+            return $payload;
+        }
+
+        $input = VehicleInspectionInput::fromArray($payload);
+        $violations = $validator->validate($input);
+        if (count($violations) > 0) {
+            return $errorResponder->unprocessableEntity('validation_failed', $violations);
+        }
+
         $route = $routeRepository->findOneByPublicId($routePublicId);
         if (!$route instanceof RouteEntity) {
             return $errorResponder->notFound('route_not_found', 'Ruta no encontrada.');
@@ -445,32 +442,26 @@ class DriverApiController extends AbstractController
             return $errorResponder->notFound('route_not_found', 'Ruta no encontrada.');
         }
 
-        $payload = $this->decodePayload($request, $errorResponder);
-        if ($payload instanceof JsonResponse) {
-            return $payload;
-        }
+        $inspection = $entityManager->getRepository(VehicleInspection::class)->findOneBy(['route' => $route]);
 
-        if (!isset($payload['items']) || !\is_array($payload['items'])) {
-            return $errorResponder->badRequest('invalid_payload', 'Se requiere un array de items.');
-        }
-
-        $existing = $entityManager->getRepository(VehicleInspection::class)
-            ->findOneBy(['route' => $route]);
-
-        $inspection = $existing ?? new VehicleInspection($route, $driver);
-        $inspection->setItems($payload['items']);
-        $inspection->setNotes($payload['notes'] ?? null);
-
-        if ($existing === null) {
+        if ($inspection instanceof VehicleInspection) {
+            $inspection->setItems($input->items);
+        } else {
+            $inspection = new VehicleInspection($route, $driver, $input->items);
             $entityManager->persist($inspection);
         }
+
+        $allChecked = $inspection->allItemsChecked();
+        $inspection->setCompletedAt($allChecked ? new DateTimeImmutable() : null);
+
         $entityManager->flush();
 
         return $this->json([
             'ok' => true,
             'public_id' => $inspection->getPublicIdString(),
-            'completed' => $inspection->isCompleted(),
-        ], $existing !== null ? 200 : 201);
+            'items' => $inspection->getItems(),
+            'completed_at' => $inspection->getCompletedAt()?->format(\DATE_ATOM),
+        ], $inspection->getCompletedAt() !== null ? 200 : 201);
     }
 
     /**
