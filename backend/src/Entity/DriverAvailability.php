@@ -49,6 +49,10 @@ class DriverAvailability
 
     public function __construct(User $driver, int $dayOfWeek, string $startTime, string $endTime)
     {
+        self::validateTimeFormat($startTime);
+        self::validateTimeFormat($endTime);
+        self::validateTimeRange($startTime, $endTime);
+
         $this->driver = $driver;
         $this->dayOfWeek = $dayOfWeek;
         $this->startTime = $startTime;
@@ -63,10 +67,46 @@ class DriverAvailability
     public function setDayOfWeek(int $dayOfWeek): void { $this->dayOfWeek = $dayOfWeek; }
 
     public function getStartTime(): string { return $this->startTime; }
-    public function setStartTime(string $startTime): void { $this->startTime = $startTime; }
+
+    public function setStartTime(string $startTime): void
+    {
+        self::validateTimeFormat($startTime);
+        self::validateTimeRange($startTime, $this->endTime);
+        $this->startTime = $startTime;
+    }
 
     public function getEndTime(): string { return $this->endTime; }
-    public function setEndTime(string $endTime): void { $this->endTime = $endTime; }
+
+    public function setEndTime(string $endTime): void
+    {
+        self::validateTimeFormat($endTime);
+        self::validateTimeRange($this->startTime, $endTime);
+        $this->endTime = $endTime;
+    }
+
+    private static function validateTimeFormat(string $time): void
+    {
+        if (preg_match('/^\d{2}:\d{2}$/', $time) !== 1) {
+            throw new \InvalidArgumentException(sprintf('Time "%s" must follow HH:MM format.', $time));
+        }
+
+        [$hours, $minutes] = array_map('intval', explode(':', $time));
+
+        if ($hours < 0 || $hours > 23 || $minutes < 0 || $minutes > 59) {
+            throw new \InvalidArgumentException(sprintf('Time "%s" contains invalid hours or minutes.', $time));
+        }
+    }
+
+    private static function validateTimeRange(string $startTime, string $endTime): void
+    {
+        if ($startTime >= $endTime) {
+            throw new \InvalidArgumentException(sprintf(
+                'startTime "%s" must be before endTime "%s".',
+                $startTime,
+                $endTime,
+            ));
+        }
+    }
 
     public function isAvailable(): bool { return $this->isAvailable; }
     public function setAvailable(bool $isAvailable): void { $this->isAvailable = $isAvailable; }

@@ -102,7 +102,14 @@ final class DriverAvailabilityService
             ->getQuery()
             ->execute();
 
-        foreach ($schedule as $slot) {
+        foreach ($schedule as $index => $slot) {
+            if (!isset($slot['startTime'], $slot['endTime'], $slot['dayOfWeek'])) {
+                throw new \InvalidArgumentException(sprintf(
+                    'Schedule entry #%d is missing required keys (dayOfWeek, startTime, endTime).',
+                    $index,
+                ));
+            }
+
             $entry = new DriverAvailability(
                 $driver,
                 $slot['dayOfWeek'],
