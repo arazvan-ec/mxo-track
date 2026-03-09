@@ -42,6 +42,29 @@ class PublicTrackingController extends AbstractController
         ]);
     }
 
+    #[Route('/track/{trackingToken}/rate', name: 'public_tracking_rate_page', methods: ['GET'])]
+    public function ratePage(string $trackingToken): Response
+    {
+        $info = $this->trackingService->trackByToken($trackingToken);
+
+        if ($info === null) {
+            throw $this->createNotFoundException('Envio no encontrado.');
+        }
+
+        $currentStatus = $info->latestEvent?->getEventType()->value ?? 'CREATED';
+
+        if ($currentStatus !== 'DELIVERED') {
+            return $this->redirectToRoute('public_tracking', ['trackingToken' => $trackingToken]);
+        }
+
+        $existingRating = $this->ratingService->getRatingForShipment($info->shipment);
+
+        return $this->render('tracking/rate.html.twig', [
+            'shipment' => $info->shipment,
+            'existingRating' => $existingRating,
+        ]);
+    }
+
     #[Route('/track/{trackingToken}/rate', name: 'public_tracking_rate', methods: ['POST'])]
     public function rate(string $trackingToken, Request $request): JsonResponse
     {
