@@ -18,19 +18,21 @@ use Psr\Log\LoggerInterface;
  * Multi-criteria driver scoring service for intelligent route assignment.
  *
  * Scores drivers based on:
- * - Zone affinity (30%): how well the driver knows the delivery area
- * - Rating (25%): average customer rating from past deliveries
- * - Workload (20%): number of active routes this week (fewer = better)
- * - Skills match (25%): percentage of required vehicle skills the driver's vehicle has
+ * - Zone affinity (25%): how well the driver knows the delivery area
+ * - Rating (20%): average customer rating from past deliveries
+ * - Workload (15%): number of active routes this week (fewer = better)
+ * - Skills match (20%): percentage of required vehicle skills the driver's vehicle has
+ * - Availability (20%): whether the driver is available on the route date
  */
 final class DriverScoringService
 {
     /** @var array<string, float> Weight for each scoring criterion (must sum to 1.0) */
     private const array WEIGHTS = [
-        'zone' => 0.30,
-        'rating' => 0.25,
-        'workload' => 0.20,
-        'skills' => 0.25,
+        'zone' => 0.25,
+        'rating' => 0.20,
+        'workload' => 0.15,
+        'skills' => 0.20,
+        'availability' => 0.20,
     ];
 
     /** Maximum active routes per week before workload score drops to 0. */
@@ -43,13 +45,14 @@ final class DriverScoringService
         private readonly EntityManagerInterface $em,
         private readonly DriverAffinityService $affinityService,
         private readonly DeliveryRatingService $ratingService,
+        private readonly DriverAvailabilityService $availabilityService,
         private readonly LoggerInterface $logger,
     ) {}
 
     /**
      * Score all available drivers for a given route.
      *
-     * @return list<array{driver: User, score: float, breakdown: array{zone: float, rating: float, workload: float, skills: float}}>
+     * @return list<array{driver: User, score: float, breakdown: array{zone: float, rating: float, workload: float, skills: float, availability: float}}>
      */
     public function scoreDriversForRoute(Route $route): array
     {
@@ -59,6 +62,7 @@ final class DriverScoringService
             return [];
         }
 
+        $routeDate = $route->getStartAt() ?? new \DateTimeImmutable('today');
         $routeZoneIds = $this->getRouteZoneIds($route);
         $requiredSkills = $this->getRequiredSkillsForRoute($route);
 
@@ -70,12 +74,14 @@ final class DriverScoringService
             $ratingScore = $this->calculateRatingScore($driverId);
             $workloadScore = $this->calculateWorkloadScore($driver);
             $skillsScore = $this->calculateSkillsScore($driver, $requiredSkills);
+            $availabilityScore = $this->availabilityService->isDriverAvailable($driver, $routeDate) ? 100.0 : 10.0;
 
             $totalScore = round(
                 $zoneScore * self::WEIGHTS['zone']
                 + $ratingScore * self::WEIGHTS['rating']
                 + $workloadScore * self::WEIGHTS['workload']
-                + $skillsScore * self::WEIGHTS['skills'],
+                + $skillsScore * self::WEIGHTS['skills']
+                + $availabilityScore * self::WEIGHTS['availability'],
                 1,
             );
 
@@ -87,6 +93,7 @@ final class DriverScoringService
                     'rating' => round($ratingScore, 1),
                     'workload' => round($workloadScore, 1),
                     'skills' => round($skillsScore, 1),
+                    'availability' => round($availabilityScore, 1),
                 ],
             ];
         }
