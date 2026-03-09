@@ -16,6 +16,12 @@ security:
       pattern: ^/(_(profiler|wdt)|css|images|js)/
       security: false
 
+    api_v1:
+      pattern: ^/api/v1
+      stateless: true
+      custom_authenticators:
+        - App\Security\ApiKeyAuthenticator
+
     main:
       lazy: true
       provider: app_user_provider
@@ -31,6 +37,7 @@ security:
         target: app_login
 
   access_control:
+    - { path: ^/api/v1, roles: IS_AUTHENTICATED_FULLY }
     - { path: ^/login, roles: PUBLIC_ACCESS }
     - { path: ^/logout, roles: PUBLIC_ACCESS }
     - { path: ^/track/, roles: PUBLIC_ACCESS }
