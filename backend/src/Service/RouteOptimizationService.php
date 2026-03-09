@@ -6,6 +6,7 @@ namespace App\Service;
 
 use App\Entity\Route;
 use App\Entity\RouteStop;
+use App\Enum\RouteStopStatus;
 use App\RouteOptimization\OptimizableJob;
 use App\RouteOptimization\OptimizableVehicle;
 use App\RouteOptimization\RouteOptimizerInterface;
@@ -123,6 +124,104 @@ final class RouteOptimizationService
         }
 
         $this->em->flush();
+    }
+
+    /**
+     * Re-optimizes only PENDING stops on an active route.
+     *
+     * Uses the driver's current position (or the route origin) as the start point,
+     * filters out already-delivered/exception/skipped stops, and reorders pending
+     * stops via VROOM + OSRM.
+     *
+     * @return array{
+     *     optimized: list<array{stop: RouteStop, newSequence: int}>,
+     *     distanceBefore: float,
+     *     distanceAfter: float,
+     *     durationMinutes: int,
+     * }
+     */
+    public function reoptimizePendingStops(Route $route, ?float $currentLat = null, ?float $currentLng = null): array
+    {
+        $allStops = $this->getStopsForRoute($route);
+
+        // Separate origin, pending, and non-pending stops
+        $originStop = null;
+        $pendingStops = [];
+        $maxNonPendingSeq = -1;
+
+        foreach ($allStops as $stop) {
+            if ($stop->isOrigin()) {
+                $originStop = $stop;
+                continue;
+            }
+            if ($stop->getStatus() === RouteStopStatus::PENDING) {
+                $pendingStops[] = $stop;
+            } else {
+                $maxNonPendingSeq = max($maxNonPendingSeq, $stop->getSequence());
+            }
+        }
+
+        if (\count($pendingStops) < 2) {
+            $distanceBefore = $this->calculatePendingDistance($pendingStops, $currentLat, $currentLng, $originStop);
+
+            return $this->buildPendingResult($pendingStops, $maxNonPendingSeq + 1, $distanceBefore, $distanceBefore);
+        }
+
+        // Determine start position: use current driver position, or fall back to origin
+        $startLat = $currentLat ?? $originStop?->getLatitude();
+        $startLng = $currentLng ?? $originStop?->getLongitude();
+
+        $distanceBefore = $this->calculatePendingDistance($pendingStops, $startLat, $startLng, null);
+
+        // Build optimizer-neutral vehicle and jobs
+        $optimizableVehicle = new OptimizableVehicle(
+            id: 0,
+            startLatitude: $startLat,
+            startLongitude: $startLng,
+            endLatitude: null,
+            endLongitude: null,
+        );
+
+        $optimizableJobs = [];
+        $stopMap = [];
+
+        foreach ($pendingStops as $index => $stop) {
+            if ($stop->getLatitude() === null || $stop->getLongitude() === null) {
+                continue;
+            }
+
+            $optimizableJobs[] = new OptimizableJob(
+                id: $index,
+                latitude: $stop->getLatitude(),
+                longitude: $stop->getLongitude(),
+                serviceTimeSeconds: 300,
+            );
+            $stopMap[$index] = $stop;
+        }
+
+        if (\count($optimizableJobs) < 2) {
+            return $this->buildPendingResult($pendingStops, $maxNonPendingSeq + 1, $distanceBefore, $distanceBefore);
+        }
+
+        $result = $this->routeOptimizer->optimize([$optimizableVehicle], $optimizableJobs);
+
+        $optimizedPending = [];
+        if (isset($result->routes[0])) {
+            foreach ($result->routes[0]->steps as $step) {
+                if ($step->type === 'job' && isset($stopMap[$step->jobId])) {
+                    $optimizedPending[] = $stopMap[$step->jobId];
+                }
+            }
+        }
+
+        $distanceAfter = isset($result->routes[0])
+            ? $result->routes[0]->distanceMeters / 1000.0
+            : $distanceBefore;
+        $durationMinutes = isset($result->routes[0])
+            ? (int) round($result->routes[0]->durationSeconds / 60.0)
+            : 0;
+
+        return $this->buildPendingResult($optimizedPending, $maxNonPendingSeq + 1, $distanceBefore, $distanceAfter, $durationMinutes);
     }
 
     /**
@@ -277,5 +376,64 @@ final class RouteOptimizationService
             ->orderBy('s.sequence', 'ASC')
             ->getQuery()
             ->getResult();
+    }
+
+    /**
+     * Calculates total road distance for pending stops from the starting position.
+     *
+     * @param list<RouteStop> $pendingStops
+     */
+    private function calculatePendingDistance(array $pendingStops, ?float $startLat, ?float $startLng, ?RouteStop $originStop): float
+    {
+        $waypoints = [];
+
+        $lat = $startLat ?? $originStop?->getLatitude();
+        $lng = $startLng ?? $originStop?->getLongitude();
+
+        if ($lat !== null && $lng !== null) {
+            $waypoints[] = new Coordinate($lat, $lng);
+        }
+
+        foreach ($pendingStops as $stop) {
+            if ($stop->getLatitude() !== null && $stop->getLongitude() !== null) {
+                $waypoints[] = new Coordinate($stop->getLatitude(), $stop->getLongitude());
+            }
+        }
+
+        if (\count($waypoints) < 2) {
+            return 0.0;
+        }
+
+        $result = $this->routingEngine->routeWithWaypoints($waypoints);
+
+        return $result->totalDistanceKm;
+    }
+
+    /**
+     * @param list<RouteStop> $pendingStops
+     *
+     * @return array{
+     *     optimized: list<array{stop: RouteStop, newSequence: int}>,
+     *     distanceBefore: float,
+     *     distanceAfter: float,
+     *     durationMinutes: int,
+     * }
+     */
+    private function buildPendingResult(array $pendingStops, int $startSequence, float $distanceBefore, float $distanceAfter, int $durationMinutes = 0): array
+    {
+        $result = [];
+        $seq = $startSequence;
+
+        foreach ($pendingStops as $stop) {
+            $result[] = ['stop' => $stop, 'newSequence' => $seq];
+            $seq++;
+        }
+
+        return [
+            'optimized' => $result,
+            'distanceBefore' => $distanceBefore,
+            'distanceAfter' => $distanceAfter,
+            'durationMinutes' => $durationMinutes,
+        ];
     }
 }
