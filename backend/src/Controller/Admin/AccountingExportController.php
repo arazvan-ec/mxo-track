@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Admin;
 
 use App\Entity\Customer;
+use App\Entity\User;
 use App\Repository\CustomerRepository;
 use App\Service\AccountingExportService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -51,12 +52,32 @@ final class AccountingExportController extends AbstractController
             throw $this->createNotFoundException('Cliente no encontrado.');
         }
 
-        $from = $request->query->get('from')
-            ? new \DateTimeImmutable($request->query->get('from'))
-            : new \DateTimeImmutable('first day of this month');
-        $to = $request->query->get('to')
-            ? new \DateTimeImmutable($request->query->get('to'))
-            : new \DateTimeImmutable('today');
+        // Validate customer scope: non-admin users can only export their own customer
+        /** @var User $user */
+        $user = $this->getUser();
+        if (!$this->isGranted('ROLE_ADMIN') && $user->getCustomer()?->getId() !== $customer->getId()) {
+            throw $this->createAccessDeniedException('No tienes acceso a este cliente.');
+        }
+
+        // Parse and validate date range
+        try {
+            $from = $request->query->get('from')
+                ? new \DateTimeImmutable($request->query->getString('from'))
+                : new \DateTimeImmutable('first day of this month');
+            $to = $request->query->get('to')
+                ? new \DateTimeImmutable($request->query->getString('to'))
+                : new \DateTimeImmutable('today');
+        } catch (\Exception) {
+            $this->addFlash('error', 'Formato de fecha inválido.');
+
+            return $this->redirectToRoute('admin_billing_index');
+        }
+
+        if ($from > $to) {
+            $this->addFlash('error', 'La fecha de inicio no puede ser posterior a la fecha fin.');
+
+            return $this->redirectToRoute('admin_billing_index');
+        }
 
         $csvContent = $this->exportService->exportCsv($customer, $from, $to);
         $filename = sprintf(
