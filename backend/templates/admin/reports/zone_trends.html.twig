@@ -1,0 +1,251 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Tendencias por Zona - MXO Track{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+  <h1 class="text-2xl font-bold tracking-tight text-gray-900">Tendencias por Zona</h1>
+  <p class="mt-1 text-sm text-gray-500">Rendimiento de entregas por zona de entrega a lo largo del tiempo.</p>
+</div>
+
+{# Date range filter #}
+<div class="mb-8 flex flex-wrap items-end gap-3" x-data="zoneTrendsFilter()">
+  <div>
+    <label for="zt-from" class="block text-xs font-medium text-gray-600 mb-1">Desde</label>
+    <input type="date" id="zt-from" x-model="fromDate"
+           class="rounded-lg border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-brand-500">
+  </div>
+  <div>
+    <label for="zt-to" class="block text-xs font-medium text-gray-600 mb-1">Hasta</label>
+    <input type="date" id="zt-to" x-model="toDate"
+           class="rounded-lg border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-brand-500">
+  </div>
+  <button type="button" @click="loadData()"
+          class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-500 transition-colors">
+    Filtrar
+  </button>
+  <button type="button" @click="fromDate = ''; toDate = ''; loadData()"
+          class="text-sm text-gray-500 hover:text-gray-700 underline">
+    Limpiar
+  </button>
+</div>
+
+{# Summary cards for current week #}
+<div class="mb-8">
+  <h2 class="text-base font-semibold text-gray-900 mb-4">Resumen semana actual</h2>
+  <div id="summaryCards" class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+    {% if summary|length > 0 %}
+      {% for zone in summary %}
+        <div class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-900/5">
+          <p class="text-sm font-medium text-gray-500 truncate">{{ zone.zone_name }}</p>
+          <p class="mt-2 text-3xl font-bold text-gray-900">{{ zone.total }}</p>
+          <div class="mt-2 flex items-center gap-3 text-sm">
+            <span class="{% if zone.success_rate >= 90 %}text-emerald-600{% elseif zone.success_rate >= 70 %}text-amber-600{% else %}text-red-600{% endif %} font-medium">
+              {{ zone.success_rate }}% exito
+            </span>
+            <span class="text-gray-400">|</span>
+            <span class="text-gray-500">{{ zone.avg_time }} min prom.</span>
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="col-span-full rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-900/5 text-center text-sm text-gray-500">
+        No hay datos de entregas esta semana.
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+{# Chart #}
+<div class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-900/5 mb-8">
+  <h3 class="text-base font-semibold text-gray-900 mb-4">Tasa de exito por zona (semanal)</h3>
+  <div id="chartLoading" class="flex items-center justify-center py-12 text-sm text-gray-400" style="display: none;">
+    Cargando datos...
+  </div>
+  <div id="chartEmpty" class="flex items-center justify-center py-12 text-sm text-gray-400" style="display: none;">
+    No hay datos disponibles para el periodo seleccionado.
+  </div>
+  <div class="relative" style="height: 400px;">
+    <canvas id="zoneTrendsChart"></canvas>
+  </div>
+</div>
+
+{# Detailed table #}
+<div class="rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5 overflow-hidden">
+  <div class="px-6 py-4 border-b border-gray-100">
+    <h3 class="text-base font-semibold text-gray-900">Detalle semanal por zona</h3>
+  </div>
+  <div id="trendsTableContainer">
+    <div class="px-6 py-12 text-center text-sm text-gray-500">
+      Cargando datos...
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+let zoneTrendsChart = null;
+
+const ZONE_COLORS = [
+  { border: '#3b82f6', bg: 'rgba(59, 130, 246, 0.15)' },
+  { border: '#10b981', bg: 'rgba(16, 185, 129, 0.15)' },
+  { border: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)' },
+  { border: '#ef4444', bg: 'rgba(239, 68, 68, 0.15)' },
+  { border: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.15)' },
+  { border: '#ec4899', bg: 'rgba(236, 72, 153, 0.15)' },
+  { border: '#14b8a6', bg: 'rgba(20, 184, 166, 0.15)' },
+  { border: '#f97316', bg: 'rgba(249, 115, 22, 0.15)' },
+];
+
+function renderChart(trends) {
+  const canvas = document.getElementById('zoneTrendsChart');
+  const loading = document.getElementById('chartLoading');
+  const empty = document.getElementById('chartEmpty');
+
+  loading.style.display = 'none';
+
+  if (!trends || trends.length === 0) {
+    empty.style.display = 'flex';
+    canvas.style.display = 'none';
+    if (zoneTrendsChart) { zoneTrendsChart.destroy(); zoneTrendsChart = null; }
+    return;
+  }
+
+  empty.style.display = 'none';
+  canvas.style.display = 'block';
+
+  // Group data by zone
+  const zones = {};
+  const weeksSet = new Set();
+  trends.forEach(function(row) {
+    if (!zones[row.zone_name]) zones[row.zone_name] = {};
+    zones[row.zone_name][row.week] = row.success_rate;
+    weeksSet.add(row.week);
+  });
+
+  const weeks = Array.from(weeksSet).sort();
+  const zoneNames = Object.keys(zones).sort();
+
+  const datasets = zoneNames.map(function(name, i) {
+    const color = ZONE_COLORS[i % ZONE_COLORS.length];
+    return {
+      label: name,
+      data: weeks.map(function(w) { return zones[name][w] !== undefined ? zones[name][w] : null; }),
+      borderColor: color.border,
+      backgroundColor: color.bg,
+      fill: false,
+      tension: 0.3,
+      pointRadius: 4,
+      pointHoverRadius: 6,
+      spanGaps: true,
+    };
+  });
+
+  if (zoneTrendsChart) { zoneTrendsChart.destroy(); }
+
+  zoneTrendsChart = new Chart(canvas, {
+    type: 'line',
+    data: { labels: weeks, datasets: datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom' },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) {
+              return ctx.dataset.label + ': ' + (ctx.parsed.y !== null ? ctx.parsed.y + '%' : 'N/A');
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: 100,
+          ticks: {
+            callback: function(v) { return v + '%'; }
+          },
+          title: { display: true, text: 'Tasa de exito' }
+        },
+        x: {
+          title: { display: true, text: 'Semana' }
+        }
+      }
+    }
+  });
+}
+
+function renderTable(trends) {
+  const container = document.getElementById('trendsTableContainer');
+
+  if (!trends || trends.length === 0) {
+    container.innerHTML = '<div class="px-6 py-12 text-center text-sm text-gray-500">No hay datos disponibles para el periodo seleccionado.</div>';
+    return;
+  }
+
+  let html = '<div class="overflow-x-auto"><table class="min-w-full divide-y divide-gray-200">';
+  html += '<thead class="bg-gray-50"><tr>';
+  html += '<th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Zona</th>';
+  html += '<th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Semana</th>';
+  html += '<th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Total</th>';
+  html += '<th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Exitosas</th>';
+  html += '<th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Excepciones</th>';
+  html += '<th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Tasa exito</th>';
+  html += '<th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Tiempo prom. (min)</th>';
+  html += '</tr></thead><tbody class="divide-y divide-gray-100">';
+
+  trends.forEach(function(row) {
+    var rateClass = row.success_rate >= 90 ? 'text-emerald-600' : (row.success_rate >= 70 ? 'text-amber-600' : 'text-red-600');
+    html += '<tr class="hover:bg-gray-50 transition-colors">';
+    html += '<td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">' + escapeHtml(row.zone_name) + '</td>';
+    html += '<td class="whitespace-nowrap px-6 py-4 text-sm text-gray-700">' + escapeHtml(row.week) + '</td>';
+    html += '<td class="whitespace-nowrap px-6 py-4 text-right text-sm text-gray-700">' + row.total_deliveries + '</td>';
+    html += '<td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium text-emerald-600">' + row.successful_deliveries + '</td>';
+    html += '<td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium text-red-600">' + row.exceptions + '</td>';
+    html += '<td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium ' + rateClass + '">' + row.success_rate + '%</td>';
+    html += '<td class="whitespace-nowrap px-6 py-4 text-right text-sm text-gray-700">' + row.avg_delivery_time_minutes + '</td>';
+    html += '</tr>';
+  });
+
+  html += '</tbody></table></div>';
+  container.innerHTML = html;
+}
+
+function escapeHtml(str) {
+  var div = document.createElement('div');
+  div.appendChild(document.createTextNode(str));
+  return div.innerHTML;
+}
+
+function zoneTrendsFilter() {
+  return {
+    fromDate: '',
+    toDate: '',
+    init() {
+      this.loadData();
+    },
+    async loadData() {
+      var loading = document.getElementById('chartLoading');
+      loading.style.display = 'flex';
+
+      var params = new URLSearchParams();
+      if (this.fromDate) params.set('from', this.fromDate);
+      if (this.toDate) params.set('to', this.toDate);
+
+      try {
+        var resp = await fetch('{{ path("admin_zone_trends_data") }}?' + params.toString());
+        var data = await resp.json();
+        renderChart(data.trends || []);
+        renderTable(data.trends || []);
+      } catch (e) {
+        loading.style.display = 'none';
+        document.getElementById('chartEmpty').style.display = 'flex';
+        document.getElementById('zoneTrendsChart').style.display = 'none';
+        document.getElementById('trendsTableContainer').innerHTML = '<div class="px-6 py-12 text-center text-sm text-red-500">Error al cargar datos.</div>';
+      }
+    }
+  };
+}
+</script>
+{% endblock %}
