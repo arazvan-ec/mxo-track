@@ -101,6 +101,7 @@ class RouteApiController extends AbstractController
             'total' => $total,
             'page' => $page,
             'limit' => $limit,
+            'total_pages' => (int) ceil($total / $limit),
         ]);
     }
 

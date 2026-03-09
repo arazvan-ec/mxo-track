@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Controller\Api\V1;
 
+use App\Dto\Api\CreateShipmentRequest;
+use App\Dto\Api\ShipmentResponse;
 use App\Entity\Shipment;
 use App\Entity\ShipmentEvent;
 use App\Enum\ShipmentEventType;
@@ -17,6 +19,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 #[OA\Tag(name: 'Shipments')]
 #[Route('/api/v1/shipments', name: 'api_v1_shipments_')]
@@ -26,6 +29,7 @@ class ShipmentApiController extends AbstractController
         private readonly EntityManagerInterface $em,
         private readonly ShipmentRepository $shipmentRepository,
         private readonly ApiErrorResponder $errorResponder,
+        private readonly ValidatorInterface $validator,
     ) {
     }
 
@@ -96,38 +100,49 @@ class ShipmentApiController extends AbstractController
         $created = [];
 
         foreach ($items as $item) {
-            $reference = $item['reference'] ?? null;
-            if (!is_string($reference) || $reference === '') {
-                return $this->errorResponder->badRequest('missing_reference', 'Each shipment must have a reference.');
+            if (!is_array($item)) {
+                return $this->errorResponder->badRequest('invalid_item', 'Each shipment entry must be an object.');
+            }
+
+            $dto = CreateShipmentRequest::fromArray($item);
+            $violations = $this->validator->validate($dto);
+
+            if (\count($violations) > 0) {
+                $errors = [];
+                foreach ($violations as $violation) {
+                    $errors[] = $violation->getPropertyPath() . ': ' . $violation->getMessage();
+                }
+
+                return $this->errorResponder->badRequest('validation_error', implode(' ', $errors));
             }
 
             // Check uniqueness
-            $existing = $this->shipmentRepository->findOneBy(['reference' => $reference]);
+            $existing = $this->shipmentRepository->findOneBy(['reference' => $dto->reference]);
             if ($existing !== null) {
-                return $this->errorResponder->badRequest('duplicate_reference', sprintf('Shipment with reference "%s" already exists.', $reference));
+                return $this->errorResponder->badRequest('duplicate_reference', sprintf('Shipment with reference "%s" already exists.', $dto->reference));
             }
 
-            $shipment = new Shipment($reference, $customer);
-            $shipment->setRecipientName($item['recipient_name'] ?? null);
-            $shipment->setRecipientPhone($item['recipient_phone'] ?? null);
-            $shipment->setAddress($item['address'] ?? null);
-            $shipment->setNotes($item['notes'] ?? null);
-            $shipment->setDescription($item['description'] ?? null);
+            $shipment = new Shipment($dto->reference, $customer);
+            $shipment->setRecipientName($dto->recipientName);
+            $shipment->setRecipientPhone($dto->recipientPhone);
+            $shipment->setAddress($dto->address);
+            $shipment->setNotes($dto->notes);
+            $shipment->setDescription($dto->description);
 
-            if (isset($item['latitude'])) {
-                $shipment->setLatitude((float) $item['latitude']);
+            if ($dto->latitude !== null) {
+                $shipment->setLatitude($dto->latitude);
             }
-            if (isset($item['longitude'])) {
-                $shipment->setLongitude((float) $item['longitude']);
+            if ($dto->longitude !== null) {
+                $shipment->setLongitude($dto->longitude);
             }
-            if (isset($item['total_weight_kg'])) {
-                $shipment->setTotalWeightKg((float) $item['total_weight_kg']);
+            if ($dto->totalWeightKg !== null) {
+                $shipment->setTotalWeightKg($dto->totalWeightKg);
             }
-            if (isset($item['total_volume_m3'])) {
-                $shipment->setTotalVolumeM3((float) $item['total_volume_m3']);
+            if ($dto->totalVolumeM3 !== null) {
+                $shipment->setTotalVolumeM3($dto->totalVolumeM3);
             }
-            if (isset($item['total_parcels'])) {
-                $shipment->setTotalParcels((int) $item['total_parcels']);
+            if ($dto->totalParcels !== null) {
+                $shipment->setTotalParcels($dto->totalParcels);
             }
 
             $this->em->persist($shipment);
@@ -204,20 +219,14 @@ class ShipmentApiController extends AbstractController
             ->getQuery()
             ->getSingleScalarResult();
 
-        $items = array_map(static fn (Shipment $s): array => [
-            'public_id' => $s->getPublicIdString(),
-            'reference' => $s->getReference(),
-            'address' => $s->getAddress(),
-            'recipient_name' => $s->getRecipientName(),
-            'tracking_token' => $s->getTrackingToken(),
-            'created_at' => $s->getCreatedAt()->format(\DATE_ATOM),
-        ], $shipments);
+        $items = array_map(static fn (Shipment $s): array => ShipmentResponse::fromEntity($s)->toListArray(), $shipments);
 
         return new JsonResponse([
             'items' => $items,
             'total' => $total,
             'page' => $page,
             'limit' => $limit,
+            'total_pages' => (int) ceil($total / $limit),
         ]);
     }
 
@@ -264,23 +273,7 @@ class ShipmentApiController extends AbstractController
             return $this->errorResponder->notFound('shipment_not_found', 'Shipment not found.');
         }
 
-        return new JsonResponse([
-            'public_id' => $shipment->getPublicIdString(),
-            'reference' => $shipment->getReference(),
-            'recipient_name' => $shipment->getRecipientName(),
-            'recipient_phone' => $shipment->getRecipientPhone(),
-            'address' => $shipment->getAddress(),
-            'latitude' => $shipment->getLatitude(),
-            'longitude' => $shipment->getLongitude(),
-            'notes' => $shipment->getNotes(),
-            'description' => $shipment->getDescription(),
-            'service_type' => $shipment->getServiceType()->value,
-            'total_weight_kg' => $shipment->getTotalWeightKg(),
-            'total_volume_m3' => $shipment->getTotalVolumeM3(),
-            'total_parcels' => $shipment->getTotalParcels(),
-            'tracking_token' => $shipment->getTrackingToken(),
-            'created_at' => $shipment->getCreatedAt()->format(\DATE_ATOM),
-        ]);
+        return new JsonResponse(ShipmentResponse::fromEntity($shipment)->toArray());
     }
 
     #[OA\Get(summary: 'Get shipment tracking events', description: 'Returns the full event timeline for a shipment.')]

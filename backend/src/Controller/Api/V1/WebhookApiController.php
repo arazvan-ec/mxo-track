@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller\Api\V1;
 
+use App\Dto\Api\CreateWebhookRequest;
 use App\Entity\WebhookEndpoint;
 use App\Http\ApiErrorResponder;
 use App\Security\ApiKeyUser;
@@ -15,6 +16,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Uid\Ulid;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 #[OA\Tag(name: 'Webhooks')]
 #[Route('/api/v1/webhooks', name: 'api_v1_webhooks_')]
@@ -23,6 +25,7 @@ class WebhookApiController extends AbstractController
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly ApiErrorResponder $errorResponder,
+        private readonly ValidatorInterface $validator,
     ) {
     }
 
@@ -78,20 +81,22 @@ class WebhookApiController extends AbstractController
             return $this->errorResponder->badRequest('invalid_json', 'Request body must be valid JSON.');
         }
 
-        $url = $body['url'] ?? null;
-        if (!is_string($url) || !filter_var($url, \FILTER_VALIDATE_URL)) {
-            return $this->errorResponder->badRequest('invalid_url', 'A valid URL is required.');
+        $dto = CreateWebhookRequest::fromArray($body);
+        $violations = $this->validator->validate($dto);
+
+        if (\count($violations) > 0) {
+            $errors = [];
+            foreach ($violations as $violation) {
+                $errors[] = $violation->getPropertyPath() . ': ' . $violation->getMessage();
+            }
+
+            return $this->errorResponder->badRequest('validation_error', implode(' ', $errors));
         }
 
-        $events = $body['events'] ?? [];
-        if (!is_array($events)) {
-            return $this->errorResponder->badRequest('invalid_events', 'Events must be an array of event type strings.');
-        }
+        $secret = $dto->secret ?? bin2hex(random_bytes(32));
 
-        $secret = bin2hex(random_bytes(32));
-
-        $endpoint = new WebhookEndpoint($customer, $url, $secret);
-        $endpoint->setEvents(array_values(array_filter($events, 'is_string')));
+        $endpoint = new WebhookEndpoint($customer, $dto->url, $secret);
+        $endpoint->setEvents($dto->events);
 
         $this->em->persist($endpoint);
         $this->em->flush();
