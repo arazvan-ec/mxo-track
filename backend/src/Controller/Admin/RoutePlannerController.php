@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Controller\Admin;
 
+use App\Application\Route\BuildRoutesInput;
+use App\Application\Route\RoutePlanningService;
 use App\Entity\Shipment;
 use App\Service\ShipmentClusteringService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -22,6 +24,7 @@ class RoutePlannerController extends AbstractController
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly ShipmentClusteringService $clusteringService,
+        private readonly RoutePlanningService $routePlanningService,
     ) {}
 
     #[Route('', name: 'admin_route_planner_index', methods: ['GET'])]
@@ -102,6 +105,58 @@ class RoutePlannerController extends AbstractController
             'clusters' => $clusters,
             'totalShipments' => \count($points),
             'numClusters' => \count($clusters),
+        ]);
+    }
+
+    /**
+     * Preview route building with optional cluster hints.
+     *
+     * Input JSON: {shipment_ids: [...], vehicle_ids: [...], origin_id: "...", max_stops: N, cluster_hints: [...]}
+     * The cluster_hints are passed as metadata to RouteBuilder via BuildRoutesInput.
+     */
+    #[Route('/preview', name: 'admin_route_planner_preview', methods: ['POST'])]
+    public function preview(Request $request): JsonResponse
+    {
+        try {
+            $payload = json_decode((string) $request->getContent(), true, 512, \JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return new JsonResponse(['error' => 'JSON invalido.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $shipmentIds = $payload['shipment_ids'] ?? [];
+        $vehicleIds = $payload['vehicle_ids'] ?? [];
+
+        if (!\is_array($shipmentIds) || $shipmentIds === []) {
+            return new JsonResponse(['error' => 'Se requiere al menos un shipment_id.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        if (!\is_array($vehicleIds) || $vehicleIds === []) {
+            return new JsonResponse(['error' => 'Se requiere al menos un vehicle_id.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $clusterHints = null;
+        if (isset($payload['cluster_hints']) && \is_array($payload['cluster_hints'])) {
+            $clusterHints = $payload['cluster_hints'];
+        }
+
+        $input = new BuildRoutesInput(
+            shipmentPublicIds: array_map('strval', $shipmentIds),
+            vehiclePublicIds: array_map('strval', $vehicleIds),
+            originPublicId: isset($payload['origin_id']) ? (string) $payload['origin_id'] : null,
+            maxStopsPerRoute: (int) ($payload['max_stops'] ?? 30),
+            clusterHints: $clusterHints,
+        );
+
+        try {
+            $result = $this->routePlanningService->buildRoutes($input);
+        } catch (\InvalidArgumentException $e) {
+            return new JsonResponse(['error' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
+        }
+
+        return new JsonResponse([
+            'ok' => true,
+            'result' => $result->toArray(),
+            'clusterHintsApplied' => $clusterHints !== null,
         ]);
     }
 }
