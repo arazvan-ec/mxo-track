@@ -65,6 +65,46 @@
         <span x-show="!loadingShipments">Cargar envios</span>
         <span x-show="loadingShipments">Cargando...</span>
       </button>
+      <button @click="showCsvModal = true" type="button"
+              class="rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500">
+        Importar CSV
+      </button>
+    </div>
+
+    {# CSV import modal #}
+    <div x-show="showCsvModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @keydown.escape.window="showCsvModal = false">
+      <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md" @click.outside="showCsvModal = false">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Importar envios desde CSV</h3>
+        <form method="post" action="{{ path('admin_shipments_import') }}" enctype="multipart/form-data">
+          <input type="hidden" name="_token" value="{{ csrf_token('import-shipments') }}">
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
+            <select name="customer_id" required
+                    class="block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 text-sm">
+              <option value="">-- Seleccionar --</option>
+              {% for customer in customers %}
+                <option value="{{ customer.publicIdString }}">{{ customer.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Archivo CSV</label>
+            <input type="file" name="csv_file" accept=".csv" required
+                   class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100">
+            <p class="mt-1 text-xs text-gray-500">Columnas: reference, address, recipient_name, recipient_phone, lat, lng, weight_kg, volume_m3, parcels</p>
+          </div>
+          <div class="flex justify-end gap-3">
+            <button type="button" @click="showCsvModal = false"
+                    class="rounded-md bg-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-300">
+              Cancelar
+            </button>
+            <button type="submit"
+                    class="rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500">
+              Importar
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
 
     {# Clustering controls #}
@@ -387,6 +427,7 @@ function routePlanner() {
     numClusters: 3,
     clusters: [],
     clustering: false,
+    showCsvModal: false,
 
     // Step 2 state
     vehicles: [],

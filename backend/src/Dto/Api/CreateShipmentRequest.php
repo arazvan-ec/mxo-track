@@ -18,7 +18,7 @@ final class CreateShipmentRequest
     #[Assert\Length(max: 100)]
     public ?string $recipientName = null;
 
-    #[Assert\Regex(pattern: '/^\+?[0-9\s\-]{6,20}$/', message: 'Invalid phone format.')]
+    #[Assert\Regex(pattern: '/^\+[1-9]\d{1,14}$/', message: 'Phone must be in E.164 format (e.g. +34612345678).')]
     public ?string $recipientPhone = null;
 
     #[Assert\Length(max: 500)]
