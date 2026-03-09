@@ -1,0 +1,8 @@
+cliArgs:
+  geometry: true
+  planmode: true
+
+router:
+  osrm:
+    host: "osrm"
+    port: "5000"

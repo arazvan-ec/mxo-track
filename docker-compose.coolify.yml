@@ -1,0 +1,192 @@
+# =============================================================================
+# docker-compose.coolify.yml — Production deployment for Coolify
+# =============================================================================
+# Deploy via Coolify UI: New Resource → Docker Compose → point to this file.
+# Set environment variables in Coolify UI or use .env.coolify file.
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # Main application (PHP-FPM + nginx)
+  # ---------------------------------------------------------------------------
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.railway
+    command: ["/app/coolify-start.sh"]
+    environment:
+      APP_ENV: ${APP_ENV:-prod}
+      APP_SECRET: ${APP_SECRET}
+      APP_URL: ${APP_URL}
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      REDIS_SESSION_PREFIX: ${REDIS_SESSION_PREFIX:-sess:transporte:}
+      MERCURE_URL: ${MERCURE_URL:-http://mercure/.well-known/mercure}
+      MERCURE_PUBLIC_URL: ${MERCURE_PUBLIC_URL}
+      MERCURE_PUBLISHER_JWT_KEY: ${MERCURE_PUBLISHER_JWT_KEY}
+      MERCURE_SUBSCRIBER_JWT_KEY: ${MERCURE_SUBSCRIBER_JWT_KEY}
+      MERCURE_SUBSCRIBER_TOKEN_TTL: ${MERCURE_SUBSCRIBER_TOKEN_TTL:-3600}
+      TRACCAR_BASE_URL: ${TRACCAR_BASE_URL:-http://traccar:8082}
+      TRACCAR_WS_URL: ${TRACCAR_WS_URL:-ws://traccar:8082/api/socket}
+      TRACCAR_USERNAME: ${TRACCAR_USERNAME:-admin}
+      TRACCAR_PASSWORD: ${TRACCAR_PASSWORD}
+      VROOM_URL: ${VROOM_URL:-http://vroom:3000}
+      OSRM_URL: ${OSRM_URL:-http://osrm:5000}
+      POD_STORAGE: ${POD_STORAGE:-database}
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.1,REMOTE_ADDR}
+      TRUSTED_HEADERS: ${TRUSTED_HEADERS:-x-forwarded-for,x-forwarded-host,x-forwarded-proto,x-forwarded-port,x-forwarded-prefix}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Async worker (Messenger consumer + Traccar stream)
+  # ---------------------------------------------------------------------------
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    command: ["/app/coolify-worker-start.sh"]
+    environment:
+      APP_ENV: ${APP_ENV:-prod}
+      APP_SECRET: ${APP_SECRET}
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      MERCURE_URL: ${MERCURE_URL:-http://mercure/.well-known/mercure}
+      MERCURE_PUBLISHER_JWT_KEY: ${MERCURE_PUBLISHER_JWT_KEY}
+      TRACCAR_BASE_URL: ${TRACCAR_BASE_URL:-http://traccar:8082}
+      TRACCAR_WS_URL: ${TRACCAR_WS_URL:-ws://traccar:8082/api/socket}
+      TRACCAR_USERNAME: ${TRACCAR_USERNAME:-admin}
+      TRACCAR_PASSWORD: ${TRACCAR_PASSWORD}
+      VROOM_URL: ${VROOM_URL:-http://vroom:3000}
+      OSRM_URL: ${OSRM_URL:-http://osrm:5000}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL (main application database)
+  # ---------------------------------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-mxo_track}
+      POSTGRES_USER: ${POSTGRES_USER:-mxo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mxo} -d ${POSTGRES_DB:-mxo_track}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Redis (sessions + cache)
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Mercure (SSE realtime hub)
+  # ---------------------------------------------------------------------------
+  mercure:
+    image: dunglas/mercure:v0.16
+    environment:
+      SERVER_NAME: ${MERCURE_SERVER_NAME:-':80'}
+      MERCURE_PUBLISHER_JWT_KEY: ${MERCURE_PUBLISHER_JWT_KEY}
+      MERCURE_SUBSCRIBER_JWT_KEY: ${MERCURE_SUBSCRIBER_JWT_KEY}
+      MERCURE_EXTRA_DIRECTIVES: |
+        cors_origins ${MERCURE_CORS_ORIGINS:-*}
+        publish_origins *
+    ports:
+      - "3000:80"
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Traccar (GPS tracking server)
+  # ---------------------------------------------------------------------------
+  traccar:
+    build:
+      context: .
+      dockerfile: Dockerfile.traccar
+    environment:
+      TRACCAR_DB_HOST: traccar_db
+      TRACCAR_DB_PORT: "5432"
+      TRACCAR_DB_NAME: ${TRACCAR_DB_NAME:-traccar}
+      TRACCAR_DB_USER: ${TRACCAR_DB_USER:-traccar}
+      TRACCAR_DB_PASSWORD: ${TRACCAR_DB_PASSWORD}
+    volumes:
+      - traccar_logs:/opt/traccar/logs
+    depends_on:
+      traccar_db:
+        condition: service_healthy
+    ports:
+      - "5055:5055"
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Traccar PostgreSQL (dedicated DB for Traccar)
+  # ---------------------------------------------------------------------------
+  traccar_db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${TRACCAR_POSTGRES_DB:-traccar}
+      POSTGRES_USER: ${TRACCAR_POSTGRES_USER:-traccar}
+      POSTGRES_PASSWORD: ${TRACCAR_POSTGRES_PASSWORD}
+    volumes:
+      - traccar_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${TRACCAR_POSTGRES_USER:-traccar} -d ${TRACCAR_POSTGRES_DB:-traccar}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # OSRM (road routing engine — downloads Madrid map on first boot)
+  # ---------------------------------------------------------------------------
+  osrm:
+    build:
+      context: .
+      dockerfile: Dockerfile.osrm
+    volumes:
+      - osrm_data:/data
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # VROOM (Vehicle Routing Problem optimizer)
+  # ---------------------------------------------------------------------------
+  vroom:
+    image: ghcr.io/vroom-project/vroom-docker:v1.15.0
+    volumes:
+      - ./docker/vroom/config-coolify.yml:/conf/config.yml:ro
+    environment:
+      VROOM_ROUTER: osrm
+    depends_on:
+      - osrm
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redis_data:
+  traccar_pgdata:
+  traccar_logs:
+  osrm_data:

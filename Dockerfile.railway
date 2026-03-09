@@ -42,10 +42,12 @@ RUN php bin/console doctrine:proxy:create-proxy-classes --env=prod 2>/dev/null |
 # Ensure var/ is writable by PHP-FPM (www-data)
 RUN mkdir -p /app/var/log /app/var/cache && chown -R www-data:www-data /app/var
 
-# Copy nginx config and start script
+# Copy nginx configs and start scripts
 COPY docker/nginx-railway.conf /etc/nginx/nginx-railway.conf.template
+COPY docker/nginx-coolify.conf /etc/nginx/nginx-coolify.conf
 COPY scripts/railway-start.sh /app/railway-start.sh
-RUN chmod +x /app/railway-start.sh
+COPY scripts/coolify-start.sh /app/coolify-start.sh
+RUN chmod +x /app/railway-start.sh /app/coolify-start.sh
 
 EXPOSE 8000
 

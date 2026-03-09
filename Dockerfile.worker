@@ -27,8 +27,9 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction
 RUN php bin/console doctrine:proxy:create-proxy-classes --env=prod 2>/dev/null || \
     php bin/console cache:warmup --env=prod
 
-# Copy start script
+# Copy start scripts
 COPY scripts/railway-worker-start.sh /app/railway-worker-start.sh
-RUN chmod +x /app/railway-worker-start.sh
+COPY scripts/coolify-worker-start.sh /app/coolify-worker-start.sh
+RUN chmod +x /app/railway-worker-start.sh /app/coolify-worker-start.sh
 
 CMD ["/app/railway-worker-start.sh"]
