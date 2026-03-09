@@ -1,5 +1,27 @@
 # Plan de Implementacion: Mejoras de Producto mxo-track
 
+## Estado: COMPLETADO (2026-03-09)
+
+**15/15 features implementadas** + review socratico + todos los fixes aplicados.
+
+| Fase | Features | Estado |
+|------|----------|--------|
+| Fase 1: Core & Quick Wins | F1.1, F1.2, F1.3, F1.4 | COMPLETADO |
+| Fase 2: Valor al Cliente | F2.1, F2.2, F2.3 | COMPLETADO |
+| Fase 3: Optimizacion Avanzada | F3.1, F3.2, F3.3 | COMPLETADO |
+| Fase 4: Analytics & UX | F4.1, F4.2, F4.3 | COMPLETADO |
+| Fase 5: Extras | F5.1, F5.2 | COMPLETADO |
+| Review Socratico — Fase A: Bugs criticos | A.1–A.4 | COMPLETADO |
+| Review Socratico — Fase B: Issues medios | B.1–B.6 | COMPLETADO |
+| Review Socratico — Fase C: Mejoras | C.1–C.5 | COMPLETADO |
+| Review Socratico — Fase D: Nuevas features | D.1–D.5 | COMPLETADO |
+| Review Socratico — Fase E: Code review PR#21 | E.1–E.2 | COMPLETADO |
+
+**Branch**: `claude/plan-product-improvements-8AeLX`
+**Ultimo commit**: `f515c55` — fix: close remaining gaps from review
+
+---
+
 ## Contexto
 
 mxo-track es una plataforma de logistica de ultima milla (Symfony 7.4, PostgreSQL, VROOM+OSRM, Traccar, Mercure). El backend esta maduro (route optimization, CSV import, GPS tracking, multi-tenant, driver API con POD), pero faltan interfaces visuales clave y capas de valor anadido. Este plan detalla la implementacion de 15 features priorizadas en 5 fases, tras podar 4 features del plan original (chat conductor, eCommerce, prediccion volumen, fraude POD).
@@ -40,9 +62,9 @@ Servicios que reducen significativamente el esfuerzo:
 
 ---
 
-## FASE 1: Core & Quick Wins
+## FASE 1: Core & Quick Wins — COMPLETADO
 
-### F1.1 — Planificador de Rutas con Preview (ALTA, Grande)
+### F1.1 — Planificador de Rutas con Preview (ALTA, Grande) — COMPLETADO
 
 **Plan aprobado**: Implementar segun `docs/plans/improve-software/PLAN_PLANIFICADOR_RUTAS.md`
 
@@ -94,7 +116,7 @@ POST /admin/route-planner/confirm      → Persiste rutas, redirect a listado
 
 ---
 
-### F1.2 — Navegacion Integrada en App del Conductor (ALTA, Pequeno)
+### F1.2 — Navegacion Integrada en App del Conductor (ALTA, Pequeno) — COMPLETADO
 
 **Archivos a MODIFICAR:**
 
@@ -121,7 +143,7 @@ POST /admin/route-planner/confirm      → Persiste rutas, redirect a listado
 
 ---
 
-### F1.3 — Rating de Entrega por Destinatario (BAJA, Pequeno)
+### F1.3 — Rating de Entrega por Destinatario (BAJA, Pequeno) — COMPLETADO
 
 **Ya existe:** `DeliveryRating` entity, `DeliveryRatingService.submitRating()`
 
@@ -159,7 +181,7 @@ POST /admin/route-planner/confirm      → Persiste rutas, redirect a listado
 
 ---
 
-### F1.4 — Checklist Pre-Ruta del Vehiculo (BAJA, Pequeno)
+### F1.4 — Checklist Pre-Ruta del Vehiculo (BAJA, Pequeno) — COMPLETADO
 
 **Archivos a CREAR:**
 
@@ -206,9 +228,9 @@ created_at (TIMESTAMP)
 
 ---
 
-## FASE 2: Valor al Cliente
+## FASE 2: Valor al Cliente — COMPLETADO
 
-### F2.1 — Notificacion ETA al Destinatario (ALTA, Medio)
+### F2.1 — Notificacion ETA al Destinatario (ALTA, Medio) — COMPLETADO
 
 **Ya existe:** `SmsChannel`, `SmsProviderInterface`, `PreDeliveryTemplate`, `EtaService`, `NotificationChannelInterface`
 
@@ -269,7 +291,7 @@ sent_at (TIMESTAMP), error_message (TEXT NULL), created_at (TIMESTAMP)
 
 ---
 
-### F2.2 — Dashboard de SLA y Cumplimiento (ALTA, Medio)
+### F2.2 — Dashboard de SLA y Cumplimiento (ALTA, Medio) — COMPLETADO
 
 **Ya existe:** `ReportingService` con `getDeliveryReport()`, `getDriverPerformance()`, `getTrendData()`, `getDriverRanking()`, `getStopStatusDistribution()`
 
@@ -326,7 +348,7 @@ Retorna:
 
 ---
 
-### F2.3 — API Publica para Clientes (ALTA, Grande)
+### F2.3 — API Publica para Clientes (ALTA, Grande) — COMPLETADO
 
 **Archivos a CREAR:**
 
@@ -409,9 +431,9 @@ DELETE /webhooks/{publicId}    → Eliminar endpoint
 
 ---
 
-## FASE 3: Optimizacion Avanzada
+## FASE 3: Optimizacion Avanzada — COMPLETADO
 
-### F3.1 — Reoptimizacion Dinamica en Ruta (MEDIA, Medio)
+### F3.1 — Reoptimizacion Dinamica en Ruta (MEDIA, Medio) — COMPLETADO
 
 **Ya existe:** `RouteOptimizationService.optimizeStopOrder()`, Mercure para notificaciones
 
@@ -450,7 +472,7 @@ DELETE /webhooks/{publicId}    → Eliminar endpoint
 
 ---
 
-### F3.2 — Agrupacion de Envios por Zona (Clustering) (MEDIA, Medio)
+### F3.2 — Agrupacion de Envios por Zona (Clustering) (MEDIA, Medio) — COMPLETADO
 
 **Ya existe:** `DeliveryZoneService.computeZones()` con k-means
 
@@ -491,7 +513,7 @@ DELETE /webhooks/{publicId}    → Eliminar endpoint
 
 ---
 
-### F3.3 — Asignacion Inteligente de Conductores (MEDIA, Medio)
+### F3.3 — Asignacion Inteligente de Conductores (MEDIA, Medio) — COMPLETADO
 
 **Ya existe:** `DriverAffinityService` con afinidad por zona, `ReportingService.getDriverPerformance()`
 
@@ -542,9 +564,9 @@ Criterios (pesos configurables):
 
 ---
 
-## FASE 4: Analytics & UX
+## FASE 4: Analytics & UX — COMPLETADO
 
-### F4.1 — Mapa de Calor de Excepciones (MEDIA, Medio)
+### F4.1 — Mapa de Calor de Excepciones (MEDIA, Medio) — COMPLETADO
 
 **Ya existe:** `ExceptionPatternService.analyzePatterns()`, `AddressRiskService`
 
@@ -583,7 +605,7 @@ Criterios (pesos configurables):
 
 ---
 
-### F4.2 — Comparativa Rutas Planificadas vs Ejecutadas (MEDIA, Medio)
+### F4.2 — Comparativa Rutas Planificadas vs Ejecutadas (MEDIA, Medio) — COMPLETADO
 
 **Ya existe:** `PostRouteAnalyzer` (ai_analysis JSON), `VehiclePosition` entity
 
@@ -623,7 +645,7 @@ Criterios (pesos configurables):
 
 ---
 
-### F4.3 — Reprogramacion por el Destinatario (MEDIA, Medio)
+### F4.3 — Reprogramacion por el Destinatario (MEDIA, Medio) — COMPLETADO
 
 **Ya existe:** `DeliverySlotService` (completo), `DeliverySlot` entity (lifecycle completo)
 
@@ -665,9 +687,9 @@ Criterios (pesos configurables):
 
 ---
 
-## FASE 5: Extras
+## FASE 5: Extras — COMPLETADO
 
-### F5.1 — Disponibilidad y Horarios de Conductores (BAJA, Medio)
+### F5.1 — Disponibilidad y Horarios de Conductores (BAJA, Medio) — COMPLETADO
 
 **Nota:** Conductores son autonomos/mixto — no control de jornada legal, sino gestion de disponibilidad.
 
@@ -704,7 +726,7 @@ notes (TEXT NULL), created_at (TIMESTAMP)
 
 ---
 
-### F5.2 — Exportacion Contable (BAJA, Pequeno)
+### F5.2 — Exportacion Contable (BAJA, Pequeno) — COMPLETADO
 
 **Ya existe:** `BillingService.getCustomerSummary()`
 
