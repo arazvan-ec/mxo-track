@@ -11,12 +11,14 @@ use App\Http\ApiErrorResponder;
 use App\Repository\ShipmentRepository;
 use App\Security\ApiKeyUser;
 use Doctrine\ORM\EntityManagerInterface;
+use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 
+#[OA\Tag(name: 'Shipments')]
 #[Route('/api/v1/shipments', name: 'api_v1_shipments_')]
 class ShipmentApiController extends AbstractController
 {
@@ -27,6 +29,56 @@ class ShipmentApiController extends AbstractController
     ) {
     }
 
+    #[OA\Post(
+        summary: 'Create one or more shipments',
+        description: 'Creates a single shipment or a batch of shipments. Send a single object with a "reference" field, or an object with a "shipments" array.',
+    )]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'reference', type: 'string', example: 'SHP-001'),
+                new OA\Property(property: 'address', type: 'string', example: 'Calle Gran Vía 1, Madrid'),
+                new OA\Property(property: 'recipient_name', type: 'string', example: 'Juan García'),
+                new OA\Property(property: 'recipient_phone', type: 'string', example: '+34612345678'),
+                new OA\Property(property: 'latitude', type: 'number', format: 'float', example: 40.4168),
+                new OA\Property(property: 'longitude', type: 'number', format: 'float', example: -3.7038),
+                new OA\Property(property: 'total_weight_kg', type: 'number', format: 'float', example: 2.5),
+                new OA\Property(property: 'total_volume_m3', type: 'number', format: 'float', example: 0.05),
+                new OA\Property(property: 'total_parcels', type: 'integer', example: 1),
+                new OA\Property(property: 'notes', type: 'string', example: 'Fragile'),
+                new OA\Property(property: 'description', type: 'string', example: 'Electronics package'),
+            ],
+        ),
+    )]
+    #[OA\Response(
+        response: 201,
+        description: 'Shipment(s) created successfully',
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(
+                    property: 'shipments',
+                    type: 'array',
+                    items: new OA\Items(properties: [
+                        new OA\Property(property: 'public_id', type: 'string', example: '01JABCDEF123456789'),
+                        new OA\Property(property: 'reference', type: 'string', example: 'SHP-001'),
+                        new OA\Property(property: 'tracking_token', type: 'string'),
+                        new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
+                    ]),
+                ),
+            ],
+        ),
+    )]
+    #[OA\Response(
+        response: 400,
+        description: 'Validation error (invalid JSON, missing reference, duplicate reference)',
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'error', type: 'string', example: 'missing_reference'),
+                new OA\Property(property: 'message', type: 'string', example: 'Each shipment must have a reference.'),
+            ],
+        ),
+    )]
     #[Route('', name: 'create', methods: ['POST'])]
     public function create(Request $request): JsonResponse
     {
@@ -104,6 +156,32 @@ class ShipmentApiController extends AbstractController
         );
     }
 
+    #[OA\Get(summary: 'List shipments', description: 'Returns a paginated list of shipments for the authenticated customer.')]
+    #[OA\Parameter(name: 'page', in: 'query', required: false, description: 'Page number (default: 1)', schema: new OA\Schema(type: 'integer', minimum: 1, default: 1))]
+    #[OA\Parameter(name: 'limit', in: 'query', required: false, description: 'Items per page (1-100, default: 20)', schema: new OA\Schema(type: 'integer', minimum: 1, maximum: 100, default: 20))]
+    #[OA\Response(
+        response: 200,
+        description: 'Paginated list of shipments',
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(
+                    property: 'items',
+                    type: 'array',
+                    items: new OA\Items(properties: [
+                        new OA\Property(property: 'public_id', type: 'string'),
+                        new OA\Property(property: 'reference', type: 'string'),
+                        new OA\Property(property: 'address', type: 'string', nullable: true),
+                        new OA\Property(property: 'recipient_name', type: 'string', nullable: true),
+                        new OA\Property(property: 'tracking_token', type: 'string'),
+                        new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
+                    ]),
+                ),
+                new OA\Property(property: 'total', type: 'integer'),
+                new OA\Property(property: 'page', type: 'integer'),
+                new OA\Property(property: 'limit', type: 'integer'),
+            ],
+        ),
+    )]
     #[Route('', name: 'list', methods: ['GET'])]
     public function list(Request $request): JsonResponse
     {
@@ -143,6 +221,41 @@ class ShipmentApiController extends AbstractController
         ]);
     }
 
+    #[OA\Get(summary: 'Get shipment detail', description: 'Returns full details of a single shipment by its public ID.')]
+    #[OA\Parameter(name: 'publicId', in: 'path', required: true, description: 'Shipment ULID', schema: new OA\Schema(type: 'string'))]
+    #[OA\Response(
+        response: 200,
+        description: 'Shipment details',
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'public_id', type: 'string'),
+                new OA\Property(property: 'reference', type: 'string'),
+                new OA\Property(property: 'recipient_name', type: 'string', nullable: true),
+                new OA\Property(property: 'recipient_phone', type: 'string', nullable: true),
+                new OA\Property(property: 'address', type: 'string', nullable: true),
+                new OA\Property(property: 'latitude', type: 'number', format: 'float', nullable: true),
+                new OA\Property(property: 'longitude', type: 'number', format: 'float', nullable: true),
+                new OA\Property(property: 'notes', type: 'string', nullable: true),
+                new OA\Property(property: 'description', type: 'string', nullable: true),
+                new OA\Property(property: 'service_type', type: 'string'),
+                new OA\Property(property: 'total_weight_kg', type: 'number', format: 'float', nullable: true),
+                new OA\Property(property: 'total_volume_m3', type: 'number', format: 'float', nullable: true),
+                new OA\Property(property: 'total_parcels', type: 'integer', nullable: true),
+                new OA\Property(property: 'tracking_token', type: 'string'),
+                new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
+            ],
+        ),
+    )]
+    #[OA\Response(
+        response: 404,
+        description: 'Shipment not found',
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'error', type: 'string', example: 'shipment_not_found'),
+                new OA\Property(property: 'message', type: 'string', example: 'Shipment not found.'),
+            ],
+        ),
+    )]
     #[Route('/{publicId}', name: 'detail', methods: ['GET'])]
     public function detail(string $publicId): JsonResponse
     {
@@ -170,6 +283,37 @@ class ShipmentApiController extends AbstractController
         ]);
     }
 
+    #[OA\Get(summary: 'Get shipment tracking events', description: 'Returns the full event timeline for a shipment.')]
+    #[OA\Parameter(name: 'publicId', in: 'path', required: true, description: 'Shipment ULID', schema: new OA\Schema(type: 'string'))]
+    #[OA\Response(
+        response: 200,
+        description: 'Tracking timeline',
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'public_id', type: 'string'),
+                new OA\Property(property: 'reference', type: 'string'),
+                new OA\Property(
+                    property: 'events',
+                    type: 'array',
+                    items: new OA\Items(properties: [
+                        new OA\Property(property: 'type', type: 'string', example: 'CREATED'),
+                        new OA\Property(property: 'payload', type: 'object', nullable: true),
+                        new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
+                    ]),
+                ),
+            ],
+        ),
+    )]
+    #[OA\Response(
+        response: 404,
+        description: 'Shipment not found',
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'error', type: 'string', example: 'shipment_not_found'),
+                new OA\Property(property: 'message', type: 'string', example: 'Shipment not found.'),
+            ],
+        ),
+    )]
     #[Route('/{publicId}/tracking', name: 'tracking', methods: ['GET'])]
     public function tracking(string $publicId): JsonResponse
     {
