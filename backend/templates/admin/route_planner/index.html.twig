@@ -47,14 +47,115 @@
   {# ── Step 1: Select shipments ───────────────────────────────────────── #}
   <div x-show="step === 1" class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
     <h2 class="text-lg font-semibold text-gray-900 mb-4">Paso 1: Seleccionar envios</h2>
-    <p class="text-sm text-gray-500 mb-4">Selecciona los envios que quieres incluir en las rutas.</p>
-    <div class="text-sm text-gray-400 italic">
-      (Utiliza la API <code>POST /api/routes/build</code> para construir rutas a partir de envios y vehiculos seleccionados.)
+
+    {# Customer selector + load button #}
+    <div class="flex items-end gap-4 mb-4">
+      <div class="flex-1">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
+        <select x-model="selectedCustomerId"
+                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+          <option value="">-- Todos los clientes --</option>
+          {% for customer in customers %}
+            <option value="{{ customer.publicIdString }}">{{ customer.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button @click="loadShipments()" type="button" :disabled="loadingShipments"
+              class="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 disabled:opacity-50">
+        <span x-show="!loadingShipments">Cargar envios</span>
+        <span x-show="loadingShipments">Cargando...</span>
+      </button>
     </div>
+
+    {# Clustering controls #}
+    <div x-show="shipments.length > 0" class="flex items-end gap-4 mb-4 p-3 bg-purple-50 rounded-md border border-purple-200">
+      <div>
+        <label class="block text-xs font-medium text-purple-700 mb-1">Num. zonas</label>
+        <input type="number" x-model.number="numClusters" min="2" max="10"
+               class="block w-20 rounded-md border-purple-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 text-sm">
+      </div>
+      <button @click="clusterShipments()" type="button" :disabled="clustering"
+              class="rounded-md bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-purple-500 disabled:opacity-50">
+        <span x-show="!clustering">Agrupar por zona</span>
+        <span x-show="clustering">Agrupando...</span>
+      </button>
+      <button x-show="clusters.length > 0" @click="clearClusters()" type="button"
+              class="rounded-md bg-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-300">
+        Limpiar zonas
+      </button>
+    </div>
+
+    {# Cluster summary #}
+    <div x-show="clusters.length > 0" class="flex flex-wrap gap-2 mb-4">
+      <template x-for="(cluster, ci) in clusters" :key="ci">
+        <span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium text-white"
+              :style="'background-color:' + cluster.color">
+          <span x-text="'Zona ' + (ci + 1) + ': ' + cluster.shipmentIds.length + ' envios'"></span>
+        </span>
+      </template>
+    </div>
+
+    {# Shipment list #}
+    <div x-show="shipments.length > 0">
+      <div class="flex items-center gap-3 mb-2">
+        <label class="flex items-center gap-2 text-sm">
+          <input type="checkbox" @change="toggleAllShipments($event.target.checked)"
+                 :checked="selectedShipmentIds.length === shipments.length && shipments.length > 0"
+                 class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+          <span class="font-medium text-gray-700">Seleccionar todos</span>
+        </label>
+        <span class="text-sm text-gray-500" x-text="selectedShipmentIds.length + ' de ' + shipments.length + ' seleccionados'"></span>
+      </div>
+
+      <div class="max-h-96 overflow-y-auto border border-gray-200 rounded-md">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50 sticky top-0">
+            <tr>
+              <th class="w-10 px-3 py-2"></th>
+              <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Referencia</th>
+              <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Direccion</th>
+              <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Destinatario</th>
+              <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Peso (kg)</th>
+              <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Bultos</th>
+              <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Zona</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200 bg-white">
+            <template x-for="shipment in shipments" :key="shipment.publicId">
+              <tr class="hover:bg-gray-50">
+                <td class="px-3 py-2">
+                  <input type="checkbox" :value="shipment.publicId"
+                         :checked="selectedShipmentIds.includes(shipment.publicId)"
+                         @change="toggleShipment(shipment.publicId)"
+                         class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                </td>
+                <td class="px-3 py-2 text-sm font-medium text-gray-900" x-text="shipment.reference"></td>
+                <td class="px-3 py-2 text-sm text-gray-500 max-w-xs truncate" x-text="shipment.address"></td>
+                <td class="px-3 py-2 text-sm text-gray-500" x-text="shipment.recipientName"></td>
+                <td class="px-3 py-2 text-sm text-gray-500 text-right" x-text="shipment.totalWeightKg ?? '-'"></td>
+                <td class="px-3 py-2 text-sm text-gray-500 text-right" x-text="shipment.totalParcels"></td>
+                <td class="px-3 py-2 text-center">
+                  <span x-show="getShipmentCluster(shipment.publicId)"
+                        class="inline-block w-4 h-4 rounded-full"
+                        :style="'background-color:' + (getShipmentCluster(shipment.publicId)?.color || 'transparent')"></span>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {# Empty state #}
+    <div x-show="shipments.length === 0 && !loadingShipments" class="text-center py-8">
+      <p class="text-sm text-gray-500">Selecciona un cliente y pulsa "Cargar envios" para ver los envios disponibles.</p>
+    </div>
+
     <div class="mt-6 flex justify-end">
-      <button @click="step = 2" type="button"
-              class="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500">
-        Siguiente
+      <button @click="step = 2; loadVehicles(); loadLocations()" type="button"
+              :disabled="selectedShipmentIds.length === 0"
+              class="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 disabled:opacity-50">
+        Siguiente (<span x-text="selectedShipmentIds.length"></span> envios)
       </button>
     </div>
   </div>
@@ -62,15 +163,84 @@
   {# ── Step 2: Select vehicles ────────────────────────────────────────── #}
   <div x-show="step === 2" class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
     <h2 class="text-lg font-semibold text-gray-900 mb-4">Paso 2: Seleccionar vehiculos</h2>
-    <p class="text-sm text-gray-500 mb-4">Selecciona los vehiculos disponibles para las rutas.</p>
+
+    {# Vehicle list #}
+    <div x-show="vehicles.length > 0">
+      <div class="flex items-center gap-3 mb-2">
+        <label class="flex items-center gap-2 text-sm">
+          <input type="checkbox" @change="toggleAllVehicles($event.target.checked)"
+                 :checked="selectedVehicleIds.length === vehicles.length && vehicles.length > 0"
+                 class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+          <span class="font-medium text-gray-700">Seleccionar todos</span>
+        </label>
+        <span class="text-sm text-gray-500" x-text="selectedVehicleIds.length + ' de ' + vehicles.length + ' seleccionados'"></span>
+      </div>
+
+      <div class="max-h-72 overflow-y-auto border border-gray-200 rounded-md">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50 sticky top-0">
+            <tr>
+              <th class="w-10 px-3 py-2"></th>
+              <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Vehiculo</th>
+              <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Peso max (kg)</th>
+              <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Volumen max (m3)</th>
+              <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Bultos max</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200 bg-white">
+            <template x-for="vehicle in vehicles" :key="vehicle.publicId">
+              <tr class="hover:bg-gray-50">
+                <td class="px-3 py-2">
+                  <input type="checkbox" :value="vehicle.publicId"
+                         :checked="selectedVehicleIds.includes(vehicle.publicId)"
+                         @change="toggleVehicle(vehicle.publicId)"
+                         class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                </td>
+                <td class="px-3 py-2 text-sm font-medium text-gray-900" x-text="vehicle.name"></td>
+                <td class="px-3 py-2 text-sm text-gray-500 text-right" x-text="vehicle.maxWeightKg ?? '-'"></td>
+                <td class="px-3 py-2 text-sm text-gray-500 text-right" x-text="vehicle.maxVolumeM3 ?? '-'"></td>
+                <td class="px-3 py-2 text-sm text-gray-500 text-right" x-text="vehicle.maxParcels ?? '-'"></td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {# Loading state #}
+    <div x-show="loadingVehicles" class="flex items-center justify-center py-8">
+      <span class="text-sm text-gray-500">Cargando vehiculos...</span>
+    </div>
+
+    {# Origin + max stops #}
+    <div class="mt-4 grid grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Origen (opcional)</label>
+        <select x-model="originPublicId"
+                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+          <option value="">-- Sin origen --</option>
+          <template x-for="loc in locations" :key="loc.publicId">
+            <option :value="loc.publicId" x-text="loc.name + (loc.isDefault ? ' (por defecto)' : '')"></option>
+          </template>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Max paradas por ruta</label>
+        <input type="number" x-model.number="maxStopsPerRoute" min="1" max="100"
+               class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+      </div>
+    </div>
+
     <div class="mt-6 flex justify-between">
       <button @click="step = 1" type="button"
               class="rounded-md bg-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-300">
         Anterior
       </button>
-      <button @click="step = 3; loadDriverSuggestions()" type="button"
-              class="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500">
-        Siguiente
+      <button @click="generatePreview()" type="button"
+              :disabled="selectedVehicleIds.length === 0 || loadingPreview"
+              class="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 disabled:opacity-50">
+        <span x-show="!loadingPreview">Generar rutas (<span x-text="selectedVehicleIds.length"></span> vehiculos)</span>
+        <span x-show="loadingPreview">Generando...</span>
       </button>
     </div>
   </div>
@@ -188,7 +358,7 @@
           Anterior
         </button>
         <button @click="confirmRoutes()" type="button"
-                :disabled="confirming"
+                :disabled="confirming || routes.length === 0"
                 class="rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500 disabled:opacity-50">
           <span x-show="!confirming">Confirmar rutas</span>
           <span x-show="confirming">Confirmando...</span>
@@ -204,19 +374,185 @@
 {{ parent() }}
 <script>
 function routePlanner() {
+  const csrfToken = '{{ csrf_token("route-planner-confirm") }}';
+
   return {
     step: 1,
+
+    // Step 1 state
+    selectedCustomerId: '',
+    shipments: [],
+    selectedShipmentIds: [],
+    loadingShipments: false,
+    numClusters: 3,
+    clusters: [],
+    clustering: false,
+
+    // Step 2 state
+    vehicles: [],
+    selectedVehicleIds: [],
+    loadingVehicles: false,
+    locations: [],
+    originPublicId: '',
+    maxStopsPerRoute: 30,
+
+    // Step 3 state
     routes: [],
     driverSuggestions: {},
     driverAssignments: {},
     loadingDrivers: false,
+    loadingPreview: false,
     confirming: false,
 
-    async loadDriverSuggestions() {
-      if (this.routes.length === 0) {
-        return;
-      }
+    // ── Step 1 methods ──
 
+    async loadShipments() {
+      this.loadingShipments = true;
+      try {
+        const url = '{{ path("admin_route_planner_shipments") }}?customer_id=' + encodeURIComponent(this.selectedCustomerId);
+        const resp = await fetch(url);
+        if (resp.ok) {
+          this.shipments = await resp.json();
+          this.selectedShipmentIds = this.shipments.map(s => s.publicId);
+          this.clusters = [];
+        }
+      } catch (err) {
+        console.error('Error loading shipments', err);
+      } finally {
+        this.loadingShipments = false;
+      }
+    },
+
+    toggleShipment(id) {
+      const idx = this.selectedShipmentIds.indexOf(id);
+      if (idx === -1) {
+        this.selectedShipmentIds.push(id);
+      } else {
+        this.selectedShipmentIds.splice(idx, 1);
+      }
+    },
+
+    toggleAllShipments(checked) {
+      this.selectedShipmentIds = checked ? this.shipments.map(s => s.publicId) : [];
+    },
+
+    async clusterShipments() {
+      if (this.selectedShipmentIds.length < 2) return;
+      this.clustering = true;
+      try {
+        const resp = await fetch('{{ path("admin_route_planner_cluster") }}', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+          body: JSON.stringify({
+            shipment_ids: this.selectedShipmentIds,
+            num_clusters: this.numClusters,
+          }),
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          this.clusters = data.clusters || [];
+        }
+      } catch (err) {
+        console.error('Error clustering shipments', err);
+      } finally {
+        this.clustering = false;
+      }
+    },
+
+    clearClusters() {
+      this.clusters = [];
+    },
+
+    getShipmentCluster(shipmentId) {
+      for (const cluster of this.clusters) {
+        if (cluster.shipmentIds.includes(shipmentId)) {
+          return cluster;
+        }
+      }
+      return null;
+    },
+
+    // ── Step 2 methods ──
+
+    async loadVehicles() {
+      this.loadingVehicles = true;
+      try {
+        const resp = await fetch('{{ path("admin_route_planner_vehicles") }}');
+        if (resp.ok) {
+          this.vehicles = await resp.json();
+          this.selectedVehicleIds = this.vehicles.map(v => v.publicId);
+        }
+      } catch (err) {
+        console.error('Error loading vehicles', err);
+      } finally {
+        this.loadingVehicles = false;
+      }
+    },
+
+    async loadLocations() {
+      try {
+        const url = '{{ path("admin_route_planner_locations") }}?customer_id=' + encodeURIComponent(this.selectedCustomerId);
+        const resp = await fetch(url);
+        if (resp.ok) {
+          this.locations = await resp.json();
+          const defaultLoc = this.locations.find(l => l.isDefault);
+          if (defaultLoc) this.originPublicId = defaultLoc.publicId;
+        }
+      } catch (err) {
+        console.error('Error loading locations', err);
+      }
+    },
+
+    toggleVehicle(id) {
+      const idx = this.selectedVehicleIds.indexOf(id);
+      if (idx === -1) {
+        this.selectedVehicleIds.push(id);
+      } else {
+        this.selectedVehicleIds.splice(idx, 1);
+      }
+    },
+
+    toggleAllVehicles(checked) {
+      this.selectedVehicleIds = checked ? this.vehicles.map(v => v.publicId) : [];
+    },
+
+    // ── Step 3 methods ──
+
+    async generatePreview() {
+      this.loadingPreview = true;
+      try {
+        const resp = await fetch('{{ path("admin_route_planner_preview") }}', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+          body: JSON.stringify({
+            shipment_ids: this.selectedShipmentIds,
+            vehicle_ids: this.selectedVehicleIds,
+            origin_public_id: this.originPublicId || null,
+            max_stops_per_route: this.maxStopsPerRoute,
+          }),
+        });
+
+        if (resp.ok) {
+          const data = await resp.json();
+          this.routes = data.routes || [];
+          this.driverAssignments = {};
+          this.driverSuggestions = {};
+          this.step = 3;
+          this.loadDriverSuggestions();
+        } else {
+          const err = await resp.json();
+          alert(err.error || 'Error al generar rutas.');
+        }
+      } catch (err) {
+        console.error('Error generating preview', err);
+        alert('Error al generar rutas.');
+      } finally {
+        this.loadingPreview = false;
+      }
+    },
+
+    async loadDriverSuggestions() {
+      if (this.routes.length === 0) return;
       this.loadingDrivers = true;
 
       for (const routeData of this.routes) {
@@ -229,7 +565,6 @@ function routePlanner() {
             const suggestions = await response.json();
             this.driverSuggestions[routePublicId] = suggestions;
 
-            // Auto-select the top-scored driver
             if (suggestions.length > 0 && !this.driverAssignments[routePublicId]) {
               this.driverAssignments[routePublicId] = suggestions[0].driver_public_id;
             }
@@ -255,13 +590,8 @@ function routePlanner() {
       try {
         const response = await fetch('{{ path("admin_route_planner_confirm") }}', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-Token': '{{ csrf_token("route-planner-confirm") }}',
-          },
-          body: JSON.stringify({
-            driver_assignments: this.driverAssignments,
-          }),
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+          body: JSON.stringify({ driver_assignments: this.driverAssignments }),
         });
 
         if (response.ok) {
