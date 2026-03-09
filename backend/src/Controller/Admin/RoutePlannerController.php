@@ -10,6 +10,7 @@ use App\Service\DriverScoringService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route as SymfonyRoute;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
@@ -21,6 +22,15 @@ class RoutePlannerController extends AbstractController
         private readonly RouteRepository $routeRepository,
         private readonly DriverScoringService $driverScoringService,
     ) {}
+
+    /**
+     * Route planner wizard page.
+     */
+    #[SymfonyRoute('', name: 'admin_route_planner_index', methods: ['GET'])]
+    public function index(): Response
+    {
+        return $this->render('admin/route_planner/index.html.twig');
+    }
 
     /**
      * Suggest drivers for a given route, ranked by multi-criteria score.
