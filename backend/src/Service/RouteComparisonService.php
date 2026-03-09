@@ -39,7 +39,16 @@ final class RouteComparisonService
     public function compare(Route $route): array
     {
         $stops = $this->getStopsInSequence($route);
+
+        if ($stops === []) {
+            return ['warning' => 'no_stops'];
+        }
+
         $positions = $this->getActualPositions($route);
+
+        if ($positions === []) {
+            return ['warning' => 'no_positions'];
+        }
 
         $plannedPolyline = $this->buildPlannedPolyline($stops);
         $actualPolyline = $this->buildActualPolyline($positions);
@@ -232,5 +241,10 @@ final class RouteComparisonService
         $actualMinutes = $actualSeconds / 60.0;
 
         return $actualMinutes - (float) $estimatedMinutes;
+    }
+
+    private function isValidCoordinate(float $lat, float $lng): bool
+    {
+        return $lat >= -90.0 && $lat <= 90.0 && $lng >= -180.0 && $lng <= 180.0;
     }
 }

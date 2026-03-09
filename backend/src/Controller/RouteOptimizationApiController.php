@@ -167,6 +167,12 @@ class RouteOptimizationApiController extends AbstractController
         $currentLat = isset($data['currentLat']) ? (float) $data['currentLat'] : null;
         $currentLng = isset($data['currentLng']) ? (float) $data['currentLng'] : null;
 
+        if ($currentLat !== null && $currentLng !== null) {
+            if ($currentLat < -90.0 || $currentLat > 90.0 || $currentLng < -180.0 || $currentLng > 180.0) {
+                return $this->errorResponder->badRequest('INVALID_COORDINATES', 'currentLat must be in [-90, 90] and currentLng must be in [-180, 180].');
+            }
+        }
+
         $result = $this->optimizer->reoptimizePendingStops($route, $currentLat, $currentLng);
         $this->optimizer->applyOptimizedOrder($result['optimized']);
 

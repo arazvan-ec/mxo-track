@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use Psr\Log\LoggerInterface;
+
 /**
  * Groups shipments by geographic zone using k-means clustering.
  *
@@ -12,6 +14,10 @@ namespace App\Service;
 final class ShipmentClusteringService
 {
     private const int MAX_ITERATIONS = 50;
+
+    public function __construct(
+        private readonly ?LoggerInterface $logger = null,
+    ) {}
 
     /** @var list<string> Predefined cluster colours (hex) */
     private const array CLUSTER_COLORS = [
@@ -37,6 +43,27 @@ final class ShipmentClusteringService
     public function cluster(array $shipments, int $numClusters): array
     {
         if ($shipments === [] || $numClusters < 1) {
+            return [];
+        }
+
+        // Filter out shipments with invalid coordinates
+        $validShipments = [];
+        foreach ($shipments as $shipment) {
+            $lat = $shipment['lat'];
+            $lng = $shipment['lng'];
+            if ($lat < -90.0 || $lat > 90.0 || $lng < -180.0 || $lng > 180.0) {
+                $this->logger?->warning('Shipment with invalid coordinates filtered from clustering', [
+                    'id' => $shipment['id'],
+                    'lat' => $lat,
+                    'lng' => $lng,
+                ]);
+                continue;
+            }
+            $validShipments[] = $shipment;
+        }
+        $shipments = array_values($validShipments);
+
+        if ($shipments === []) {
             return [];
         }
 
