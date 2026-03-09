@@ -4,17 +4,20 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Domain\Event\VehiclePositionReceived;
 use App\Entity\Route;
 use App\Entity\Vehicle;
 use App\Entity\VehicleCheckpoint;
 use App\Entity\VehicleLastPosition;
 use App\Entity\VehiclePosition;
 use App\Enum\RouteStatus;
+use App\Tracking\DevicePosition;
 use DateTimeImmutable;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\Update;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 use Throwable;
 
 final class TraccarIngestionService
@@ -22,10 +25,11 @@ final class TraccarIngestionService
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly HubInterface $hub,
+        private readonly EventDispatcherInterface $eventDispatcher,
     ) {
     }
 
-    /** @param list<array<string,mixed>> $positions */
+    /** @param list<DevicePosition> $positions */
     public function ingestForVehicle(Vehicle $vehicle, array $positions): int
     {
         $created = 0;
@@ -39,10 +43,10 @@ final class TraccarIngestionService
         $checkpoint = $this->entityManager->getRepository(VehicleCheckpoint::class)->findOneBy(['vehicle' => $vehicle]);
 
         foreach ($positions as $position) {
-            $deviceTime = new DateTimeImmutable((string) ($position['deviceTime'] ?? 'now'));
-            $serverTime = new DateTimeImmutable((string) ($position['serverTime'] ?? 'now'));
-            $lat = (float) ($position['latitude'] ?? 0.0);
-            $lng = (float) ($position['longitude'] ?? 0.0);
+            $deviceTime = $position->deviceTime;
+            $serverTime = $position->serverTime;
+            $lat = $position->latitude;
+            $lng = $position->longitude;
 
             $exists = $this->entityManager->getRepository(VehiclePosition::class)->findOneBy([
                 'vehicle' => $vehicle,
@@ -59,9 +63,9 @@ final class TraccarIngestionService
             $this->entityManager->persist($history);
             $created++;
 
-            $speed = (float) ($position['speed'] ?? 0.0);
-            $course = (float) ($position['course'] ?? 0.0);
-            $accuracy = (float) ($position['accuracy'] ?? 0.0);
+            $speed = $position->speed;
+            $course = $position->course;
+            $accuracy = $position->accuracy;
 
             if ($last === null) {
                 $last = VehicleLastPosition::fromTelemetry($vehicle, $lat, $lng, $speed, $course, $accuracy, $deviceTime, $serverTime);
@@ -75,7 +79,7 @@ final class TraccarIngestionService
                 $this->entityManager->persist($checkpoint);
             }
             $checkpoint->setLastDeviceTime($deviceTime);
-            $checkpoint->setLastTraccarPositionId(isset($position['id']) ? (int) $position['id'] : null);
+            $checkpoint->setLastTraccarPositionId($position->rawId);
 
             try {
                 $this->entityManager->flush();
@@ -103,6 +107,15 @@ final class TraccarIngestionService
             } catch (Throwable) {
                 // no romper ingesta por fallo temporal de Mercure
             }
+
+            $this->eventDispatcher->dispatch(new VehiclePositionReceived(
+                vehiclePublicId: $vehicle->getPublicIdString(),
+                latitude: $lat,
+                longitude: $lng,
+                speed: $speed,
+                course: $course,
+                deviceTime: $deviceTime,
+            ));
         }
 
         return $created;

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller\Admin;
 
+use App\Application\Route\RoutePlanningService;
 use App\Entity\Customer;
 use App\Entity\Route;
 use App\Entity\RouteStop;
@@ -34,6 +35,7 @@ class RouteAdminController extends AbstractController
         private readonly RouteRepository $routeRepository,
         private readonly RouteStopRepository $routeStopRepository,
         private readonly RouteOptimizationService $optimizationService,
+        private readonly RoutePlanningService $routePlanningService,
     ) {}
 
     #[SymfonyRoute('', name: 'admin_routes_index', methods: ['GET'])]
@@ -175,7 +177,7 @@ class RouteAdminController extends AbstractController
 
         if ($form->isSubmitted() && $form->isValid()) {
             $this->em->persist($route);
-            $this->createOriginStopIfNeeded($route);
+            $this->routePlanningService->createOriginStopIfNeeded($route);
             $this->em->flush();
 
             $this->addFlash('success', 'Ruta creada correctamente.');
@@ -204,7 +206,7 @@ class RouteAdminController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $this->syncOriginStop($route);
+            $this->routePlanningService->syncOriginStop($route);
             $this->em->flush();
 
             $this->addFlash('success', 'Ruta actualizada correctamente.');
@@ -288,40 +290,7 @@ class RouteAdminController extends AbstractController
         $stopForm->handleRequest($request);
 
         if ($stopForm->isSubmitted() && $stopForm->isValid()) {
-            $data = $stopForm->getData();
-
-            // Calculate next sequence
-            $maxSequence = $this->em->createQueryBuilder()
-                ->select('MAX(s.sequence)')
-                ->from(RouteStop::class, 's')
-                ->where('s.route = :route')
-                ->setParameter('route', $route)
-                ->getQuery()
-                ->getSingleScalarResult();
-
-            $nextSequence = $maxSequence !== null ? ((int) $maxSequence) + 1 : 1;
-
-            $stop = new RouteStop($route, $nextSequence, $data['address']);
-
-            if (isset($data['latitude']) && $data['latitude'] !== null) {
-                $stop->setLatitude((float) $data['latitude']);
-            }
-            if (isset($data['longitude']) && $data['longitude'] !== null) {
-                $stop->setLongitude((float) $data['longitude']);
-            }
-            if (isset($data['recipientName']) && $data['recipientName'] !== null) {
-                $stop->setRecipientName($data['recipientName']);
-            }
-            if (isset($data['recipientPhone']) && $data['recipientPhone'] !== null) {
-                $stop->setRecipientPhone($data['recipientPhone']);
-            }
-            if (isset($data['notes']) && $data['notes'] !== null) {
-                $stop->setNotes($data['notes']);
-            }
-
-            $this->em->persist($stop);
-            $this->em->flush();
-
+            $this->routePlanningService->addStop($route->getPublicIdString(), $stopForm->getData());
             $this->addFlash('success', 'Parada anadida correctamente.');
         } else {
             $this->addFlash('error', 'Error al anadir la parada. Revisa los datos.');
@@ -442,64 +411,8 @@ class RouteAdminController extends AbstractController
             return new JsonResponse(['error' => 'Se requiere el campo "order".'], 400);
         }
 
-        // Load all stops for this route
-        $stops = $this->em->createQueryBuilder()
-            ->select('s')
-            ->from(RouteStop::class, 's')
-            ->where('s.route = :route')
-            ->setParameter('route', $route)
-            ->getQuery()
-            ->getResult();
-
-        // Index by publicId
-        $stopsMap = [];
-        foreach ($stops as $stop) {
-            $stopsMap[$stop->getPublicIdString()] = $stop;
-        }
-
-        // Apply the new order
-        foreach ($payload['order'] as $seq => $stopPublicId) {
-            if (isset($stopsMap[$stopPublicId])) {
-                $stopsMap[$stopPublicId]->setSequence((int) $seq);
-            }
-        }
-
-        $this->em->flush();
+        $this->routePlanningService->reorderStops($publicId, $payload['order']);
 
         return new JsonResponse(['ok' => true]);
-    }
-
-    private function createOriginStopIfNeeded(Route $route): void
-    {
-        $origin = $route->getOriginLocation();
-        if ($origin === null) {
-            return;
-        }
-
-        $stop = new RouteStop($route, 0, $origin->getAddress());
-        $stop->setLatitude($origin->getLatitude());
-        $stop->setLongitude($origin->getLongitude());
-        $stop->setOrigin(true);
-        $this->em->persist($stop);
-    }
-
-    private function syncOriginStop(Route $route): void
-    {
-        // Remove existing origin stop
-        $existingOrigin = $this->em->createQueryBuilder()
-            ->select('s')
-            ->from(RouteStop::class, 's')
-            ->where('s.route = :route')
-            ->andWhere('s.isOrigin = true')
-            ->setParameter('route', $route)
-            ->getQuery()
-            ->getOneOrNullResult();
-
-        if ($existingOrigin !== null) {
-            $this->em->remove($existingOrigin);
-        }
-
-        // Create new one if origin location is set
-        $this->createOriginStopIfNeeded($route);
     }
 }

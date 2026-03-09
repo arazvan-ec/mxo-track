@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Tracking\GpsDeviceProviderInterface;
 use Doctrine\DBAL\Connection;
 use Predis\Client as RedisClient;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
@@ -12,7 +13,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 final class SystemHealthService
 {
     public function __construct(
-        private readonly TraccarApiClient $traccarApiClient,
+        private readonly GpsDeviceProviderInterface $gpsProvider,
         private readonly HttpClientInterface $httpClient,
         private readonly Connection $connection,
         private readonly RedisClient $redis,
@@ -87,7 +88,7 @@ final class SystemHealthService
     private function checkTraccar(): array
     {
         $start = microtime(true);
-        $ok = $this->traccarApiClient->canConnect();
+        $ok = $this->gpsProvider->isAvailable();
 
         return [
             'ok' => $ok,

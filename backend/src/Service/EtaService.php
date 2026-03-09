@@ -8,20 +8,21 @@ use App\Entity\Route;
 use App\Entity\RouteStop;
 use App\Entity\VehicleLastPosition;
 use App\Enum\RouteStopStatus;
+use App\Routing\RoutingEngineInterface;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 
 final class EtaService
 {
-    private const float DEFAULT_AVG_SPEED_KMH = 30.0;
+    public const int DEFAULT_SERVICE_TIME_SECONDS = 300;
 
     public function __construct(
         private readonly EntityManagerInterface $em,
-        private readonly RouteOptimizationService $optimizationService,
+        private readonly RoutingEngineInterface $routingEngine,
     ) {}
 
     /**
-     * Calculates ETAs for each pending stop on a route.
+     * Calculates ETAs for each pending stop on a route using OSRM road distances.
      *
      * @return array<string, array{eta: DateTimeImmutable, remainingMinutes: int, distanceKm: float}>
      *     Keyed by stop public_id
@@ -62,8 +63,7 @@ final class EtaService
             $currentLng = $lastPosition->getLng();
         }
 
-        // If no vehicle position, try to use the first non-pending (completed) stop
-        // or origin stop as reference
+        // If no vehicle position, try to use origin stop as reference
         if ($currentLat === null || $currentLng === null) {
             foreach ($stops as $stop) {
                 if ($stop->isOrigin() && $stop->getLatitude() !== null && $stop->getLongitude() !== null) {
@@ -84,7 +84,6 @@ final class EtaService
         foreach ($stops as $stop) {
             // Skip non-pending stops and origin stops
             if ($stop->getStatus() !== RouteStopStatus::PENDING || $stop->isOrigin()) {
-                // If this is a completed stop with coordinates, update current position
                 if ($stop->getStatus() === RouteStopStatus::DELIVERED
                     && $stop->getLatitude() !== null
                     && $stop->getLongitude() !== null) {
@@ -98,60 +97,47 @@ final class EtaService
                 continue;
             }
 
-            $distanceKm = $this->optimizationService->calculateDistance(
+            // Use routing engine for real road distance and duration
+            $roadResult = $this->routingEngine->route(
                 $currentLat,
                 $currentLng,
                 $stop->getLatitude(),
                 $stop->getLongitude(),
             );
 
-            $travelTimeSeconds = $this->calculateTravelTimeSeconds($distanceKm, self::DEFAULT_AVG_SPEED_KMH);
-            $accumulatedSeconds += $travelTimeSeconds;
+            $accumulatedSeconds += (int) $roadResult->durationSeconds;
 
-            $eta = $currentTime->modify('+' . (int) $accumulatedSeconds . ' seconds');
+            $eta = $currentTime->modify('+' . $accumulatedSeconds . ' seconds');
 
             $etas[$stop->getPublicIdString()] = [
                 'eta' => $eta,
                 'remainingMinutes' => (int) ceil($accumulatedSeconds / 60),
-                'distanceKm' => round($distanceKm, 2),
+                'distanceKm' => round($roadResult->distanceKm, 2),
             ];
 
             // Move current position to this stop for next calculation
             $currentLat = $stop->getLatitude();
             $currentLng = $stop->getLongitude();
 
-            // Add a small stop time (2 minutes per delivery)
-            $accumulatedSeconds += 120;
+            // Add service time per delivery (from shipment config or default)
+            $serviceTime = $stop->getShipment()?->getServiceTimeSeconds() ?? self::DEFAULT_SERVICE_TIME_SECONDS;
+            $accumulatedSeconds += $serviceTime;
         }
 
         return $etas;
     }
 
     /**
-     * Estimates arrival time from one point to another.
+     * Estimates arrival time from one point to another using OSRM.
      */
     public function estimateArrival(
         float $fromLat,
         float $fromLng,
         float $toLat,
         float $toLng,
-        float $avgSpeedKmh = self::DEFAULT_AVG_SPEED_KMH,
     ): DateTimeImmutable {
-        $distanceKm = $this->optimizationService->calculateDistance($fromLat, $fromLng, $toLat, $toLng);
-        $travelTimeSeconds = $this->calculateTravelTimeSeconds($distanceKm, $avgSpeedKmh);
+        $roadResult = $this->routingEngine->route($fromLat, $fromLng, $toLat, $toLng);
 
-        return (new DateTimeImmutable())->modify('+' . (int) $travelTimeSeconds . ' seconds');
-    }
-
-    /**
-     * Calculates travel time in seconds for a given distance and speed.
-     */
-    private function calculateTravelTimeSeconds(float $distanceKm, float $avgSpeedKmh): float
-    {
-        if ($avgSpeedKmh <= 0.0) {
-            return 0.0;
-        }
-
-        return ($distanceKm / $avgSpeedKmh) * 3600;
+        return (new DateTimeImmutable())->modify('+' . (int) $roadResult->durationSeconds . ' seconds');
     }
 }

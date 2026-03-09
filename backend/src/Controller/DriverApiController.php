@@ -4,24 +4,26 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Application\Delivery\DeliveryContext;
+use App\Application\Delivery\DeliveryService;
+use App\Application\Delivery\DriverConfirmationRequiredException;
+use App\Application\Delivery\DriverNotOwnerException;
+use App\Application\Delivery\StopNotFoundException;
+use App\Application\Route\RouteLifecycleService;
+use App\Application\Route\RouteNotFoundException;
+use App\Application\Route\RouteNotOwnedException;
 use App\Dto\Driver\DeliverStopInput;
 use App\Dto\Driver\ExceptionStopInput;
-use App\Entity\Pod;
+use App\Dto\Driver\StopFeedbackInput;
+use App\Entity\DriverFeedback;
 use App\Entity\Route as RouteEntity;
 use App\Entity\RouteStop;
-use App\Entity\Shipment;
-use App\Entity\ShipmentEvent;
 use App\Entity\User;
-use App\Enum\ExceptionCode;
-use App\Enum\ShipmentEventType;
 use App\Http\ApiErrorResponder;
 use App\Repository\PodRepository;
 use App\Repository\RouteRepository;
 use App\Repository\RouteStopRepository;
-use App\Repository\ShipmentRepository;
-use App\Service\AuditLogger;
-use App\Service\DeliveryEvidenceFactory;
-use App\Service\DriverActionService;
+use App\Service\DriverBriefingService;
 use App\Service\EtaService;
 use Doctrine\ORM\EntityManagerInterface;
 use JsonException;
@@ -52,41 +54,37 @@ class DriverApiController extends AbstractController
     }
 
     #[Route('/routes/{routePublicId}/start', methods: ['POST'])]
-    public function start(string $routePublicId, RouteRepository $routeRepository, EntityManagerInterface $entityManager, ApiErrorResponder $errorResponder): JsonResponse
-    {
-        $route = $routeRepository->findOneByPublicId($routePublicId);
-        if (!$route instanceof RouteEntity) {
-            return $errorResponder->notFound('route_not_found', 'Ruta no encontrada.');
-        }
-
+    public function start(
+        string $routePublicId,
+        RouteLifecycleService $lifecycleService,
+        ApiErrorResponder $errorResponder,
+    ): JsonResponse {
         /** @var User $driver */
         $driver = $this->getUser();
-        if ($route->getDriver()?->getId() !== $driver->getId()) {
+
+        try {
+            $route = $lifecycleService->startRoute($routePublicId, $driver);
+        } catch (RouteNotFoundException|RouteNotOwnedException) {
             return $errorResponder->notFound('route_not_found', 'Ruta no encontrada.');
         }
-
-        $route->start();
-        $entityManager->flush();
 
         return $this->json(['ok' => true, 'status' => $route->getStatus()->value]);
     }
 
     #[Route('/routes/{routePublicId}/finish', methods: ['POST'])]
-    public function finish(string $routePublicId, RouteRepository $routeRepository, EntityManagerInterface $entityManager, ApiErrorResponder $errorResponder): JsonResponse
-    {
-        $route = $routeRepository->findOneByPublicId($routePublicId);
-        if (!$route instanceof RouteEntity) {
-            return $errorResponder->notFound('route_not_found', 'Ruta no encontrada.');
-        }
-
+    public function finish(
+        string $routePublicId,
+        RouteLifecycleService $lifecycleService,
+        ApiErrorResponder $errorResponder,
+    ): JsonResponse {
         /** @var User $driver */
         $driver = $this->getUser();
-        if ($route->getDriver()?->getId() !== $driver->getId()) {
+
+        try {
+            $route = $lifecycleService->finishRoute($routePublicId, $driver);
+        } catch (RouteNotFoundException|RouteNotOwnedException) {
             return $errorResponder->notFound('route_not_found', 'Ruta no encontrada.');
         }
-
-        $route->finish();
-        $entityManager->flush();
 
         return $this->json(['ok' => true, 'status' => $route->getStatus()->value]);
     }
@@ -118,14 +116,9 @@ class DriverApiController extends AbstractController
     public function deliver(
         string $stopPublicId,
         Request $request,
-        DriverActionService $actionService,
-        EntityManagerInterface $entityManager,
-        AuditLogger $auditLogger,
+        DeliveryService $deliveryService,
         ApiErrorResponder $errorResponder,
         ValidatorInterface $validator,
-        DeliveryEvidenceFactory $deliveryEvidenceFactory,
-        RouteStopRepository $routeStopRepository,
-        ShipmentRepository $shipmentRepository,
     ): JsonResponse {
         $payload = $this->decodePayload($request, $errorResponder);
         if ($payload instanceof JsonResponse) {
@@ -141,69 +134,32 @@ class DriverApiController extends AbstractController
         /** @var User $driver */
         $driver = $this->getUser();
 
-        $stop = $routeStopRepository->findOneByPublicId($stopPublicId);
-        if (!$stop instanceof RouteStop) {
+        try {
+            $result = $deliveryService->deliverStop(
+                $stopPublicId,
+                $input,
+                $driver,
+                new DeliveryContext(
+                    clientIp: (string) ($request->getClientIp() ?? ''),
+                    userAgent: (string) $request->headers->get('User-Agent', ''),
+                ),
+            );
+        } catch (StopNotFoundException|DriverNotOwnerException) {
             return $errorResponder->notFound('stop_not_found', 'Parada no encontrada.');
-        }
-
-        if ($stop->getRoute()->getDriver()?->getId() !== $driver->getId()) {
-            return $errorResponder->notFound('stop_not_found', 'Parada no encontrada.');
-        }
-
-        $created = $actionService->register($driver, $input->clientActionId, 'DELIVER', $stop);
-        if (!$created) {
-            return $this->json(['ok' => true, 'idempotent' => true]);
-        }
-
-        if (!$input->confirmedByDriver) {
+        } catch (DriverConfirmationRequiredException) {
             return $errorResponder->badRequest('driver_confirmation_required', 'El driver debe confirmar explícitamente la entrega.');
         }
 
-        $stop->markDelivered();
-
-        $pod = new Pod($stop, $driver, $input->signedByName, $input->recipientIdEncoded);
-        $entityManager->persist($pod);
-
-        if ($input->shipmentPublicId !== null) {
-            $shipment = $shipmentRepository->findOneByPublicId($input->shipmentPublicId);
-            if ($shipment instanceof Shipment) {
-                $entityManager->persist(new ShipmentEvent($shipment, ShipmentEventType::DELIVERED, [
-                    'stop_public_id' => $stopPublicId,
-                    'confirmation_mode' => 'recipient_id_encoded',
-                ]));
-            }
-        }
-
-        $auditLogger->log($driver, 'DRIVER_DELIVER', 'route_stop', (string) $stop->getId(), [
-            'client_action_id' => $input->clientActionId,
-            'shipment_public_id' => $input->shipmentPublicId ?? '',
-            'delivery_evidence' => $deliveryEvidenceFactory->build(
-                $input->recipientIdEncoded,
-                $input->confirmedByDriver,
-                $stopPublicId,
-                $input->clientActionId,
-                $driver->getPublicIdString(),
-                (string) ($request->getClientIp() ?? ''),
-                (string) $request->headers->get('User-Agent', ''),
-            ),
-        ]);
-
-        $entityManager->flush();
-
-        return $this->json(['ok' => true, 'idempotent' => false], 201);
+        return $this->json($result->toArray(), $result->idempotent ? 200 : 201);
     }
 
     #[Route('/stops/{stopPublicId}/exception', methods: ['POST'])]
     public function exception(
         string $stopPublicId,
         Request $request,
-        DriverActionService $actionService,
-        EntityManagerInterface $entityManager,
-        AuditLogger $auditLogger,
+        DeliveryService $deliveryService,
         ApiErrorResponder $errorResponder,
         ValidatorInterface $validator,
-        RouteStopRepository $routeStopRepository,
-        ShipmentRepository $shipmentRepository,
     ): JsonResponse {
         $payload = $this->decodePayload($request, $errorResponder);
         if ($payload instanceof JsonResponse) {
@@ -218,45 +174,14 @@ class DriverApiController extends AbstractController
 
         /** @var User $driver */
         $driver = $this->getUser();
-        $stop = $routeStopRepository->findOneByPublicId($stopPublicId);
 
-        if (!$stop instanceof RouteStop) {
+        try {
+            $result = $deliveryService->reportException($stopPublicId, $input, $driver);
+        } catch (StopNotFoundException|DriverNotOwnerException) {
             return $errorResponder->notFound('stop_not_found', 'Parada no encontrada.');
         }
 
-        if ($stop->getRoute()->getDriver()?->getId() !== $driver->getId()) {
-            return $errorResponder->notFound('stop_not_found', 'Parada no encontrada.');
-        }
-
-        $created = $actionService->register($driver, $input->clientActionId, 'EXCEPTION', $stop);
-        if (!$created) {
-            return $this->json(['ok' => true, 'idempotent' => true]);
-        }
-
-        $reason = ExceptionCode::tryFrom($input->reason) ?? ExceptionCode::OTHER;
-        $stop->markException($reason, $input->comment);
-
-        if ($input->shipmentPublicId !== null) {
-            $shipment = $shipmentRepository->findOneByPublicId($input->shipmentPublicId);
-            if ($shipment instanceof Shipment) {
-                $entityManager->persist(new ShipmentEvent($shipment, ShipmentEventType::EXCEPTION, [
-                    'stop_public_id' => $stopPublicId,
-                    'reason' => $reason->value,
-                    'comment' => $input->comment,
-                ]));
-            }
-        }
-
-        $auditLogger->log($driver, 'DRIVER_EXCEPTION', 'route_stop', (string) $stop->getId(), [
-            'client_action_id' => $input->clientActionId,
-            'shipment_public_id' => $input->shipmentPublicId ?? '',
-            'reason' => $reason->value,
-            'comment' => $input->comment,
-        ]);
-
-        $entityManager->flush();
-
-        return $this->json(['ok' => true, 'idempotent' => false], 201);
+        return $this->json($result->toArray(), $result->idempotent ? 200 : 201);
     }
 
     #[Route('/stops/{stopPublicId}/pod', methods: ['GET'])]
@@ -275,7 +200,7 @@ class DriverApiController extends AbstractController
         }
 
         $pod = $podRepository->findOneBy(['routeStop' => $stop]);
-        if (!$pod instanceof Pod) {
+        if ($pod === null) {
             return $errorResponder->notFound('pod_not_found', 'Confirmación no encontrada.');
         }
 
@@ -302,7 +227,7 @@ class DriverApiController extends AbstractController
         }
 
         $pod = $podRepository->findOneBy(['routeStop' => $stop]);
-        if (!$pod instanceof Pod) {
+        if ($pod === null) {
             return $errorResponder->notFound('pod_not_found', 'Confirmación no encontrada.');
         }
 
@@ -343,6 +268,89 @@ class DriverApiController extends AbstractController
         }
 
         return $this->json(['items' => $items]);
+    }
+
+    #[Route('/routes/{routePublicId}/stops/{stopPublicId}/feedback', methods: ['POST'])]
+    public function stopFeedback(
+        string $routePublicId,
+        string $stopPublicId,
+        Request $request,
+        RouteRepository $routeRepository,
+        RouteStopRepository $routeStopRepository,
+        EntityManagerInterface $entityManager,
+        ApiErrorResponder $errorResponder,
+        ValidatorInterface $validator,
+    ): JsonResponse {
+        $payload = $this->decodePayload($request, $errorResponder);
+        if ($payload instanceof JsonResponse) {
+            return $payload;
+        }
+
+        $input = StopFeedbackInput::fromArray($payload);
+        $violations = $validator->validate($input);
+        if (count($violations) > 0) {
+            return $errorResponder->unprocessableEntity('validation_failed', $violations);
+        }
+
+        $route = $routeRepository->findOneByPublicId($routePublicId);
+        if (!$route instanceof RouteEntity) {
+            return $errorResponder->notFound('route_not_found', 'Ruta no encontrada.');
+        }
+
+        /** @var User $driver */
+        $driver = $this->getUser();
+        if ($route->getDriver()?->getId() !== $driver->getId()) {
+            return $errorResponder->notFound('route_not_found', 'Ruta no encontrada.');
+        }
+
+        $stop = $routeStopRepository->findOneByPublicId($stopPublicId);
+        if (!$stop instanceof RouteStop) {
+            return $errorResponder->notFound('stop_not_found', 'Parada no encontrada.');
+        }
+
+        if ($stop->getRoute()->getDriver()?->getId() !== $driver->getId()) {
+            return $errorResponder->notFound('stop_not_found', 'Parada no encontrada.');
+        }
+
+        $feedback = new DriverFeedback(
+            driver: $driver,
+            stop: $stop,
+            correctedLat: $input->correctedLat,
+            correctedLng: $input->correctedLng,
+            accessNotes: $input->accessNotes,
+            actualServiceTimeSeconds: $input->actualServiceTimeSeconds,
+            comment: $input->comment,
+        );
+        $entityManager->persist($feedback);
+        $entityManager->flush();
+
+        return $this->json([
+            'ok' => true,
+            'feedback_public_id' => $feedback->getPublicIdString(),
+        ], 201);
+    }
+
+    #[Route('/routes/{routePublicId}/briefing', methods: ['GET'])]
+    public function briefing(
+        string $routePublicId,
+        RouteRepository $routeRepository,
+        DriverBriefingService $briefingService,
+        ApiErrorResponder $errorResponder,
+    ): JsonResponse {
+        $route = $routeRepository->findOneByPublicId($routePublicId);
+        if (!$route instanceof RouteEntity) {
+            return $errorResponder->notFound('route_not_found', 'Ruta no encontrada.');
+        }
+
+        /** @var User $driver */
+        $driver = $this->getUser();
+        if ($route->getDriver()?->getId() !== $driver->getId()) {
+            return $errorResponder->notFound('route_not_found', 'Ruta no encontrada.');
+        }
+
+        $briefing = $briefingService->generateBriefing($route);
+
+        return $this->json($briefing->toArray());
     }
 
     /**

@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Command;
 
 use App\Entity\Vehicle;
-use App\Service\TraccarApiClient;
 use App\Service\TraccarIngestionService;
+use App\Tracking\GpsDeviceProviderInterface;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -25,7 +25,7 @@ class SimulateGpsCommand extends Command
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
-        private readonly TraccarApiClient $traccarApiClient,
+        private readonly GpsDeviceProviderInterface $gpsProvider,
         private readonly TraccarIngestionService $ingestionService,
         private readonly HttpClientInterface $httpClient,
         #[Autowire('%kernel.project_dir%')]
@@ -66,8 +66,8 @@ class SimulateGpsCommand extends Command
             $output->writeln('<error>No se pudo crear/encontrar device en Traccar.</error>');
             return self::FAILURE;
         }
-        $traccarDeviceId = (int) $device['id'];
-        $output->writeln(sprintf('Traccar device: <info>%s</info> (id: %d, uniqueId: %s)', $device['name'], $traccarDeviceId, $uniqueId));
+        $traccarDeviceId = $device->id;
+        $output->writeln(sprintf('Traccar device: <info>%s</info> (id: %d, uniqueId: %s)', $device->name, $traccarDeviceId, $uniqueId));
 
         // 3. Update Vehicle with Traccar device ID
         $vehicle->setTraccarDeviceId($traccarDeviceId);
@@ -95,7 +95,7 @@ class SimulateGpsCommand extends Command
             sleep(3);
 
             $output->writeln('Ingesting posiciones desde Traccar...');
-            $positions = $this->traccarApiClient->getPositions($traccarDeviceId, $startTime);
+            $positions = $this->gpsProvider->getPositions($traccarDeviceId, $startTime);
             $totalCreated = $this->ingestionService->ingestForVehicle($vehicle, $positions);
             $output->writeln(sprintf('<info>%d</info> posiciones ingested en Symfony.', $totalCreated));
         }
@@ -328,21 +328,20 @@ class SimulateGpsCommand extends Command
         return $vehicles[0] ?? null;
     }
 
-    /** @return array<string,mixed>|null */
-    private function ensureTraccarDevice(Vehicle $vehicle, string $uniqueId, OutputInterface $output): ?array
+    private function ensureTraccarDevice(Vehicle $vehicle, string $uniqueId, OutputInterface $output): ?\App\Tracking\DeviceInfo
     {
-        $this->traccarApiClient->login();
-        $devices = $this->traccarApiClient->getDevices();
+        $this->gpsProvider->login();
+        $devices = $this->gpsProvider->getDevices();
 
         foreach ($devices as $device) {
-            if (($device['uniqueId'] ?? '') === $uniqueId) {
+            if ($device->uniqueId === $uniqueId) {
                 $output->writeln('Device ya existe en Traccar.');
                 return $device;
             }
         }
 
         $output->writeln('Creando device en Traccar...');
-        return $this->traccarApiClient->createDevice($vehicle->getName(), $uniqueId);
+        return $this->gpsProvider->createDevice($vehicle->getName(), $uniqueId);
     }
 
     /** @return list<array{lat: float, lon: float}> */

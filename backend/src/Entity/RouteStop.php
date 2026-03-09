@@ -32,6 +32,7 @@ class RouteStop
     #[ORM\Column(nullable: true)] private ?DateTimeImmutable $deliveredAt = null;
     #[ORM\Column(length: 30, enumType: ExceptionCode::class, nullable: true)] private ?ExceptionCode $exceptionCode = null;
     #[ORM\Column(type: 'text', nullable: true)] private ?string $exceptionNotes = null;
+    #[ORM\Column(type: 'text', nullable: true)] private ?string $aiNotes = null;
     #[ORM\Column] private bool $isOrigin = false;
     #[ORM\Column(type: 'time_immutable', nullable: true)] private ?DateTimeImmutable $deliveryWindowStart = null;
     #[ORM\Column(type: 'time_immutable', nullable: true)] private ?DateTimeImmutable $deliveryWindowEnd = null;
@@ -74,6 +75,8 @@ class RouteStop
     public function setDeliveryWindowStart(?DateTimeImmutable $deliveryWindowStart): void { $this->deliveryWindowStart = $deliveryWindowStart; }
     public function getDeliveryWindowEnd(): ?DateTimeImmutable { return $this->deliveryWindowEnd; }
     public function setDeliveryWindowEnd(?DateTimeImmutable $deliveryWindowEnd): void { $this->deliveryWindowEnd = $deliveryWindowEnd; }
+    public function getAiNotes(): ?string { return $this->aiNotes; }
+    public function setAiNotes(?string $aiNotes): void { $this->aiNotes = $aiNotes; }
 
     public function markDelivered(): void
     {

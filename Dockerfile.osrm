@@ -1,0 +1,15 @@
+FROM osrm/osrm-backend:latest
+
+# Install curl for downloading map data on first boot
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY scripts/osrm-start.sh /opt/osrm-start.sh
+RUN chmod +x /opt/osrm-start.sh
+
+# Volume mount point for persistent map data (Railway volume)
+VOLUME ["/data"]
+
+EXPOSE 5000
+
+ENTRYPOINT ["/opt/osrm-start.sh"]

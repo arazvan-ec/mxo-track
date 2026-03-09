@@ -6,6 +6,7 @@ namespace App\Entity;
 
 use App\Entity\Concerns\PublicIdTrait;
 use App\Entity\Concerns\SoftDeleteTrait;
+use App\Enum\ClientFrequency;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
 
@@ -32,6 +33,12 @@ class Customer implements SoftDeletableInterface
     #[ORM\Column(length: 500, nullable: true)]
     private ?string $webhookUrl = null;
 
+    #[ORM\Column(length: 20, enumType: ClientFrequency::class, nullable: true)]
+    private ?ClientFrequency $frequency = null;
+
+    #[ORM\Column(length: 100, nullable: true)]
+    private ?string $preferredDeliverySlot = null;
+
     #[ORM\Column]
     private bool $isActive = true;
 
@@ -48,6 +55,10 @@ class Customer implements SoftDeletableInterface
     public function setContactPhone(?string $contactPhone): void { $this->contactPhone = $contactPhone; }
     public function getWebhookUrl(): ?string { return $this->webhookUrl; }
     public function setWebhookUrl(?string $webhookUrl): void { $this->webhookUrl = $webhookUrl; }
+    public function getFrequency(): ?ClientFrequency { return $this->frequency; }
+    public function setFrequency(?ClientFrequency $frequency): void { $this->frequency = $frequency; }
+    public function getPreferredDeliverySlot(): ?string { return $this->preferredDeliverySlot; }
+    public function setPreferredDeliverySlot(?string $slot): void { $this->preferredDeliverySlot = $slot; }
     public function isActive(): bool { return $this->isActive; }
     public function setActive(bool $isActive): void { $this->isActive = $isActive; }
 }

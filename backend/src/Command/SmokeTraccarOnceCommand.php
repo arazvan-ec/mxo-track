@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Command;
 
 use App\Entity\Vehicle;
-use App\Service\TraccarApiClient;
+use App\Tracking\GpsDeviceProviderInterface;
 use DateInterval;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
@@ -19,7 +19,7 @@ class SmokeTraccarOnceCommand extends Command
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
-        private readonly TraccarApiClient $traccarApiClient,
+        private readonly GpsDeviceProviderInterface $gpsProvider,
     ) {
         parent::__construct();
     }
@@ -32,7 +32,7 @@ class SmokeTraccarOnceCommand extends Command
         $output->writeln(sprintf('smoke.traccar.active_vehicles=%d', count($vehicles)));
         $output->writeln(sprintf('smoke.traccar.mapped_vehicles=%d', count($withDevice)));
 
-        $devices = $this->traccarApiClient->getDevices();
+        $devices = $this->gpsProvider->getDevices();
         $output->writeln(sprintf('smoke.traccar.devices_visible=%d', count($devices)));
 
         if ($withDevice === []) {
@@ -42,7 +42,7 @@ class SmokeTraccarOnceCommand extends Command
 
         $deviceId = $withDevice[0]->getTraccarDeviceId();
         $from = (new DateTimeImmutable())->sub(new DateInterval('PT10M'));
-        $positions = $this->traccarApiClient->getPositions((int) $deviceId, $from);
+        $positions = $this->gpsProvider->getPositions((int) $deviceId, $from);
         $output->writeln(sprintf('smoke.traccar.positions_checked=%d', count($positions)));
 
         return self::SUCCESS;

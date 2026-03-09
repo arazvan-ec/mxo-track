@@ -51,6 +51,24 @@ class Route implements SoftDeletableInterface
     #[ORM\JoinColumn(name: 'origin_location_id', nullable: true, onDelete: 'SET NULL')]
     private ?CustomerLocation $originLocation = null;
 
+    #[ORM\Column(type: 'decimal', precision: 10, scale: 2, nullable: true)]
+    private ?string $totalWeightKg = null;
+
+    #[ORM\Column(type: 'decimal', precision: 10, scale: 4, nullable: true)]
+    private ?string $totalVolumeM3 = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $totalParcels = null;
+
+    #[ORM\Column(type: 'decimal', precision: 8, scale: 2, nullable: true)]
+    private ?string $totalDistanceKm = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $estimatedDurationMinutes = null;
+
+    #[ORM\Column(type: 'json', nullable: true)]
+    private ?array $aiAnalysis = null;
+
     public function __construct(string $name)
     {
         $this->name = $name;
@@ -72,6 +90,22 @@ class Route implements SoftDeletableInterface
     public function setCustomer(?Customer $customer): void { $this->customer = $customer; }
     public function getOriginLocation(): ?CustomerLocation { return $this->originLocation; }
     public function setOriginLocation(?CustomerLocation $originLocation): void { $this->originLocation = $originLocation; }
+
+    public function getTotalWeightKg(): ?float { return $this->totalWeightKg !== null ? (float) $this->totalWeightKg : null; }
+    public function setTotalWeightKg(?float $v): void { $this->totalWeightKg = $v !== null ? (string) $v : null; }
+    public function getTotalVolumeM3(): ?float { return $this->totalVolumeM3 !== null ? (float) $this->totalVolumeM3 : null; }
+    public function setTotalVolumeM3(?float $v): void { $this->totalVolumeM3 = $v !== null ? (string) $v : null; }
+    public function getTotalParcels(): ?int { return $this->totalParcels; }
+    public function setTotalParcels(?int $v): void { $this->totalParcels = $v; }
+    public function getTotalDistanceKm(): ?float { return $this->totalDistanceKm !== null ? (float) $this->totalDistanceKm : null; }
+    public function setTotalDistanceKm(?float $v): void { $this->totalDistanceKm = $v !== null ? (string) $v : null; }
+    public function getEstimatedDurationMinutes(): ?int { return $this->estimatedDurationMinutes; }
+    public function setEstimatedDurationMinutes(?int $v): void { $this->estimatedDurationMinutes = $v; }
+
+    /** @return array<string, mixed>|null */
+    public function getAiAnalysis(): ?array { return $this->aiAnalysis; }
+    /** @param array<string, mixed>|null $aiAnalysis */
+    public function setAiAnalysis(?array $aiAnalysis): void { $this->aiAnalysis = $aiAnalysis; }
 
     public function start(): void
     {
