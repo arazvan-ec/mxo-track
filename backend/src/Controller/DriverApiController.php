@@ -121,7 +121,7 @@ class DriverApiController extends AbstractController
         }
 
         $stops = $entityManager->getRepository(RouteStop::class)->findBy(['route' => $route], ['sequence' => 'ASC']);
-        $items = array_map(static fn (RouteStop $stop): array => [
+        $items = array_map(fn (RouteStop $stop): array => [
             'public_id' => $stop->getPublicIdString(),
             'status' => $stop->getStatus()->value,
             'sequence' => $stop->getSequence(),
@@ -131,12 +131,9 @@ class DriverApiController extends AbstractController
             'recipient_name' => $stop->getRecipientName(),
             'recipient_phone' => $stop->getRecipientPhone(),
             'is_origin' => $stop->isOrigin(),
-            'navigation_url' => $stop->getLatitude() !== null && $stop->getLongitude() !== null
-                ? sprintf('https://www.google.com/maps/dir/?api=1&destination=%s,%s', $stop->getLatitude(), $stop->getLongitude())
-                : null,
-            'waze_url' => $stop->getLatitude() !== null && $stop->getLongitude() !== null
-                ? sprintf('https://waze.com/ul?ll=%s,%s&navigate=yes', $stop->getLatitude(), $stop->getLongitude())
-                : null,
+            ...($stop->getLatitude() !== null && $stop->getLongitude() !== null
+                ? $this->buildNavigationUrls($stop->getLatitude(), $stop->getLongitude())
+                : []),
         ], $stops);
 
         return $this->json(['items' => $items]);
