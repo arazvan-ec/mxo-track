@@ -50,6 +50,16 @@ final readonly class RoutePlanningService
             ->getQuery()
             ->getResult();
 
+        // Filter out shipments with invalid or missing coordinates
+        $shipments = array_values(array_filter($shipments, static function (Shipment $s): bool {
+            $lat = $s->getLatitude();
+            $lng = $s->getLongitude();
+
+            return $lat !== null && $lng !== null
+                && $lat >= -90.0 && $lat <= 90.0
+                && $lng >= -180.0 && $lng <= 180.0;
+        }));
+
         if (\count($shipments) === 0) {
             throw new \InvalidArgumentException('No valid shipments found.');
         }

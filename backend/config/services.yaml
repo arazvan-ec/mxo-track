@@ -108,6 +108,7 @@ services:
   App\Notification\RecipientNotificationService:
     arguments:
       $channels: !tagged_iterator app.notification_channel
+      $appBaseUrl: '%env(default::APP_BASE_URL)%'
 
   # Provider wiring — default to Null for dev, swap to Twilio in prod
   App\Notification\Provider\SmsProviderInterface:

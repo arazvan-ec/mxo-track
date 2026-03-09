@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Reporte SLA - {{ from|date('d/m/Y') }} a {{ to|date('d/m/Y') }}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #1e293b; font-size: 12px; padding: 24px; }
+    h1 { font-size: 20px; margin-bottom: 4px; }
+    h2 { font-size: 14px; margin-top: 20px; margin-bottom: 8px; border-bottom: 2px solid #6366f1; padding-bottom: 4px; }
+    .meta { color: #64748b; font-size: 11px; margin-bottom: 16px; }
+    .kpi-grid { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+    .kpi-card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; flex: 1; min-width: 140px; }
+    .kpi-card .label { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+    .kpi-card .value { font-size: 24px; font-weight: 700; margin-top: 4px; }
+    .kpi-card .desc { font-size: 9px; color: #94a3b8; margin-top: 2px; }
+    .brand { color: #6366f1; }
+    .green { color: #10b981; }
+    .indigo { color: #6366f1; }
+    .gray { color: #1e293b; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+    th { background: #f8fafc; text-align: left; padding: 6px 10px; font-size: 10px; text-transform: uppercase; color: #64748b; border-bottom: 2px solid #e2e8f0; }
+    td { padding: 6px 10px; border-bottom: 1px solid #f1f5f9; font-size: 11px; }
+    .text-right { text-align: right; }
+    .text-emerald { color: #10b981; font-weight: 600; }
+    .text-red { color: #ef4444; font-weight: 600; }
+    .footer { margin-top: 32px; padding-top: 8px; border-top: 1px solid #e2e8f0; font-size: 9px; color: #94a3b8; text-align: center; }
+    @media print {
+      body { padding: 0; }
+      @page { margin: 1.5cm; }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Reporte SLA & Cumplimiento</h1>
+  <p class="meta">
+    Cliente: <strong>{{ customer_name }}</strong> |
+    Periodo: {{ from|date('d/m/Y') }} - {{ to|date('d/m/Y') }} |
+    Generado: {{ "now"|date('d/m/Y H:i') }}
+  </p>
+
+  <h2>Indicadores principales</h2>
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="label">OTIF</div>
+      <div class="value brand">{{ sla.otif_rate }}%</div>
+      <div class="desc">On Time In Full</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">Tasa a tiempo</div>
+      <div class="value green">{{ sla.on_time_rate }}%</div>
+      <div class="desc">Dentro de ventana</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">1er intento</div>
+      <div class="value indigo">{{ sla.first_attempt_rate }}%</div>
+      <div class="desc">Sin fallos previos</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">Tiempo promedio</div>
+      <div class="value gray">{{ sla.avg_delivery_time_minutes }} min</div>
+      <div class="desc">Inicio ruta a entrega</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">Paradas/hora</div>
+      <div class="value gray">{{ sla.avg_stops_per_hour }}</div>
+      <div class="desc">Promedio por hora de ruta</div>
+    </div>
+  </div>
+
+  <h2>Excepciones por tipo</h2>
+  {% set exception_labels = {
+    'ABSENT': 'Ausente',
+    'WRONG_ADDRESS': 'Direccion incorrecta',
+    'REFUSED': 'Rechazado',
+    'DAMAGED': 'Danado',
+    'OTHER': 'Otro',
+    'SIN_CODIGO': 'Sin codigo'
+  } %}
+
+  {% if sla.exception_rate_by_type|length > 0 %}
+    <table>
+      <thead>
+        <tr>
+          <th>Tipo</th>
+          <th class="text-right">Cantidad</th>
+          <th class="text-right">% del total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in sla.exception_rate_by_type %}
+          <tr>
+            <td>{{ exception_labels[item.code] ?? item.code }}</td>
+            <td class="text-right text-red">{{ item.count }}</td>
+            <td class="text-right">{{ item.rate }}%</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p style="color: #94a3b8; margin-bottom: 16px;">Sin excepciones en el periodo seleccionado.</p>
+  {% endif %}
+
+  <h2>Tendencia SLA</h2>
+  {% if sla.sla_trend|length > 0 %}
+    <table>
+      <thead>
+        <tr>
+          <th>Periodo</th>
+          <th class="text-right">OTIF %</th>
+          <th class="text-right">A tiempo %</th>
+          <th class="text-right">1er intento %</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in sla.sla_trend %}
+          <tr>
+            <td>{{ row.period_label }}</td>
+            <td class="text-right">{{ row.otif_rate }}%</td>
+            <td class="text-right">{{ row.on_time_rate }}%</td>
+            <td class="text-right">{{ row.first_attempt_rate }}%</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p style="color: #94a3b8; margin-bottom: 16px;">Sin datos de tendencia.</p>
+  {% endif %}
+
+  <h2>Ranking de transportistas</h2>
+  {% if sla.driver_ranking|length > 0 %}
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Transportista</th>
+          <th class="text-right">Entregas</th>
+          <th class="text-right">Excepciones</th>
+          <th class="text-right">Tasa exito</th>
+          <th class="text-right">Paradas/hora</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for driver in sla.driver_ranking %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td>
+              {{ driver.driver_name }}
+              <span style="color: #94a3b8; font-size: 10px;">({{ driver.driver_email }})</span>
+            </td>
+            <td class="text-right text-emerald">{{ driver.deliveries }}</td>
+            <td class="text-right text-red">{{ driver.exceptions }}</td>
+            <td class="text-right">{{ driver.success_rate }}%</td>
+            <td class="text-right">{{ driver.avg_stops_per_hour }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p style="color: #94a3b8;">Sin datos de transportistas para el periodo seleccionado.</p>
+  {% endif %}
+
+  <div class="footer">
+    MXO Track - Reporte generado automaticamente | {{ "now"|date('d/m/Y H:i:s') }}
+  </div>
+
+</body>
+</html>

@@ -172,6 +172,11 @@
               <td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
                 <a href="{{ path('admin_routes_edit', {publicId: route.publicIdString}) }}"
                    class="text-blue-600 hover:text-blue-900 mr-3">Editar</a>
+                {% if route.status.value == 'DONE' %}
+                  <a href="{{ path('admin_routes_analysis', {publicId: route.publicIdString}) }}"
+                     class="text-emerald-600 hover:text-emerald-900 mr-3"
+                     title="Ver analisis de ruta planificada vs ejecutada">Analisis</a>
+                {% endif %}
                 {% if route.status.value != 'CANCELLED' %}
                   <form method="post" action="{{ path('admin_routes_delete', {publicId: route.publicIdString}) }}" class="inline"
                         onsubmit="return confirm('Cancelar esta ruta?');">

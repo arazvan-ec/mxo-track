@@ -1,0 +1,172 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Disponibilidad - {{ driver.name ?? driver.email }} - Admin{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-4xl">
+
+    {# Header #}
+    <div class="mb-6 flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">Disponibilidad semanal</h1>
+        <p class="mt-1 text-sm text-gray-500">{{ driver.name ?? driver.email }}</p>
+      </div>
+      <a href="{{ path('admin_drivers_index') }}"
+         class="inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+        Volver a conductores
+      </a>
+    </div>
+
+    {# Schedule form #}
+    <div class="bg-white shadow rounded-lg p-6" x-data="availabilitySchedule()">
+      <form method="post" action="{{ path('admin_drivers_availability_save', {publicId: driver.publicIdString}) }}">
+        <input type="hidden" name="_token" value="{{ csrf_token('availability-' ~ driver.publicIdString) }}">
+
+        {# Day tabs #}
+        <div class="border-b border-gray-200 mb-6">
+          <nav class="-mb-px flex space-x-4 overflow-x-auto" aria-label="Dias">
+            <template x-for="(dayName, dayIndex) in days" :key="dayIndex">
+              <button type="button"
+                      @click="activeDay = dayIndex"
+                      :class="activeDay === dayIndex
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'"
+                      class="whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium transition-colors">
+                <span x-text="dayName"></span>
+                <span x-show="slots.filter(s => s.dayOfWeek === dayIndex).length > 0"
+                      class="ml-1 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-blue-100 px-1 text-xs font-medium text-blue-600"
+                      x-text="slots.filter(s => s.dayOfWeek === dayIndex).length"></span>
+              </button>
+            </template>
+          </nav>
+        </div>
+
+        {# Slots for active day #}
+        <div class="space-y-4 min-h-[200px]">
+          <template x-for="(slot, idx) in slots.filter(s => s.dayOfWeek === activeDay)" :key="slot._key">
+            <div class="flex items-start gap-4 rounded-lg border border-gray-200 p-4">
+              <input type="hidden" :name="'slots[' + slot._key + '][dayOfWeek]'" :value="slot.dayOfWeek">
+
+              {# Start time #}
+              <div class="flex-1">
+                <label class="block text-xs font-medium text-gray-500 mb-1">Inicio</label>
+                <input type="time" x-model="slot.startTime"
+                       :name="'slots[' + slot._key + '][startTime]'"
+                       class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+              </div>
+
+              {# End time #}
+              <div class="flex-1">
+                <label class="block text-xs font-medium text-gray-500 mb-1">Fin</label>
+                <input type="time" x-model="slot.endTime"
+                       :name="'slots[' + slot._key + '][endTime]'"
+                       class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+              </div>
+
+              {# Available toggle #}
+              <div class="pt-5">
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" x-model="slot.isAvailable"
+                         :name="'slots[' + slot._key + '][isAvailable]'"
+                         class="sr-only peer" value="1">
+                  <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                  <span class="ml-2 text-xs font-medium" :class="slot.isAvailable ? 'text-green-600' : 'text-gray-400'"
+                        x-text="slot.isAvailable ? 'Disponible' : 'No disponible'"></span>
+                </label>
+              </div>
+
+              {# Notes #}
+              <div class="flex-1">
+                <label class="block text-xs font-medium text-gray-500 mb-1">Notas</label>
+                <input type="text" x-model="slot.notes"
+                       :name="'slots[' + slot._key + '][notes]'"
+                       placeholder="Opcional"
+                       class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+              </div>
+
+              {# Remove button #}
+              <div class="pt-5">
+                <button type="button" @click="removeSlot(slot._key)"
+                        class="text-red-400 hover:text-red-600 transition-colors">
+                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </template>
+
+          {# Empty state #}
+          <div x-show="slots.filter(s => s.dayOfWeek === activeDay).length === 0"
+               class="text-center py-8 text-gray-400 text-sm">
+            No hay franjas horarias configuradas para este dia.
+          </div>
+        </div>
+
+        {# Add slot button #}
+        <div class="mt-4">
+          <button type="button" @click="addSlot(activeDay)"
+                  class="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+            <svg class="mr-1.5 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+            </svg>
+            Agregar franja
+          </button>
+        </div>
+
+        {# Hidden inputs for all slots (to ensure non-active day slots are submitted) #}
+        <template x-for="slot in slots.filter(s => s.dayOfWeek !== activeDay)" :key="'hidden-' + slot._key">
+          <div>
+            <input type="hidden" :name="'slots[' + slot._key + '][dayOfWeek]'" :value="slot.dayOfWeek">
+            <input type="hidden" :name="'slots[' + slot._key + '][startTime]'" :value="slot.startTime">
+            <input type="hidden" :name="'slots[' + slot._key + '][endTime]'" :value="slot.endTime">
+            <input type="hidden" :name="'slots[' + slot._key + '][isAvailable]'" x-bind:value="slot.isAvailable ? '1' : ''" x-effect="if(slot.isAvailable) { $el.disabled = false } else { $el.disabled = true }">
+            <input type="hidden" :name="'slots[' + slot._key + '][notes]'" :value="slot.notes || ''">
+          </div>
+        </template>
+
+        {# Save #}
+        <div class="mt-6 flex items-center justify-between border-t border-gray-200 pt-4">
+          <a href="{{ path('admin_drivers_edit', {publicId: driver.publicIdString}) }}"
+             class="text-sm font-medium text-gray-600 hover:text-gray-900">
+            Editar conductor
+          </a>
+          <button type="submit"
+                  class="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
+            Guardar horario
+          </button>
+        </div>
+      </form>
+    </div>
+
+</div>
+
+<script>
+function availabilitySchedule() {
+  // Load existing schedule from server-rendered data
+  const existingSlots = {{ scheduleJson|raw }};
+
+  return {
+    activeDay: 0,
+    days: ['Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado', 'Domingo'],
+    nextKey: existingSlots.length,
+    slots: existingSlots,
+
+    addSlot(dayOfWeek) {
+      this.slots.push({
+        _key: this.nextKey++,
+        dayOfWeek: dayOfWeek,
+        startTime: '08:00',
+        endTime: '18:00',
+        isAvailable: true,
+        notes: '',
+      });
+    },
+
+    removeSlot(key) {
+      this.slots = this.slots.filter(s => s._key !== key);
+    },
+  };
+}
+</script>
+{% endblock %}

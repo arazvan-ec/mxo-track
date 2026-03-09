@@ -69,6 +69,9 @@ class Route implements SoftDeletableInterface
     #[ORM\Column(type: 'json', nullable: true)]
     private ?array $aiAnalysis = null;
 
+    #[ORM\Column(options: ['default' => false])]
+    private bool $autoReoptimize = false;
+
     public function __construct(string $name)
     {
         $this->name = $name;
@@ -106,6 +109,9 @@ class Route implements SoftDeletableInterface
     public function getAiAnalysis(): ?array { return $this->aiAnalysis; }
     /** @param array<string, mixed>|null $aiAnalysis */
     public function setAiAnalysis(?array $aiAnalysis): void { $this->aiAnalysis = $aiAnalysis; }
+
+    public function isAutoReoptimize(): bool { return $this->autoReoptimize; }
+    public function setAutoReoptimize(bool $autoReoptimize): void { $this->autoReoptimize = $autoReoptimize; }
 
     public function start(): void
     {

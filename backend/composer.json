@@ -29,7 +29,8 @@
     "symfony/form": "7.4.*",
     "phrity/websocket": "^3.6",
     "symfony/monolog-bundle": "^3.10",
-    "symfony/translation": "^7.4"
+    "symfony/translation": "^7.4",
+    "nelmio/api-doc-bundle": "^5.9"
   },
   "require-dev": {
     "doctrine/doctrine-fixtures-bundle": "^3.6",

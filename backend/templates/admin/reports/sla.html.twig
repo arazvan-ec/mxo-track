@@ -1,0 +1,378 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}SLA & Cumplimiento - MXO Track{% endblock %}
+
+{% block breadcrumbs %}
+  <li>
+    <div class="flex items-center">
+      <svg class="h-5 w-5 shrink-0 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd"/>
+      </svg>
+      <a href="{{ path('admin_reports_index') }}" class="ml-2 text-sm font-medium text-gray-500 hover:text-gray-700">Reportes</a>
+    </div>
+  </li>
+  <li>
+    <div class="flex items-center">
+      <svg class="h-5 w-5 shrink-0 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd"/>
+      </svg>
+      <span class="ml-2 text-sm font-medium text-gray-500">SLA & Cumplimiento</span>
+    </div>
+  </li>
+{% endblock %}
+
+{% block content %}
+<div x-data="slaApp()" x-init="init()">
+
+  {# Header #}
+  <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <h1 class="text-2xl font-bold tracking-tight text-gray-900">SLA & Cumplimiento</h1>
+      <p class="mt-1 text-sm text-gray-500">Indicadores de nivel de servicio, tendencias y ranking de transportistas.</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <a :href="exportUrl()"
+         class="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50 transition-colors">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+        </svg>
+        Exportar PDF
+      </a>
+    </div>
+  </div>
+
+  {# Filters #}
+  <form method="get" class="mb-8 flex flex-wrap items-end gap-3" @submit.prevent="applyFilters()">
+    <div>
+      <label for="customer_id" class="block text-xs font-medium text-gray-600 mb-1">Cliente</label>
+      <select id="customer_id" name="customer_id" x-model="customerId"
+              class="rounded-lg border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-brand-500">
+        <option value="">Todos los clientes</option>
+        {% for c in customers %}
+          <option value="{{ c.id }}" {{ selected_customer_id == c.id ? 'selected' : '' }}>{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="period" class="block text-xs font-medium text-gray-600 mb-1">Periodo</label>
+      <select id="period" name="period" x-model="period" @change="onPeriodChange()"
+              class="rounded-lg border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-brand-500">
+        <option value="week">Ultima semana</option>
+        <option value="month" selected>Ultimo mes</option>
+        <option value="custom">Personalizado</option>
+      </select>
+    </div>
+    <div x-show="period === 'custom'" x-transition>
+      <label for="from" class="block text-xs font-medium text-gray-600 mb-1">Desde</label>
+      <input type="date" id="from" name="from" x-model="fromDate"
+             value="{{ from|date('Y-m-d') }}"
+             class="rounded-lg border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-brand-500">
+    </div>
+    <div x-show="period === 'custom'" x-transition>
+      <label for="to" class="block text-xs font-medium text-gray-600 mb-1">Hasta</label>
+      <input type="date" id="to" name="to" x-model="toDate"
+             value="{{ to|date('Y-m-d') }}"
+             class="rounded-lg border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-brand-500">
+    </div>
+    <button type="submit"
+            class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-500 transition-colors"
+            :disabled="loading">
+      <span x-show="!loading">Aplicar</span>
+      <span x-show="loading">Cargando...</span>
+    </button>
+  </form>
+
+  {# KPI Cards #}
+  <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+    <div class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-900/5">
+      <p class="text-sm font-medium text-gray-500">OTIF (On Time In Full)</p>
+      <p class="mt-2 text-3xl font-bold text-brand-600" x-text="data.otif_rate + '%'">{{ sla.otif_rate }}%</p>
+      <p class="mt-1 text-xs text-gray-400">Entregado a tiempo y completo</p>
+    </div>
+    <div class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-900/5">
+      <p class="text-sm font-medium text-gray-500">Tasa a tiempo</p>
+      <p class="mt-2 text-3xl font-bold text-emerald-600" x-text="data.on_time_rate + '%'">{{ sla.on_time_rate }}%</p>
+      <p class="mt-1 text-xs text-gray-400">Dentro de ventana de entrega</p>
+    </div>
+    <div class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-900/5">
+      <p class="text-sm font-medium text-gray-500">Primera entrega exitosa</p>
+      <p class="mt-2 text-3xl font-bold text-indigo-600" x-text="data.first_attempt_rate + '%'">{{ sla.first_attempt_rate }}%</p>
+      <p class="mt-1 text-xs text-gray-400">Sin intentos previos fallidos</p>
+    </div>
+    <div class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-900/5">
+      <p class="text-sm font-medium text-gray-500">Tiempo promedio</p>
+      <p class="mt-2 text-3xl font-bold text-gray-900" x-text="data.avg_delivery_time_minutes + ' min'">{{ sla.avg_delivery_time_minutes }} min</p>
+      <p class="mt-1 text-xs text-gray-400">Desde inicio de ruta a entrega</p>
+    </div>
+  </div>
+
+  {# Charts row #}
+  <div class="grid grid-cols-1 gap-6 lg:grid-cols-2 mb-8">
+    {# SLA Trend line chart #}
+    <div class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-900/5">
+      <h3 class="text-base font-semibold text-gray-900 mb-4">Tendencia SLA</h3>
+      <div class="relative" style="height: 300px;">
+        <canvas id="slaTrendChart"></canvas>
+      </div>
+    </div>
+
+    {# Exception breakdown bar chart #}
+    <div class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-900/5">
+      <h3 class="text-base font-semibold text-gray-900 mb-4">Excepciones por tipo</h3>
+      <div class="relative" style="height: 300px;">
+        <canvas id="exceptionChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  {# Additional KPI: Stops per hour #}
+  <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 mb-8">
+    <div class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-900/5">
+      <p class="text-sm font-medium text-gray-500">Paradas por hora</p>
+      <p class="mt-2 text-3xl font-bold text-amber-600" x-text="data.avg_stops_per_hour">{{ sla.avg_stops_per_hour }}</p>
+      <p class="mt-1 text-xs text-gray-400">Promedio de entregas completadas por hora de ruta</p>
+    </div>
+  </div>
+
+  {# Driver ranking table #}
+  <div class="rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5 overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-100">
+      <h3 class="text-base font-semibold text-gray-900">Ranking de transportistas</h3>
+    </div>
+    <template x-if="data.driver_ranking && data.driver_ranking.length > 0">
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">#</th>
+              <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Transportista</th>
+              <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Entregas</th>
+              <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Excepciones</th>
+              <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Tasa exito</th>
+              <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Paradas/hora</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            <template x-for="(driver, index) in data.driver_ranking" :key="driver.driver_email">
+              <tr class="hover:bg-gray-50 transition-colors">
+                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500" x-text="index + 1"></td>
+                <td class="whitespace-nowrap px-6 py-4">
+                  <div class="text-sm font-medium text-gray-900" x-text="driver.driver_name"></div>
+                  <div class="text-xs text-gray-500" x-text="driver.driver_email"></div>
+                </td>
+                <td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium text-emerald-600" x-text="driver.deliveries"></td>
+                <td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium text-red-600" x-text="driver.exceptions"></td>
+                <td class="whitespace-nowrap px-6 py-4 text-right text-sm text-gray-700" x-text="driver.success_rate + '%'"></td>
+                <td class="whitespace-nowrap px-6 py-4 text-right text-sm text-gray-700" x-text="driver.avg_stops_per_hour"></td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </template>
+    <template x-if="!data.driver_ranking || data.driver_ranking.length === 0">
+      <div class="px-6 py-12 text-center text-sm text-gray-500">
+        No hay datos de transportistas para el periodo seleccionado.
+      </div>
+    </template>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
+<script>
+function slaApp() {
+  return {
+    loading: false,
+    customerId: '{{ selected_customer_id ?? '' }}',
+    period: '{{ from|date('Y-m-d') == (("now"|date('Y-m-d', '-7 days'))) ? 'week' : 'month' }}',
+    fromDate: '{{ from|date('Y-m-d') }}',
+    toDate: '{{ to|date('Y-m-d') }}',
+    data: {{ sla|json_encode|raw }},
+    trendChart: null,
+    exceptionChart: null,
+
+    init() {
+      this.renderCharts();
+    },
+
+    onPeriodChange() {
+      if (this.period === 'week') {
+        const d = new Date();
+        d.setDate(d.getDate() - 7);
+        this.fromDate = d.toISOString().split('T')[0];
+        this.toDate = new Date().toISOString().split('T')[0];
+      } else if (this.period === 'month') {
+        const d = new Date();
+        d.setDate(d.getDate() - 30);
+        this.fromDate = d.toISOString().split('T')[0];
+        this.toDate = new Date().toISOString().split('T')[0];
+      }
+    },
+
+    exportUrl() {
+      const params = new URLSearchParams();
+      if (this.customerId) params.set('customer_id', this.customerId);
+      params.set('from', this.fromDate);
+      params.set('to', this.toDate);
+      return '{{ path('admin_reports_sla_export') }}?' + params.toString();
+    },
+
+    async applyFilters() {
+      this.loading = true;
+      const params = new URLSearchParams();
+      if (this.customerId) params.set('customer_id', this.customerId);
+      params.set('from', this.fromDate);
+      params.set('to', this.toDate);
+
+      try {
+        const resp = await fetch('{{ path('admin_reports_sla_data') }}?' + params.toString());
+        const json = await resp.json();
+        this.data = json.sla;
+        this.renderCharts();
+      } catch (e) {
+        console.error('Error fetching SLA data:', e);
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    renderCharts() {
+      this.renderTrendChart();
+      this.renderExceptionChart();
+    },
+
+    renderTrendChart() {
+      const ctx = document.getElementById('slaTrendChart');
+      if (!ctx) return;
+
+      if (this.trendChart) {
+        this.trendChart.destroy();
+      }
+
+      const trend = this.data.sla_trend || [];
+
+      this.trendChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: trend.map(d => d.period_label),
+          datasets: [
+            {
+              label: 'OTIF %',
+              data: trend.map(d => d.otif_rate),
+              borderColor: '#6366f1',
+              backgroundColor: 'rgba(99, 102, 241, 0.1)',
+              fill: true,
+              tension: 0.3,
+              pointRadius: 4,
+              pointHoverRadius: 6,
+            },
+            {
+              label: 'A tiempo %',
+              data: trend.map(d => d.on_time_rate),
+              borderColor: '#10b981',
+              backgroundColor: 'rgba(16, 185, 129, 0.1)',
+              fill: false,
+              tension: 0.3,
+              pointRadius: 4,
+              pointHoverRadius: 6,
+            },
+            {
+              label: '1er intento %',
+              data: trend.map(d => d.first_attempt_rate),
+              borderColor: '#f59e0b',
+              backgroundColor: 'rgba(245, 158, 11, 0.1)',
+              fill: false,
+              tension: 0.3,
+              pointRadius: 4,
+              pointHoverRadius: 6,
+              borderDash: [5, 5],
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom' }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 100,
+              ticks: {
+                callback: function(v) { return v + '%'; }
+              }
+            }
+          }
+        }
+      });
+    },
+
+    renderExceptionChart() {
+      const ctx = document.getElementById('exceptionChart');
+      if (!ctx) return;
+
+      if (this.exceptionChart) {
+        this.exceptionChart.destroy();
+      }
+
+      const exceptions = this.data.exception_rate_by_type || [];
+
+      const labelMap = {
+        'ABSENT': 'Ausente',
+        'WRONG_ADDRESS': 'Direccion incorrecta',
+        'REFUSED': 'Rechazado',
+        'DAMAGED': 'Danado',
+        'OTHER': 'Otro',
+        'SIN_CODIGO': 'Sin codigo'
+      };
+
+      const colors = ['#ef4444', '#f97316', '#eab308', '#8b5cf6', '#64748b', '#94a3b8'];
+
+      if (exceptions.length === 0) {
+        ctx.parentElement.innerHTML = '<div class="flex items-center justify-center h-full text-sm text-gray-400">Sin excepciones en el periodo</div>';
+        return;
+      }
+
+      this.exceptionChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: exceptions.map(e => labelMap[e.code] || e.code),
+          datasets: [{
+            label: 'Cantidad',
+            data: exceptions.map(e => e.count),
+            backgroundColor: colors.slice(0, exceptions.length),
+            borderWidth: 0,
+            borderRadius: 6,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: 'y',
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                afterLabel: function(ctx) {
+                  const item = exceptions[ctx.dataIndex];
+                  return item ? item.rate + '% del total' : '';
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              beginAtZero: true,
+              ticks: { precision: 0 }
+            }
+          }
+        }
+      });
+    }
+  };
+}
+</script>
+{% endblock %}

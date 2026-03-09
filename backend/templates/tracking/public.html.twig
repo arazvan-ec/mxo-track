@@ -99,10 +99,58 @@
     </div>
 
     {# ── Delivery Address ─────────────────────────────────────────── #}
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
       <h2 class="text-sm font-semibold text-gray-900 mb-2">Direccion de entrega</h2>
       <p class="text-sm text-gray-600">{{ shipment.address }}</p>
     </div>
+
+    {# ── Rating Section ──────────────────────────────────────────── #}
+    {% if currentStatus == 'DELIVERED' %}
+      {% if existingRating %}
+        {# Show existing rating inline #}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+          <h2 class="text-sm font-semibold text-gray-900 mb-3">Tu valoracion</h2>
+          <div class="flex items-center gap-1 mb-2">
+            {% for i in 1..5 %}
+              <svg class="w-5 h-5 {{ i <= existingRating.score ? 'text-yellow-400' : 'text-gray-200' }}"
+                   fill="currentColor" viewBox="0 0 20 20">
+                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+              </svg>
+            {% endfor %}
+            <span class="ml-1 text-sm font-medium text-gray-600">{{ existingRating.score }}/5</span>
+          </div>
+          {% if existingRating.tags is not empty %}
+            <div class="flex flex-wrap gap-1.5 mb-2">
+              {% for tag in existingRating.tags %}
+                <span class="inline-flex items-center rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-700 ring-1 ring-inset ring-brand-200">
+                  {{ tag }}
+                </span>
+              {% endfor %}
+            </div>
+          {% endif %}
+          {% if existingRating.comment %}
+            <p class="text-sm text-gray-600 mt-2">{{ existingRating.comment }}</p>
+          {% endif %}
+        </div>
+      {% else %}
+        {# Prompt to rate #}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-sm font-semibold text-gray-900">Valora tu entrega</h2>
+              <p class="text-xs text-gray-500 mt-0.5">Tu opinion nos ayuda a mejorar</p>
+            </div>
+            <a href="{{ path('public_tracking_rate_page', {trackingToken: shipment.trackingToken}) }}"
+               class="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 transition-colors">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+              </svg>
+              Valorar
+            </a>
+          </div>
+        </div>
+      {% endif %}
+    {% endif %}
 
   </main>
 

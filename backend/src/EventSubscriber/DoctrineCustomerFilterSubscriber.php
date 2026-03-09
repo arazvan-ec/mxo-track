@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\EventSubscriber;
 
 use App\Entity\User;
+use App\Security\ApiKeyUser;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -38,6 +39,17 @@ final class DoctrineCustomerFilterSubscriber implements EventSubscriberInterface
         }
 
         $user = $this->security->getUser();
+
+        // Handle API key users (Public API v1)
+        if ($user instanceof ApiKeyUser) {
+            if (!$filters->isEnabled('customer_tenant')) {
+                $filters->enable('customer_tenant');
+            }
+            $filters->getFilter('customer_tenant')->setParameter('customer_id', (string) $user->getCustomer()->getId());
+
+            return;
+        }
+
         if (!$user instanceof User) {
             if ($filters->isEnabled('customer_tenant')) {
                 $filters->disable('customer_tenant');
