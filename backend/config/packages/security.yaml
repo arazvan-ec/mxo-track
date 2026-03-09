@@ -16,6 +16,10 @@ security:
       pattern: ^/(_(profiler|wdt)|css|images|js)/
       security: false
 
+    api_v1_doc:
+      pattern: ^/api/v1/doc
+      security: false
+
     api_v1:
       pattern: ^/api/v1
       stateless: true
@@ -37,6 +41,7 @@ security:
         target: app_login
 
   access_control:
+    - { path: ^/api/v1/doc, roles: PUBLIC_ACCESS }
     - { path: ^/api/v1, roles: IS_AUTHENTICATED_FULLY }
     - { path: ^/login, roles: PUBLIC_ACCESS }
     - { path: ^/logout, roles: PUBLIC_ACCESS }
