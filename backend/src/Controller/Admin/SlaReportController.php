@@ -137,9 +137,8 @@ class SlaReportController extends AbstractController
         // Find customer by ID
         $customer = null;
         if ($customerIdStr !== '') {
-            $customerId = (int) $customerIdStr;
             foreach ($customers as $c) {
-                if ($c->getId() === $customerId) {
+                if ($c->getId() === $customerIdStr) {
                     $customer = $c;
                     break;
                 }
