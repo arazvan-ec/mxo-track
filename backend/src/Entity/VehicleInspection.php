@@ -6,13 +6,10 @@ namespace App\Entity;
 
 use App\Entity\Concerns\PublicIdTrait;
 use DateTimeImmutable;
-use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity]
-#[ORM\Table(name: 'vehicle_inspection')]
 #[ORM\UniqueConstraint(name: 'uniq_vehicle_inspection_public_id', columns: ['public_id'])]
-#[ORM\UniqueConstraint(name: 'uniq_vehicle_inspection_route', columns: ['route_id'])]
 #[ORM\HasLifecycleCallbacks]
 class VehicleInspection
 {
@@ -23,26 +20,27 @@ class VehicleInspection
     private Route $route;
 
     #[ORM\ManyToOne(targetEntity: User::class)]
-    #[ORM\JoinColumn(nullable: false)]
+    #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private User $driver;
 
-    /** @var array<array{name: string, checked: bool, note?: string}> */
-    #[ORM\Column(type: Types::JSON)]
-    private array $items = [];
+    /** @var array<int, array{name: string, checked: bool, note?: string}> */
+    #[ORM\Column(type: 'json')]
+    private array $items;
 
-    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    #[ORM\Column(nullable: true)]
     private ?DateTimeImmutable $completedAt = null;
 
-    #[ORM\Column(type: Types::TEXT, nullable: true)]
-    private ?string $notes = null;
-
-    #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
+    #[ORM\Column]
     private DateTimeImmutable $createdAt;
 
-    public function __construct(Route $route, User $driver)
+    /**
+     * @param array<int, array{name: string, checked: bool, note?: string}> $items
+     */
+    public function __construct(Route $route, User $driver, array $items)
     {
         $this->route = $route;
         $this->driver = $driver;
+        $this->items = $items;
         $this->createdAt = new DateTimeImmutable();
     }
 
@@ -56,24 +54,16 @@ class VehicleInspection
         return $this->driver;
     }
 
-    /** @return array<array{name: string, checked: bool, note?: string}> */
+    /** @return array<int, array{name: string, checked: bool, note?: string}> */
     public function getItems(): array
     {
         return $this->items;
     }
 
-    /** @param array<array{name: string, checked: bool, note?: string}> $items */
+    /** @param array<int, array{name: string, checked: bool, note?: string}> $items */
     public function setItems(array $items): void
     {
         $this->items = $items;
-
-        $allChecked = \count($items) > 0 && array_reduce(
-            $items,
-            static fn(bool $carry, array $item) => $carry && ($item['checked'] ?? false),
-            true,
-        );
-
-        $this->completedAt = $allChecked ? new DateTimeImmutable() : null;
     }
 
     public function getCompletedAt(): ?DateTimeImmutable
@@ -81,19 +71,9 @@ class VehicleInspection
         return $this->completedAt;
     }
 
-    public function isCompleted(): bool
+    public function setCompletedAt(?DateTimeImmutable $completedAt): void
     {
-        return $this->completedAt !== null;
-    }
-
-    public function getNotes(): ?string
-    {
-        return $this->notes;
-    }
-
-    public function setNotes(?string $notes): void
-    {
-        $this->notes = $notes;
+        $this->completedAt = $completedAt;
     }
 
     public function getCreatedAt(): DateTimeImmutable
@@ -101,17 +81,14 @@ class VehicleInspection
         return $this->createdAt;
     }
 
-    /**
-     * @return array<string>
-     */
-    public static function defaultChecklistItems(): array
+    public function allItemsChecked(): bool
     {
-        return [
-            'Neumaticos en buen estado',
-            'Luces funcionan correctamente',
-            'Carga asegurada',
-            'Documentacion del vehiculo',
-            'Nivel de combustible/carga',
-        ];
+        foreach ($this->items as $item) {
+            if (!($item['checked'] ?? false)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }
