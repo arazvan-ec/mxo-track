@@ -142,4 +142,15 @@ final class DriverAvailabilityService
 
         return $count > 0;
     }
+
+    /**
+     * Returns an availability score for driver assignment/scoring integrations.
+     *
+     * Returns 1.0 if the driver is available on the given date, 0.0 otherwise.
+     * This can be used by a DriverScoringService to weight driver assignments.
+     */
+    public function getAvailabilityScore(User $driver, \DateTimeInterface $date): float
+    {
+        return $this->isDriverAvailable($driver, $date) ? 1.0 : 0.0;
+    }
 }
