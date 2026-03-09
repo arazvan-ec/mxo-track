@@ -8,6 +8,7 @@ use App\Application\Route\BuildRoutesInput;
 use App\Application\Route\RouteNotFoundException;
 use App\Application\Route\RoutePlanningService;
 use App\Entity\Route as RouteEntity;
+use App\Enum\RouteStatus;
 use App\Http\ApiErrorResponder;
 use App\Repository\RouteRepository;
 use App\Service\DeliveryNoteGenerator;
@@ -17,6 +18,8 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Mercure\HubInterface;
+use Symfony\Component\Mercure\Update;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
@@ -30,6 +33,7 @@ class RouteOptimizationApiController extends AbstractController
         private readonly RoutePlanningService $routePlanningService,
         private readonly DeliveryNoteGenerator $deliveryNoteGenerator,
         private readonly ApiErrorResponder $errorResponder,
+        private readonly HubInterface $hub,
     ) {}
 
     /**
@@ -136,6 +140,60 @@ class RouteOptimizationApiController extends AbstractController
         $timing = $this->optimizer->estimateRouteTiming($route, $avgSpeed, $deliveryTime);
 
         return new JsonResponse($timing);
+    }
+
+    /**
+     * Re-optimize pending stops on an active route using the driver's current position.
+     */
+    #[Route('/routes/{publicId}/reoptimize', name: 'api_route_reoptimize', methods: ['POST'])]
+    #[IsGranted('ROLE_OPERATOR')]
+    public function reoptimizeRoute(string $publicId, Request $request): JsonResponse
+    {
+        $route = $this->findRouteByPublicId($publicId);
+        if ($route === null) {
+            return $this->errorResponder->notFound('ROUTE_NOT_FOUND', 'Ruta no encontrada.');
+        }
+
+        if ($route->getStatus() !== RouteStatus::ACTIVE) {
+            return $this->errorResponder->badRequest('ROUTE_NOT_ACTIVE', 'Solo se pueden reoptimizar rutas activas.');
+        }
+
+        try {
+            $data = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            $data = [];
+        }
+
+        $currentLat = isset($data['currentLat']) ? (float) $data['currentLat'] : null;
+        $currentLng = isset($data['currentLng']) ? (float) $data['currentLng'] : null;
+
+        $result = $this->optimizer->reoptimizePendingStops($route, $currentLat, $currentLng);
+        $this->optimizer->applyOptimizedOrder($result['optimized']);
+
+        // Publish Mercure update
+        try {
+            $this->hub->publish(new Update(
+                sprintf('/routes/%s/updates', $publicId),
+                json_encode([
+                    'type' => 'route_reoptimized',
+                    'route_public_id' => $publicId,
+                    'distance_before' => $result['distanceBefore'],
+                    'distance_after' => $result['distanceAfter'],
+                    'duration_minutes' => $result['durationMinutes'],
+                    'stops_reordered' => \count($result['optimized']),
+                ], JSON_THROW_ON_ERROR),
+            ));
+        } catch (\Throwable) {
+            // Don't break the flow on Mercure failure
+        }
+
+        return new JsonResponse([
+            'status' => 'reoptimized',
+            'distance_before_km' => round($result['distanceBefore'], 2),
+            'distance_after_km' => round($result['distanceAfter'], 2),
+            'duration_minutes' => $result['durationMinutes'],
+            'stops_reordered' => \count($result['optimized']),
+        ]);
     }
 
     private function findRouteByPublicId(string $publicId): ?RouteEntity
