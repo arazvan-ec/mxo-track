@@ -53,6 +53,177 @@
     </div>
     <div id="analysis-map"></div>
   </div>
+
+  {# Metrics panel #}
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    {# Planned distance #}
+    <div class="bg-white shadow rounded-lg p-5">
+      <div class="flex items-center gap-3">
+        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
+          <svg class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-sm text-gray-500">Distancia planificada</p>
+          <p class="text-xl font-bold text-gray-900">{{ comparison.plannedDistanceKm }} km</p>
+        </div>
+      </div>
+    </div>
+
+    {# Actual distance #}
+    <div class="bg-white shadow rounded-lg p-5">
+      <div class="flex items-center gap-3">
+        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-red-100">
+          <svg class="h-5 w-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-sm text-gray-500">Distancia ejecutada</p>
+          <p class="text-xl font-bold text-gray-900">{{ comparison.actualDistanceKm }} km</p>
+        </div>
+      </div>
+    </div>
+
+    {# Deviation #}
+    <div class="bg-white shadow rounded-lg p-5">
+      <div class="flex items-center gap-3">
+        <div class="flex h-10 w-10 items-center justify-center rounded-lg {{ comparison.deviationKm > 5 ? 'bg-amber-100' : 'bg-green-100' }}">
+          <svg class="h-5 w-5 {{ comparison.deviationKm > 5 ? 'text-amber-600' : 'text-green-600' }}" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-sm text-gray-500">Desviacion</p>
+          <p class="text-xl font-bold text-gray-900">{{ comparison.deviationKm }} km</p>
+        </div>
+      </div>
+    </div>
+
+    {# Extra time #}
+    <div class="bg-white shadow rounded-lg p-5">
+      <div class="flex items-center gap-3">
+        <div class="flex h-10 w-10 items-center justify-center rounded-lg {{ comparison.extraTimeMinutes > 15 ? 'bg-amber-100' : 'bg-green-100' }}">
+          <svg class="h-5 w-5 {{ comparison.extraTimeMinutes > 15 ? 'text-amber-600' : 'text-green-600' }}" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-sm text-gray-500">Diferencia de tiempo</p>
+          <p class="text-xl font-bold text-gray-900">
+            {% if comparison.extraTimeMinutes > 0 %}+{% endif %}{{ comparison.extraTimeMinutes }} min
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# Route details #}
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    {# Route info #}
+    <div class="bg-white shadow rounded-lg overflow-hidden">
+      <div class="px-4 py-3 border-b border-gray-200">
+        <h3 class="text-base font-semibold text-gray-900">Detalles de la ruta</h3>
+      </div>
+      <div class="px-4 py-4 space-y-3 text-sm">
+        <div class="flex justify-between">
+          <span class="text-gray-500">Vehiculo</span>
+          <span class="font-medium text-gray-900">{{ route.vehicle ? route.vehicle.name : '-' }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-gray-500">Transportista</span>
+          <span class="font-medium text-gray-900">{{ route.driver ? route.driver.email : '-' }}</span>
+        </div>
+        {% if route.startAt %}
+        <div class="flex justify-between">
+          <span class="text-gray-500">Inicio</span>
+          <span class="font-medium text-gray-900">{{ route.startAt|date('d/m/Y H:i') }}</span>
+        </div>
+        {% endif %}
+        {% if route.endAt %}
+        <div class="flex justify-between">
+          <span class="text-gray-500">Fin</span>
+          <span class="font-medium text-gray-900">{{ route.endAt|date('d/m/Y H:i') }}</span>
+        </div>
+        {% endif %}
+        {% if route.estimatedDurationMinutes %}
+        <div class="flex justify-between">
+          <span class="text-gray-500">Duracion estimada</span>
+          <span class="font-medium text-gray-900">{{ route.estimatedDurationMinutes }} min</span>
+        </div>
+        {% endif %}
+        {% if route.totalDistanceKm %}
+        <div class="flex justify-between">
+          <span class="text-gray-500">Distancia planificada (ruta)</span>
+          <span class="font-medium text-gray-900">{{ route.totalDistanceKm }} km</span>
+        </div>
+        {% endif %}
+        <div class="flex justify-between">
+          <span class="text-gray-500">Paradas</span>
+          <span class="font-medium text-gray-900">{{ comparison.stops|length }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-gray-500">Puntos GPS registrados</span>
+          <span class="font-medium text-gray-900">{{ comparison.actualPolyline|length }}</span>
+        </div>
+      </div>
+    </div>
+
+    {# AI Analysis #}
+    <div class="bg-white shadow rounded-lg overflow-hidden">
+      <div class="px-4 py-3 border-b border-gray-200">
+        <h3 class="text-base font-semibold text-gray-900">Analisis IA</h3>
+      </div>
+      <div class="px-4 py-4 text-sm">
+        {% if aiAnalysis %}
+          {% if aiAnalysis.summary is defined and aiAnalysis.summary %}
+          <div class="mb-4">
+            <p class="font-medium text-gray-700 mb-1">Resumen</p>
+            <p class="text-gray-600">{{ aiAnalysis.summary }}</p>
+          </div>
+          {% endif %}
+
+          {% if aiAnalysis.planned_vs_actual is defined and aiAnalysis.planned_vs_actual %}
+          <div class="mb-4">
+            <p class="font-medium text-gray-700 mb-1">Planificado vs Real</p>
+            <p class="text-gray-600">{{ aiAnalysis.planned_vs_actual }}</p>
+          </div>
+          {% endif %}
+
+          {% if aiAnalysis.insights is defined and aiAnalysis.insights|length > 0 %}
+          <div class="mb-4">
+            <p class="font-medium text-gray-700 mb-1">Observaciones</p>
+            <ul class="list-disc list-inside text-gray-600 space-y-1">
+              {% for insight in aiAnalysis.insights %}
+                <li>{{ insight }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+
+          {% if aiAnalysis.recommendations is defined and aiAnalysis.recommendations|length > 0 %}
+          <div>
+            <p class="font-medium text-gray-700 mb-1">Recomendaciones</p>
+            <ul class="list-disc list-inside text-gray-600 space-y-1">
+              {% for rec in aiAnalysis.recommendations %}
+                <li>{{ rec }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+        {% else %}
+          <div class="flex flex-col items-center justify-center py-8 text-gray-400">
+            <svg class="h-10 w-10 mb-2" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z"/>
+            </svg>
+            <p class="text-sm">No hay analisis IA disponible para esta ruta.</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
 {% endblock %}
 
 {% block scripts %}
