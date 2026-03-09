@@ -477,6 +477,17 @@ class DriverApiController extends AbstractController
     }
 
     /**
+     * @return array{navigationUrl: string, wazeUrl: string}
+     */
+    private function buildNavigationUrls(float $lat, float $lng): array
+    {
+        return [
+            'navigationUrl' => sprintf('https://www.google.com/maps/dir/?api=1&destination=%s,%s', $lat, $lng),
+            'wazeUrl' => sprintf('https://waze.com/ul?ll=%s,%s&navigate=yes', $lat, $lng),
+        ];
+    }
+
+    /**
      * @return array<string,mixed>|JsonResponse
      */
     private function decodePayload(Request $request, ApiErrorResponder $errorResponder): array|JsonResponse
