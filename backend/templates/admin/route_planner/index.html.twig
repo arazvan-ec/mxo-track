@@ -1,566 +1,238 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Planificador de Rutas - MXO Track{% endblock %}
+{% block title %}Planificador de Rutas - Admin{% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-<style>
-  #route-planner-map { height: 100%; width: 100%; }
-  .leaflet-top.leaflet-right { top: 10px; }
-</style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 {% endblock %}
 
 {% block content %}
-<div x-data="routePlanner()" x-init="init()">
+<div x-data="routePlannerClustering()" x-init="init()">
 
-  {# ── Page header ──────────────────────────────────────────────── #}
-  <div class="mb-6">
-    <h1 class="text-2xl font-bold tracking-tight text-gray-900">Planificador de Rutas</h1>
-    <p class="mt-1 text-sm text-gray-500">Selecciona envios, elige vehiculos y previsualiza las rutas optimizadas.</p>
-  </div>
+    {# Header #}
+    <div class="mb-6 flex items-center justify-between">
+        <h1 class="text-2xl font-bold text-gray-900">Planificador de Rutas</h1>
+    </div>
 
-  {# ── Step indicator ───────────────────────────────────────────── #}
-  <div class="mb-6">
-    <nav class="flex items-center gap-2">
-      <template x-for="(s, i) in steps" :key="i">
-        <div class="flex items-center gap-2">
-          <button @click="if (i < step) goToStep(i)"
-                  class="flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium transition-colors"
-                  :class="i === step ? 'bg-brand-600 text-white' : (i < step ? 'bg-brand-100 text-brand-700 cursor-pointer hover:bg-brand-200' : 'bg-gray-100 text-gray-400 cursor-default')">
-            <span class="flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold"
-                  :class="i < step ? 'bg-brand-600 text-white' : (i === step ? 'bg-white text-brand-600' : 'bg-gray-300 text-white')"
-                  x-text="i + 1"></span>
-            <span x-text="s"></span>
-          </button>
-          <svg x-show="i < steps.length - 1" class="h-4 w-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
-          </svg>
+    {# Step 1: Select shipments and cluster #}
+    <div class="mb-6 rounded-lg bg-white p-6 shadow">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold text-gray-800">Paso 1: Seleccionar envios y agrupar por zona</h2>
+            <div class="flex items-center gap-3">
+                <label for="numClusters" class="text-sm text-gray-600">Num. zonas:</label>
+                <input type="number" id="numClusters" x-model.number="numClusters" min="1" max="10"
+                       class="w-20 rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                <button @click="clusterShipments()"
+                        :disabled="selectedShipmentIds.length === 0 || loading"
+                        class="inline-flex items-center rounded-md bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                    <svg class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"/>
+                    </svg>
+                    <span x-text="loading ? 'Agrupando...' : 'Agrupar por zona'"></span>
+                </button>
+            </div>
         </div>
-      </template>
-    </nav>
-  </div>
 
-  {# ── Main layout: sidebar + map ───────────────────────────────── #}
-  <div class="flex gap-6" style="height: calc(100vh - 280px); min-height: 500px;">
-
-    {# ── Left panel ─────────────────────────────────────────────── #}
-    <div class="w-[420px] shrink-0 overflow-y-auto rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5 p-4">
-
-      {# ── STEP 0: Customer + shipment selection ─────────────────── #}
-      <div x-show="step === 0" x-cloak>
-
-        {# Customer dropdown #}
+        {# Shipment selection area #}
         <div class="mb-4">
-          <label for="customer-select" class="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
-          <select id="customer-select" x-model="selectedCustomer" @change="fetchShipments()"
-                  class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500">
-            <option value="">-- Seleccionar cliente --</option>
-            {% for customer in customers %}
-              <option value="{{ customer.publicIdString }}">{{ customer.name }}</option>
-            {% endfor %}
-          </select>
-        </div>
-
-        {# Loading indicator #}
-        <div x-show="loadingShipments" class="flex items-center gap-2 py-4 text-sm text-gray-500">
-          <svg class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-          </svg>
-          Cargando envios...
-        </div>
-
-        {# Select all / count #}
-        <div x-show="shipments.length > 0 && !loadingShipments" class="mb-3 flex items-center justify-between">
-          <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
-            <input type="checkbox" @change="toggleAllShipments($event.target.checked)"
-                   :checked="selectedShipments.length === shipments.length && shipments.length > 0"
-                   class="rounded border-gray-300 text-brand-600 focus:ring-brand-500">
-            Seleccionar todos
-          </label>
-          <span class="text-xs text-gray-400" x-text="selectedShipments.length + ' / ' + shipments.length + ' seleccionados'"></span>
-        </div>
-
-        {# Shipments table #}
-        <div x-show="shipments.length > 0 && !loadingShipments" class="space-y-1 max-h-[calc(100vh-520px)] overflow-y-auto">
-          <template x-for="s in shipments" :key="s.publicId">
-            <label class="flex items-start gap-3 rounded-lg border border-gray-100 p-3 cursor-pointer transition-colors hover:bg-gray-50"
-                   :class="selectedShipments.includes(s.publicId) ? 'border-brand-300 bg-brand-50' : ''">
-              <input type="checkbox" :value="s.publicId"
-                     :checked="selectedShipments.includes(s.publicId)"
-                     @change="toggleShipment(s.publicId)"
-                     class="mt-0.5 rounded border-gray-300 text-brand-600 focus:ring-brand-500">
-              <div class="min-w-0 flex-1">
-                <div class="flex items-center gap-2">
-                  <span class="text-sm font-medium text-gray-900" x-text="s.reference"></span>
-                </div>
-                <p class="text-xs text-gray-500 truncate" x-text="s.address || 'Sin direccion'"></p>
-                <div class="mt-1 flex items-center gap-3 text-xs text-gray-400">
-                  <span x-show="s.totalWeightKg" x-text="s.totalWeightKg + ' kg'"></span>
-                  <span x-show="s.totalVolumeM3" x-text="s.totalVolumeM3 + ' m3'"></span>
-                  <span x-text="s.totalParcels + ' bulto(s)'"></span>
-                </div>
-              </div>
-            </label>
-          </template>
-        </div>
-
-        {# Empty state #}
-        <div x-show="shipments.length === 0 && !loadingShipments && selectedCustomer !== ''" class="py-8 text-center">
-          <p class="text-sm text-gray-500">No hay envios sin asignar para este cliente.</p>
-        </div>
-
-        {# Next button #}
-        <div class="mt-4 pt-4 border-t border-gray-100">
-          <button @click="step = 1" :disabled="selectedShipments.length === 0"
-                  class="w-full rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-brand-500 disabled:opacity-50 disabled:cursor-not-allowed">
-            Siguiente: Vehiculos
-            <span x-show="selectedShipments.length > 0" class="ml-1" x-text="'(' + selectedShipments.length + ')'"></span>
-          </button>
-        </div>
-      </div>
-
-      {# ── STEP 1: Vehicle selection ──────────────────────────────── #}
-      <div x-show="step === 1" x-cloak>
-
-        <h3 class="text-sm font-semibold text-gray-700 mb-3">Vehiculos disponibles</h3>
-
-        {# Vehicle cards #}
-        <div class="space-y-2 max-h-[calc(100vh-520px)] overflow-y-auto">
-          {% for vehicle in vehicles %}
-          <label class="flex items-start gap-3 rounded-lg border border-gray-100 p-3 cursor-pointer transition-colors hover:bg-gray-50"
-                 :class="selectedVehicles.includes('{{ vehicle.publicIdString }}') ? 'border-emerald-300 bg-emerald-50' : ''">
-            <input type="checkbox" value="{{ vehicle.publicIdString }}"
-                   :checked="selectedVehicles.includes('{{ vehicle.publicIdString }}')"
-                   @change="toggleVehicle('{{ vehicle.publicIdString }}')"
-                   class="mt-0.5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
-            <div class="min-w-0 flex-1">
-              <span class="text-sm font-medium text-gray-900">{{ vehicle.name }}</span>
-              <div class="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-400">
-                {% if vehicle.maxWeightKg %}
-                  <span class="inline-flex items-center gap-1 rounded bg-gray-100 px-1.5 py-0.5">
-                    <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v17.25m0 0c-1.472 0-2.882.265-4.185.75M12 20.25c1.472 0 2.882.265 4.185.75"/></svg>
-                    {{ vehicle.maxWeightKg }} kg
-                  </span>
-                {% endif %}
-                {% if vehicle.maxVolumeM3 %}
-                  <span class="inline-flex items-center gap-1 rounded bg-gray-100 px-1.5 py-0.5">
-                    <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"/></svg>
-                    {{ vehicle.maxVolumeM3 }} m3
-                  </span>
-                {% endif %}
-                {% if vehicle.maxParcels %}
-                  <span class="inline-flex items-center gap-1 rounded bg-gray-100 px-1.5 py-0.5">
-                    {{ vehicle.maxParcels }} bultos
-                  </span>
-                {% endif %}
-              </div>
-            </div>
-          </label>
-          {% endfor %}
-        </div>
-
-        {# Origin location #}
-        <div class="mt-4 pt-4 border-t border-gray-100">
-          <label class="block text-sm font-medium text-gray-700 mb-1">Punto de origen (opcional)</label>
-          <select x-model="selectedOrigin"
-                  class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500">
-            <option value="">-- Sin origen definido --</option>
-            {% for location in locations %}
-              <option value="{{ location.publicIdString }}">{{ location.name }} - {{ location.address }}</option>
-            {% endfor %}
-          </select>
-        </div>
-
-        {# Max stops per route #}
-        <div class="mt-3">
-          <label class="block text-sm font-medium text-gray-700 mb-1">Max paradas por ruta</label>
-          <input type="number" x-model.number="maxStopsPerRoute" min="1" max="100"
-                 class="block w-24 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500">
-        </div>
-
-        {# Navigation buttons #}
-        <div class="mt-4 pt-4 border-t border-gray-100 flex gap-3">
-          <button @click="goToStep(0)"
-                  class="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
-            Atras
-          </button>
-          <button @click="runPreview()" :disabled="selectedVehicles.length === 0 || previewLoading"
-                  class="flex-1 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-brand-500 disabled:opacity-50 disabled:cursor-not-allowed">
-            <span x-show="!previewLoading">Previsualizar</span>
-            <span x-show="previewLoading" class="flex items-center justify-center gap-2">
-              <svg class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-              </svg>
-              Optimizando...
-            </span>
-          </button>
-        </div>
-      </div>
-
-      {# ── STEP 2: Preview and confirm ─────────────────────────────── #}
-      <div x-show="step === 2" x-cloak>
-
-        {# Error state #}
-        <div x-show="previewError" class="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700" x-text="previewError"></div>
-
-        {# Route summary cards #}
-        <div class="space-y-3 max-h-[calc(100vh-480px)] overflow-y-auto">
-          <template x-for="(route, idx) in previewRoutes" :key="idx">
-            <div class="rounded-lg border p-3" :style="'border-color:' + routeColors[idx % routeColors.length]">
-              <div class="flex items-center gap-2 mb-2">
-                <span class="flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white"
-                      :style="'background-color:' + routeColors[idx % routeColors.length]"
-                      x-text="idx + 1"></span>
-                <span class="text-sm font-medium text-gray-900" x-text="route.name"></span>
-              </div>
-              <div class="grid grid-cols-2 gap-2 text-xs text-gray-500">
-                <div>
-                  <span class="font-medium text-gray-700">Vehiculo:</span>
-                  <span x-text="route.vehicleName"></span>
-                </div>
-                <div>
-                  <span class="font-medium text-gray-700">Paradas:</span>
-                  <span x-text="route.stopsCount"></span>
-                </div>
-                <div>
-                  <span class="font-medium text-gray-700">Distancia:</span>
-                  <span x-text="route.totalDistanceKm != null ? route.totalDistanceKm.toFixed(1) + ' km' : 'N/A'"></span>
-                </div>
-                <div>
-                  <span class="font-medium text-gray-700">Duracion:</span>
-                  <span x-text="route.estimatedDurationMinutes != null ? route.estimatedDurationMinutes + ' min' : 'N/A'"></span>
-                </div>
-              </div>
-
-              {# Validation warnings #}
-              <template x-if="route.validation && route.validation.errors && route.validation.errors.length > 0">
-                <div class="mt-2 rounded bg-amber-50 p-2">
-                  <template x-for="err in route.validation.errors" :key="err">
-                    <p class="text-xs text-amber-700" x-text="err"></p>
-                  </template>
-                </div>
-              </template>
-
-              {# Stop list #}
-              <div class="mt-2 space-y-1">
-                <template x-for="stop in route.stops" :key="stop.sequence">
-                  <div class="flex items-center gap-2 text-xs"
-                       :class="stop.isOrigin ? 'text-gray-400' : 'text-gray-600'">
-                    <span class="flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold"
-                          :style="stop.isOrigin ? 'background:#e5e7eb;color:#6b7280' : 'background-color:' + routeColors[idx % routeColors.length] + ';color:white'"
-                          x-text="stop.isOrigin ? 'O' : stop.sequence"></span>
-                    <span class="truncate" x-text="stop.address"></span>
-                  </div>
+            <p class="text-sm text-gray-500 mb-2">
+                Selecciona los envios en el mapa o utiliza la lista. Luego agrupa por zona para visualizar clusters geograficos.
+            </p>
+            <div class="flex items-center gap-2 text-sm text-gray-600">
+                <span class="font-medium" x-text="selectedShipmentIds.length"></span> envios seleccionados
+                <template x-if="clusters.length > 0">
+                    <span class="ml-2 text-purple-600 font-medium">
+                        | <span x-text="clusters.length"></span> zonas detectadas
+                    </span>
                 </template>
-              </div>
             </div>
-          </template>
         </div>
 
-        {# Empty preview #}
-        <div x-show="previewRoutes.length === 0 && !previewError" class="py-8 text-center">
-          <p class="text-sm text-gray-500">No se generaron rutas con la configuracion actual.</p>
-        </div>
+        {# Map #}
+        <div id="clusterMap" class="h-96 rounded-lg border border-gray-200 mb-4"></div>
 
-        {# Navigation buttons #}
-        <div class="mt-4 pt-4 border-t border-gray-100 flex gap-3">
-          <button @click="goToStep(1)"
-                  class="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
-            Atras
-          </button>
-          <button @click="confirmRoutes()" :disabled="previewRoutes.length === 0 || confirmLoading"
-                  class="flex-1 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed">
-            <span x-show="!confirmLoading">Confirmar y crear rutas</span>
-            <span x-show="confirmLoading" class="flex items-center justify-center gap-2">
-              <svg class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-              </svg>
-              Creando...
-            </span>
-          </button>
-        </div>
-      </div>
+        {# Cluster summary #}
+        <template x-if="clusters.length > 0">
+            <div class="mt-4">
+                <h3 class="text-sm font-semibold text-gray-700 mb-3">Resumen de zonas</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
+                    <template x-for="(cluster, idx) in clusters" :key="idx">
+                        <div class="rounded-lg border-2 p-3" :style="'border-color: ' + cluster.color">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="h-3 w-3 rounded-full" :style="'background-color: ' + cluster.color"></span>
+                                <span class="text-sm font-semibold text-gray-800" x-text="'Zona ' + (idx + 1)"></span>
+                            </div>
+                            <p class="text-xs text-gray-500">
+                                <span x-text="cluster.shipmentIds.length"></span> envios
+                            </p>
+                            <p class="text-xs text-gray-400">
+                                Centro: <span x-text="cluster.centroid.lat.toFixed(4)"></span>,
+                                <span x-text="cluster.centroid.lng.toFixed(4)"></span>
+                            </p>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </template>
 
+        {# Error message #}
+        <template x-if="errorMessage">
+            <div class="mt-4 rounded-md bg-red-50 p-3">
+                <p class="text-sm text-red-700" x-text="errorMessage"></p>
+            </div>
+        </template>
     </div>
-
-    {# ── Right map ──────────────────────────────────────────────── #}
-    <div class="flex-1 rounded-xl overflow-hidden shadow-sm ring-1 ring-gray-900/5">
-      <div id="route-planner-map"></div>
-    </div>
-
-  </div>
-
 </div>
 {% endblock %}
 
 {% block scripts %}
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-function routePlanner() {
-  return {
-    step: 0,
-    steps: ['Envios', 'Vehiculos', 'Confirmar'],
-    map: null,
-    shipmentMarkers: [],
-    routeLayers: [],
-    routeColors: ['#2563eb', '#dc2626', '#16a34a', '#d97706', '#7c3aed', '#0891b2', '#be185d', '#65a30d'],
+function routePlannerClustering() {
+    return {
+        map: null,
+        markers: [],
+        clusterLayers: [],
+        selectedShipmentIds: [],
+        numClusters: 3,
+        clusters: [],
+        loading: false,
+        errorMessage: '',
+        // Shipment data keyed by publicId for quick lookup
+        shipmentData: {},
 
-    // Step 0
-    selectedCustomer: '',
-    shipments: [],
-    selectedShipments: [],
-    loadingShipments: false,
+        init() {
+            this.$nextTick(() => {
+                this.map = L.map('clusterMap').setView([40.4168, -3.7038], 12);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; OpenStreetMap contributors',
+                    maxZoom: 19
+                }).addTo(this.map);
 
-    // Step 1
-    selectedVehicles: [],
-    selectedOrigin: '',
-    maxStopsPerRoute: 30,
+                // Load shipments from the API (pending shipments with coordinates)
+                this.loadShipments();
+            });
+        },
 
-    // Step 2
-    previewRoutes: [],
-    previewLoading: false,
-    previewError: '',
-    confirmLoading: false,
+        async loadShipments() {
+            try {
+                const resp = await fetch('/api/shipments?status=PENDING&limit=500');
+                if (!resp.ok) return;
+                const data = await resp.json();
+                const shipments = data.shipments || data.data || data || [];
 
-    init() {
-      this.$nextTick(() => {
-        this.map = L.map('route-planner-map').setView([40.4168, -3.7038], 12);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '&copy; OpenStreetMap contributors',
-          maxZoom: 19,
-        }).addTo(this.map);
-      });
-    },
+                if (!Array.isArray(shipments)) return;
 
-    goToStep(i) {
-      this.step = i;
-      this.$nextTick(() => this.map && this.map.invalidateSize());
-    },
+                const bounds = [];
+                shipments.forEach(s => {
+                    const id = s.public_id || s.publicId || s.id;
+                    const lat = parseFloat(s.latitude || s.lat);
+                    const lng = parseFloat(s.longitude || s.lng);
+                    if (!id || isNaN(lat) || isNaN(lng)) return;
 
-    // ── Step 0: Shipments ──────────────────────────────────────────
+                    this.shipmentData[id] = { id, lat, lng, address: s.address || '' };
+                    this.selectedShipmentIds.push(id);
 
-    async fetchShipments() {
-      this.shipments = [];
-      this.selectedShipments = [];
-      this.clearShipmentMarkers();
+                    const marker = L.circleMarker([lat, lng], {
+                        radius: 7,
+                        fillColor: '#3b82f6',
+                        color: '#1d4ed8',
+                        weight: 1,
+                        fillOpacity: 0.8
+                    }).addTo(this.map);
 
-      if (!this.selectedCustomer) return;
+                    marker._shipmentId = id;
+                    marker.bindTooltip(s.address || id, { direction: 'top' });
+                    this.markers.push(marker);
+                    bounds.push([lat, lng]);
+                });
 
-      this.loadingShipments = true;
-      try {
-        const resp = await fetch('/admin/route-planner/shipments?customer=' + encodeURIComponent(this.selectedCustomer));
-        const data = await resp.json();
-        this.shipments = data.shipments || [];
-      } catch (e) {
-        console.error('Error fetching shipments:', e);
-      }
-      this.loadingShipments = false;
-    },
+                if (bounds.length > 0) {
+                    this.map.fitBounds(bounds, { padding: [30, 30] });
+                }
+            } catch (e) {
+                // Silently fail — user can still input IDs manually
+            }
+        },
 
-    toggleShipment(publicId) {
-      const idx = this.selectedShipments.indexOf(publicId);
-      if (idx >= 0) {
-        this.selectedShipments.splice(idx, 1);
-      } else {
-        this.selectedShipments.push(publicId);
-      }
-      this.updateShipmentMarkers();
-    },
+        async clusterShipments() {
+            if (this.selectedShipmentIds.length === 0) return;
 
-    toggleAllShipments(checked) {
-      if (checked) {
-        this.selectedShipments = this.shipments.map(s => s.publicId);
-      } else {
-        this.selectedShipments = [];
-      }
-      this.updateShipmentMarkers();
-    },
+            this.loading = true;
+            this.errorMessage = '';
+            this.clusters = [];
 
-    clearShipmentMarkers() {
-      this.shipmentMarkers.forEach(m => this.map.removeLayer(m));
-      this.shipmentMarkers = [];
-    },
+            try {
+                const resp = await fetch('{{ path("admin_route_planner_cluster") }}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        shipment_ids: this.selectedShipmentIds,
+                        num_clusters: this.numClusters
+                    })
+                });
 
-    updateShipmentMarkers() {
-      this.clearShipmentMarkers();
-      const bounds = [];
+                const data = await resp.json();
 
-      this.shipments.forEach(s => {
-        if (!this.selectedShipments.includes(s.publicId)) return;
-        if (s.latitude == null || s.longitude == null) return;
+                if (!resp.ok || !data.ok) {
+                    this.errorMessage = data.error || 'Error al agrupar envios.';
+                    return;
+                }
 
-        const marker = L.circleMarker([s.latitude, s.longitude], {
-          radius: 7,
-          fillColor: '#2563eb',
-          color: '#1e40af',
-          weight: 2,
-          fillOpacity: 0.8,
-        }).addTo(this.map);
+                this.clusters = data.clusters || [];
+                this.colorMarkersByClusters();
+            } catch (e) {
+                this.errorMessage = 'Error de red al agrupar envios.';
+            } finally {
+                this.loading = false;
+            }
+        },
 
-        marker.bindPopup(
-          '<strong>' + this._esc(s.reference) + '</strong><br>' +
-          '<span class="text-xs">' + this._esc(s.address || '') + '</span>'
-        );
+        colorMarkersByClusters() {
+            // Clear old cluster layers
+            this.clusterLayers.forEach(l => this.map.removeLayer(l));
+            this.clusterLayers = [];
 
-        this.shipmentMarkers.push(marker);
-        bounds.push([s.latitude, s.longitude]);
-      });
+            // Build a map: shipmentId -> cluster color
+            const colorMap = {};
+            this.clusters.forEach(cluster => {
+                cluster.shipmentIds.forEach(id => {
+                    colorMap[id] = cluster.color;
+                });
+            });
 
-      if (bounds.length > 0) {
-        this.map.fitBounds(bounds, { padding: [40, 40] });
-      }
-    },
+            // Update marker colors
+            this.markers.forEach(marker => {
+                const color = colorMap[marker._shipmentId] || '#3b82f6';
+                marker.setStyle({
+                    fillColor: color,
+                    color: color,
+                    fillOpacity: 0.85
+                });
+            });
 
-    // ── Step 1: Vehicles ───────────────────────────────────────────
+            // Add centroid markers
+            this.clusters.forEach((cluster, idx) => {
+                const centroidMarker = L.circleMarker(
+                    [cluster.centroid.lat, cluster.centroid.lng],
+                    {
+                        radius: 12,
+                        fillColor: cluster.color,
+                        color: '#ffffff',
+                        weight: 3,
+                        fillOpacity: 0.9
+                    }
+                ).addTo(this.map);
 
-    toggleVehicle(publicId) {
-      const idx = this.selectedVehicles.indexOf(publicId);
-      if (idx >= 0) {
-        this.selectedVehicles.splice(idx, 1);
-      } else {
-        this.selectedVehicles.push(publicId);
-      }
-    },
+                centroidMarker.bindTooltip('Zona ' + (idx + 1) + ' (' + cluster.shipmentIds.length + ' envios)', {
+                    permanent: false,
+                    direction: 'top'
+                });
 
-    // ── Step 2: Preview ────────────────────────────────────────────
-
-    async runPreview() {
-      this.previewLoading = true;
-      this.previewError = '';
-      this.previewRoutes = [];
-      this.clearRouteLayers();
-
-      try {
-        const resp = await fetch('/admin/route-planner/preview', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            shipment_ids: this.selectedShipments,
-            vehicle_ids: this.selectedVehicles,
-            origin_public_id: this.selectedOrigin || null,
-            max_stops_per_route: this.maxStopsPerRoute,
-          }),
-        });
-
-        const data = await resp.json();
-
-        if (!resp.ok) {
-          this.previewError = data.error || 'Error al generar la previsualizacion.';
-          this.previewLoading = false;
-          this.step = 2;
-          return;
+                this.clusterLayers.push(centroidMarker);
+            });
         }
-
-        this.previewRoutes = data.routes || [];
-        this.step = 2;
-        this.$nextTick(() => {
-          this.map && this.map.invalidateSize();
-          this.drawRoutePolylines();
-        });
-      } catch (e) {
-        this.previewError = 'Error de conexion al servidor.';
-        this.step = 2;
-      }
-
-      this.previewLoading = false;
-    },
-
-    clearRouteLayers() {
-      this.routeLayers.forEach(l => this.map.removeLayer(l));
-      this.routeLayers = [];
-    },
-
-    drawRoutePolylines() {
-      this.clearShipmentMarkers();
-      this.clearRouteLayers();
-      const allBounds = [];
-
-      this.previewRoutes.forEach((route, idx) => {
-        const color = this.routeColors[idx % this.routeColors.length];
-        const coords = [];
-
-        route.stops.forEach(stop => {
-          if (stop.latitude == null || stop.longitude == null) return;
-          coords.push([stop.latitude, stop.longitude]);
-
-          const marker = L.circleMarker([stop.latitude, stop.longitude], {
-            radius: stop.isOrigin ? 9 : 7,
-            fillColor: stop.isOrigin ? '#374151' : color,
-            color: '#fff',
-            weight: 2,
-            fillOpacity: 0.9,
-          }).addTo(this.map);
-
-          marker.bindPopup(
-            '<strong>' + (stop.isOrigin ? 'Origen' : '#' + stop.sequence) + '</strong><br>' +
-            '<span class="text-xs">' + this._esc(stop.address || '') + '</span>'
-          );
-
-          this.routeLayers.push(marker);
-          allBounds.push([stop.latitude, stop.longitude]);
-        });
-
-        if (coords.length > 1) {
-          const polyline = L.polyline(coords, {
-            color: color,
-            weight: 3,
-            opacity: 0.7,
-            dashArray: '8, 6',
-          }).addTo(this.map);
-          this.routeLayers.push(polyline);
-        }
-      });
-
-      if (allBounds.length > 0) {
-        this.map.fitBounds(allBounds, { padding: [40, 40] });
-      }
-    },
-
-    // ── Confirm ────────────────────────────────────────────────────
-
-    async confirmRoutes() {
-      this.confirmLoading = true;
-
-      try {
-        const resp = await fetch('/admin/route-planner/confirm', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            shipment_ids: this.selectedShipments,
-            vehicle_ids: this.selectedVehicles,
-            origin_public_id: this.selectedOrigin || null,
-            max_stops_per_route: this.maxStopsPerRoute,
-          }),
-        });
-
-        const data = await resp.json();
-
-        if (data.success && data.redirectUrl) {
-          window.location.href = data.redirectUrl;
-          return;
-        }
-
-        this.previewError = 'Error al confirmar las rutas.';
-      } catch (e) {
-        this.previewError = 'Error de conexion al servidor.';
-      }
-
-      this.confirmLoading = false;
-    },
-
-    // ── Helpers ────────────────────────────────────────────────────
-
-    _esc(str) {
-      const d = document.createElement('div');
-      d.textContent = str;
-      return d.innerHTML;
-    },
-  };
+    };
 }
 </script>
 {% endblock %}
