@@ -117,4 +117,29 @@ final class DriverAvailabilityService
 
         $this->em->flush();
     }
+
+    /**
+     * Checks whether a driver is available on a given date.
+     *
+     * Returns true if the driver has at least one availability slot marked
+     * as available for that day of the week. If the driver has no schedule
+     * entries at all, returns false (not available by default).
+     */
+    public function isDriverAvailable(User $driver, \DateTimeInterface $date): bool
+    {
+        $dayOfWeek = ((int) $date->format('N')) - 1;
+
+        $count = (int) $this->em->createQueryBuilder()
+            ->select('COUNT(da.id)')
+            ->from(DriverAvailability::class, 'da')
+            ->where('da.driver = :driver')
+            ->andWhere('da.dayOfWeek = :day')
+            ->andWhere('da.isAvailable = true')
+            ->setParameter('driver', $driver)
+            ->setParameter('day', $dayOfWeek)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        return $count > 0;
+    }
 }
