@@ -28,6 +28,29 @@
   .panel-scroll::-webkit-scrollbar { width: 4px; }
   .panel-scroll::-webkit-scrollbar-track { background: transparent; }
   .panel-scroll::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.3); border-radius: 2px; }
+
+  .leaflet-tooltip.exception-tooltip {
+    background: rgba(15,23,42,0.92);
+    border: 1px solid rgba(239,68,68,0.5);
+    color: #e2e8f0;
+    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    max-width: 280px;
+  }
+  .leaflet-tooltip.exception-tooltip::before { border-top-color: rgba(15,23,42,0.92); }
+
+  .exception-marker {
+    width: 28px; height: 28px;
+    background: rgba(239,68,68,0.85);
+    border: 2px solid rgba(255,255,255,0.6);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; color: #fff;
+    box-shadow: 0 2px 6px rgba(239,68,68,0.4);
+    cursor: pointer;
+  }
 </style>
 
 <div x-data="exceptionMap()" x-init="init()" class="relative w-full h-screen overflow-hidden">
@@ -69,10 +92,24 @@
           <p class="text-slate-500 text-[10px] uppercase tracking-widest">Heatmap</p>
         </div>
       </div>
+
+      {# Tabs #}
+      <div class="flex bg-slate-800/60 rounded-lg p-0.5 mb-4">
+        <button @click="activeTab = 'filters'"
+                class="flex-1 text-xs font-medium py-1.5 px-3 rounded-md transition-all"
+                :class="activeTab === 'filters' ? 'bg-red-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'">
+          Filtros
+        </button>
+        <button @click="activeTab = 'top'; loadTopAddresses()"
+                class="flex-1 text-xs font-medium py-1.5 px-3 rounded-md transition-all"
+                :class="activeTab === 'top' ? 'bg-red-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'">
+          Top 10
+        </button>
+      </div>
     </div>
 
-    {# ── Filters ─────────────────────────────────────────────────────── #}
-    <div class="flex-1 overflow-y-auto panel-scroll px-5 pb-4">
+    {# ── Filters tab ─────────────────────────────────────────────────── #}
+    <div x-show="activeTab === 'filters'" class="flex-1 overflow-y-auto panel-scroll px-5 pb-4">
 
       {# Exception type #}
       <div class="mb-4">
@@ -129,6 +166,36 @@
         </div>
       </div>
     </div>
+
+    {# ── Top 10 addresses tab ────────────────────────────────────────── #}
+    <div x-show="activeTab === 'top'" class="flex-1 overflow-y-auto panel-scroll px-3 pb-3">
+      <template x-if="topLoading">
+        <div class="text-center py-8 text-slate-500 text-sm">Cargando...</div>
+      </template>
+      <template x-if="!topLoading && topAddresses.length === 0">
+        <div class="text-center py-8 text-slate-600 text-sm">Sin datos de excepciones</div>
+      </template>
+      <template x-for="(addr, idx) in topAddresses" :key="idx">
+        <button @click="flyToAddress(addr)"
+                class="w-full text-left p-3 rounded-lg mb-1.5 transition-all border bg-slate-800/50 border-slate-700/30 hover:bg-slate-800/80 hover:border-slate-600/50">
+          <div class="flex items-start justify-between mb-1.5">
+            <div class="flex items-center gap-2 min-w-0 flex-1">
+              <span class="shrink-0 flex h-5 w-5 items-center justify-center rounded-full bg-red-500/20 text-red-400 text-[10px] font-bold"
+                    x-text="idx + 1"></span>
+              <span class="text-sm font-medium text-slate-200 truncate" x-text="addr.address"></span>
+            </div>
+            <span class="shrink-0 ml-2 bg-red-500/20 text-red-400 text-xs font-bold px-2 py-0.5 rounded-full"
+                  x-text="addr.total"></span>
+          </div>
+          <div class="flex flex-wrap gap-1 ml-7">
+            <template x-for="c in addr.codes" :key="c.code">
+              <span class="text-[10px] bg-slate-700/60 text-slate-400 px-1.5 py-0.5 rounded"
+                    x-text="c.code + ' (' + c.count + ')'"></span>
+            </template>
+          </div>
+        </button>
+      </template>
+    </div>
   </div>
 
   {# ── Map container ──────────────────────────────────────────────── #}
@@ -141,11 +208,17 @@
 <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
 
 <script>
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
 function exceptionMap() {
   return {
     map: null,
     heatLayer: null,
+    markerLayer: null,
     points: [],
+    topAddresses: [],
+    topLoading: false,
+    activeTab: 'filters',
     totalPoints: 0,
     totalExceptions: 0,
 
@@ -172,6 +245,8 @@ function exceptionMap() {
         maxZoom: 19,
         attribution: '&copy; OpenStreetMap contributors'
       }).addTo(this.map);
+
+      this.markerLayer = L.layerGroup().addTo(this.map);
     },
 
     buildQueryString() {
@@ -193,6 +268,7 @@ function exceptionMap() {
         this.totalPoints = this.points.length;
         this.totalExceptions = this.points.reduce((sum, p) => sum + p.weight, 0);
         this.renderHeatmap();
+        this.renderMarkers();
         this.fitBounds();
       } catch (_) { /* silent */ }
     },
@@ -220,6 +296,63 @@ function exceptionMap() {
       }).addTo(this.map);
     },
 
+    renderMarkers() {
+      this.markerLayer.clearLayers();
+
+      // Group points by exact lat/lng for popup aggregation
+      const grouped = {};
+      this.points.forEach(p => {
+        const key = p.lat + ',' + p.lng;
+        if (!grouped[key]) {
+          grouped[key] = { lat: p.lat, lng: p.lng, entries: [], totalWeight: 0 };
+        }
+        grouped[key].entries.push(p);
+        grouped[key].totalWeight += p.weight;
+      });
+
+      Object.values(grouped).forEach(group => {
+        const icon = L.divIcon({
+          className: '',
+          iconSize: [28, 28],
+          iconAnchor: [14, 14],
+          html: '<div class="exception-marker">' + group.totalWeight + '</div>',
+        });
+
+        const marker = L.marker([group.lat, group.lng], { icon: icon });
+
+        // Build popup content with address detail, exception types and frequency
+        let popupHtml = '<div style="max-width:260px;max-height:200px;overflow-y:auto;font-size:12px;">';
+        popupHtml += '<div style="font-weight:700;margin-bottom:6px;color:#ef4444;">' + group.totalWeight + ' excepciones</div>';
+
+        // Group entries by exception code for breakdown
+        const byCodes = {};
+        group.entries.forEach(e => {
+          if (!byCodes[e.exceptionCode]) byCodes[e.exceptionCode] = { count: 0, addresses: new Set() };
+          byCodes[e.exceptionCode].count += e.weight;
+          byCodes[e.exceptionCode].addresses.add(e.address);
+        });
+
+        Object.entries(byCodes).forEach(([code, info]) => {
+          popupHtml += '<div style="margin-bottom:4px;"><strong>' + esc(code) + '</strong>: ' + info.count + '</div>';
+          info.addresses.forEach(addr => {
+            popupHtml += '<div style="color:#94a3b8;padding-left:8px;font-size:11px;">' + esc(addr) + '</div>';
+          });
+        });
+
+        popupHtml += '</div>';
+        marker.bindPopup(popupHtml, { maxWidth: 300, className: '' });
+
+        // Tooltip on hover
+        const firstAddr = group.entries[0] ? group.entries[0].address : '';
+        marker.bindTooltip(
+          '<strong>' + group.totalWeight + ' exc.</strong><br>' + esc(firstAddr),
+          { className: 'exception-tooltip', direction: 'top', offset: [0, -16] }
+        );
+
+        this.markerLayer.addLayer(marker);
+      });
+    },
+
     fitBounds() {
       if (this.points.length === 0) return;
       const bounds = L.latLngBounds(this.points.map(p => [p.lat, p.lng]));
@@ -228,6 +361,9 @@ function exceptionMap() {
 
     applyFilters() {
       this.loadData();
+      if (this.activeTab === 'top') {
+        this.loadTopAddresses();
+      }
     },
 
     resetFilters() {
@@ -236,6 +372,32 @@ function exceptionMap() {
       this.filters.to = '';
       this.filters.customerId = '';
       this.applyFilters();
+    },
+
+    async loadTopAddresses() {
+      this.topLoading = true;
+      try {
+        const qs = this.buildQueryString();
+        const url = '{{ path("admin_reports_exception_map_top_addresses") }}' + (qs ? '?' + qs : '');
+        const res = await fetch(url, { credentials: 'include' });
+        if (!res.ok) return;
+        this.topAddresses = await res.json();
+      } catch (_) { /* silent */ }
+      finally { this.topLoading = false; }
+    },
+
+    flyToAddress(addr) {
+      if (addr.lat && addr.lng) {
+        this.map.flyTo([addr.lat, addr.lng], 16, { duration: 1 });
+
+        // Find and open the marker popup at this location
+        this.markerLayer.eachLayer(marker => {
+          const latlng = marker.getLatLng();
+          if (Math.abs(latlng.lat - addr.lat) < 0.0001 && Math.abs(latlng.lng - addr.lng) < 0.0001) {
+            setTimeout(() => marker.openPopup(), 1100);
+          }
+        });
+      }
     },
   };
 }
