@@ -1,521 +1,97 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Planificador de Rutas — MXO Track{% endblock %}
+{% block title %}Planificador de Rutas - MXO Track{% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 <style>
-  #planner-map { height: calc(100vh - 8rem); min-height: 500px; }
-  .step-indicator.active { background-color: #2563eb; color: white; }
-  .step-indicator.completed { background-color: #16a34a; color: white; }
-  .step-indicator { background-color: #e2e8f0; color: #64748b; }
-  .capacity-bar { height: 6px; border-radius: 3px; background: #e2e8f0; overflow: hidden; }
-  .capacity-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+  #route-planner-map { height: 100%; width: 100%; }
+  .leaflet-top.leaflet-right { top: 10px; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div x-data="routePlanner()" x-init="init()" class="flex flex-col h-[calc(100vh-4rem)]">
+<div x-data="routePlanner()" x-init="init()">
 
-  {# ── Step indicators ── #}
-  <div class="flex items-center gap-4 px-6 py-3 bg-white border-b">
-    <template x-for="(s, i) in steps" :key="i">
-      <div class="flex items-center gap-2">
-        <div class="flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold transition-colors"
-             :class="i < step ? 'step-indicator completed' : (i === step ? 'step-indicator active' : 'step-indicator')">
-          <span x-text="i < step ? '✓' : (i + 1)"></span>
+  {# ── Page header ──────────────────────────────────────────────── #}
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold tracking-tight text-gray-900">Planificador de Rutas</h1>
+    <p class="mt-1 text-sm text-gray-500">Selecciona envios, elige vehiculos y previsualiza las rutas optimizadas.</p>
+  </div>
+
+  {# ── Step indicator ───────────────────────────────────────────── #}
+  <div class="mb-6">
+    <nav class="flex items-center gap-2">
+      <template x-for="(s, i) in steps" :key="i">
+        <div class="flex items-center gap-2">
+          <button @click="if (i < step) step = i"
+                  class="flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium transition-colors"
+                  :class="i === step ? 'bg-brand-600 text-white' : (i < step ? 'bg-brand-100 text-brand-700 cursor-pointer hover:bg-brand-200' : 'bg-gray-100 text-gray-400 cursor-default')">
+            <span class="flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold"
+                  :class="i < step ? 'bg-brand-600 text-white' : (i === step ? 'bg-white text-brand-600' : 'bg-gray-300 text-white')"
+                  x-text="i + 1"></span>
+            <span x-text="s"></span>
+          </button>
+          <svg x-show="i < steps.length - 1" class="h-4 w-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
+          </svg>
         </div>
-        <span class="text-sm font-medium" :class="i === step ? 'text-blue-700' : 'text-slate-500'" x-text="s"></span>
-        <template x-if="i < steps.length - 1">
-          <div class="w-8 h-px bg-slate-300"></div>
-        </template>
+      </template>
+    </nav>
+  </div>
+
+  {# ── Main layout: sidebar + map ───────────────────────────────── #}
+  <div class="flex gap-6" style="height: calc(100vh - 280px); min-height: 500px;">
+
+    {# ── Left panel ─────────────────────────────────────────────── #}
+    <div class="w-[420px] shrink-0 overflow-y-auto rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5 p-4">
+
+      {# STEP 0: Customer + shipment selection (placeholder) #}
+      <div x-show="step === 0">
+        <p class="text-sm text-gray-500">Paso 1: Selecciona cliente y envios.</p>
       </div>
-    </template>
-  </div>
 
-  {# ── Main layout: panel + map ── #}
-  <div class="flex flex-1 overflow-hidden">
+      {# STEP 1: Vehicle selection (placeholder) #}
+      <div x-show="step === 1">
+        <p class="text-sm text-gray-500">Paso 2: Configura vehiculos.</p>
+      </div>
 
-    {# ── Left panel ── #}
-    <div class="w-[420px] flex-shrink-0 overflow-y-auto border-r bg-white p-4 space-y-4">
+      {# STEP 2: Preview (placeholder) #}
+      <div x-show="step === 2">
+        <p class="text-sm text-gray-500">Paso 3: Previsualiza y confirma.</p>
+      </div>
 
-      {# ══════════ STEP 1: Select shipments ══════════ #}
-      <template x-if="step === 0">
-        <div class="space-y-4">
-          <h3 class="text-lg font-semibold text-slate-800">Seleccionar envios</h3>
-
-          {# Customer filter #}
-          <div>
-            <label class="block text-sm font-medium text-slate-600 mb-1">Cliente</label>
-            <select x-model="selectedCustomer" @change="loadShipments()"
-                    class="w-full rounded-lg border-slate-300 text-sm focus:ring-blue-500 focus:border-blue-500">
-              <option value="">Todos los clientes</option>
-              {% for c in customers %}
-                <option value="{{ c.publicIdString }}">{{ c.name }}</option>
-              {% endfor %}
-            </select>
-          </div>
-
-          {# Search #}
-          <input type="text" x-model="shipmentSearch" placeholder="Buscar por referencia o destinatario..."
-                 class="w-full rounded-lg border-slate-300 text-sm focus:ring-blue-500 focus:border-blue-500">
-
-          {# Shipments table #}
-          <div class="border rounded-lg overflow-hidden">
-            <div class="bg-slate-50 px-3 py-2 flex items-center justify-between">
-              <label class="flex items-center gap-2 text-sm">
-                <input type="checkbox" @change="toggleSelectAll($event.target.checked)"
-                       class="rounded border-slate-300 text-blue-600">
-                Seleccionar todos
-              </label>
-              <span class="text-xs text-slate-500" x-text="selectedShipments.length + '/' + filteredShipments.length + ' seleccionados'"></span>
-            </div>
-            <div class="max-h-[40vh] overflow-y-auto divide-y">
-              <template x-for="s in filteredShipments" :key="s.publicId">
-                <label class="flex items-center gap-3 px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm"
-                       :class="!s.hasCoordinates ? 'opacity-60' : ''">
-                  <input type="checkbox" :value="s.publicId" x-model="selectedShipments"
-                         @change="updateMapMarkers()"
-                         class="rounded border-slate-300 text-blue-600">
-                  <div class="flex-1 min-w-0">
-                    <div class="font-medium text-slate-800 truncate" x-text="s.reference"></div>
-                    <div class="text-xs text-slate-500 truncate" x-text="s.recipientName + ' — ' + (s.address || 'Sin direccion')"></div>
-                    <div class="flex gap-2 mt-0.5">
-                      <span class="text-xs text-slate-400" x-show="s.weightKg" x-text="s.weightKg + ' kg'"></span>
-                      <span class="text-xs text-slate-400" x-show="s.parcels > 1" x-text="s.parcels + ' bultos'"></span>
-                      <span class="text-xs text-orange-500 font-medium" x-show="!s.hasCoordinates">Sin GPS</span>
-                    </div>
-                  </div>
-                </label>
-              </template>
-              <div x-show="filteredShipments.length === 0" class="px-3 py-8 text-center text-sm text-slate-400">
-                No hay envios pendientes
-              </div>
-            </div>
-          </div>
-
-          {# Summary + Next #}
-          <div class="flex items-center justify-between pt-2">
-            <div class="text-sm text-slate-600">
-              <span x-text="selectedShipments.length" class="font-semibold text-blue-600"></span> envios seleccionados
-            </div>
-            <button @click="step = 1" :disabled="selectedShipments.length === 0"
-                    class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-              Siguiente
-            </button>
-          </div>
-        </div>
-      </template>
-
-      {# ══════════ STEP 2: Configure vehicles ══════════ #}
-      <template x-if="step === 1">
-        <div class="space-y-4">
-          <h3 class="text-lg font-semibold text-slate-800">Configurar vehiculos</h3>
-
-          {# Origin selector #}
-          <div>
-            <label class="block text-sm font-medium text-slate-600 mb-1">Punto de origen</label>
-            <select x-model="selectedOrigin"
-                    class="w-full rounded-lg border-slate-300 text-sm focus:ring-blue-500 focus:border-blue-500">
-              <option value="">Sin origen definido</option>
-              <template x-for="loc in filteredLocations" :key="loc.publicId">
-                <option :value="loc.publicId" x-text="loc.name + ' — ' + loc.address"></option>
-              </template>
-            </select>
-          </div>
-
-          {# Max stops #}
-          <div>
-            <label class="block text-sm font-medium text-slate-600 mb-1">Max. paradas por ruta</label>
-            <input type="number" x-model.number="maxStops" min="1" max="100"
-                   class="w-full rounded-lg border-slate-300 text-sm focus:ring-blue-500 focus:border-blue-500">
-          </div>
-
-          {# Vehicles #}
-          <div class="space-y-2">
-            <div class="flex items-center justify-between">
-              <label class="text-sm font-medium text-slate-600">Vehiculos disponibles</label>
-              <span class="text-xs text-slate-500" x-text="selectedVehicles.length + ' seleccionados'"></span>
-            </div>
-            <template x-for="v in allVehicles" :key="v.publicId">
-              <label class="block border rounded-lg p-3 hover:border-blue-300 cursor-pointer transition-colors"
-                     :class="selectedVehicles.includes(v.publicId) ? 'border-blue-500 bg-blue-50' : 'border-slate-200'">
-                <div class="flex items-center gap-3">
-                  <input type="checkbox" :value="v.publicId" x-model="selectedVehicles"
-                         class="rounded border-slate-300 text-blue-600">
-                  <div class="flex-1">
-                    <div class="font-medium text-sm text-slate-800" x-text="v.name"></div>
-                    <div class="flex gap-3 mt-1 text-xs text-slate-500">
-                      <span x-show="v.maxWeightKg" x-text="v.maxWeightKg + ' kg'"></span>
-                      <span x-show="v.maxVolumeM3" x-text="v.maxVolumeM3 + ' m³'"></span>
-                      <span x-show="v.maxParcels" x-text="v.maxParcels + ' bultos'"></span>
-                    </div>
-                    <div class="flex gap-1 mt-1" x-show="v.skills.length > 0">
-                      <template x-for="sk in v.skills" :key="sk">
-                        <span class="px-1.5 py-0.5 bg-slate-100 text-slate-600 text-[10px] rounded" x-text="sk"></span>
-                      </template>
-                    </div>
-                  </div>
-                </div>
-              </label>
-            </template>
-          </div>
-
-          {# Summary #}
-          <div class="bg-slate-50 rounded-lg p-3 text-sm space-y-1">
-            <div class="flex justify-between"><span class="text-slate-600">Envios:</span><span class="font-medium" x-text="selectedShipments.length"></span></div>
-            <div class="flex justify-between"><span class="text-slate-600">Vehiculos:</span><span class="font-medium" x-text="selectedVehicles.length"></span></div>
-            <div class="flex justify-between"><span class="text-slate-600">Max. paradas:</span><span class="font-medium" x-text="maxStops"></span></div>
-          </div>
-
-          {# Navigation #}
-          <div class="flex items-center justify-between pt-2">
-            <button @click="step = 0" class="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 transition-colors">
-              Atras
-            </button>
-            <button @click="runOptimization()" :disabled="selectedVehicles.length === 0 || optimizing"
-                    class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-              <span x-show="!optimizing">Optimizar rutas</span>
-              <span x-show="optimizing" class="flex items-center gap-2">
-                <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
-                Optimizando...
-              </span>
-            </button>
-          </div>
-        </div>
-      </template>
-
-      {# ══════════ STEP 3: Preview & Confirm ══════════ #}
-      <template x-if="step === 2">
-        <div class="space-y-4">
-          <h3 class="text-lg font-semibold text-slate-800">Resultado de la optimizacion</h3>
-
-          {# Error #}
-          <div x-show="previewError" class="bg-red-50 text-red-700 text-sm rounded-lg p-3" x-text="previewError"></div>
-
-          {# Route cards #}
-          <template x-for="(r, ri) in previewRoutes" :key="ri">
-            <div class="border rounded-lg overflow-hidden" :style="'border-left: 4px solid ' + routeColors[ri % routeColors.length]">
-              <div class="px-3 py-2 bg-slate-50 flex items-center justify-between">
-                <div>
-                  <span class="font-medium text-sm" x-text="r.vehicleName"></span>
-                  <span class="text-xs text-slate-500 ml-2" x-text="r.stops.length + ' paradas'"></span>
-                </div>
-                <div class="text-xs text-slate-500 space-x-2">
-                  <span x-text="r.distanceKm + ' km'"></span>
-                  <span x-text="r.durationMinutes + ' min'"></span>
-                </div>
-              </div>
-              {# Capacity bars #}
-              <div class="px-3 py-2 space-y-1.5">
-                <template x-if="r.capacity.maxWeightKg">
-                  <div>
-                    <div class="flex justify-between text-[11px] text-slate-500 mb-0.5">
-                      <span>Peso</span>
-                      <span x-text="(r.capacity.weightKg || 0).toFixed(1) + ' / ' + r.capacity.maxWeightKg + ' kg (' + (r.capacity.weightPct || 0).toFixed(0) + '%)'"></span>
-                    </div>
-                    <div class="capacity-bar">
-                      <div class="capacity-fill" :style="'width:' + Math.min(r.capacity.weightPct || 0, 100) + '%'"
-                           :class="(r.capacity.weightPct || 0) > 100 ? 'bg-red-500' : (r.capacity.weightPct || 0) > 80 ? 'bg-amber-500' : 'bg-green-500'"></div>
-                    </div>
-                  </div>
-                </template>
-                <template x-if="r.capacity.maxVolumeM3">
-                  <div>
-                    <div class="flex justify-between text-[11px] text-slate-500 mb-0.5">
-                      <span>Volumen</span>
-                      <span x-text="(r.capacity.volumeM3 || 0).toFixed(3) + ' / ' + r.capacity.maxVolumeM3 + ' m³ (' + (r.capacity.volumePct || 0).toFixed(0) + '%)'"></span>
-                    </div>
-                    <div class="capacity-bar">
-                      <div class="capacity-fill" :style="'width:' + Math.min(r.capacity.volumePct || 0, 100) + '%'"
-                           :class="(r.capacity.volumePct || 0) > 100 ? 'bg-red-500' : (r.capacity.volumePct || 0) > 80 ? 'bg-amber-500' : 'bg-green-500'"></div>
-                    </div>
-                  </div>
-                </template>
-                <div x-show="!r.capacity.valid" class="text-xs text-red-600 font-medium mt-1">Capacidad excedida</div>
-              </div>
-              {# Stop list #}
-              <div class="border-t divide-y max-h-40 overflow-y-auto">
-                <template x-for="(stop, si) in r.stops" :key="si">
-                  <div class="px-3 py-1.5 text-xs flex items-center gap-2">
-                    <span class="flex items-center justify-center w-5 h-5 rounded-full text-white text-[10px] font-bold"
-                          :style="'background:' + routeColors[ri % routeColors.length]"
-                          x-text="stop.sequence"></span>
-                    <div class="flex-1 min-w-0">
-                      <div class="truncate text-slate-700" x-text="stop.recipientName || stop.address"></div>
-                    </div>
-                  </div>
-                </template>
-              </div>
-            </div>
-          </template>
-
-          {# Unassigned #}
-          <template x-if="unassignedShipments.length > 0">
-            <div class="border border-amber-300 bg-amber-50 rounded-lg p-3">
-              <div class="text-sm font-medium text-amber-800 mb-2">Envios no asignados (<span x-text="unassignedShipments.length"></span>)</div>
-              <template x-for="u in unassignedShipments" :key="u.shipmentPublicId">
-                <div class="text-xs text-amber-700 flex justify-between py-0.5">
-                  <span x-text="u.reference"></span>
-                  <span class="italic" x-text="u.reason"></span>
-                </div>
-              </template>
-            </div>
-          </template>
-
-          {# Navigation #}
-          <div class="flex items-center justify-between pt-2">
-            <button @click="step = 1; clearPreview()" class="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 transition-colors">
-              Volver a configurar
-            </button>
-            <button @click="confirmRoutes()" :disabled="previewRoutes.length === 0 || confirming"
-                    class="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-              <span x-show="!confirming">Confirmar rutas</span>
-              <span x-show="confirming" class="flex items-center gap-2">
-                <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
-                Guardando...
-              </span>
-            </button>
-          </div>
-        </div>
-      </template>
     </div>
 
-    {# ── Map ── #}
-    <div class="flex-1">
-      <div id="planner-map" class="w-full h-full"></div>
+    {# ── Right map ──────────────────────────────────────────────── #}
+    <div class="flex-1 rounded-xl overflow-hidden shadow-sm ring-1 ring-gray-900/5">
+      <div id="route-planner-map"></div>
     </div>
+
   </div>
+
 </div>
 {% endblock %}
 
 {% block scripts %}
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
 function routePlanner() {
   return {
-    // State
-    steps: ['Envios', 'Vehiculos', 'Resultado'],
     step: 0,
-    selectedCustomer: '',
-    shipmentSearch: '',
-    shipments: [],
-    selectedShipments: [],
-    allVehicles: JSON.parse('{{ vehicles_json|raw }}'),
-    allLocations: JSON.parse('{{ locations_json|raw }}'),
-    selectedVehicles: [],
-    selectedOrigin: '',
-    maxStops: 30,
-    optimizing: false,
-    confirming: false,
-    previewRoutes: [],
-    unassignedShipments: [],
-    previewError: '',
-
-    // Map
+    steps: ['Envios', 'Vehiculos', 'Confirmar'],
     map: null,
-    markers: {},
-    routeLayers: [],
-    routeColors: ['#2563eb', '#dc2626', '#16a34a', '#d97706', '#7c3aed', '#0891b2', '#be185d', '#65a30d'],
-
-    get filteredShipments() {
-      const q = this.shipmentSearch.toLowerCase();
-      return this.shipments.filter(s =>
-        !q || s.reference.toLowerCase().includes(q) ||
-        (s.recipientName || '').toLowerCase().includes(q) ||
-        (s.address || '').toLowerCase().includes(q)
-      );
-    },
-
-    get filteredLocations() {
-      if (!this.selectedCustomer) return this.allLocations;
-      return this.allLocations.filter(l => l.customerPublicId === this.selectedCustomer);
-    },
 
     init() {
-      this.map = L.map('planner-map').setView([40.4168, -3.7038], 12);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap'
-      }).addTo(this.map);
-      this.loadShipments();
-    },
-
-    async loadShipments() {
-      const params = this.selectedCustomer ? '?customer=' + this.selectedCustomer : '';
-      const res = await fetch('{{ path("admin_route_planner_shipments") }}' + params);
-      this.shipments = await res.json();
-      this.selectedShipments = [];
-      this.updateMapMarkers();
-    },
-
-    toggleSelectAll(checked) {
-      if (checked) {
-        this.selectedShipments = this.filteredShipments.map(s => s.publicId);
-      } else {
-        this.selectedShipments = [];
-      }
-      this.updateMapMarkers();
-    },
-
-    updateMapMarkers() {
-      // Remove old markers
-      Object.values(this.markers).forEach(m => this.map.removeLayer(m));
-      this.markers = {};
-
-      const selected = new Set(this.selectedShipments);
-      const bounds = [];
-
-      this.shipments.forEach(s => {
-        if (!s.hasCoordinates) return;
-
-        const isSelected = selected.has(s.publicId);
-        const color = isSelected ? '#2563eb' : '#94a3b8';
-
-        const icon = L.divIcon({
-          className: '',
-          html: `<div style="width:24px;height:24px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;color:white;font-size:10px;font-weight:bold;">${isSelected ? '✓' : ''}</div>`,
-          iconSize: [24, 24],
-          iconAnchor: [12, 12],
-        });
-
-        const marker = L.marker([s.latitude, s.longitude], { icon })
-          .addTo(this.map)
-          .bindPopup(`<b>${s.reference}</b><br>${s.recipientName || ''}<br>${s.address || ''}<br>${s.weightKg ? s.weightKg + ' kg' : ''}`);
-
-        marker.on('click', () => {
-          if (selected.has(s.publicId)) {
-            this.selectedShipments = this.selectedShipments.filter(id => id !== s.publicId);
-          } else {
-            this.selectedShipments.push(s.publicId);
-          }
-          this.updateMapMarkers();
-        });
-
-        this.markers[s.publicId] = marker;
-
-        if (isSelected) bounds.push([s.latitude, s.longitude]);
+      this.$nextTick(() => {
+        this.map = L.map('route-planner-map').setView([40.4168, -3.7038], 12);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap contributors',
+          maxZoom: 19,
+        }).addTo(this.map);
       });
-
-      if (bounds.length > 0) {
-        this.map.fitBounds(bounds, { padding: [40, 40] });
-      }
-    },
-
-    async runOptimization() {
-      this.optimizing = true;
-      this.previewError = '';
-
-      try {
-        const res = await fetch('{{ path("admin_route_planner_preview") }}', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            shipment_ids: this.selectedShipments,
-            vehicle_ids: this.selectedVehicles,
-            origin_id: this.selectedOrigin || null,
-            max_stops_per_route: this.maxStops,
-          }),
-        });
-
-        const data = await res.json();
-        if (!res.ok) {
-          this.previewError = data.error || 'Error al optimizar';
-          return;
-        }
-
-        this.previewRoutes = data.routes;
-        this.unassignedShipments = data.unassigned || [];
-        this.step = 2;
-        this.drawPreviewRoutes();
-      } catch (err) {
-        this.previewError = 'Error de conexion';
-      } finally {
-        this.optimizing = false;
-      }
-    },
-
-    drawPreviewRoutes() {
-      this.clearRouteLayers();
-      Object.values(this.markers).forEach(m => this.map.removeLayer(m));
-      this.markers = {};
-
-      const allBounds = [];
-
-      this.previewRoutes.forEach((route, ri) => {
-        const color = this.routeColors[ri % this.routeColors.length];
-        const latlngs = [];
-
-        route.stops.forEach(stop => {
-          if (stop.latitude == null || stop.longitude == null) return;
-
-          const pos = [stop.latitude, stop.longitude];
-          latlngs.push(pos);
-          allBounds.push(pos);
-
-          const icon = L.divIcon({
-            className: '',
-            html: `<div style="width:26px;height:26px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;color:white;font-size:11px;font-weight:bold;">${stop.sequence}</div>`,
-            iconSize: [26, 26],
-            iconAnchor: [13, 13],
-          });
-
-          const marker = L.marker(pos, { icon })
-            .addTo(this.map)
-            .bindPopup(`<b>Parada ${stop.sequence}</b><br>${stop.recipientName || ''}<br>${stop.address || ''}`);
-
-          this.markers[`route-${ri}-${stop.sequence}`] = marker;
-        });
-
-        if (latlngs.length > 1) {
-          const polyline = L.polyline(latlngs, { color, weight: 3, opacity: 0.7 }).addTo(this.map);
-          this.routeLayers.push(polyline);
-        }
-      });
-
-      if (allBounds.length > 0) {
-        this.map.fitBounds(allBounds, { padding: [40, 40] });
-      }
-    },
-
-    clearPreview() {
-      this.previewRoutes = [];
-      this.unassignedShipments = [];
-      this.previewError = '';
-      this.clearRouteLayers();
-      this.updateMapMarkers();
-    },
-
-    clearRouteLayers() {
-      this.routeLayers.forEach(l => this.map.removeLayer(l));
-      this.routeLayers = [];
-    },
-
-    async confirmRoutes() {
-      this.confirming = true;
-
-      try {
-        const res = await fetch('{{ path("admin_route_planner_confirm") }}', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            shipment_ids: this.selectedShipments,
-            vehicle_ids: this.selectedVehicles,
-            origin_id: this.selectedOrigin || null,
-            max_stops_per_route: this.maxStops,
-          }),
-        });
-
-        const data = await res.json();
-        if (data.ok) {
-          window.location.href = data.redirectUrl;
-        } else {
-          this.previewError = data.error || 'Error al confirmar rutas';
-        }
-      } catch (err) {
-        this.previewError = 'Error de conexion';
-      } finally {
-        this.confirming = false;
-      }
     },
   };
 }

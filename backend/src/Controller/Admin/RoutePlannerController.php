@@ -31,7 +31,33 @@ class RoutePlannerController extends AbstractController
     #[SymfonyRoute('', name: 'admin_route_planner_index', methods: ['GET'])]
     public function index(): Response
     {
-        return new Response('Route planner index - TODO');
+        $customers = $this->em->getRepository(Customer::class)
+            ->createQueryBuilder('c')
+            ->where('c.isActive = true')
+            ->orderBy('c.name', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        $vehicles = $this->em->getRepository(Vehicle::class)
+            ->createQueryBuilder('v')
+            ->where('v.isActive = true')
+            ->andWhere('v.deletedAt IS NULL')
+            ->orderBy('v.name', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        $locations = $this->em->getRepository(CustomerLocation::class)
+            ->createQueryBuilder('l')
+            ->where('l.isActive = true')
+            ->orderBy('l.name', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        return $this->render('admin/route_planner/index.html.twig', [
+            'customers' => $customers,
+            'vehicles' => $vehicles,
+            'locations' => $locations,
+        ]);
     }
 
     #[SymfonyRoute('/shipments', name: 'admin_route_planner_shipments', methods: ['GET'])]
