@@ -25,7 +25,7 @@
     <nav class="flex items-center gap-2">
       <template x-for="(s, i) in steps" :key="i">
         <div class="flex items-center gap-2">
-          <button @click="if (i < step) step = i"
+          <button @click="if (i < step) goToStep(i)"
                   class="flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium transition-colors"
                   :class="i === step ? 'bg-brand-600 text-white' : (i < step ? 'bg-brand-100 text-brand-700 cursor-pointer hover:bg-brand-200' : 'bg-gray-100 text-gray-400 cursor-default')">
             <span class="flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold"
@@ -47,18 +47,87 @@
     {# ── Left panel ─────────────────────────────────────────────── #}
     <div class="w-[420px] shrink-0 overflow-y-auto rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5 p-4">
 
-      {# STEP 0: Customer + shipment selection (placeholder) #}
-      <div x-show="step === 0">
-        <p class="text-sm text-gray-500">Paso 1: Selecciona cliente y envios.</p>
+      {# ── STEP 0: Customer + shipment selection ─────────────────── #}
+      <div x-show="step === 0" x-cloak>
+
+        {# Customer dropdown #}
+        <div class="mb-4">
+          <label for="customer-select" class="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
+          <select id="customer-select" x-model="selectedCustomer" @change="fetchShipments()"
+                  class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500">
+            <option value="">-- Seleccionar cliente --</option>
+            {% for customer in customers %}
+              <option value="{{ customer.publicIdString }}">{{ customer.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        {# Loading indicator #}
+        <div x-show="loadingShipments" class="flex items-center gap-2 py-4 text-sm text-gray-500">
+          <svg class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+          </svg>
+          Cargando envios...
+        </div>
+
+        {# Select all / count #}
+        <div x-show="shipments.length > 0 && !loadingShipments" class="mb-3 flex items-center justify-between">
+          <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+            <input type="checkbox" @change="toggleAllShipments($event.target.checked)"
+                   :checked="selectedShipments.length === shipments.length && shipments.length > 0"
+                   class="rounded border-gray-300 text-brand-600 focus:ring-brand-500">
+            Seleccionar todos
+          </label>
+          <span class="text-xs text-gray-400" x-text="selectedShipments.length + ' / ' + shipments.length + ' seleccionados'"></span>
+        </div>
+
+        {# Shipments table #}
+        <div x-show="shipments.length > 0 && !loadingShipments" class="space-y-1 max-h-[calc(100vh-520px)] overflow-y-auto">
+          <template x-for="s in shipments" :key="s.publicId">
+            <label class="flex items-start gap-3 rounded-lg border border-gray-100 p-3 cursor-pointer transition-colors hover:bg-gray-50"
+                   :class="selectedShipments.includes(s.publicId) ? 'border-brand-300 bg-brand-50' : ''">
+              <input type="checkbox" :value="s.publicId"
+                     :checked="selectedShipments.includes(s.publicId)"
+                     @change="toggleShipment(s.publicId)"
+                     class="mt-0.5 rounded border-gray-300 text-brand-600 focus:ring-brand-500">
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2">
+                  <span class="text-sm font-medium text-gray-900" x-text="s.reference"></span>
+                </div>
+                <p class="text-xs text-gray-500 truncate" x-text="s.address || 'Sin direccion'"></p>
+                <div class="mt-1 flex items-center gap-3 text-xs text-gray-400">
+                  <span x-show="s.totalWeightKg" x-text="s.totalWeightKg + ' kg'"></span>
+                  <span x-show="s.totalVolumeM3" x-text="s.totalVolumeM3 + ' m3'"></span>
+                  <span x-text="s.totalParcels + ' bulto(s)'"></span>
+                </div>
+              </div>
+            </label>
+          </template>
+        </div>
+
+        {# Empty state #}
+        <div x-show="shipments.length === 0 && !loadingShipments && selectedCustomer !== ''" class="py-8 text-center">
+          <p class="text-sm text-gray-500">No hay envios sin asignar para este cliente.</p>
+        </div>
+
+        {# Next button #}
+        <div class="mt-4 pt-4 border-t border-gray-100">
+          <button @click="step = 1" :disabled="selectedShipments.length === 0"
+                  class="w-full rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-brand-500 disabled:opacity-50 disabled:cursor-not-allowed">
+            Siguiente: Vehiculos
+            <span x-show="selectedShipments.length > 0" class="ml-1" x-text="'(' + selectedShipments.length + ')'"></span>
+          </button>
+        </div>
       </div>
 
       {# STEP 1: Vehicle selection (placeholder) #}
-      <div x-show="step === 1">
+      <div x-show="step === 1" x-cloak>
         <p class="text-sm text-gray-500">Paso 2: Configura vehiculos.</p>
       </div>
 
       {# STEP 2: Preview (placeholder) #}
-      <div x-show="step === 2">
+      <div x-show="step === 2" x-cloak>
         <p class="text-sm text-gray-500">Paso 3: Previsualiza y confirma.</p>
       </div>
 
@@ -83,6 +152,13 @@ function routePlanner() {
     step: 0,
     steps: ['Envios', 'Vehiculos', 'Confirmar'],
     map: null,
+    shipmentMarkers: [],
+
+    // Step 0
+    selectedCustomer: '',
+    shipments: [],
+    selectedShipments: [],
+    loadingShipments: false,
 
     init() {
       this.$nextTick(() => {
@@ -92,6 +168,89 @@ function routePlanner() {
           maxZoom: 19,
         }).addTo(this.map);
       });
+    },
+
+    goToStep(i) {
+      this.step = i;
+      this.$nextTick(() => this.map && this.map.invalidateSize());
+    },
+
+    async fetchShipments() {
+      this.shipments = [];
+      this.selectedShipments = [];
+      this.clearShipmentMarkers();
+
+      if (!this.selectedCustomer) return;
+
+      this.loadingShipments = true;
+      try {
+        const resp = await fetch('/admin/route-planner/shipments?customer=' + encodeURIComponent(this.selectedCustomer));
+        const data = await resp.json();
+        this.shipments = data.shipments || [];
+      } catch (e) {
+        console.error('Error fetching shipments:', e);
+      }
+      this.loadingShipments = false;
+    },
+
+    toggleShipment(publicId) {
+      const idx = this.selectedShipments.indexOf(publicId);
+      if (idx >= 0) {
+        this.selectedShipments.splice(idx, 1);
+      } else {
+        this.selectedShipments.push(publicId);
+      }
+      this.updateShipmentMarkers();
+    },
+
+    toggleAllShipments(checked) {
+      if (checked) {
+        this.selectedShipments = this.shipments.map(s => s.publicId);
+      } else {
+        this.selectedShipments = [];
+      }
+      this.updateShipmentMarkers();
+    },
+
+    clearShipmentMarkers() {
+      this.shipmentMarkers.forEach(m => this.map.removeLayer(m));
+      this.shipmentMarkers = [];
+    },
+
+    updateShipmentMarkers() {
+      this.clearShipmentMarkers();
+      const bounds = [];
+
+      this.shipments.forEach(s => {
+        if (!this.selectedShipments.includes(s.publicId)) return;
+        if (s.latitude == null || s.longitude == null) return;
+
+        const marker = L.circleMarker([s.latitude, s.longitude], {
+          radius: 7,
+          fillColor: '#2563eb',
+          color: '#1e40af',
+          weight: 2,
+          fillOpacity: 0.8,
+        }).addTo(this.map);
+
+        marker.bindPopup(
+          '<strong>' + this._esc(s.reference) + '</strong><br>' +
+          '<span class="text-xs">' + this._esc(s.address || '') + '</span>'
+        );
+
+        this.shipmentMarkers.push(marker);
+        bounds.push([s.latitude, s.longitude]);
+      });
+
+      if (bounds.length > 0) {
+        this.map.fitBounds(bounds, { padding: [40, 40] });
+      }
+    },
+
+    _esc(str) {
+      const d = document.createElement('div');
+      d.textContent = str;
+      return d.innerHTML;
     },
   };
 }
