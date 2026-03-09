@@ -1,0 +1,123 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Analisis - {{ route.name }} - Admin{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<style>
+  #analysis-map { height: 500px; width: 100%; border-radius: 0.5rem; }
+  .legend-item { display: flex; align-items: center; gap: 0.5rem; }
+  .legend-line { width: 24px; height: 3px; border-radius: 2px; }
+  .legend-planned { background-color: #3b82f6; }
+  .legend-actual { background-color: #ef4444; }
+</style>
+{% endblock %}
+
+{% block content %}
+  {# Header #}
+  <div class="mb-6 flex items-center justify-between">
+    <div class="flex items-center gap-4">
+      <a href="{{ path('admin_routes_index') }}"
+         class="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+        <svg class="mr-1.5 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/>
+        </svg>
+        Volver
+      </a>
+      <h1 class="text-2xl font-bold text-gray-900">Analisis: {{ route.name }}</h1>
+    </div>
+    <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold leading-5
+      {% if route.status.value == 'DONE' %}bg-green-100 text-green-800
+      {% elseif route.status.value == 'ACTIVE' %}bg-amber-100 text-amber-800
+      {% elseif route.status.value == 'PLANNED' %}bg-blue-100 text-blue-800
+      {% else %}bg-red-100 text-red-800{% endif %}">
+      {{ route.status.value }}
+    </span>
+  </div>
+
+  {# Map #}
+  <div class="bg-white shadow rounded-lg overflow-hidden mb-6">
+    <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+      <h2 class="text-lg font-semibold text-gray-900">Mapa de ruta</h2>
+      <div class="flex items-center gap-4 text-sm text-gray-600">
+        <div class="legend-item">
+          <div class="legend-line legend-planned"></div>
+          <span>Planificada</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-line legend-actual"></div>
+          <span>Ejecutada</span>
+        </div>
+      </div>
+    </div>
+    <div id="analysis-map"></div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+(function() {
+  const data = {{ comparisonJson|raw }};
+  const map = L.map('analysis-map');
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 19
+  }).addTo(map);
+
+  const allPoints = [];
+
+  // Planned polyline (blue)
+  if (data.plannedPolyline.length > 0) {
+    const plannedLine = L.polyline(data.plannedPolyline, {
+      color: '#3b82f6',
+      weight: 4,
+      opacity: 0.8,
+      dashArray: '10, 6'
+    }).addTo(map);
+    data.plannedPolyline.forEach(function(p) { allPoints.push(p); });
+  }
+
+  // Actual polyline (red)
+  if (data.actualPolyline.length > 0) {
+    const actualLine = L.polyline(data.actualPolyline, {
+      color: '#ef4444',
+      weight: 3,
+      opacity: 0.8
+    }).addTo(map);
+    data.actualPolyline.forEach(function(p) { allPoints.push(p); });
+  }
+
+  // Stop markers (numbered)
+  data.stops.forEach(function(stop) {
+    if (stop.lat === null || stop.lng === null) return;
+
+    const isOrigin = stop.isOrigin || false;
+    const color = isOrigin ? '#059669' : (stop.status === 'DELIVERED' ? '#3b82f6' : (stop.status === 'EXCEPTION' ? '#ef4444' : '#9ca3af'));
+
+    const icon = L.divIcon({
+      html: '<div style="background:' + color + ';color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3);">' + (isOrigin ? 'O' : stop.sequence) + '</div>',
+      className: '',
+      iconSize: [28, 28],
+      iconAnchor: [14, 14]
+    });
+
+    L.marker([stop.lat, stop.lng], { icon: icon })
+      .bindPopup('<strong>' + (isOrigin ? 'Origen' : 'Parada ' + stop.sequence) + '</strong><br>' + stop.address + '<br>Estado: ' + stop.status)
+      .addTo(map);
+
+    allPoints.push([stop.lat, stop.lng]);
+  });
+
+  // Fit map to bounds
+  if (allPoints.length > 0) {
+    map.fitBounds(allPoints, { padding: [30, 30] });
+  } else {
+    map.setView([40.4168, -3.7038], 12);
+  }
+})();
+</script>
+{% endblock %}
