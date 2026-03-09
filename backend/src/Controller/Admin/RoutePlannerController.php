@@ -4,159 +4,93 @@ declare(strict_types=1);
 
 namespace App\Controller\Admin;
 
-use App\Application\Route\BuildRoutesInput;
-use App\Application\Route\RoutePlanningService;
-use App\Entity\Shipment;
-use App\Service\ShipmentClusteringService;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Entity\Route;
+use App\Repository\RouteRepository;
+use App\Service\DriverScoringService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Routing\Annotation\Route as SymfonyRoute;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
-use Symfony\Component\Uid\Ulid;
 
-#[Route('/admin/route-planner')]
+#[SymfonyRoute('/admin/route-planner')]
 #[IsGranted('ROLE_ADMIN')]
 class RoutePlannerController extends AbstractController
 {
     public function __construct(
-        private readonly EntityManagerInterface $em,
-        private readonly ShipmentClusteringService $clusteringService,
-        private readonly RoutePlanningService $routePlanningService,
+        private readonly RouteRepository $routeRepository,
+        private readonly DriverScoringService $driverScoringService,
     ) {}
 
-    #[Route('', name: 'admin_route_planner_index', methods: ['GET'])]
-    public function index(): Response
-    {
-        return $this->render('admin/route_planner/index.html.twig');
-    }
-
     /**
-     * Cluster shipments by geographic zone using k-means.
+     * Suggest drivers for a given route, ranked by multi-criteria score.
      *
-     * Input JSON: {shipment_ids: [...], num_clusters: N}
-     * Returns JSON with clusters and colours.
+     * Query params:
+     *   - route_id: publicId of the route to score drivers for
      */
-    #[Route('/cluster', name: 'admin_route_planner_cluster', methods: ['POST'])]
-    public function cluster(Request $request): JsonResponse
+    #[SymfonyRoute('/suggest-drivers', name: 'admin_route_planner_suggest_drivers', methods: ['GET'])]
+    public function suggestDrivers(Request $request): JsonResponse
     {
-        try {
-            $payload = json_decode((string) $request->getContent(), true, 512, \JSON_THROW_ON_ERROR);
-        } catch (\JsonException) {
-            return new JsonResponse(['error' => 'JSON invalido.'], Response::HTTP_BAD_REQUEST);
+        $routePublicId = $request->query->getString('route_id', '');
+
+        if ($routePublicId === '') {
+            return new JsonResponse(['error' => 'Se requiere el parametro route_id.'], 400);
         }
 
-        $shipmentIds = $payload['shipment_ids'] ?? [];
-        $numClusters = (int) ($payload['num_clusters'] ?? 3);
+        $route = $this->routeRepository->findOneByPublicId($routePublicId);
 
-        if (!\is_array($shipmentIds) || $shipmentIds === []) {
-            return new JsonResponse(['error' => 'Se requiere al menos un shipment_id.'], Response::HTTP_BAD_REQUEST);
+        if (!$route instanceof Route) {
+            return new JsonResponse(['error' => 'Ruta no encontrada.'], 404);
         }
 
-        if ($numClusters < 1) {
-            return new JsonResponse(['error' => 'num_clusters debe ser >= 1.'], Response::HTTP_BAD_REQUEST);
-        }
+        $scores = $this->driverScoringService->scoreDriversForRoute($route);
 
-        // Convert public IDs to ULIDs and fetch shipments
-        $ulids = [];
-        foreach ($shipmentIds as $sid) {
-            try {
-                $ulids[] = Ulid::fromString((string) $sid);
-            } catch (\Throwable) {
-                // skip invalid IDs
-            }
-        }
+        $result = [];
+        foreach ($scores as $entry) {
+            /** @var \App\Entity\User $driver */
+            $driver = $entry['driver'];
+            $breakdown = $entry['breakdown'];
 
-        if ($ulids === []) {
-            return new JsonResponse(['error' => 'Ninguno de los shipment_ids es valido.'], Response::HTTP_BAD_REQUEST);
-        }
+            // Determine the top criterion
+            $topCriterion = $this->getTopCriterion($breakdown);
 
-        $shipments = $this->em->getRepository(Shipment::class)
-            ->createQueryBuilder('s')
-            ->where('s.publicId IN (:ids)')
-            ->setParameter('ids', $ulids)
-            ->getQuery()
-            ->getResult();
-
-        // Build input array for the clustering service
-        $points = [];
-        foreach ($shipments as $shipment) {
-            if ($shipment->getLatitude() === null || $shipment->getLongitude() === null) {
-                continue;
-            }
-
-            $points[] = [
-                'id' => $shipment->getPublicIdString(),
-                'lat' => $shipment->getLatitude(),
-                'lng' => $shipment->getLongitude(),
+            $result[] = [
+                'driver_public_id' => $driver->getPublicIdString(),
+                'driver_name' => $driver->getName() ?? $driver->getEmail(),
+                'driver_email' => $driver->getEmail(),
+                'score' => $entry['score'],
+                'breakdown' => $breakdown,
+                'top_criterion' => $topCriterion,
             ];
         }
 
-        if ($points === []) {
-            return new JsonResponse(['error' => 'Ninguno de los envios tiene coordenadas.'], Response::HTTP_BAD_REQUEST);
-        }
-
-        $clusters = $this->clusteringService->cluster($points, $numClusters);
-
-        return new JsonResponse([
-            'ok' => true,
-            'clusters' => $clusters,
-            'totalShipments' => \count($points),
-            'numClusters' => \count($clusters),
-        ]);
+        return new JsonResponse($result);
     }
 
     /**
-     * Preview route building with optional cluster hints.
+     * Determine which criterion contributes most to the driver's score.
      *
-     * Input JSON: {shipment_ids: [...], vehicle_ids: [...], origin_id: "...", max_stops: N, cluster_hints: [...]}
-     * The cluster_hints are passed as metadata to RouteBuilder via BuildRoutesInput.
+     * @param array{zone: float, rating: float, workload: float, skills: float} $breakdown
      */
-    #[Route('/preview', name: 'admin_route_planner_preview', methods: ['POST'])]
-    public function preview(Request $request): JsonResponse
+    private function getTopCriterion(array $breakdown): string
     {
-        try {
-            $payload = json_decode((string) $request->getContent(), true, 512, \JSON_THROW_ON_ERROR);
-        } catch (\JsonException) {
-            return new JsonResponse(['error' => 'JSON invalido.'], Response::HTTP_BAD_REQUEST);
+        $labels = [
+            'zone' => 'Zona',
+            'rating' => 'Valoracion',
+            'workload' => 'Disponibilidad',
+            'skills' => 'Habilidades',
+        ];
+
+        $maxKey = 'zone';
+        $maxVal = 0.0;
+
+        foreach ($breakdown as $key => $val) {
+            if ($val > $maxVal) {
+                $maxVal = $val;
+                $maxKey = $key;
+            }
         }
 
-        $shipmentIds = $payload['shipment_ids'] ?? [];
-        $vehicleIds = $payload['vehicle_ids'] ?? [];
-
-        if (!\is_array($shipmentIds) || $shipmentIds === []) {
-            return new JsonResponse(['error' => 'Se requiere al menos un shipment_id.'], Response::HTTP_BAD_REQUEST);
-        }
-
-        if (!\is_array($vehicleIds) || $vehicleIds === []) {
-            return new JsonResponse(['error' => 'Se requiere al menos un vehicle_id.'], Response::HTTP_BAD_REQUEST);
-        }
-
-        $clusterHints = null;
-        if (isset($payload['cluster_hints']) && \is_array($payload['cluster_hints'])) {
-            $clusterHints = $payload['cluster_hints'];
-        }
-
-        $input = new BuildRoutesInput(
-            shipmentPublicIds: array_map('strval', $shipmentIds),
-            vehiclePublicIds: array_map('strval', $vehicleIds),
-            originPublicId: isset($payload['origin_id']) ? (string) $payload['origin_id'] : null,
-            maxStopsPerRoute: (int) ($payload['max_stops'] ?? 30),
-            clusterHints: $clusterHints,
-        );
-
-        try {
-            $result = $this->routePlanningService->buildRoutes($input);
-        } catch (\InvalidArgumentException $e) {
-            return new JsonResponse(['error' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
-        }
-
-        return new JsonResponse([
-            'ok' => true,
-            'result' => $result->toArray(),
-            'clusterHintsApplied' => $clusterHints !== null,
-        ]);
+        return $labels[$maxKey] ?? $maxKey;
     }
 }
