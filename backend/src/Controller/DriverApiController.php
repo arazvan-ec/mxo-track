@@ -439,6 +439,24 @@ class DriverApiController extends AbstractController
             return $errorResponder->unprocessableEntity('validation_failed', $violations);
         }
 
+        // Validate each inspection item has required schema: name (non-empty string) and checked (bool)
+        foreach ($input->items as $index => $item) {
+            if (!is_array($item)
+                || !array_key_exists('name', $item)
+                || !is_string($item['name'])
+                || $item['name'] === ''
+                || !array_key_exists('checked', $item)
+                || !is_bool($item['checked'])
+            ) {
+                return new JsonResponse([
+                    'error' => [
+                        'code' => 'invalid_inspection_item',
+                        'message' => sprintf('Item %d inválido: debe tener "name" (string no vacío) y "checked" (booleano).', $index),
+                    ],
+                ], 422);
+            }
+        }
+
         $route = $routeRepository->findOneByPublicId($routePublicId);
         if (!$route instanceof RouteEntity) {
             return $errorResponder->notFound('route_not_found', 'Ruta no encontrada.');
@@ -473,10 +491,17 @@ class DriverApiController extends AbstractController
     }
 
     /**
-     * @return array{navigationUrl: string, wazeUrl: string}
+     * @return array{navigationUrl: string|null, wazeUrl: string|null}
      */
     private function buildNavigationUrls(float $lat, float $lng): array
     {
+        if ($lat < -90.0 || $lat > 90.0 || $lng < -180.0 || $lng > 180.0) {
+            return [
+                'navigationUrl' => null,
+                'wazeUrl' => null,
+            ];
+        }
+
         return [
             'navigationUrl' => sprintf('https://www.google.com/maps/dir/?api=1&destination=%s,%s', $lat, $lng),
             'wazeUrl' => sprintf('https://waze.com/ul?ll=%s,%s&navigate=yes', $lat, $lng),

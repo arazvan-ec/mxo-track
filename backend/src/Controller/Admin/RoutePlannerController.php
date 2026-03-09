@@ -126,6 +126,11 @@ class RoutePlannerController extends AbstractController
                 continue;
             }
 
+            if (!$driver->hasRole('ROLE_DRIVER')) {
+                $errors[] = sprintf('El usuario "%s" no tiene el rol de conductor.', $driverPublicId);
+                continue;
+            }
+
             $route->setDriver($driver);
             $assigned++;
         }
