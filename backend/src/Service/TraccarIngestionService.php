@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Domain\Event\VehiclePositionReceived;
 use App\Entity\Route;
 use App\Entity\Vehicle;
 use App\Entity\VehicleCheckpoint;
@@ -16,6 +17,7 @@ use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\Update;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 use Throwable;
 
 final class TraccarIngestionService
@@ -23,6 +25,7 @@ final class TraccarIngestionService
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly HubInterface $hub,
+        private readonly EventDispatcherInterface $eventDispatcher,
     ) {
     }
 
@@ -104,6 +107,15 @@ final class TraccarIngestionService
             } catch (Throwable) {
                 // no romper ingesta por fallo temporal de Mercure
             }
+
+            $this->eventDispatcher->dispatch(new VehiclePositionReceived(
+                vehiclePublicId: $vehicle->getPublicIdString(),
+                latitude: $lat,
+                longitude: $lng,
+                speed: $speed,
+                course: $course,
+                deviceTime: $deviceTime,
+            ));
         }
 
         return $created;

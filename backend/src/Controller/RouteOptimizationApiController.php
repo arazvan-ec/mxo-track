@@ -4,15 +4,13 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
-use App\Entity\Customer;
-use App\Entity\CustomerLocation;
+use App\Application\Route\BuildRoutesInput;
+use App\Application\Route\RouteNotFoundException;
+use App\Application\Route\RoutePlanningService;
 use App\Entity\Route as RouteEntity;
-use App\Entity\Shipment;
-use App\Entity\Vehicle;
 use App\Http\ApiErrorResponder;
 use App\Repository\RouteRepository;
 use App\Service\DeliveryNoteGenerator;
-use App\Service\RouteBuilder;
 use App\Service\RouteCapacityValidator;
 use App\Service\RouteOptimizationService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -29,7 +27,7 @@ class RouteOptimizationApiController extends AbstractController
         private readonly EntityManagerInterface $em,
         private readonly RouteOptimizationService $optimizer,
         private readonly RouteCapacityValidator $capacityValidator,
-        private readonly RouteBuilder $routeBuilder,
+        private readonly RoutePlanningService $routePlanningService,
         private readonly DeliveryNoteGenerator $deliveryNoteGenerator,
         private readonly ApiErrorResponder $errorResponder,
     ) {}
@@ -41,33 +39,13 @@ class RouteOptimizationApiController extends AbstractController
     #[IsGranted('ROLE_OPERATOR')]
     public function optimizeRoute(string $publicId): JsonResponse
     {
-        $route = $this->findRouteByPublicId($publicId);
-        if ($route === null) {
+        try {
+            $result = $this->routePlanningService->optimizeRoute($publicId, apply: true);
+        } catch (RouteNotFoundException) {
             return $this->errorResponder->notFound('Ruta no encontrada.');
         }
 
-        $result = $this->optimizer->optimizeStopOrder($route);
-        $this->optimizer->applyOptimizedOrder($result['optimized']);
-
-        // Update route with VROOM's real road distance and duration
-        $route->setTotalDistanceKm($result['distanceAfter']);
-        $route->setEstimatedDurationMinutes($result['durationMinutes']);
-
-        $this->em->flush();
-
-        return new JsonResponse([
-            'distanceBefore' => round($result['distanceBefore'], 2),
-            'distanceAfter' => round($result['distanceAfter'], 2),
-            'improvement' => $result['distanceBefore'] > 0
-                ? round((1 - $result['distanceAfter'] / $result['distanceBefore']) * 100, 1)
-                : 0,
-            'estimatedDurationMinutes' => $result['durationMinutes'],
-            'stops' => array_map(static fn (array $item): array => [
-                'publicId' => $item['stop']->getPublicIdString(),
-                'sequence' => $item['newSequence'],
-                'address' => $item['stop']->getAddress(),
-            ], $result['optimized']),
-        ]);
+        return new JsonResponse($result->toArray());
     }
 
     /**
@@ -121,71 +99,23 @@ class RouteOptimizationApiController extends AbstractController
 
         $shipmentIds = $data['shipment_ids'] ?? [];
         $vehicleIds = $data['vehicle_ids'] ?? [];
-        $originId = $data['origin_id'] ?? null;
-        $maxStopsPerRoute = $data['max_stops_per_route'] ?? 30;
 
         if (\count($shipmentIds) === 0 || \count($vehicleIds) === 0) {
             return $this->errorResponder->badRequest('Se requieren shipment_ids y vehicle_ids.');
         }
 
-        // Load entities
-        $shipments = $this->em->getRepository(Shipment::class)
-            ->createQueryBuilder('s')
-            ->where('s.publicId IN (:ids)')
-            ->setParameter('ids', $shipmentIds)
-            ->getQuery()
-            ->getResult();
-
-        $vehicles = $this->em->getRepository(Vehicle::class)
-            ->createQueryBuilder('v')
-            ->where('v.publicId IN (:ids)')
-            ->setParameter('ids', $vehicleIds)
-            ->getQuery()
-            ->getResult();
-
-        if (\count($shipments) === 0) {
-            return $this->errorResponder->badRequest('No se encontraron envíos válidos.');
+        try {
+            $result = $this->routePlanningService->buildRoutes(new BuildRoutesInput(
+                shipmentPublicIds: $shipmentIds,
+                vehiclePublicIds: $vehicleIds,
+                originPublicId: $data['origin_id'] ?? null,
+                maxStopsPerRoute: (int) ($data['max_stops_per_route'] ?? 30),
+            ));
+        } catch (\InvalidArgumentException $e) {
+            return $this->errorResponder->badRequest($e->getMessage());
         }
 
-        // Find customer from first shipment
-        $customer = $shipments[0]->getCustomer();
-
-        $origin = null;
-        if ($originId !== null) {
-            $origin = $this->em->getRepository(CustomerLocation::class)
-                ->findOneBy(['publicId' => $originId]);
-        }
-
-        $results = $this->routeBuilder->buildRoutes(
-            $shipments,
-            $vehicles,
-            $customer,
-            $origin,
-            (int) $maxStopsPerRoute,
-        );
-
-        $this->em->flush();
-
-        $response = [];
-        foreach ($results as $result) {
-            $route = $result['route'];
-            $response[] = [
-                'route' => [
-                    'publicId' => $route->getPublicIdString(),
-                    'name' => $route->getName(),
-                    'vehicle' => $route->getVehicle()?->getName(),
-                    'totalDistanceKm' => $route->getTotalDistanceKm(),
-                    'estimatedDurationMinutes' => $route->getEstimatedDurationMinutes(),
-                ],
-                'stopsCount' => \count($result['stops']),
-                'validation' => $result['validation'],
-            ];
-        }
-
-        return new JsonResponse([
-            'routesCreated' => \count($results),
-            'routes' => $response,
-        ]);
+        return new JsonResponse($result->toArray());
     }
 
     /**
