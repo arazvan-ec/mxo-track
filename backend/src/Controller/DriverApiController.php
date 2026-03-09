@@ -19,6 +19,7 @@ use App\Entity\DriverFeedback;
 use App\Entity\Route as RouteEntity;
 use App\Entity\RouteStop;
 use App\Entity\User;
+use App\Entity\VehicleInspection;
 use App\Http\ApiErrorResponder;
 use App\Repository\PodRepository;
 use App\Repository\RouteRepository;
@@ -57,10 +58,26 @@ class DriverApiController extends AbstractController
     public function start(
         string $routePublicId,
         RouteLifecycleService $lifecycleService,
+        RouteRepository $routeRepository,
+        EntityManagerInterface $entityManager,
         ApiErrorResponder $errorResponder,
     ): JsonResponse {
         /** @var User $driver */
         $driver = $this->getUser();
+
+        // Check vehicle inspection is completed before allowing route start
+        $route = $routeRepository->findOneByPublicId($routePublicId);
+        if ($route instanceof RouteEntity) {
+            $inspection = $entityManager->getRepository(VehicleInspection::class)
+                ->findOneBy(['route' => $route]);
+
+            if ($inspection === null || !$inspection->isCompleted()) {
+                return $errorResponder->badRequest(
+                    'inspection_required',
+                    'Debe completar la inspeccion del vehiculo antes de iniciar la ruta.',
+                );
+            }
+        }
 
         try {
             $route = $lifecycleService->startRoute($routePublicId, $driver);
@@ -107,6 +124,19 @@ class DriverApiController extends AbstractController
         $items = array_map(static fn (RouteStop $stop): array => [
             'public_id' => $stop->getPublicIdString(),
             'status' => $stop->getStatus()->value,
+            'sequence' => $stop->getSequence(),
+            'address' => $stop->getAddress(),
+            'latitude' => $stop->getLatitude(),
+            'longitude' => $stop->getLongitude(),
+            'recipient_name' => $stop->getRecipientName(),
+            'recipient_phone' => $stop->getRecipientPhone(),
+            'is_origin' => $stop->isOrigin(),
+            'navigation_url' => $stop->getLatitude() !== null && $stop->getLongitude() !== null
+                ? sprintf('https://www.google.com/maps/dir/?api=1&destination=%s,%s', $stop->getLatitude(), $stop->getLongitude())
+                : null,
+            'waze_url' => $stop->getLatitude() !== null && $stop->getLongitude() !== null
+                ? sprintf('https://waze.com/ul?ll=%s,%s&navigate=yes', $stop->getLatitude(), $stop->getLongitude())
+                : null,
         ], $stops);
 
         return $this->json(['items' => $items]);
@@ -351,6 +381,99 @@ class DriverApiController extends AbstractController
         $briefing = $briefingService->generateBriefing($route);
 
         return $this->json($briefing->toArray());
+    }
+
+    #[Route('/routes/{routePublicId}/inspection', methods: ['GET'])]
+    public function getInspection(
+        string $routePublicId,
+        RouteRepository $routeRepository,
+        EntityManagerInterface $entityManager,
+        ApiErrorResponder $errorResponder,
+    ): JsonResponse {
+        $route = $routeRepository->findOneByPublicId($routePublicId);
+        if (!$route instanceof RouteEntity) {
+            return $errorResponder->notFound('route_not_found', 'Ruta no encontrada.');
+        }
+
+        /** @var User $driver */
+        $driver = $this->getUser();
+        if ($route->getDriver()?->getId() !== $driver->getId()) {
+            return $errorResponder->notFound('route_not_found', 'Ruta no encontrada.');
+        }
+
+        $inspection = $entityManager->getRepository(VehicleInspection::class)
+            ->findOneBy(['route' => $route]);
+
+        if ($inspection !== null) {
+            return $this->json([
+                'public_id' => $inspection->getPublicIdString(),
+                'items' => $inspection->getItems(),
+                'completed' => $inspection->isCompleted(),
+                'completed_at' => $inspection->getCompletedAt()?->format(\DATE_ATOM),
+                'notes' => $inspection->getNotes(),
+            ]);
+        }
+
+        // Return default checklist template
+        $defaultItems = array_map(
+            static fn(string $name) => ['name' => $name, 'checked' => false],
+            VehicleInspection::defaultChecklistItems(),
+        );
+
+        return $this->json([
+            'public_id' => null,
+            'items' => $defaultItems,
+            'completed' => false,
+            'completed_at' => null,
+            'notes' => null,
+        ]);
+    }
+
+    #[Route('/routes/{routePublicId}/inspection', methods: ['POST'])]
+    public function submitInspection(
+        string $routePublicId,
+        Request $request,
+        RouteRepository $routeRepository,
+        EntityManagerInterface $entityManager,
+        ApiErrorResponder $errorResponder,
+    ): JsonResponse {
+        $route = $routeRepository->findOneByPublicId($routePublicId);
+        if (!$route instanceof RouteEntity) {
+            return $errorResponder->notFound('route_not_found', 'Ruta no encontrada.');
+        }
+
+        /** @var User $driver */
+        $driver = $this->getUser();
+        if ($route->getDriver()?->getId() !== $driver->getId()) {
+            return $errorResponder->notFound('route_not_found', 'Ruta no encontrada.');
+        }
+
+        $payload = $this->decodePayload($request, $errorResponder);
+        if ($payload instanceof JsonResponse) {
+            return $payload;
+        }
+
+        if (!isset($payload['items']) || !\is_array($payload['items'])) {
+            return $errorResponder->badRequest('invalid_payload', 'Se requiere un array de items.');
+        }
+
+        $existing = $entityManager->getRepository(VehicleInspection::class)
+            ->findOneBy(['route' => $route]);
+
+        $inspection = $existing ?? new VehicleInspection($route, $driver);
+        $inspection->setItems($payload['items']);
+        $inspection->setNotes($payload['notes'] ?? null);
+
+        if ($existing === null) {
+            $entityManager->persist($inspection);
+        }
+        $entityManager->flush();
+
+        return $this->json([
+            'ok' => true,
+            'public_id' => $inspection->getPublicIdString(),
+            'completed' => $inspection->isCompleted(),
+        ], $existing !== null ? 200 : 201);
     }
 
     /**

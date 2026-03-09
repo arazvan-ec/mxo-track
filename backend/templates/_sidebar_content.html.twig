@@ -89,6 +89,22 @@
         </a>
       </li>
 
+      {# Planificador de Rutas #}
+      <li>
+        <a href="{{ path('admin_route_planner') }}"
+           class="group flex items-center gap-x-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors
+                  {% if app.request.attributes.get('_route') starts with 'admin_route_planner' %}
+                    bg-slate-900 text-white
+                  {% else %}
+                    text-slate-300 hover:bg-slate-700 hover:text-white
+                  {% endif %}">
+          <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6.429 9.75L2.25 12l4.179 2.25m0-4.5l5.571 3 5.571-3m-11.142 0L2.25 7.5 12 2.25l9.75 5.25-4.179 2.25m0 0L12 12.75 6.429 9.75m11.142 0l4.179 2.25L12 17.25 2.25 12l4.179-2.25m11.142 0L12 7.5"/>
+          </svg>
+          Planificador
+        </a>
+      </li>
+
       {# Clientes #}
       <li>
         <a href="{{ path('admin_customers_index') }}"
