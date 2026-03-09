@@ -186,8 +186,85 @@ class RoutePlannerController extends AbstractController
     }
 
     #[SymfonyRoute('/confirm', name: 'admin_route_planner_confirm', methods: ['POST'])]
-    public function confirm(): Response
+    public function confirm(Request $request): Response
     {
-        return $this->redirectToRoute('admin_routes_index');
+        try {
+            $payload = json_decode((string) $request->getContent(), true, 512, \JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            $this->addFlash('error', 'Datos invalidos.');
+
+            return $this->redirectToRoute('admin_route_planner_index');
+        }
+
+        $shipmentIds = $payload['shipment_ids'] ?? [];
+        $vehicleIds = $payload['vehicle_ids'] ?? [];
+        $originPublicId = $payload['origin_public_id'] ?? null;
+        $maxStopsPerRoute = (int) ($payload['max_stops_per_route'] ?? 30);
+
+        if (\count($shipmentIds) === 0 || \count($vehicleIds) === 0) {
+            $this->addFlash('error', 'Se requieren envios y vehiculos.');
+
+            return $this->redirectToRoute('admin_route_planner_index');
+        }
+
+        /** @var list<Shipment> $shipments */
+        $shipments = $this->em->getRepository(Shipment::class)
+            ->createQueryBuilder('s')
+            ->where('s.publicId IN (:ids)')
+            ->setParameter('ids', $shipmentIds)
+            ->getQuery()
+            ->getResult();
+
+        if (\count($shipments) === 0) {
+            $this->addFlash('error', 'No se encontraron envios validos.');
+
+            return $this->redirectToRoute('admin_route_planner_index');
+        }
+
+        /** @var list<Vehicle> $vehicles */
+        $vehicles = $this->em->getRepository(Vehicle::class)
+            ->createQueryBuilder('v')
+            ->where('v.publicId IN (:ids)')
+            ->setParameter('ids', $vehicleIds)
+            ->getQuery()
+            ->getResult();
+
+        if (\count($vehicles) === 0) {
+            $this->addFlash('error', 'No se encontraron vehiculos validos.');
+
+            return $this->redirectToRoute('admin_route_planner_index');
+        }
+
+        $customer = $shipments[0]->getCustomer();
+
+        $origin = null;
+        if ($originPublicId !== null && $originPublicId !== '') {
+            $origin = $this->em->getRepository(CustomerLocation::class)
+                ->findOneBy(['publicId' => $originPublicId]);
+        }
+
+        try {
+            $results = $this->routeBuilder->buildRoutes(
+                $shipments,
+                $vehicles,
+                $customer,
+                $origin,
+                $maxStopsPerRoute,
+            );
+
+            $this->em->flush();
+        } catch (\Throwable $e) {
+            $this->addFlash('error', 'Error al crear rutas: ' . $e->getMessage());
+
+            return $this->redirectToRoute('admin_route_planner_index');
+        }
+
+        $this->addFlash('success', sprintf('%d ruta(s) creada(s) correctamente.', \count($results)));
+
+        return new JsonResponse([
+            'success' => true,
+            'routesCreated' => \count($results),
+            'redirectUrl' => $this->generateUrl('admin_routes_index'),
+        ]);
     }
 }
