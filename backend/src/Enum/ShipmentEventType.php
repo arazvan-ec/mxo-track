@@ -13,4 +13,5 @@ enum ShipmentEventType: string
     case OUT_FOR_DELIVERY = 'OUT_FOR_DELIVERY';
     case DELIVERED = 'DELIVERED';
     case EXCEPTION = 'EXCEPTION';
+    case RESCHEDULE_REQUESTED = 'RESCHEDULE_REQUESTED';
 }
