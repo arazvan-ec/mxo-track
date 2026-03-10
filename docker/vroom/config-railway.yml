@@ -5,12 +5,14 @@ cliArgs:
   logsize: "10M"
   geometry: true
   planmode: true
+  router: "osrm"
   threads: 4
   timeout: 300000
   maxlocations: 1000
   maxvehicles: 200
 
-router:
+routingServers:
   osrm:
-    host: "osrm-mxo.railway.internal"
-    port: "5000"
+    car:
+      host: "osrm-mxo.railway.internal"
+      port: "5000"
