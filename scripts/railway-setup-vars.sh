@@ -114,8 +114,11 @@ SVC_MERCURE=${SVC_MERCURE:-mercure}
 read -rp "  Traccar service name [traccar]: " SVC_TRACCAR
 SVC_TRACCAR=${SVC_TRACCAR:-traccar}
 
-read -rp "  PostgreSQL service name [Postgres]: " SVC_PG
+read -rp "  PostgreSQL (app) service name [Postgres]: " SVC_PG
 SVC_PG=${SVC_PG:-Postgres}
+
+read -rp "  PostgreSQL (traccar) service name [traccar-db]: " SVC_TRACCAR_DB
+SVC_TRACCAR_DB=${SVC_TRACCAR_DB:-traccar-db}
 
 read -rp "  Redis service name [Redis]: " SVC_REDIS
 SVC_REDIS=${SVC_REDIS:-Redis}
@@ -145,6 +148,31 @@ if [ -z "$REDIS_URL" ]; then
     error "REDIS_URL is required."
     exit 1
 fi
+
+echo ""
+echo -e "${BOLD}Traccar DB connection${NC} (from $SVC_TRACCAR_DB service)"
+echo ""
+
+read -rp "  TRACCAR_DB_HOST (internal host, e.g. traccar-db.railway.internal): " TRACCAR_DB_HOST
+if [ -z "$TRACCAR_DB_HOST" ]; then
+    error "TRACCAR_DB_HOST is required."
+    exit 1
+fi
+
+read -rp "  TRACCAR_DB_PORT [5432]: " TRACCAR_DB_PORT
+TRACCAR_DB_PORT=${TRACCAR_DB_PORT:-5432}
+
+read -rp "  TRACCAR_DB_USER [postgres]: " TRACCAR_DB_USER
+TRACCAR_DB_USER=${TRACCAR_DB_USER:-postgres}
+
+read -rp "  TRACCAR_DB_PASSWORD: " TRACCAR_DB_PASSWORD
+if [ -z "$TRACCAR_DB_PASSWORD" ]; then
+    error "TRACCAR_DB_PASSWORD is required."
+    exit 1
+fi
+
+read -rp "  TRACCAR_DB_NAME [traccar]: " TRACCAR_DB_NAME
+TRACCAR_DB_NAME=${TRACCAR_DB_NAME:-traccar}
 
 echo ""
 echo -e "${BOLD}Public URLs${NC}"
@@ -193,7 +221,7 @@ echo -e "${BOLD}Summary — variables will be set on:${NC}"
 echo "  App ($SVC_APP):     18 variables"
 echo "  Worker ($SVC_WORKER):  13 variables"
 echo "  Mercure ($SVC_MERCURE): 7 variables"
-echo "  Traccar ($SVC_TRACCAR): 1 variable"
+echo "  Traccar ($SVC_TRACCAR): 6 variables"
 echo "  OSRM ($SVC_OSRM):     1 variable"
 echo "  VROOM ($SVC_VROOM):   1 variable"
 echo ""
@@ -261,11 +289,15 @@ set_vars "$SVC_MERCURE" \
     "MERCURE_CORS_ORIGINS=${APP_URL}"
 
 # =============================================================================
-# TRACCAR service — no custom vars needed (config baked in Dockerfile)
-# but set PORT so Railway knows which port to route to
+# TRACCAR service — PostgreSQL connection + PORT
 # =============================================================================
 set_vars "$SVC_TRACCAR" \
-    "PORT=8082"
+    "PORT=8082" \
+    "TRACCAR_DB_HOST=${TRACCAR_DB_HOST}" \
+    "TRACCAR_DB_PORT=${TRACCAR_DB_PORT}" \
+    "TRACCAR_DB_USER=${TRACCAR_DB_USER}" \
+    "TRACCAR_DB_PASSWORD=${TRACCAR_DB_PASSWORD}" \
+    "TRACCAR_DB_NAME=${TRACCAR_DB_NAME}"
 
 # =============================================================================
 # OSRM service — internal routing engine, no public access needed

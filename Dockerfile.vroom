@@ -1,4 +1,4 @@
-FROM ghcr.io/vroom-project/vroom-docker:v1.15.0
+FROM ghcr.io/vroom-project/vroom-docker:v1.14.0
 
 COPY docker/vroom/config-railway.yml /conf/config.yml
 

@@ -7,8 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl \
 COPY scripts/osrm-start.sh /opt/osrm-start.sh
 RUN chmod +x /opt/osrm-start.sh
 
-# Volume mount point for persistent map data (Railway volume)
-VOLUME ["/data"]
+# Mount /data as a Railway volume from the dashboard for persistent map data
 
 EXPOSE 5000
 

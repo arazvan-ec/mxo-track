@@ -45,7 +45,7 @@ VROOM y OSRM solo existen en `docker-compose.local.yml` (desarrollo local). Las 
 
 | Campo | Valor |
 |-------|-------|
-| Imagen base | `ghcr.io/vroom-project/vroom-docker:v1.15.0` |
+| Imagen base | `ghcr.io/vroom-project/vroom-docker:v1.14.0` |
 | Dockerfile | `Dockerfile.vroom` |
 | Puerto | 3000 (interno) |
 | Dominio público | No |

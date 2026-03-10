@@ -1,8 +1,7 @@
 FROM traccar/traccar:latest
 
-# Install PostgreSQL client for pg_isready and createdb
-RUN apt-get update && apt-get install -y --no-install-recommends postgresql-client \
-    && rm -rf /var/lib/apt/lists/*
+# Install PostgreSQL client for pg_isready and createdb (Alpine-based image)
+RUN apk add --no-cache postgresql-client
 
 COPY docker/traccar-railway/traccar.xml /opt/traccar/conf/traccar.xml
 COPY scripts/traccar-start.sh /opt/traccar-start.sh
