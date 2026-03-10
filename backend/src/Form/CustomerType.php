@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Form;
 
 use App\Entity\Customer;
+use App\Enum\ClientFrequency;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
+use Symfony\Component\Form\Extension\Core\Type\EnumType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
@@ -42,6 +44,24 @@ class CustomerType extends AbstractType
                 'attr' => [
                     'class' => 'w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm',
                     'placeholder' => '+34 600 000 000',
+                ],
+            ])
+            ->add('frequency', EnumType::class, [
+                'class' => ClientFrequency::class,
+                'label' => 'Frecuencia',
+                'required' => false,
+                'placeholder' => 'Seleccionar frecuencia',
+                'choice_label' => static fn (ClientFrequency $f): string => $f->label(),
+                'attr' => [
+                    'class' => 'w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm',
+                ],
+            ])
+            ->add('preferredDeliverySlot', TextType::class, [
+                'label' => 'Horario de entrega preferido',
+                'required' => false,
+                'attr' => [
+                    'class' => 'w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm',
+                    'placeholder' => 'ej. 9:00-14:00',
                 ],
             ])
             ->add('isActive', CheckboxType::class, [

@@ -19,6 +19,9 @@
           <tr>
             <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Nombre</th>
             <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Traccar ID</th>
+            <th scope="col" class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Peso max (kg)</th>
+            <th scope="col" class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Volumen max (m³)</th>
+            <th scope="col" class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Bultos max</th>
             <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Estado</th>
             <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Ultima posicion</th>
             <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Creado</th>
@@ -33,6 +36,15 @@
               </td>
               <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
                 {{ vehicle.traccarDeviceId ?? '-' }}
+              </td>
+              <td class="whitespace-nowrap px-6 py-4 text-sm text-right text-gray-500">
+                {{ vehicle.maxWeightKg is not null ? vehicle.maxWeightKg|number_format(2) : '-' }}
+              </td>
+              <td class="whitespace-nowrap px-6 py-4 text-sm text-right text-gray-500">
+                {{ vehicle.maxVolumeM3 is not null ? vehicle.maxVolumeM3|number_format(4) : '-' }}
+              </td>
+              <td class="whitespace-nowrap px-6 py-4 text-sm text-right text-gray-500">
+                {{ vehicle.maxParcels ?? '-' }}
               </td>
               <td class="whitespace-nowrap px-6 py-4 text-sm">
                 {% if vehicle.active %}
@@ -66,7 +78,7 @@
             </tr>
           {% else %}
             <tr>
-              <td colspan="6" class="px-6 py-8 text-center text-sm text-gray-500">
+              <td colspan="9" class="px-6 py-8 text-center text-sm text-gray-500">
                 No hay vehiculos registrados.
               </td>
             </tr>

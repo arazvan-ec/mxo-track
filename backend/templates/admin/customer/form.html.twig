@@ -34,6 +34,18 @@
           {{ form_errors(form.contactPhone) }}
         </div>
 
+        <div>
+          {{ form_label(form.frequency, null, {label_attr: {class: 'block text-sm font-medium text-gray-700 mb-1'}}) }}
+          {{ form_widget(form.frequency) }}
+          {{ form_errors(form.frequency) }}
+        </div>
+
+        <div>
+          {{ form_label(form.preferredDeliverySlot, null, {label_attr: {class: 'block text-sm font-medium text-gray-700 mb-1'}}) }}
+          {{ form_widget(form.preferredDeliverySlot) }}
+          {{ form_errors(form.preferredDeliverySlot) }}
+        </div>
+
         <div class="flex items-center">
           {{ form_widget(form.isActive, {attr: {class: 'h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500'}}) }}
           {{ form_label(form.isActive, null, {label_attr: {class: 'ml-2 block text-sm text-gray-700'}}) }}
