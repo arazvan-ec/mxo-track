@@ -98,8 +98,7 @@
           <div x-show="open" x-collapse x-cloak class="mt-3">
             <div class="rounded-lg bg-gray-50 p-4 ring-1 ring-gray-200">
               <p class="text-sm text-gray-700 mb-3">
-                El archivo debe incluir una fila de cabecera con las siguientes 7 columnas.
-                Solo <strong>reference</strong> es obligatoria; las demas son opcionales.
+                El archivo debe incluir una fila de cabecera. Solo <strong>reference</strong> es obligatoria; las demas columnas son opcionales.
               </p>
               <div class="overflow-x-auto">
                 <table class="min-w-full text-xs">
@@ -141,7 +140,7 @@
                       <td class="py-1.5 pr-4">Telefono del destinatario</td>
                       <td class="py-1.5 font-mono">+34612345678</td>
                     </tr>
-                    <tr>
+                    <tr class="border-b border-gray-100">
                       <td class="py-1.5 pr-4 font-mono">notes</td>
                       <td class="py-1.5 pr-4">Notas de entrega</td>
                       <td class="py-1.5 font-mono">Entregar en porteria</td>
@@ -151,10 +150,60 @@
               </div>
 
               <div class="mt-3 pt-3 border-t border-gray-200">
+                <p class="text-xs font-medium text-gray-700 mb-2">Columnas opcionales adicionales (para optimizacion de rutas):</p>
+                <div class="overflow-x-auto">
+                  <table class="min-w-full text-xs">
+                    <tbody class="text-gray-600">
+                      <tr class="border-b border-gray-100">
+                        <td class="py-1.5 pr-4 font-mono">service_type</td>
+                        <td class="py-1.5 pr-4">Tipo de servicio</td>
+                        <td class="py-1.5 font-mono">standard</td>
+                      </tr>
+                      <tr class="border-b border-gray-100">
+                        <td class="py-1.5 pr-4 font-mono">weight_kg</td>
+                        <td class="py-1.5 pr-4">Peso total en kilogramos</td>
+                        <td class="py-1.5 font-mono">2.50</td>
+                      </tr>
+                      <tr class="border-b border-gray-100">
+                        <td class="py-1.5 pr-4 font-mono">volume_m3</td>
+                        <td class="py-1.5 pr-4">Volumen total en metros cubicos</td>
+                        <td class="py-1.5 font-mono">0.0350</td>
+                      </tr>
+                      <tr class="border-b border-gray-100">
+                        <td class="py-1.5 pr-4 font-mono">num_parcels</td>
+                        <td class="py-1.5 pr-4">Numero de paquetes</td>
+                        <td class="py-1.5 font-mono">2</td>
+                      </tr>
+                      <tr class="border-b border-gray-100">
+                        <td class="py-1.5 pr-4 font-mono">ean</td>
+                        <td class="py-1.5 pr-4">Codigo EAN del producto</td>
+                        <td class="py-1.5 font-mono">8412345678901</td>
+                      </tr>
+                      <tr class="border-b border-gray-100">
+                        <td class="py-1.5 pr-4 font-mono">description</td>
+                        <td class="py-1.5 pr-4">Descripcion del paquete</td>
+                        <td class="py-1.5 font-mono">Caja electronica</td>
+                      </tr>
+                      <tr class="border-b border-gray-100">
+                        <td class="py-1.5 pr-4 font-mono">service_time_seconds</td>
+                        <td class="py-1.5 pr-4">Tiempo de servicio en segundos (default: 300)</td>
+                        <td class="py-1.5 font-mono">180</td>
+                      </tr>
+                      <tr>
+                        <td class="py-1.5 pr-4 font-mono">priority</td>
+                        <td class="py-1.5 pr-4">Prioridad (0-100, mayor = mas urgente)</td>
+                        <td class="py-1.5 font-mono">50</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="mt-3 pt-3 border-t border-gray-200">
                 <p class="text-xs text-gray-500 mb-2">Ejemplo de contenido CSV:</p>
-                <pre class="text-xs bg-white rounded p-2 ring-1 ring-gray-200 overflow-x-auto font-mono text-gray-700">reference,recipient_name,address,latitude,longitude,phone,notes
-REF-001,Juan Garcia,Calle Gran Via 42 Madrid,40.4200,-3.7025,+34612345678,Entregar en porteria
-REF-002,Maria Lopez,Av. de la Castellana 100,40.4515,-3.6903,+34698765432,</pre>
+                <pre class="text-xs bg-white rounded p-2 ring-1 ring-gray-200 overflow-x-auto font-mono text-gray-700">reference,recipient_name,address,latitude,longitude,phone,notes,weight_kg,volume_m3,num_parcels
+REF-001,Juan Garcia,Calle Gran Via 42 Madrid,40.4200,-3.7025,+34612345678,Entregar en porteria,2.50,0.0350,1
+REF-002,Maria Lopez,Av. de la Castellana 100,40.4515,-3.6903,+34698765432,,5.00,0.1200,3</pre>
               </div>
             </div>
           </div>
@@ -164,7 +213,7 @@ REF-002,Maria Lopez,Av. de la Castellana 100,40.4515,-3.6903,+34698765432,</pre>
 
       {# Form actions #}
       <div class="flex items-center justify-between gap-4 border-t border-gray-100 px-6 py-4 bg-gray-50 rounded-b-xl">
-        <a href="data:text/csv;charset=utf-8,reference%2Crecipient_name%2Caddress%2Clatitude%2Clongitude%2Cphone%2Cnotes%0AREF-001%2CJuan%20Garcia%2CCalle%20Gran%20Via%2042%20Madrid%2C40.4200%2C-3.7025%2C%2B34612345678%2CEntregar%20en%20porteria%0A"
+        <a href="data:text/csv;charset=utf-8,reference%2Crecipient_name%2Caddress%2Clatitude%2Clongitude%2Cphone%2Cnotes%2Cweight_kg%2Cvolume_m3%2Cnum_parcels%0AREF-001%2CJuan%20Garcia%2CCalle%20Gran%20Via%2042%20Madrid%2C40.4200%2C-3.7025%2C%2B34612345678%2CEntregar%20en%20porteria%2C2.50%2C0.0350%2C1%0A"
            download="plantilla_envios.csv"
            class="inline-flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900 transition-colors">
           <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
