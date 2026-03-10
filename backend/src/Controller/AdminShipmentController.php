@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Domain\Event\ShipmentsImported;
 use App\Entity\CsvImportRun;
 use App\Entity\Customer;
 use App\Service\ShipmentCsvImporter;
@@ -14,6 +15,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Uid\Ulid;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 #[Route('/admin/shipments')]
 #[IsGranted('ROLE_ADMIN')]
@@ -24,6 +26,7 @@ class AdminShipmentController extends AbstractController
         Request $request,
         EntityManagerInterface $entityManager,
         ShipmentCsvImporter $importer,
+        EventDispatcherInterface $eventDispatcher,
     ): Response {
         $customers = $entityManager->getRepository(Customer::class)->findAll();
         $result = null;
@@ -52,6 +55,17 @@ class AdminShipmentController extends AbstractController
             $result = $importer->import($csv->getPathname(), $customer);
 
             if ($result['created'] > 0) {
+                $latestRun = $entityManager->getRepository(CsvImportRun::class)->findOneBy(
+                    ['customer' => $customer],
+                    ['createdAt' => 'DESC'],
+                );
+                $eventDispatcher->dispatch(new ShipmentsImported(
+                    importRunId: $latestRun?->getId() ?? 0,
+                    customerId: $customer->getId(),
+                    createdCount: $result['created'],
+                    skippedCount: $result['skipped'],
+                ));
+
                 $this->addFlash(
                     'success',
                     sprintf('%d envio(s) creado(s) correctamente.', $result['created']),
