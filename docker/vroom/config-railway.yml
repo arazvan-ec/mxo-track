@@ -1,4 +1,6 @@
 cliArgs:
+  baseurl: "/"
+  port: 3000
   geometry: true
   planmode: true
 
