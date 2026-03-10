@@ -1,8 +1,14 @@
 cliArgs:
   baseurl: "/"
   port: 3000
+  logdir: "/tmp"
+  logsize: "10M"
   geometry: true
   planmode: true
+  threads: 4
+  timeout: 300000
+  maxlocations: 1000
+  maxvehicles: 200
 
 router:
   osrm:
