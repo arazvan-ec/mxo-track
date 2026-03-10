@@ -15,7 +15,7 @@ else
     echo "[osrm] First boot — downloading and processing map data..."
 
     echo "[osrm] Step 1/4: Downloading Comunidad de Madrid map (~75 MB)..."
-    curl -L -o "${MAP_FILE}" "${MAP_URL}"
+    wget -O "${MAP_FILE}" "${MAP_URL}"
 
     echo "[osrm] Step 2/4: Extracting road network..."
     osrm-extract -p /opt/car.lua "${MAP_FILE}"
