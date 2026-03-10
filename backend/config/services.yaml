@@ -83,6 +83,14 @@ services:
     arguments:
       $mlServiceUrl: '%env(ML_SERVICE_URL)%'
 
+  # Prediction / ML (Ports & Adapters) — Null for dev, swap to HttpMlServiceClient in prod
+  App\Prediction\EtaPredictorInterface:
+    alias: App\Prediction\NullEtaPredictor
+  App\Prediction\AnomalyDetectorInterface:
+    alias: App\Prediction\NullAnomalyDetector
+  App\Prediction\DemandForecasterInterface:
+    alias: App\Prediction\NullDemandForecaster
+
   # Geocoding (Ports & Adapters)
   App\Geocoding\NominatimGeocoder:
     arguments:
