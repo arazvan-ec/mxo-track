@@ -20,6 +20,9 @@ framework:
 
         routing:
             'App\Message\PostRouteAnalysisMessage': ml
+            'App\Message\EnrichRouteNotesMessage': async
+            'App\Message\NlpClassificationMessage': async
+            'App\Message\FleetAnomalyCheckMessage': async
 
 when@test:
     framework:

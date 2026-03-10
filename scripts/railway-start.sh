@@ -60,6 +60,9 @@ for i in $(seq 1 $MAX_ATTEMPTS); do
     sleep 2
 done
 
+echo "==> Running database migrations..."
+php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration --env=prod
+
 echo "==> Updating database schema..."
 php bin/console doctrine:schema:update --force --env=prod --no-interaction
 

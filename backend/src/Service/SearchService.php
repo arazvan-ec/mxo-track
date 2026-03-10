@@ -9,15 +9,19 @@ use App\Entity\Shipment;
 use App\Entity\User;
 use App\Entity\Vehicle;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 final class SearchService
 {
     private const int MAX_RESULTS_PER_TYPE = 10;
+    private const float SEMANTIC_MIN_SIMILARITY = 0.7;
 
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly UrlGeneratorInterface $urlGenerator,
+        private readonly EmbeddingService $embeddingService,
+        private readonly LoggerInterface $logger,
     ) {}
 
     /**
@@ -35,15 +39,18 @@ final class SearchService
         $isCustomer = $user !== null && $user->hasRole('ROLE_CUSTOMER') && !$isAdmin;
         $customer = $user?->getCustomer();
 
-        // Search shipments
+        // Keyword search (SQL LIKE)
         $results = array_merge($results, $this->searchShipments($query, $isCustomer, $customer));
-
-        // Search routes (only for admin/operator, or customer's own routes)
         $results = array_merge($results, $this->searchRoutes($query, $isAdmin, $isCustomer, $customer));
 
-        // Search vehicles (only admin/operator)
         if ($isAdmin) {
             $results = array_merge($results, $this->searchVehicles($query));
+        }
+
+        // Semantic search: complement with vector similarity when keyword results are sparse
+        if (\count($results) < 3) {
+            $semanticResults = $this->searchSemantic($query, $isCustomer, $customer);
+            $results = $this->mergeDeduplicateResults($results, $semanticResults);
         }
 
         return $results;
@@ -159,5 +166,67 @@ final class SearchService
         }
 
         return $results;
+    }
+
+    /**
+     * @return array<array{type: string, label: string, url: string, extra: string}>
+     */
+    private function searchSemantic(string $query, bool $isCustomer, ?\App\Entity\Customer $customer): array
+    {
+        try {
+            $matches = $this->embeddingService->search($query, 'shipment', self::MAX_RESULTS_PER_TYPE);
+        } catch (\Throwable $e) {
+            $this->logger->debug('Semantic search unavailable: {error}', ['error' => $e->getMessage()]);
+
+            return [];
+        }
+
+        $results = [];
+        foreach ($matches as $match) {
+            if ($match['similarity'] < self::SEMANTIC_MIN_SIMILARITY) {
+                continue;
+            }
+
+            $shipment = $this->em->getRepository(Shipment::class)->find($match['entity_id']);
+            if ($shipment === null) {
+                continue;
+            }
+
+            if ($isCustomer && $customer !== null && $shipment->getCustomer()?->getId() !== $customer->getId()) {
+                continue;
+            }
+
+            $results[] = [
+                'type' => 'shipment',
+                'label' => $shipment->getReference(),
+                'url' => $this->urlGenerator->generate('customer_shipments_show', ['publicId' => $shipment->getPublicIdString()]),
+                'extra' => $shipment->getRecipientName() ?? '',
+            ];
+        }
+
+        return $results;
+    }
+
+    /**
+     * @param array<array{type: string, label: string, url: string, extra: string}> $existing
+     * @param array<array{type: string, label: string, url: string, extra: string}> $additional
+     * @return array<array{type: string, label: string, url: string, extra: string}>
+     */
+    private function mergeDeduplicateResults(array $existing, array $additional): array
+    {
+        $seen = [];
+        foreach ($existing as $result) {
+            $seen[$result['type'] . ':' . $result['label']] = true;
+        }
+
+        foreach ($additional as $result) {
+            $key = $result['type'] . ':' . $result['label'];
+            if (!isset($seen[$key])) {
+                $existing[] = $result;
+                $seen[$key] = true;
+            }
+        }
+
+        return $existing;
     }
 }

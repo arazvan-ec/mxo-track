@@ -17,10 +17,12 @@ use App\Enum\ExceptionCode;
 use App\Enum\ShipmentEventType;
 use App\Repository\RouteStopRepository;
 use App\Repository\ShipmentRepository;
+use App\Message\NlpClassificationMessage;
 use App\Service\AuditLogger;
 use App\Service\DeliveryEvidenceFactory;
 use App\Service\DriverActionService;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 final readonly class DeliveryService
@@ -31,6 +33,7 @@ final readonly class DeliveryService
         private DeliveryEvidenceFactory $evidenceFactory,
         private AuditLogger $auditLogger,
         private EventDispatcherInterface $eventDispatcher,
+        private MessageBusInterface $messageBus,
         private RouteStopRepository $stopRepo,
         private ShipmentRepository $shipmentRepo,
     ) {}
@@ -118,14 +121,16 @@ final readonly class DeliveryService
         $reason = ExceptionCode::tryFrom($input->reason) ?? ExceptionCode::OTHER;
         $stop->markException($reason, $input->comment);
 
+        $shipmentEvent = null;
         if ($input->shipmentPublicId !== null) {
             $shipment = $this->shipmentRepo->findOneByPublicId($input->shipmentPublicId);
             if ($shipment instanceof Shipment) {
-                $this->em->persist(new ShipmentEvent($shipment, ShipmentEventType::EXCEPTION, [
+                $shipmentEvent = new ShipmentEvent($shipment, ShipmentEventType::EXCEPTION, [
                     'stop_public_id' => $stopPublicId,
                     'reason' => $reason->value,
                     'comment' => $input->comment,
-                ]));
+                ]);
+                $this->em->persist($shipmentEvent);
             }
         }
 
@@ -137,6 +142,14 @@ final readonly class DeliveryService
         ]);
 
         $this->em->flush();
+
+        if ($shipmentEvent !== null && $input->comment !== '') {
+            $this->messageBus->dispatch(new NlpClassificationMessage(
+                shipmentEventId: $shipmentEvent->getId(),
+                exceptionNotes: $input->comment,
+                exceptionCode: $reason->value,
+            ));
+        }
 
         $this->eventDispatcher->dispatch(new StopExceptionReported(
             stopPublicId: $stopPublicId,

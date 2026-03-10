@@ -46,6 +46,10 @@ class AiAssistantController extends AbstractController
 
         $result = $this->aiAssistantService->chat($userMessage, $customerId, $user);
 
+        if ($result['response'] === '') {
+            $result['response'] = 'El asistente IA no esta disponible. Verifica que CLAUDE_API_KEY esta configurada.';
+        }
+
         return $this->json($result);
     }
 }

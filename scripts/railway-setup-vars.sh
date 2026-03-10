@@ -120,6 +120,12 @@ SVC_PG=${SVC_PG:-Postgres}
 read -rp "  Redis service name [Redis]: " SVC_REDIS
 SVC_REDIS=${SVC_REDIS:-Redis}
 
+read -rp "  OSRM service name [osrm-mxo]: " SVC_OSRM
+SVC_OSRM=${SVC_OSRM:-osrm-mxo}
+
+read -rp "  VROOM service name [vroom-mxo]: " SVC_VROOM
+SVC_VROOM=${SVC_VROOM:-vroom-mxo}
+
 # =============================================================================
 # Gather URLs and connection strings
 # =============================================================================
@@ -176,16 +182,20 @@ echo -e "  TRACCAR_PASSWORD: ${CYAN}${TRACCAR_PASSWORD}${NC}"
 # Internal service URLs (Railway private networking)
 TRACCAR_INTERNAL="http://${SVC_TRACCAR}.railway.internal:8082"
 MERCURE_INTERNAL="http://${SVC_MERCURE}.railway.internal/.well-known/mercure"
+OSRM_INTERNAL="http://${SVC_OSRM}.railway.internal:5000"
+VROOM_INTERNAL="http://${SVC_VROOM}.railway.internal:3000"
 
 # =============================================================================
 # Confirm before applying
 # =============================================================================
 echo ""
 echo -e "${BOLD}Summary — variables will be set on:${NC}"
-echo "  App ($SVC_APP):     16 variables"
-echo "  Worker ($SVC_WORKER):  11 variables"
-echo "  Mercure ($SVC_MERCURE): 6 variables"
-echo "  Traccar ($SVC_TRACCAR): 0 variables (config baked in Dockerfile)"
+echo "  App ($SVC_APP):     18 variables"
+echo "  Worker ($SVC_WORKER):  13 variables"
+echo "  Mercure ($SVC_MERCURE): 7 variables"
+echo "  Traccar ($SVC_TRACCAR): 1 variable"
+echo "  OSRM ($SVC_OSRM):     1 variable"
+echo "  VROOM ($SVC_VROOM):   1 variable"
 echo ""
 read -rp "Proceed? [Y/n]: " CONFIRM
 CONFIRM=${CONFIRM:-Y}
@@ -216,7 +226,9 @@ set_vars "$SVC_APP" \
     "TRACCAR_USERNAME=admin" \
     "TRACCAR_PASSWORD=${TRACCAR_PASSWORD}" \
     "POD_STORAGE=database" \
-    "TRUSTED_PROXIES=REMOTE_ADDR"
+    "TRUSTED_PROXIES=REMOTE_ADDR" \
+    "OSRM_URL=${OSRM_INTERNAL}" \
+    "VROOM_URL=${VROOM_INTERNAL}"
 
 # =============================================================================
 # WORKER service
@@ -232,7 +244,9 @@ set_vars "$SVC_WORKER" \
     "TRACCAR_BASE_URL=${TRACCAR_INTERNAL}" \
     "TRACCAR_WS_URL=ws://${SVC_TRACCAR}.railway.internal:8082/api/socket" \
     "TRACCAR_USERNAME=admin" \
-    "TRACCAR_PASSWORD=${TRACCAR_PASSWORD}"
+    "TRACCAR_PASSWORD=${TRACCAR_PASSWORD}" \
+    "OSRM_URL=${OSRM_INTERNAL}" \
+    "VROOM_URL=${VROOM_INTERNAL}"
 
 # =============================================================================
 # MERCURE service
@@ -252,6 +266,18 @@ set_vars "$SVC_MERCURE" \
 # =============================================================================
 set_vars "$SVC_TRACCAR" \
     "PORT=8082"
+
+# =============================================================================
+# OSRM service — internal routing engine, no public access needed
+# =============================================================================
+set_vars "$SVC_OSRM" \
+    "PORT=5000"
+
+# =============================================================================
+# VROOM service — internal VRP optimizer, no public access needed
+# =============================================================================
+set_vars "$SVC_VROOM" \
+    "PORT=3000"
 
 # =============================================================================
 # Done
