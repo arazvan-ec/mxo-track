@@ -13,6 +13,7 @@ use App\Entity\Vehicle;
 use App\Entity\VehicleLastPosition;
 use App\Enum\RouteStatus;
 use App\Enum\RouteStopStatus;
+use App\Enum\VehicleSkill;
 use App\Service\VisibilityScopeService;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -51,13 +52,33 @@ final readonly class FleetOverviewService
             $routeVehicles = array_filter($routeVehicles, static fn (Vehicle $v) => isset($allowedIds[$v->getId()]));
         }
 
-        // Build vehicle data with last positions
+        // Build vehicle-to-route mapping for enrichment
+        $vehicleRouteMap = [];
+        foreach ($activeRoutes as $route) {
+            $v = $route->getVehicle();
+            if ($v !== null) {
+                $vehicleRouteMap[$v->getId()] = [
+                    'route_name' => $route->getName(),
+                    'driver_name' => $route->getDriver()?->getName() ?? $route->getDriver()?->getEmail(),
+                ];
+            }
+        }
+
+        // Build vehicle data with last positions, skills, route/driver info
         $vehiclesData = [];
         foreach ($routeVehicles as $vehicle) {
             $lastPos = $this->em->getRepository(VehicleLastPosition::class)->findOneBy(['vehicle' => $vehicle]);
+            $skills = $vehicle->getSkills();
+            $primarySkill = $skills[0] ?? null;
+            $routeInfo = $vehicleRouteMap[$vehicle->getId()] ?? ['route_name' => null, 'driver_name' => null];
+
             $vehiclesData[] = [
                 'public_id' => $vehicle->getPublicIdString(),
                 'name' => $vehicle->getName(),
+                'skills' => array_map(static fn (VehicleSkill $s) => $s->name, $skills),
+                'marker_color' => $primarySkill?->markerColor() ?? VehicleSkill::defaultMarkerColor(),
+                'route_name' => $routeInfo['route_name'],
+                'driver_name' => $routeInfo['driver_name'],
                 'last_position' => $lastPos !== null ? [
                     'lat' => $lastPos->getLat(),
                     'lng' => $lastPos->getLng(),
