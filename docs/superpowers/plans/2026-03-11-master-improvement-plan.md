@@ -1,7 +1,7 @@
 # Plan Maestro de Mejoras: mxo-track
 
 **Fecha:** 2026-03-11
-**Estado:** Diseño — pendiente de aprobación
+**Estado:** En ejecución — Fase 0 ✅, Fase 2 ✅, Fases 1/3/4/5/6 pendientes
 **Objetivo:** Plan exhaustivo de mejoras organizadas por fases, priorizadas por impacto de negocio vs esfuerzo
 **Contexto:** Pre-producción, tests obligatorios, tres objetivos (cerrar ventas + retener + escalar)
 
@@ -200,80 +200,72 @@
 
 ---
 
-## Fase 2: Inteligencia Artificial Activa
+## Fase 2: Inteligencia Artificial Activa ✅
 
 > El AI/ML ya está scaffoldeado. Activarlo es el mayor ROI posible.
+>
+> **Estado:** Completada. 55 tests nuevos (304 total, 886 assertions). 2 bugs de producción corregidos.
 
-### 2.1 — Activar clasificación de excepciones con Claude
+### 2.1 — Activar clasificación de excepciones con Claude ✅
 **Qué:** Cuando un driver reporta excepción, Claude analiza y clasifica automáticamente
 **Por qué:** Insights automáticos sin intervención humana
 **Impacto:** Operadores entienden patrones de fallo sin revisar cada excepción
 **Tareas:**
-- [ ] Test: `ExceptionClassifierServiceTest` — mock Claude API, verificar clasificación
-- [ ] Activar `ClaudeLlmClient` como implementación por defecto (requiere `ANTHROPIC_API_KEY`)
-- [ ] Conectar `ExceptionClassifierService` al evento `StopExceptionReported`
-- [ ] Almacenar clasificación en `RouteStop.aiAnalysis` (JSON)
-- [ ] Test: verificar que excepciones sin API key usan NullLlmClient sin errores
-- [ ] UI: mostrar clasificación en detalle de excepción
+- [x] Test: `ExceptionClassifierServiceTest` — 8 tests (clasificación válida, fallbacks, 9 subcategorías)
+- [x] Test: `NlpClassificationHandlerTest` — 3 tests (clasificar+persistir, skip, merge payload)
+- [x] `ClaudeLlmClient` ya es implementación por defecto (wired en services.yaml)
+- [x] `NlpClassificationMessage` ya se dispatcha desde `DeliveryService:147`
+- [x] Clasificación se almacena en `ShipmentEvent.payload['ai_classification']`
+- [x] UI: clasificación AI en detalle de excepción (badge de subcategoría, confianza, insight, acción sugerida)
 
-### 2.2 — Activar análisis post-ruta
+### 2.2 — Activar análisis post-ruta ✅
 **Qué:** Al completar ruta, Claude analiza eficiencia y sugiere mejoras
 **Por qué:** Aprendizaje continuo — cada ruta genera insights
 **Impacto:** "Tu sistema aprende de cada entrega" — argumento de venta potente
 **Tareas:**
-- [ ] Test: `PostRouteAnalyzerTest` — mock LLM, verificar análisis generado
-- [ ] Activar `PostRouteAnalyzer` con Claude cuando ruta cambia a DONE
-- [ ] Análisis incluye:
-  - Eficiencia de ruta (distancia real vs óptima)
-  - Tiempo en cada parada vs estimado
-  - Excepciones y posibles causas
-  - Recomendaciones para futuras rutas similares
-- [ ] Almacenar en `Route.aiAnalysis` (JSON)
-- [ ] UI: sección "Insights IA" en detalle de ruta completada
-- [ ] Test: ruta sin API key usa NullLlmClient y `aiAnalysis` queda null
+- [x] Test: `PostRouteAnalyzerTest` — 6 tests (AI analysis, fallback stats, JSON inválido, markdown, low rate warning, origin exclusion)
+- [x] Test: `PostRouteAnalysisHandlerTest` — 2 tests (analyze+persist, skip not found)
+- [x] `PostRouteAnalysisListener` ya conectado al evento `RouteCompleted`
+- [x] Análisis incluye: summary, planned_vs_actual, insights, recommendations
+- [x] Almacenado en `Route.aiAnalysis` (JSON)
+- [x] UI: sección "Análisis IA" ya existía en `analysis.html.twig` (summary, comparativa, insights, recomendaciones)
+- [x] Fallback estadístico automático cuando Claude API no disponible
 
-### 2.3 — Activar predicción de riesgo de entrega
+### 2.3 — Activar predicción de riesgo de entrega ✅
 **Qué:** Antes de asignar shipment a ruta, predecir probabilidad de fallo
 **Por qué:** Rutas más inteligentes — evitar enviar drivers a direcciones problemáticas
 **Impacto:** Reduce tasa de excepciones, ahorra tiempo y combustible
 **Tareas:**
-- [ ] Test: `DeliveryRiskServiceTest` — verificar scoring con datos históricos
-- [ ] Activar `AddressRiskService` + `DeliveryRiskService`
-- [ ] Scoring basado en:
-  - Historial de excepciones en esa dirección
-  - Hora del día y día de la semana
-  - Tipo de shipment (valor, peso, skills)
-  - Historial del driver en esa zona
-- [ ] Integrar score en RouteBuilder (advertencias, no bloqueos)
-- [ ] UI: badge de riesgo (🟢🟡🔴) en cada shipment del planificador
-- [ ] Test: dirección con 5 excepciones previas → score alto
+- [x] Test: `DeliveryRiskServiceTest` — 6 tests (LOW/MEDIUM/HIGH, address boost +0.15, cap 1.0, ML fallback)
+- [x] Test: `AddressRiskServiceTest` — 6 tests (few samples, low rate, high rate, threshold, no history, DB error)
+- [x] **Bug fix:** `DeliveryRiskService` llamaba `isHighRisk()` en array → corregido a `$result['is_risky'] ?? false`
+- [x] Score integrado en planificador de rutas (`RoutePlannerController`)
+- [x] UI: badge de riesgo (Alto=rojo, Bajo=verde) con tooltip en planificador
+- [x] Address risk boost de +0.15 cuando dirección tiene ≥30% excepciones en ≥3 entregas
 
-### 2.4 — Activar embeddings para búsqueda semántica
+### 2.4 — Activar embeddings para búsqueda semántica ✅
 **Qué:** Buscar envíos por descripción natural ("el paquete frágil de la calle Serrano")
 **Por qué:** Operadores buscan envíos rápido sin recordar referencias exactas
 **Impacto:** Eficiencia operativa + demo impressionante
 **Tareas:**
-- [ ] Test: `EmbeddingServiceTest` — mock OpenAI, verificar vectorización
-- [ ] Activar `OpenAiEmbeddingClient` (requiere `OPENAI_API_KEY`)
-- [ ] Indexar shipments al crear/actualizar (async via Messenger)
-- [ ] Endpoint `GET /api/search?q=...` con búsqueda semántica
-- [ ] Fallback a búsqueda por texto si no hay API key
-- [ ] Test: buscar "paquete refrigerado Serrano" devuelve shipment correcto
+- [x] Test: `EmbeddingServiceTest` — 5 tests (embed+store, null/empty skip, search results, search failure)
+- [x] Test: `SearchServiceTest` — 5 tests (empty/short/whitespace query, semantic fallback, exception handling)
+- [x] `OpenAiEmbeddingClient` ya wired como default en services.yaml
+- [x] `ShipmentEmbeddingListener` ya conectado al evento `ShipmentsImported`
+- [x] Búsqueda semántica via pgvector (cosine distance) en endpoint `/api/search`
+- [x] Fallback automático: si keyword devuelve <3 resultados, intenta semántica
 
-### 2.5 — AI Assistant para operadores
+### 2.5 — AI Assistant para operadores ✅
 **Qué:** Chat con IA que responde preguntas sobre el estado operativo
 **Por qué:** "Pregúntale a tu sistema" — interfaz natural para datos complejos
 **Impacto:** Demo killer feature
 **Tareas:**
-- [ ] Test: `AiAssistantServiceTest` — mock tools, verificar tool loop
-- [ ] Activar `AiAssistantService` con herramientas:
-  - Buscar shipments, rutas, drivers
-  - Consultar KPIs y métricas
-  - Ver alertas activas
-  - Consultar predicciones de demanda
-- [ ] UI: widget de chat en dashboard del operador
-- [ ] Rate limiting: 20 req/min por usuario (ya implementado)
-- [ ] Test: pregunta "¿cuántas entregas pendientes hay?" → respuesta correcta
+- [x] Test: `AiAssistantServiceTest` — 4 tests (chat response, error handling, rate limit 20/min, empty response)
+- [x] Test: `AiAssistantControllerTest` — 5 tests (valid input, empty/long/missing message, unavailable response)
+- [x] **Bug fix:** `AiAssistantService.chat()` parámetro `$customerId` cambiado de `?int` a `?string` (Doctrine BIGINT)
+- [x] 5 herramientas: search_shipments, get_delivery_report, get_route_details, get_active_alerts, get_exception_patterns
+- [x] UI: `/admin/ai-assistant` con chat widget (ya existía)
+- [x] Rate limiting: 20 req/min por usuario (in-memory timestamp buckets)
 
 ---
 

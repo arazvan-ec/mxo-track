@@ -7,9 +7,9 @@
 
 | Métrica | Valor |
 |---------|-------|
-| Archivos de test | 44 (39 Unit, 3 Functional, 2 Factory) |
-| Tests totales | 249 |
-| Assertions | 701 |
+| Archivos de test | 53 (48 Unit, 3 Functional, 2 Factory) |
+| Tests totales | 304 |
+| Assertions | 886 |
 
 ## Comandos
 
@@ -40,7 +40,18 @@ backend/tests/
 │   │   └── ProviderFactoryRegistryTest.php
 │   ├── Service/           # 8 archivos — servicios core
 │   ├── Validation/        # 3 archivos
-│   └── Dto/               # 5+ archivos
+│   ├── Dto/               # 5+ archivos
+│   ├── ExceptionClassifierServiceTest.php     # 8 tests — clasificación NLP
+│   ├── NlpClassificationHandlerTest.php       # 3 tests — handler async
+│   ├── PostRouteAnalyzerTest.php              # 6 tests — análisis post-ruta
+│   ├── PostRouteAnalysisHandlerTest.php       # 2 tests — handler async
+│   ├── DeliveryRiskServiceTest.php            # 6 tests — predicción de riesgo
+│   ├── AddressRiskServiceTest.php             # 6 tests — riesgo por dirección
+│   ├── EmbeddingServiceTest.php               # 5 tests — embeddings vectoriales
+│   ├── SearchServiceTest.php                  # 5 tests — búsqueda híbrida
+│   ├── AiAssistantServiceTest.php             # 4 tests — asistente IA
+│   ├── AiAssistantControllerTest.php          # 5 tests — controller chat
+│   └── DeliveryNoteAiEnricherTest.php         # 5 tests — notas de entrega
 ├── Functional/
 │   ├── CustomerTenantFilterTest.php
 │   ├── RouteLifecycleTest.php
@@ -78,9 +89,9 @@ Requieren base de datos y servicios. Verifican:
 
 ## Coverage
 
-- **Bien cubierto**: Provider framework (factories, engines, resolvers, enums)
-- **Parcialmente cubierto**: Servicios core (RouteBuilder, DeliveryService)
-- **Poco cubierto**: Controllers, Analytics services, AI/ML services
+- **Bien cubierto**: Provider framework (factories, engines, resolvers, enums), AI/ML services (clasificación, análisis, riesgo, embeddings, búsqueda, assistant, notas)
+- **Parcialmente cubierto**: Servicios core (RouteBuilder, DeliveryService), Controllers
+- **Poco cubierto**: Analytics services (AdminMetrics, SlaMetrics, DriverScoring), Domain event listeners
 
 ## Convenciones
 
@@ -92,3 +103,4 @@ Requieren base de datos y servicios. Verifican:
 ## Historial
 
 - 2026-03-11: Creación inicial
+- 2026-03-11: Phase 2 — +55 tests AI/ML (249→304 tests, 701→886 assertions, 44→53 test files)
