@@ -87,6 +87,18 @@ final readonly class RoutePlanningService
         foreach ($results as $result) {
             $route = $result['route'];
             $routePublicIds[] = $route->getPublicIdString();
+            $stopsData = [];
+            foreach ($result['stops'] as $stop) {
+                $stopsData[] = [
+                    'sequence' => $stop->getSequence(),
+                    'address' => $stop->getAddress(),
+                    'latitude' => $stop->getLatitude(),
+                    'longitude' => $stop->getLongitude(),
+                    'isOrigin' => $stop->isOrigin(),
+                    'recipientName' => $stop->getRecipientName(),
+                ];
+            }
+
             $response[] = [
                 'route' => [
                     'publicId' => $route->getPublicIdString(),
@@ -96,6 +108,7 @@ final readonly class RoutePlanningService
                     'estimatedDurationMinutes' => $route->getEstimatedDurationMinutes(),
                 ],
                 'stopsCount' => \count($result['stops']),
+                'stops' => $stopsData,
                 'validation' => $result['validation'],
             ];
         }
