@@ -11,9 +11,11 @@ use App\Entity\User;
 use App\Enum\RouteStatus;
 use App\Enum\RouteStopStatus;
 use App\Service\AdminMetricsService;
+use App\Service\OperatorKpiService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
@@ -26,6 +28,7 @@ final class OperatorDashboardController extends AbstractController
         private readonly AdminMetricsService $metricsService,
         private readonly EntityManagerInterface $em,
         private readonly FleetOverviewService $fleetOverview,
+        private readonly OperatorKpiService $kpiService,
     ) {}
 
     #[Route('', name: 'operator_dashboard')]
@@ -45,9 +48,10 @@ final class OperatorDashboardController extends AbstractController
         /** @var User $user */
         $user = $this->getUser();
 
-        $todayStart = new \DateTimeImmutable('today midnight');
+        // KPIs from dedicated service
+        $kpis = $this->kpiService->collectKpis();
 
-        // Active routes with vehicle and driver
+        // Active routes with vehicle and driver (for table)
         $activeRoutes = $this->em->createQueryBuilder()
             ->select('r', 'v', 'd')
             ->from(RouteEntity::class, 'r')
@@ -59,7 +63,7 @@ final class OperatorDashboardController extends AbstractController
             ->getQuery()
             ->getResult();
 
-        // Stop counts per route (total, delivered, exception)
+        // Stop counts per route (for progress bars in table)
         $stopCounts = [];
         if (\count($activeRoutes) > 0) {
             $rows = $this->em->createQueryBuilder()
@@ -87,53 +91,22 @@ final class OperatorDashboardController extends AbstractController
             }
         }
 
-        // Today's stats across all routes
-        $deliveriesToday = (int) $this->em->createQueryBuilder()
-            ->select('COUNT(rs.id)')
-            ->from(RouteStop::class, 'rs')
-            ->where('rs.status = :delivered')
-            ->andWhere('rs.deliveredAt >= :todayStart')
-            ->setParameter('delivered', RouteStopStatus::DELIVERED)
-            ->setParameter('todayStart', $todayStart)
-            ->getQuery()
-            ->getSingleScalarResult();
-
-        $exceptionsToday = (int) $this->em->createQueryBuilder()
-            ->select('COUNT(rs.id)')
-            ->from(RouteStop::class, 'rs')
-            ->join('rs.route', 'r')
-            ->where('rs.status = :exception')
-            ->andWhere('r.status IN (:statuses)')
-            ->setParameter('exception', RouteStopStatus::EXCEPTION)
-            ->setParameter('statuses', [RouteStatus::ACTIVE, RouteStatus::PLANNED, RouteStatus::DONE])
-            ->getQuery()
-            ->getSingleScalarResult();
-
-        // Total stops across active routes for completion rate
-        $totalActiveStops = 0;
-        $totalDeliveredStops = 0;
-        foreach ($stopCounts as $counts) {
-            $totalActiveStops += $counts['total'];
-            $totalDeliveredStops += $counts['delivered'];
-        }
-
-        $completionRate = $totalActiveStops > 0
-            ? round(($totalDeliveredStops / $totalActiveStops) * 100, 1)
-            : 0.0;
-
-        // Fleet map data for the embedded map
+        // Fleet map data
         $mapData = $this->fleetOverview->getFleetMapData($user);
 
         return $this->render('operator/dashboard_live.html.twig', [
             'activeRoutes' => $activeRoutes,
             'stopCounts' => $stopCounts,
-            'deliveriesToday' => $deliveriesToday,
-            'exceptionsToday' => $exceptionsToday,
-            'completionRate' => $completionRate,
-            'totalActiveRoutes' => \count($activeRoutes),
+            'kpis' => $kpis,
             'mercure_public_url' => $mercurePublicUrl,
             'vehicles_json' => json_encode($mapData->vehicles, \JSON_HEX_TAG | \JSON_HEX_APOS | \JSON_HEX_AMP | \JSON_THROW_ON_ERROR),
             'routes_json' => json_encode($mapData->routes, \JSON_HEX_TAG | \JSON_HEX_APOS | \JSON_HEX_AMP | \JSON_THROW_ON_ERROR),
         ]);
+    }
+
+    #[Route('/dashboard/kpis', name: 'operator_dashboard_kpis', methods: ['GET'])]
+    public function kpis(): JsonResponse
+    {
+        return new JsonResponse($this->kpiService->collectKpis());
     }
 }
