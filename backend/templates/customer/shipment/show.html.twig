@@ -192,10 +192,49 @@
                     {% if event.payload|length > 0 %}
                       <div class="mt-2 text-xs text-gray-600">
                         {% for key, value in event.payload %}
-                          <span class="inline-block bg-white rounded px-2 py-0.5 border border-gray-200 mr-1 mb-1">
-                            <span class="text-gray-400">{{ key }}:</span> {{ value }}
-                          </span>
+                          {% if key != 'ai_classification' %}
+                            <span class="inline-block bg-white rounded px-2 py-0.5 border border-gray-200 mr-1 mb-1">
+                              <span class="text-gray-400">{{ key }}:</span> {{ value }}
+                            </span>
+                          {% endif %}
                         {% endfor %}
+                      </div>
+                    {% endif %}
+
+                    {# AI Classification for exception events #}
+                    {% if event.eventType.value == 'EXCEPTION' and event.payload.ai_classification is defined %}
+                      {% set ai = event.payload.ai_classification %}
+                      <div class="mt-3 bg-purple-50 border border-purple-200 rounded-lg p-3">
+                        <div class="flex items-center gap-2 mb-2">
+                          <svg class="w-4 h-4 text-purple-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z"/>
+                          </svg>
+                          <span class="text-xs font-semibold text-purple-700">Clasificacion IA</span>
+                          {% if ai.confidence is defined %}
+                            <span class="text-xs text-purple-500">({{ (ai.confidence * 100)|number_format(0) }}% confianza)</span>
+                          {% endif %}
+                        </div>
+                        {% if ai.subcategory is defined %}
+                          <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
+                            {% if ai.subcategory == 'ACCESO_EDIFICIO' %}bg-yellow-100 text-yellow-800
+                            {% elseif ai.subcategory == 'DIRECCION_INCOMPLETA' %}bg-orange-100 text-orange-800
+                            {% elseif ai.subcategory == 'AUSENCIA_RECURRENTE' %}bg-red-100 text-red-800
+                            {% elseif ai.subcategory == 'RECHAZO_ESTADO' %}bg-pink-100 text-pink-800
+                            {% elseif ai.subcategory == 'HORARIO_INCOMPATIBLE' %}bg-blue-100 text-blue-800
+                            {% elseif ai.subcategory == 'PAQUETE_DANADO' %}bg-amber-100 text-amber-800
+                            {% elseif ai.subcategory == 'DIRECCION_NO_ENCONTRADA' %}bg-gray-100 text-gray-800
+                            {% elseif ai.subcategory == 'DESTINATARIO_DESCONOCIDO' %}bg-indigo-100 text-indigo-800
+                            {% else %}bg-gray-100 text-gray-700
+                            {% endif %}">
+                            {{ ai.subcategory|replace({'_': ' '}) }}
+                          </span>
+                        {% endif %}
+                        {% if ai.actionable_insight is defined and ai.actionable_insight %}
+                          <p class="mt-2 text-xs text-purple-700">{{ ai.actionable_insight }}</p>
+                        {% endif %}
+                        {% if ai.suggested_action is defined and ai.suggested_action %}
+                          <p class="mt-1 text-xs text-purple-600 italic">{{ ai.suggested_action }}</p>
+                        {% endif %}
                       </div>
                     {% endif %}
                   </div>

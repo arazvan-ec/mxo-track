@@ -14,6 +14,7 @@ use App\Entity\Shipment;
 use App\Entity\User;
 use App\Entity\Vehicle;
 use App\Repository\RouteRepository;
+use App\Service\AddressRiskService;
 use App\Service\DriverScoringService;
 use App\Service\ShipmentClusteringService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -35,6 +36,7 @@ class RoutePlannerController extends AbstractController
         private readonly RoutePlanningService $routePlanningService,
         private readonly DriverScoringService $driverScoringService,
         private readonly ShipmentClusteringService $clusteringService,
+        private readonly AddressRiskService $addressRiskService,
     ) {}
 
     #[SymfonyRoute('', name: 'admin_route_planner_index', methods: ['GET'])]
@@ -80,6 +82,7 @@ class RoutePlannerController extends AbstractController
 
         $data = [];
         foreach ($shipments as $shipment) {
+            $addressRisk = $this->addressRiskService->checkAddress($shipment->getAddress() ?? '');
             $data[] = [
                 'publicId' => $shipment->getPublicIdString(),
                 'reference' => $shipment->getReference(),
@@ -90,6 +93,7 @@ class RoutePlannerController extends AbstractController
                 'totalWeightKg' => $shipment->getTotalWeightKg(),
                 'totalVolumeM3' => $shipment->getTotalVolumeM3(),
                 'totalParcels' => $shipment->getTotalParcels(),
+                'addressRisk' => $addressRisk,
             ];
         }
 

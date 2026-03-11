@@ -56,9 +56,9 @@ final class DeliveryRiskService
             $modelVersion = (string) ($mlResult['model_version'] ?? 'fallback');
         }
 
-        // Check address risk (returns ?AddressRisk entity)
-        $addressRiskEntity = $this->addressRiskService->checkAddress($stop->getAddress());
-        $isAddressRisky = $addressRiskEntity !== null && $addressRiskEntity->isHighRisk();
+        // Check address risk (returns array with is_risky, exception_rate, sample_count)
+        $addressRiskResult = $this->addressRiskService->checkAddress($stop->getAddress());
+        $isAddressRisky = $addressRiskResult['is_risky'] ?? false;
 
         // Boost score if address is flagged as risky
         if ($isAddressRisky) {
