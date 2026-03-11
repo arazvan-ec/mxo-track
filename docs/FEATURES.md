@@ -34,7 +34,8 @@
 22. [Infraestructura y Despliegue](#22-infraestructura-y-despliegue)
 23. [Modelo de Datos](#23-modelo-de-datos)
 24. [Búsqueda](#24-búsqueda)
-25. [Historial de Cambios](#25-historial-de-cambios)
+25. [Providers Configurables por Tenant](#25-providers-configurables-por-tenant)
+26. [Historial de Cambios](#26-historial-de-cambios)
 
 ---
 
@@ -630,7 +631,7 @@ Columnas soportadas:
 | `SoftDeleteTrait` | 7 entidades con borrado lógico: User, Customer, Vehicle, Route, Shipment |
 | `CustomerScopedEntityInterface` | 9 entidades con aislamiento multi-tenant |
 
-### Entidades Principales (34 total)
+### Entidades Principales (36 total)
 
 | Categoría | Entidades |
 |---|---|
@@ -642,11 +643,12 @@ Columnas soportadas:
 | **Ubicaciones** | CustomerLocation, DeliveryZone |
 | **Programación** | DeliverySlot, DeliveryRating, DriverAvailability |
 | **Notificaciones** | Notification, PushSubscription, RecipientNotification |
-| **Integraciones** | ApiKey, WebhookEndpoint, CsvImportRun |
+| **Integraciones** | ApiKey, WebhookEndpoint, CsvImportRun, CustomerIntegration |
+| **Realtime** | RealtimeEvent |
 | **Analytics** | AuditLog, AddressRisk |
 | **Plantillas** | RoutePlanTemplate |
 
-### Enums (10 total)
+### Enums (15 total)
 
 | Enum | Valores |
 |---|---|
@@ -660,6 +662,11 @@ Columnas soportadas:
 | `VehicleSkill` | REFRIGERATED, HEAVY_LOAD, PEDESTRIAN_ACCESS, HAZMAT, FRAGILE |
 | `ShipmentPriority` | LOW, NORMAL, HIGH, URGENT, CRITICAL |
 | `ClientFrequency` | NOT_FREQUENT, FREQUENT, VERY_FREQUENT, SUPER_FREQUENT |
+| `ServiceType` | ROUTING, ROUTE_OPTIMIZER, GPS, REALTIME |
+| `RoutingProvider` | OSRM, HAVERSINE, GOOGLE_DIRECTIONS |
+| `RouteOptimizerProvider` | VROOM, GREEDY |
+| `GpsProviderType` | TRACCAR, WEBHOOK |
+| `RealtimeProviderType` | MERCURE, HTTP_POLLING |
 
 ---
 
@@ -680,12 +687,119 @@ Columnas soportadas:
 
 ---
 
-## 25. Historial de Cambios
+## 25. Providers Configurables por Tenant
+
+### Visión General
+
+Cada Customer (tenant) puede configurar qué proveedores externos usar para routing, optimización de rutas, GPS y actualizaciones en tiempo real. El sistema usa un patrón **Transparent Proxy + Provider Factory** que mantiene compatibilidad total hacia atrás: los servicios de dominio existentes no cambian.
+
+### Arquitectura
+
+| Componente | Responsabilidad |
+|---|---|
+| `TenantContext` | Resuelve el Customer actual desde el token de seguridad |
+| `ProviderResolver` | Lee `CustomerIntegration` de DB, aplica fallbacks a defaults globales |
+| `CachedProviderResolver` | Decorator con caché Redis (TTL 5 min) sobre el resolver |
+| `ProviderFactoryRegistry` | Mapea tipo de provider → factory, autodiscovery via tags |
+| `FallbackChain` | Ejecuta providers en orden de prioridad, captura `ProviderUnavailableException` |
+| Transparent Proxies | Implementan la misma interfaz del puerto, resuelven provider en runtime |
+
+### Entidad `CustomerIntegration`
+
+Configuración per-tenant almacenada en DB:
+
+| Campo | Tipo | Descripción |
+|---|---|---|
+| `customer` | ManyToOne | Tenant propietario |
+| `serviceType` | `ServiceType` enum | routing, route_optimizer, gps, realtime |
+| `providerType` | string | Identificador del provider (ej. `osrm`, `haversine`, `google_directions`) |
+| `config` | JSON | Configuración específica del provider (API keys, URLs, etc.) |
+| `enabled` | boolean | Activar/desactivar sin eliminar |
+| `priority` | integer | Orden en fallback chain (menor = mayor prioridad) |
+
+### Providers Disponibles
+
+#### Routing (`RoutingEngineInterface`)
+
+| Provider | Tipo | Infraestructura | Descripción |
+|---|---|---|---|
+| OSRM | `osrm` | Requiere servidor OSRM | Routing con distancias reales por carretera (existente) |
+| Haversine | `haversine` | Ninguna | Distancia en línea recta con factor de corrección configurable |
+| Google Directions | `google_directions` | API key de Google | Routing via Google Directions API |
+
+#### Optimización de Rutas (`RouteOptimizerInterface`)
+
+| Provider | Tipo | Infraestructura | Descripción |
+|---|---|---|---|
+| VROOM | `vroom` | Requiere servidor VROOM + OSRM | Solver VRP completo (existente) |
+| Greedy | `greedy` | Ninguna | Algoritmo nearest-neighbor, sin dependencias externas |
+
+#### GPS (`GpsDeviceProviderInterface`)
+
+| Provider | Tipo | Infraestructura | Descripción |
+|---|---|---|---|
+| Traccar | `traccar` | Requiere servidor Traccar | Tracking GPS via Traccar API (existente) |
+| Webhook | `webhook` | Ninguna | Recibe posiciones via webhook, sin servidor GPS externo |
+
+#### Realtime (`RealtimePublisherInterface`)
+
+| Provider | Tipo | Infraestructura | Descripción |
+|---|---|---|---|
+| Mercure | `mercure` | Requiere hub Mercure | SSE en tiempo real (existente) |
+| HTTP Polling | `http_polling` | Ninguna | Persiste eventos en DB, clientes consultan via API |
+
+### API de Polling
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| GET | `/api/v1/events` | Eventos desde `?since=ISO8601`, filtro opcional `?topic=` |
+
+### Admin CRUD
+
+| Ruta | Descripción |
+|---|---|
+| `/admin/customer-integrations` | Listado de integraciones por tenant |
+| `/admin/customer-integrations/new` | Crear nueva integración |
+| `/admin/customer-integrations/{publicId}/edit` | Editar integración |
+| `/admin/customer-integrations/{publicId}/delete` | Eliminar integración |
+
+### Defaults Globales (`.env`)
+
+```
+DEFAULT_ROUTE_OPTIMIZER=vroom
+DEFAULT_ROUTING_ENGINE=osrm
+DEFAULT_GPS_PROVIDER=traccar
+DEFAULT_REALTIME_PUBLISHER=mercure
+```
+
+Cuando un tenant no tiene `CustomerIntegration` configurada, se usan estos defaults.
+
+### Entidades Nuevas
+
+| Entidad | Multi-tenant | Descripción |
+|---|---|---|
+| `CustomerIntegration` | Sí | Configuración de providers por tenant |
+| `RealtimeEvent` | Sí | Eventos almacenados para HTTP polling |
+
+### Enums Nuevos
+
+| Enum | Valores |
+|---|---|
+| `ServiceType` | ROUTING, ROUTE_OPTIMIZER, GPS, REALTIME |
+| `RoutingProvider` | OSRM, HAVERSINE, GOOGLE_DIRECTIONS |
+| `RouteOptimizerProvider` | VROOM, GREEDY |
+| `GpsProviderType` | TRACCAR, WEBHOOK |
+| `RealtimeProviderType` | MERCURE, HTTP_POLLING |
+
+---
+
+## 26. Historial de Cambios
 
 | Fecha | Versión | Cambios |
 |---|---|---|
 | 2026-03-11 | 1.0.0 | Documento inicial con todas las características del sistema |
 | 2026-03-11 | 1.1.0 | Fase 3: +41 unit tests (92→133). Fase 4: fix APP_BASE_URL, deprecar legacy ShipmentApiController, archivar docs completados, añadir metadata a composer.json |
+| 2026-03-11 | 1.2.0 | Providers configurables por tenant: framework de proxy transparente + factory, 5 providers nuevos (Haversine, Greedy, Google Directions, Webhook GPS, HTTP Polling), entidad CustomerIntegration, API de polling, admin CRUD, fallback chains, caché Redis. 255 tests (122 nuevos). |
 
 ---
 
