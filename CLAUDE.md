@@ -227,6 +227,16 @@ docker compose -f docker-compose.local.yml exec -T app php bin/console app:dev:s
 - `SecurityHeadersSubscriber` adds X-Frame-Options, CSP, etc.
 - `UserChecker` validates user is active before authentication
 
+## Features Document
+
+El documento `docs/FEATURES.md` contiene la descripción completa de todas las características funcionales y técnicas del sistema. **Debe mantenerse actualizado:**
+
+- Cada PR que añada, modifique o elimine funcionalidad debe incluir la actualización correspondiente en `docs/FEATURES.md`
+- Añadir una entrada en la sección "Historial de Cambios" del documento
+- Al planificar nuevas features, consultar `docs/FEATURES.md` para entender el estado actual del sistema
+
+---
+
 ## Conventions
 
 - All PHP files use `declare(strict_types=1)`
