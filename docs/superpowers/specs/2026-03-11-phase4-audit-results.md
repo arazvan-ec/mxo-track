@@ -47,14 +47,9 @@
 
 ## 3. Auditoría Controladores Duplicados
 
-### ShipmentApiController (2 versiones)
+### ShipmentApiController (resuelto)
 
-| Archivo | Ruta | Propósito |
-|---------|------|-----------|
-| `Controller/ShipmentApiController.php` | `/api/shipments` | Legacy — GET list, GET detail |
-| `Controller/Api/V1/ShipmentApiController.php` | `/api/v1/shipments` | V1 API — POST create, GET list (paginado), GET detail, GET tracking |
-
-**Conclusión:** No hay conflicto funcional (rutas diferentes). El controller raíz parece legacy. Considerar eliminación si no hay clientes usándolo.
+**Resuelto:** El controller legacy `Controller/ShipmentApiController.php` (`/api/shipments`) fue eliminado en Phase 0. Solo queda `Controller/Api/V1/ShipmentApiController.php` (`/api/v1/shipments`).
 
 ### RouteAnalysisController (2 versiones)
 

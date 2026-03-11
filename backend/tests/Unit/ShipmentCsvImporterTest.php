@@ -316,7 +316,7 @@ final class ShipmentCsvImporterTest extends TestCase
         $path = $this->tmpDir . '/test_' . uniqid() . '.csv';
         $fh = fopen($path, 'wb');
         foreach ($rows as $row) {
-            fputcsv($fh, $row);
+            fputcsv($fh, $row, ',', '"', '');
         }
         fclose($fh);
 

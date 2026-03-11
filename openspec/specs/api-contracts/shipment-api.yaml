@@ -4,21 +4,57 @@
 api_contract:
   name: "Shipment API"
   version: "1.0"
-  base_path: "/api/shipments"
-  description: "Shipment tracking and event API. Customer-scoped via Doctrine tenant filter."
+  base_path: "/api/v1/shipments"
+  description: "Shipment tracking and management API (V1). Customer-scoped via Doctrine tenant filter."
 
   endpoints:
-    - method: "GET"
-      path: "/api/shipments"
-      description: "List shipments (filtered by customer tenant for ROLE_CUSTOMER/ROLE_DRIVER)"
+    - method: "POST"
+      path: "/api/v1/shipments"
+      description: "Create single or batch shipments with validation"
+      request:
+        content_type: "application/json"
       responses:
-        - status: 200
-          description: "Array of shipments"
+        - status: 201
+          description: "Shipment(s) created"
+        - status: 422
+          description: "Validation error"
       authentication: "session (authenticated)"
 
     - method: "GET"
-      path: "/api/shipments/{publicId}/events"
-      description: "Get events for a specific shipment"
+      path: "/api/v1/shipments"
+      description: "List shipments (paginated, filtered by customer tenant)"
+      parameters:
+        - name: "page"
+          in: "query"
+          type: "integer"
+          required: false
+        - name: "limit"
+          in: "query"
+          type: "integer"
+          required: false
+      responses:
+        - status: 200
+          description: "Paginated array of shipments"
+      authentication: "session (authenticated)"
+
+    - method: "GET"
+      path: "/api/v1/shipments/{publicId}"
+      description: "Get shipment detail"
+      parameters:
+        - name: "publicId"
+          in: "path"
+          type: "string (ULID)"
+          required: true
+      responses:
+        - status: 200
+          description: "Shipment detail"
+        - status: 404
+          description: "Shipment not found"
+      authentication: "session (authenticated)"
+
+    - method: "GET"
+      path: "/api/v1/shipments/{publicId}/tracking"
+      description: "Get full event timeline for a shipment"
       parameters:
         - name: "publicId"
           in: "path"
@@ -31,28 +67,7 @@ api_contract:
           description: "Shipment not found"
       authentication: "session (authenticated)"
 
-    - method: "POST"
-      path: "/api/shipments/{publicId}/events"
-      description: "Add a new event to a shipment"
-      parameters:
-        - name: "publicId"
-          in: "path"
-          type: "string (ULID)"
-          required: true
-      request:
-        content_type: "application/json"
-        schema:
-          properties:
-            event_type: { type: "string (ShipmentEventType)" }
-            payload: { type: "object, optional" }
-      responses:
-        - status: 201
-          description: "Event created"
-        - status: 422
-          description: "Validation error"
-      authentication: "session (ROLE_ADMIN or ROLE_OPERATOR)"
-
   source_files:
-    - "backend/src/Controller/ShipmentApiController.php"
+    - "backend/src/Controller/Api/V1/ShipmentApiController.php"
 
   extracted_at: "2026-02-19"
