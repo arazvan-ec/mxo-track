@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Command;
 
 use App\Service\DemoScenarioBuilder;
+use App\Service\ShipmentCsvImporter;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -12,6 +13,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 #[AsCommand(
     name: 'app:demo:setup',
@@ -22,6 +24,9 @@ final class DemoSetupCommand extends Command
     public function __construct(
         private readonly DemoScenarioBuilder $scenarioBuilder,
         private readonly EntityManagerInterface $em,
+        private readonly ShipmentCsvImporter $csvImporter,
+        #[Autowire('%kernel.project_dir%')]
+        private readonly string $projectDir = '',
     ) {
         parent::__construct();
     }
@@ -31,7 +36,8 @@ final class DemoSetupCommand extends Command
         $this
             ->addOption('shipments', null, InputOption::VALUE_REQUIRED, 'Number of shipments to create', '40')
             ->addOption('fresh', null, InputOption::VALUE_NONE, 'Purge existing demo data before creating')
-            ->addOption('skip-routes', null, InputOption::VALUE_NONE, 'Skip route building (useful when VROOM is unavailable)');
+            ->addOption('skip-routes', null, InputOption::VALUE_NONE, 'Skip route building (useful when VROOM is unavailable)')
+            ->addOption('import-csv', null, InputOption::VALUE_NONE, 'Import shipments from docs/demo/envios-madrid.csv instead of generating them');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -39,6 +45,7 @@ final class DemoSetupCommand extends Command
         $io = new SymfonyStyle($input, $output);
         $shipmentCount = max(1, (int) $input->getOption('shipments'));
         $skipRoutes = (bool) $input->getOption('skip-routes');
+        $importCsv = (bool) $input->getOption('import-csv');
 
         $io->title('Demo Scenario Setup');
 
@@ -80,6 +87,25 @@ final class DemoSetupCommand extends Command
             ],
         );
 
+        if ($importCsv) {
+            $io->section('Importing CSV demo shipments...');
+            $csvPath = $this->resolveCsvPath();
+
+            if (!is_file($csvPath)) {
+                $io->error(sprintf('CSV file not found: %s', $csvPath));
+
+                return Command::FAILURE;
+            }
+
+            $importResult = $this->csvImporter->import($csvPath, $result->customer);
+            $io->success(sprintf(
+                'CSV import: %d created, %d skipped, %d errors',
+                $importResult['created'],
+                $importResult['skipped'],
+                $importResult['errors'],
+            ));
+        }
+
         if (!$skipRoutes) {
             $io->section('Building optimized routes...');
             $io->warning('Route building requires VROOM. Use --skip-routes to skip.');
@@ -87,6 +113,15 @@ final class DemoSetupCommand extends Command
         }
 
         return Command::SUCCESS;
+    }
+
+    private function resolveCsvPath(): string
+    {
+        if ($this->projectDir !== '') {
+            return $this->projectDir . '/../docs/demo/envios-madrid.csv';
+        }
+
+        return \dirname(__DIR__, 3) . '/docs/demo/envios-madrid.csv';
     }
 
     private function purgeExistingDemoData(): void
