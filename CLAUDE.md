@@ -84,6 +84,7 @@ Antes de trabajar en un subsistema, **LEE el módulo relevante** en `docs/knowle
 | Claude AI, embeddings, ML | `docs/knowledge/ai-ml.md` |
 | VROOM, OSRM, capacidad, rutas | `docs/knowledge/route-optimization.md` |
 | Roles, multi-tenancy, CSRF, seguridad | `docs/knowledge/security.md` |
+| Skills de Superpowers (completo) | `docs/knowledge/superpowers-skills.md` |
 | Índice completo de módulos | `docs/knowledge/index.md` |
 | Análisis previos del codebase | `docs/analysis/` |
 
@@ -124,6 +125,8 @@ Antes de trabajar en un subsistema, **LEE el módulo relevante** en `docs/knowle
 ## Superpowers Skills
 
 Skills que definen el flujo de trabajo y disciplina de desarrollo. **OBLIGATORIO invocar la skill relevante antes de cualquier acción.**
+
+**Referencia completa:** `docs/knowledge/superpowers-skills.md` — **LEE el módulo completo** antes de aplicar cualquier skill. Los triggers aquí son solo índice de navegación.
 
 ### Skill 1: Using Superpowers
 **Trigger:** Inicio de cualquier conversación — verificar si alguna skill aplica antes de responder.
