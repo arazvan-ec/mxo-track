@@ -36,7 +36,7 @@ final class AiAssistantService
      *
      * @return array{response: string, tools_used: list<string>}
      */
-    public function chat(string $userMessage, ?int $customerId = null, ?User $user = null): array
+    public function chat(string $userMessage, ?string $customerId = null, ?User $user = null): array
     {
         $rateLimitKey = 'user_' . ($user?->getId() ?? 'anon');
         if (!$this->checkRateLimit($rateLimitKey)) {
@@ -147,7 +147,7 @@ PROMPT;
     /**
      * @param array<string, mixed> $input
      */
-    private function executeTool(string $toolName, array $input, ?int $customerId, ?User $user): mixed
+    private function executeTool(string $toolName, array $input, ?string $customerId, ?User $user): mixed
     {
         return match ($toolName) {
             'search_shipments' => $this->executeSearchShipments($input, $user),
