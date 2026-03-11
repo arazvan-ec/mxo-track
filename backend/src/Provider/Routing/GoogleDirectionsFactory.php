@@ -12,11 +12,16 @@ final class GoogleDirectionsFactory implements ProviderFactoryInterface
 {
     public function __construct(
         private readonly HttpClientInterface $httpClient,
+        private readonly string $defaultApiKey = '',
     ) {
     }
 
     public function create(array $config): GoogleDirectionsEngine
     {
+        if (!isset($config['api_key']) && $this->defaultApiKey !== '') {
+            $config['api_key'] = $this->defaultApiKey;
+        }
+
         return new GoogleDirectionsEngine(
             $this->httpClient,
             GoogleDirectionsConfig::fromArray($config),

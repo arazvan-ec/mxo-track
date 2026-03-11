@@ -1,6 +1,6 @@
-# Deploy Lite en Railway (sin infraestructura externa)
+# Deploy Lite en Railway (sin infraestructura pesada)
 
-Deploy simplificado usando **providers zero-infra** (PHP puro). Solo necesitas **4 servicios** en Railway:
+Deploy simplificado sin OSRM/VROOM/Traccar. Solo necesitas **4 servicios** en Railway:
 
 | Servicio | Tipo | Puerto |
 |----------|------|--------|
@@ -9,16 +9,16 @@ Deploy simplificado usando **providers zero-infra** (PHP puro). Solo necesitas *
 | **bbdd-mxo** | PostgreSQL (gestionado) | 5432 |
 | **redis-mxo** | Redis (gestionado) | 6379 |
 
-**No necesitas**: OSRM, VROOM, Traccar, worker. **No necesitas API keys de terceros.**
+**No necesitas**: OSRM, VROOM, Traccar, worker. **Necesitas**: API key de Google Maps (Directions API).
 
 ## Providers usados
 
-| Servicio | Provider | Descripción |
-|----------|----------|-------------|
-| Routing | **Haversine** | Distancias great-circle con factor de corrección 1.3x. Sin rutas reales por carretera. |
-| Optimización | **Greedy** | Nearest-neighbor. Funcional pero no óptimo para muchas paradas. |
-| GPS | **Webhook** | Dispositivos envían posiciones vía HTTP. Sin polling a servidor GPS. |
-| Realtime | **Mercure** | SSE real-time (tienes infra Mercure). |
+| Servicio | Provider | Requisito |
+|----------|----------|-----------|
+| Routing | **Google Directions** | API key de Google Maps |
+| Optimización | **Greedy** | Ninguno (PHP puro, nearest-neighbor) |
+| GPS | **Webhook** | Ninguno (push-based) |
+| Realtime | **Mercure** | Servicio mercure-mxo |
 
 ## Paso 1: Crear servicios
 
@@ -63,10 +63,13 @@ MERCURE_SUBSCRIBER_TOKEN_TTL=3600
 POD_STORAGE=database
 TRUSTED_PROXIES=REMOTE_ADDR
 DEFAULT_ROUTE_OPTIMIZER=greedy
-DEFAULT_ROUTING_ENGINE=haversine
+DEFAULT_ROUTING_ENGINE=google_directions
 DEFAULT_GPS_PROVIDER=webhook
 DEFAULT_REALTIME_PUBLISHER=mercure
+GOOGLE_DIRECTIONS_API_KEY=<tu API key de Google Maps>
 ```
+
+> **GOOGLE_DIRECTIONS_API_KEY**: Necesitas una API key de Google Cloud con la Directions API habilitada. Consíguela en https://console.cloud.google.com/apis/credentials
 
 > **No necesitas** TRACCAR_*, VROOM_URL, OSRM_URL — son opcionales.
 
@@ -113,6 +116,7 @@ Para activar providers con infraestructura real, añade los servicios y cambia l
 # En app-mxo, añadir/cambiar:
 DEFAULT_ROUTE_OPTIMIZER=vroom
 DEFAULT_ROUTING_ENGINE=osrm
+# Or keep google_directions and remove OSRM
 DEFAULT_GPS_PROVIDER=traccar
 TRACCAR_BASE_URL=http://traccar-mxo.railway.internal:8082
 TRACCAR_USERNAME=admin

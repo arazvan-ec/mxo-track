@@ -62,6 +62,10 @@ services:
     arguments:
       $defaultOsrmUrl: '%env(string:default::OSRM_URL)%'
 
+  App\Provider\Routing\GoogleDirectionsFactory:
+    arguments:
+      $defaultApiKey: '%env(string:default::GOOGLE_DIRECTIONS_API_KEY)%'
+
   App\Provider\Gps\TraccarFactory:
     arguments:
       $defaultBaseUrl: '%env(string:default::TRACCAR_BASE_URL)%'

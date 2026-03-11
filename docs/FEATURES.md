@@ -663,7 +663,7 @@ Columnas soportadas:
 | `ShipmentPriority` | LOW, NORMAL, HIGH, URGENT, CRITICAL |
 | `ClientFrequency` | NOT_FREQUENT, FREQUENT, VERY_FREQUENT, SUPER_FREQUENT |
 | `ServiceType` | ROUTING, ROUTE_OPTIMIZER, GPS, REALTIME |
-| `RoutingProvider` | OSRM, HAVERSINE, GOOGLE_DIRECTIONS |
+| `RoutingProvider` | OSRM, GOOGLE_DIRECTIONS |
 | `RouteOptimizerProvider` | VROOM, GREEDY |
 | `GpsProviderType` | TRACCAR, WEBHOOK |
 | `RealtimeProviderType` | MERCURE, HTTP_POLLING |
@@ -712,7 +712,7 @@ Configuración per-tenant almacenada en DB:
 |---|---|---|
 | `customer` | ManyToOne | Tenant propietario |
 | `serviceType` | `ServiceType` enum | routing, route_optimizer, gps, realtime |
-| `providerType` | string | Identificador del provider (ej. `osrm`, `haversine`, `google_directions`) |
+| `providerType` | string | Identificador del provider (ej. `osrm`, `google_directions`) |
 | `config` | JSON | Configuración específica del provider (API keys, URLs, etc.) |
 | `enabled` | boolean | Activar/desactivar sin eliminar |
 | `priority` | integer | Orden en fallback chain (menor = mayor prioridad) |
@@ -723,9 +723,8 @@ Configuración per-tenant almacenada en DB:
 
 | Provider | Tipo | Infraestructura | Descripción |
 |---|---|---|---|
-| OSRM | `osrm` | Requiere servidor OSRM | Routing con distancias reales por carretera (existente) |
-| Haversine | `haversine` | Ninguna | Distancia en línea recta con factor de corrección configurable |
-| Google Directions | `google_directions` | API key de Google | Routing via Google Directions API |
+| OSRM | `osrm` | Requiere servidor OSRM | Routing con distancias reales por carretera |
+| Google Directions | `google_directions` | API key de Google | Routing via Google Directions API (default) |
 
 #### Optimización de Rutas (`RouteOptimizerInterface`)
 
@@ -786,7 +785,7 @@ Cuando un tenant no tiene `CustomerIntegration` configurada, se usan estos defau
 | Enum | Valores |
 |---|---|
 | `ServiceType` | ROUTING, ROUTE_OPTIMIZER, GPS, REALTIME |
-| `RoutingProvider` | OSRM, HAVERSINE, GOOGLE_DIRECTIONS |
+| `RoutingProvider` | OSRM, GOOGLE_DIRECTIONS |
 | `RouteOptimizerProvider` | VROOM, GREEDY |
 | `GpsProviderType` | TRACCAR, WEBHOOK |
 | `RealtimeProviderType` | MERCURE, HTTP_POLLING |
@@ -799,7 +798,7 @@ Cuando un tenant no tiene `CustomerIntegration` configurada, se usan estos defau
 |---|---|---|
 | 2026-03-11 | 1.0.0 | Documento inicial con todas las características del sistema |
 | 2026-03-11 | 1.1.0 | Fase 3: +41 unit tests (92→133). Fase 4: fix APP_BASE_URL, deprecar legacy ShipmentApiController, archivar docs completados, añadir metadata a composer.json |
-| 2026-03-11 | 1.2.0 | Providers configurables por tenant: framework de proxy transparente + factory, 5 providers nuevos (Haversine, Greedy, Google Directions, Webhook GPS, HTTP Polling), entidad CustomerIntegration, API de polling, admin CRUD, fallback chains, caché Redis. 255 tests (122 nuevos). |
+| 2026-03-11 | 1.2.0 | Providers configurables por tenant: framework de proxy transparente + factory, 4 providers nuevos (Greedy, Google Directions, Webhook GPS, HTTP Polling), entidad CustomerIntegration, API de polling, admin CRUD, fallback chains, caché Redis. 255 tests (122 nuevos). |
 
 ---
 

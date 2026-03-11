@@ -7,6 +7,5 @@ namespace App\Provider\Routing;
 enum RoutingProvider: string
 {
     case Osrm = 'osrm';
-    case Haversine = 'haversine';
     case GoogleDirections = 'google_directions';
 }
