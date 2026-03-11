@@ -237,6 +237,70 @@ El documento `docs/FEATURES.md` contiene la descripción completa de todas las c
 
 ---
 
+## Análisis Persistentes (Knowledge Base)
+
+Las conclusiones de exploraciones y análisis del codebase se guardan en `docs/analysis/` para reutilizarlas entre sesiones. Esto evita repetir investigaciones costosas y permite construir conocimiento acumulativo sobre el proyecto.
+
+### Reglas
+
+1. **Al explorar un tema complejo** (arquitectura, deployment, integración, debugging) — guardar las conclusiones en `docs/analysis/YYYY-MM-DD-<tema>.md` y hacer commit
+2. **Antes de investigar un tema** — consultar primero si ya existe un análisis en `docs/analysis/` para no repetir trabajo
+3. **Al descubrir algo nuevo** sobre un tema ya analizado — actualizar el archivo existente (no crear uno nuevo) y añadir fecha de actualización al final
+4. **Los subagentes también deben guardar sus conclusiones** — si un subagente de exploración genera hallazgos significativos, el agente principal debe persistirlos en `docs/analysis/`
+
+### Formato de cada archivo
+
+```markdown
+# [Título del análisis]
+
+**Fecha:** YYYY-MM-DD
+**Última actualización:** YYYY-MM-DD
+**Estado:** Vigente | Parcialmente desactualizado | Desactualizado
+**Contexto:** Qué se investigó y por qué
+
+## Hallazgos clave
+
+- Hallazgo concreto con rutas de archivos, configs, y detalles técnicos
+- ...
+
+## Implicaciones para futuras tareas
+
+- Qué tener en cuenta al trabajar en X
+- ...
+
+## Historial de actualizaciones
+
+- YYYY-MM-DD: Creación inicial
+- YYYY-MM-DD: Actualizado porque...
+```
+
+### Cuándo guardar análisis
+
+- Exploración de cómo funciona un subsistema (Traccar, Mercure, VROOM, providers, etc.)
+- Análisis de configuración de deployment (Railway, Docker, variables de entorno)
+- Debugging complejo donde se descubrió algo no obvio
+- Evaluación de alternativas técnicas con pros/contras
+- Cualquier investigación que tomó >5 minutos de exploración
+- Conclusiones de subagentes de exploración que contengan información reutilizable
+
+### Cuándo consultar análisis existentes
+
+- **Al inicio de cualquier tarea** que toque un subsistema ya analizado
+- Al planificar features que involucren componentes documentados
+- Al debuggear problemas en áreas ya investigadas
+- Antes de lanzar subagentes de exploración (puede que la respuesta ya esté documentada)
+
+### Diferencia con otros docs
+
+| Directorio | Propósito | Cuándo se crea |
+|-----------|-----------|----------------|
+| `docs/analysis/` | Conocimiento descubierto sobre el estado actual del código/infra | Al explorar/investigar |
+| `docs/superpowers/specs/` | Diseño validado de algo que se va a construir | Al terminar brainstorming |
+| `docs/superpowers/plans/` | Pasos de implementación | Al terminar diseño |
+| `docs/FEATURES.md` | Funcionalidades del sistema (user-facing) | Al completar features |
+
+---
+
 ## Conventions
 
 - All PHP files use `declare(strict_types=1)`
