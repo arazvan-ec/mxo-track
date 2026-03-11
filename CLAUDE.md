@@ -249,6 +249,117 @@ El documento `docs/FEATURES.md` contiene la descripción completa de todas las c
 
 ---
 
+## Backlog Arquitectónico
+
+Registro vivo de decisiones arquitectónicas, alternativas descartadas (pero no olvidadas), y mejoras futuras. Cada entrada documenta **qué se eligió, qué se descartó y por qué**, para poder retomarlo con contexto completo.
+
+**Regla:** Cualquier decisión arquitectónica significativa debe quedar aquí. Al iniciar trabajo relacionado, consultar primero esta sección.
+
+### Formato de entrada
+
+```
+### [FECHA] Título corto
+**Estado:** Pendiente | En progreso | Resuelto | Descartado
+**Decisión:** Qué se eligió
+**Contexto:** Por qué se tomó esta decisión
+**Alternativas consideradas:**
+- Alternativa A — pros / contras
+- Alternativa B — pros / contras
+**Trigger para revisitar:** Cuándo tiene sentido reconsiderar
+**Spec/Plan relacionado:** link al doc si existe
+```
+
+---
+
+### [2026-03-11] Providers configurables: Proxy + Factory vs alternativas
+
+**Estado:** Pendiente de implementación
+**Decisión:** Transparent Proxy + Provider Factory + CustomerIntegration entity
+**Contexto:** Se necesita que cada Customer (tenant) pueda elegir qué providers usar para routing, optimización, GPS y realtime. Se eligió este enfoque en el brainstorming por su compatibilidad hacia atrás (los servicios existentes no cambian) y flexibilidad.
+
+**Alternativas consideradas:**
+
+1. **Transparent Proxy + Factory (elegida)**
+   - Pros: Zero cambios en servicios existentes, el proxy implementa la misma interfaz y resuelve en runtime. Fallback chains nativos via prioridad. Fácil de testear (Null implementations siguen funcionando).
+   - Contras: Una capa de indirección extra en cada llamada. El proxy necesita acceso al TenantContext (Security) lo que acopla ligeramente infraestructura con resolución. Cada nuevo servicio necesita un proxy dedicado (boilerplate).
+
+2. **Symfony Tagged Services + CompilerPass**
+   - Pros: Aprovecha el DI container nativo de Symfony. Autodiscovery de providers con `#[AutoconfigureTag]`. Muy type-safe y optimizado en compilación.
+   - Contras: La resolución per-tenant en runtime no encaja bien con el container compilado de Symfony (que es estático). Requeriría un ServiceLocator custom + lógica de resolución similar al proxy. No simplifica realmente vs. la opción elegida.
+   - Trigger para revisitar: Si Symfony introduce soporte nativo para "scoped services" o "tenant-aware DI" en futuras versiones.
+
+3. **Event-Driven / Middleware Pattern**
+   - Pros: Los servicios emiten un evento "necesito routing" y un listener resuelve el provider. Desacoplamiento máximo. Fácil de añadir logging, métricas, circuit breaker como middleware.
+   - Contras: Más complejo de entender y debuggear. Flujo indirecto (difícil saber qué provider se usó mirando el código). Symfony Messenger podría servir pero añade overhead para llamadas síncronas. Over-engineering para el caso actual.
+   - Trigger para revisitar: Si se necesita circuit breaker automático, métricas por provider, o A/B testing entre providers.
+
+4. **Config en YAML/ENV (sin DB)**
+   - Pros: Simple, sin entidad extra, sin queries. Cada tenant tendría su propio `.env` override o config file.
+   - Contras: No configurable desde UI. Requiere redeploy para cambiar providers. No escala con muchos tenants. No soporta fallback chains dinámicos.
+   - Trigger para revisitar: Si hay muy pocos tenants (< 5) y la configuración casi nunca cambia.
+
+**Trigger para revisitar:** Si el boilerplate de proxies se vuelve tedioso (> 6 servicios con proxy), considerar codegen o un proxy genérico basado en reflection. Si se necesitan métricas/circuit breaker, evaluar el enfoque middleware.
+
+**Spec:** `docs/superpowers/specs/2026-03-11-user-configurable-providers-design.md`
+**Plan:** `docs/superpowers/plans/2026-03-11-user-configurable-providers.md`
+
+---
+
+### [2026-03-11] GpsDeviceProviderInterface: Refactoring de métodos Traccar-específicos
+
+**Estado:** Pendiente
+**Decisión:** Pospuesto — se implementará WebhookGpsProvider con stubs (login→no-op, getSessionCookie→null) como paso intermedio.
+**Contexto:** La interfaz actual `GpsDeviceProviderInterface` tiene `login()` y `getSessionCookie()` que son conceptos de Traccar. Para providers genéricos (webhook, APIs SaaS) estos métodos no tienen sentido.
+
+**Alternativas consideradas:**
+
+1. **Refactoring previo a la implementación de providers (ideal)**
+   - Narrowing del port: solo `getDevices()`, `createDevice()`, `getPositions(string $deviceId)`, `isAvailable()`
+   - Mover `login()`/`getSessionCookie()` a `TraccarGpsProvider` directamente
+   - Cambiar `$deviceId` de `int` a `string` (identifier genérico)
+   - Pros: Interfaz limpia desde el inicio
+   - Contras: Requiere actualizar todos los consumidores de la interfaz actual
+
+2. **Stubs en providers no-Traccar (elegida temporalmente)**
+   - `login()` → no-op, `getSessionCookie()` → null
+   - Pros: No rompe nada, rápido de implementar
+   - Contras: Interfaz "sucia", viola Interface Segregation Principle
+
+**Trigger para revisitar:** Cuando se implemente el segundo provider de GPS (después de webhook), el refactoring se vuelve obligatorio para evitar más stubs.
+
+---
+
+### [2026-03-11] Mercure: EventListeners usan HubInterface directamente en lugar del port
+
+**Estado:** Pendiente
+**Decisión:** Se documentó como deuda técnica. Los listeners `MercurePositionListener` y `MercureRouteProgressListener` usan `HubInterface` directamente en lugar de `RealtimePublisherInterface`.
+**Contexto:** El port `RealtimePublisherInterface` existe pero no se usa consistentemente. `TraccarIngestionService` también usa `HubInterface` directamente.
+
+**Acción futura:**
+- Refactorizar listeners para usar `RealtimePublisherInterface`
+- Refactorizar `TraccarIngestionService` para publicar solo via domain events (ya emite `VehiclePositionReceived`)
+- Esto es prerequisito para que el TenantAwareRealtimePublisher funcione correctamente en todos los flujos
+
+**Trigger para revisitar:** Antes de configurar un customer con `HttpPollingPublisher`, ya que sin este refactoring los listeners seguirán publicando a Mercure independientemente de la config del customer.
+
+---
+
+### [2026-03-11] Encriptación de credenciales en CustomerIntegration
+
+**Estado:** Pendiente
+**Decisión:** Las API keys se almacenan en JSON plano en la columna `config` de `CustomerIntegration`. Sin encriptación por ahora.
+**Contexto:** La encriptación añade complejidad (key management, rotación). Para v1 se prioriza funcionalidad.
+
+**Alternativas para el futuro:**
+1. **Symfony Secrets** — vault encriptado, pero es por entorno, no por tenant
+2. **Encriptación a nivel de columna (Doctrine listener)** — transparente, pero requiere gestión de keys
+3. **Vault externo (HashiCorp Vault, AWS Secrets Manager)** — enterprise, escalable
+4. **Encriptación campo-a-campo en el JSON** — solo encriptar `api_key`, no todo el JSON
+
+**Trigger para revisitar:** Antes de ir a producción con customers reales que configuren API keys de terceros.
+
+---
+
 ## Superpowers Skills (from [obra/superpowers](https://github.com/obra/superpowers))
 
 Las siguientes skills definen el flujo de trabajo y la disciplina de desarrollo que se debe seguir en este proyecto.
