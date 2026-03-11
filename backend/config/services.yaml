@@ -26,47 +26,47 @@ services:
       $ttlSeconds: '%mercure.subscriber.ttl%'
 
 
-  # GPS Tracking (Ports & Adapters)
+  # GPS Tracking (Ports & Adapters) — optional, only needed when using Traccar provider
   App\Tracking\TraccarGpsProvider:
     arguments:
-      $baseUrl: '%env(TRACCAR_BASE_URL)%'
-      $username: '%env(TRACCAR_USERNAME)%'
-      $password: '%env(TRACCAR_PASSWORD)%'
+      $baseUrl: '%env(string:default::TRACCAR_BASE_URL)%'
+      $username: '%env(string:default::TRACCAR_USERNAME)%'
+      $password: '%env(string:default::TRACCAR_PASSWORD)%'
 
   App\Service\TraccarWebSocketClient:
     arguments:
-      $wsUrl: '%env(TRACCAR_WS_URL)%'
+      $wsUrl: '%env(string:default::TRACCAR_WS_URL)%'
 
   App\Service\SystemHealthService:
     arguments:
-      $mercureInternalUrl: '%env(MERCURE_URL)%'
+      $mercureInternalUrl: '%env(string:default::MERCURE_URL)%'
 
-  # Route Optimization (Ports & Adapters)
+  # Route Optimization (Ports & Adapters) — optional, only needed when using VROOM provider
   App\RouteOptimization\VroomRouteOptimizer:
     arguments:
-      $vroomUrl: '%env(VROOM_URL)%'
+      $vroomUrl: '%env(string:default::VROOM_URL)%'
 
-  # Routing (Ports & Adapters)
+  # Routing (Ports & Adapters) — optional, only needed when using OSRM provider
   App\Routing\OsrmRoutingEngine:
     arguments:
-      $osrmUrl: '%env(OSRM_URL)%'
+      $osrmUrl: '%env(string:default::OSRM_URL)%'
 
   # ── Provider Framework (tenant-configurable providers) ──────────────
 
   # Factory wiring: inject env defaults into factories
   App\Provider\RouteOptimizer\VroomFactory:
     arguments:
-      $defaultVroomUrl: '%env(VROOM_URL)%'
+      $defaultVroomUrl: '%env(string:default::VROOM_URL)%'
 
   App\Provider\Routing\OsrmFactory:
     arguments:
-      $defaultOsrmUrl: '%env(OSRM_URL)%'
+      $defaultOsrmUrl: '%env(string:default::OSRM_URL)%'
 
   App\Provider\Gps\TraccarFactory:
     arguments:
-      $defaultBaseUrl: '%env(TRACCAR_BASE_URL)%'
-      $defaultUsername: '%env(TRACCAR_USERNAME)%'
-      $defaultPassword: '%env(TRACCAR_PASSWORD)%'
+      $defaultBaseUrl: '%env(string:default::TRACCAR_BASE_URL)%'
+      $defaultUsername: '%env(string:default::TRACCAR_USERNAME)%'
+      $defaultPassword: '%env(string:default::TRACCAR_PASSWORD)%'
 
   # ProviderFactoryRegistry: collects all tagged factories + global defaults
   App\Provider\ProviderFactoryRegistry:
@@ -101,7 +101,7 @@ services:
 
   App\Service\WebhookNotificationService:
     arguments:
-      $webhookSecret: '%env(default::WEBHOOK_SECRET)%'
+      $webhookSecret: '%env(string:default::WEBHOOK_SECRET)%'
 
   # AI / LLM (Ports & Adapters)
   App\Ai\ClaudeLlmClient:
@@ -113,14 +113,14 @@ services:
 
   App\Ai\OpenAiEmbeddingClient:
     arguments:
-      $openaiApiKey: '%env(default::OPENAI_API_KEY)%'
+      $openaiApiKey: '%env(string:default::OPENAI_API_KEY)%'
 
   App\Ai\EmbeddingClientInterface:
     alias: App\Ai\OpenAiEmbeddingClient
 
   App\Service\MlApiClient:
     arguments:
-      $mlServiceUrl: '%env(ML_SERVICE_URL)%'
+      $mlServiceUrl: '%env(string:default::ML_SERVICE_URL)%'
 
   # Prediction / ML (Ports & Adapters) — Null for dev, swap to HttpMlServiceClient in prod
   App\Prediction\EtaPredictorInterface:
@@ -133,7 +133,7 @@ services:
   # Geocoding (Ports & Adapters)
   App\Geocoding\NominatimGeocoder:
     arguments:
-      $nominatimUrl: '%env(default::NOMINATIM_URL)%'
+      $nominatimUrl: '%env(string:default::NOMINATIM_URL)%'
 
   App\Geocoding\CachedGeocoder:
     arguments:
@@ -155,7 +155,7 @@ services:
   App\Notification\RecipientNotificationService:
     arguments:
       $channels: !tagged_iterator app.notification_channel
-      $appBaseUrl: '%env(default::APP_BASE_URL)%'
+      $appBaseUrl: '%env(string:default::APP_BASE_URL)%'
 
   # Provider wiring — default to Null for dev, swap to Twilio in prod
   App\Notification\Provider\SmsProviderInterface:
@@ -166,11 +166,11 @@ services:
   # Twilio config (ready to activate by changing aliases above)
   App\Notification\Provider\TwilioSmsProvider:
     arguments:
-      $accountSid: '%env(default::TWILIO_ACCOUNT_SID)%'
-      $authToken: '%env(default::TWILIO_AUTH_TOKEN)%'
-      $fromNumber: '%env(default::TWILIO_FROM_NUMBER)%'
+      $accountSid: '%env(string:default::TWILIO_ACCOUNT_SID)%'
+      $authToken: '%env(string:default::TWILIO_AUTH_TOKEN)%'
+      $fromNumber: '%env(string:default::TWILIO_FROM_NUMBER)%'
   App\Notification\Provider\TwilioWhatsAppProvider:
     arguments:
-      $accountSid: '%env(default::TWILIO_ACCOUNT_SID)%'
-      $authToken: '%env(default::TWILIO_AUTH_TOKEN)%'
-      $fromNumber: '%env(default::TWILIO_WHATSAPP_FROM)%'
+      $accountSid: '%env(string:default::TWILIO_ACCOUNT_SID)%'
+      $authToken: '%env(string:default::TWILIO_AUTH_TOKEN)%'
+      $fromNumber: '%env(string:default::TWILIO_WHATSAPP_FROM)%'
