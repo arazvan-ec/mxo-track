@@ -6,7 +6,7 @@ use App\Entity\Customer;
 use App\Entity\User;
 use Symfony\Bundle\SecurityBundle\Security;
 
-final readonly class TenantContext
+readonly class TenantContext
 {
     public function __construct(private Security $security) {}
 

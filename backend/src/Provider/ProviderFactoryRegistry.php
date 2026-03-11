@@ -6,7 +6,7 @@ namespace App\Provider;
 
 use App\Entity\CustomerIntegration;
 
-final class ProviderFactoryRegistry
+class ProviderFactoryRegistry
 {
     /** @var array<string, ProviderFactoryInterface> */
     private array $factories = [];
