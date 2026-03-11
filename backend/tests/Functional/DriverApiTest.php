@@ -4,36 +4,32 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use App\Application\Delivery\DeliveryContext;
+use App\Application\Delivery\DeliveryResult;
+use App\Application\Delivery\DeliveryService;
+use App\Application\Delivery\DriverConfirmationRequiredException;
+use App\Application\Delivery\DriverNotOwnerException;
+use App\Application\Delivery\ExceptionResult;
+use App\Application\Delivery\StopNotFoundException;
+use App\Application\Route\InspectionNotCompletedException;
+use App\Application\Route\RouteLifecycleService;
+use App\Application\Route\RouteNotFoundException;
+use App\Application\Route\RouteNotOwnedException;
 use App\Controller\DriverApiController;
 use App\Dto\Driver\DeliverStopInput;
 use App\Dto\Driver\ExceptionStopInput;
-use App\Entity\DriverAction;
-use App\Entity\Pod;
 use App\Entity\Route;
 use App\Entity\RouteStop;
-use App\Entity\Shipment;
-use App\Entity\ShipmentEvent;
 use App\Entity\User;
 use App\Enum\ExceptionCode;
 use App\Enum\RouteStatus;
 use App\Enum\RouteStopStatus;
-use App\Enum\ShipmentEventType;
 use App\Http\ApiErrorResponder;
-use App\Repository\RouteRepository;
-use App\Repository\RouteStopRepository;
-use App\Repository\ShipmentRepository;
-use App\Service\AuditLogger;
-use App\Service\DeliveryEvidenceFactory;
-use App\Service\DriverActionService;
-use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\ORM\EntityRepository;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\Uid\Ulid;
 use Symfony\Component\Uid\Uuid;
 use Symfony\Component\Validator\ConstraintViolationList;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
@@ -71,39 +67,22 @@ final class DriverApiTest extends TestCase
 
         $request = $this->createJsonRequest($payload);
 
-        $actionService = $this->createMock(DriverActionService::class);
-        $actionService->method('register')->willReturn(true); // new action
-
-        $entityManager = $this->createMock(EntityManagerInterface::class);
-        $entityManager->method('persist');
-        $entityManager->method('flush');
-
-        $auditLogger = $this->createMock(AuditLogger::class);
-        $auditLogger->expects(self::once())->method('log');
+        $deliveryService = $this->createMock(DeliveryService::class);
+        $deliveryService->expects(self::once())
+            ->method('deliverStop')
+            ->willReturn(new DeliveryResult(idempotent: false, podPublicId: 'pod-123'));
 
         $validator = $this->createMock(ValidatorInterface::class);
         $validator->method('validate')->willReturn(new ConstraintViolationList());
-
-        $deliveryEvidenceFactory = new DeliveryEvidenceFactory();
-
-        $routeStopRepo = $this->createMock(RouteStopRepository::class);
-        $routeStopRepo->method('findOneByPublicId')->willReturn($stop);
-
-        $shipmentRepo = $this->createMock(ShipmentRepository::class);
 
         $controller = $this->createControllerWithUser($driver);
 
         $response = $controller->deliver(
             $stop->getPublicIdString(),
             $request,
-            $actionService,
-            $entityManager,
-            $auditLogger,
+            $deliveryService,
             $this->errorResponder,
             $validator,
-            $deliveryEvidenceFactory,
-            $routeStopRepo,
-            $shipmentRepo,
         );
 
         self::assertSame(201, $response->getStatusCode());
@@ -130,36 +109,22 @@ final class DriverApiTest extends TestCase
 
         $request = $this->createJsonRequest($payload);
 
-        $actionService = $this->createMock(DriverActionService::class);
-        $actionService->method('register')->willReturn(false); // duplicate
-
-        $entityManager = $this->createMock(EntityManagerInterface::class);
-        $auditLogger = $this->createMock(AuditLogger::class);
-        $auditLogger->expects(self::never())->method('log');
+        $deliveryService = $this->createMock(DeliveryService::class);
+        $deliveryService->expects(self::once())
+            ->method('deliverStop')
+            ->willReturn(new DeliveryResult(idempotent: true));
 
         $validator = $this->createMock(ValidatorInterface::class);
         $validator->method('validate')->willReturn(new ConstraintViolationList());
-
-        $deliveryEvidenceFactory = new DeliveryEvidenceFactory();
-
-        $routeStopRepo = $this->createMock(RouteStopRepository::class);
-        $routeStopRepo->method('findOneByPublicId')->willReturn($stop);
-
-        $shipmentRepo = $this->createMock(ShipmentRepository::class);
 
         $controller = $this->createControllerWithUser($driver);
 
         $response = $controller->deliver(
             $stop->getPublicIdString(),
             $request,
-            $actionService,
-            $entityManager,
-            $auditLogger,
+            $deliveryService,
             $this->errorResponder,
             $validator,
-            $deliveryEvidenceFactory,
-            $routeStopRepo,
-            $shipmentRepo,
         );
 
         self::assertSame(200, $response->getStatusCode());
@@ -183,33 +148,22 @@ final class DriverApiTest extends TestCase
 
         $request = $this->createJsonRequest($payload);
 
-        $actionService = $this->createMock(DriverActionService::class);
-        $entityManager = $this->createMock(EntityManagerInterface::class);
-        $auditLogger = $this->createMock(AuditLogger::class);
+        $deliveryService = $this->createMock(DeliveryService::class);
+        $deliveryService->expects(self::once())
+            ->method('deliverStop')
+            ->willThrowException(new StopNotFoundException('nonexistent-public-id'));
 
         $validator = $this->createMock(ValidatorInterface::class);
         $validator->method('validate')->willReturn(new ConstraintViolationList());
-
-        $deliveryEvidenceFactory = new DeliveryEvidenceFactory();
-
-        $routeStopRepo = $this->createMock(RouteStopRepository::class);
-        $routeStopRepo->method('findOneByPublicId')->willReturn(null); // not found
-
-        $shipmentRepo = $this->createMock(ShipmentRepository::class);
 
         $controller = $this->createControllerWithUser($driver);
 
         $response = $controller->deliver(
             'nonexistent-public-id',
             $request,
-            $actionService,
-            $entityManager,
-            $auditLogger,
+            $deliveryService,
             $this->errorResponder,
             $validator,
-            $deliveryEvidenceFactory,
-            $routeStopRepo,
-            $shipmentRepo,
         );
 
         self::assertSame(404, $response->getStatusCode());
@@ -234,36 +188,22 @@ final class DriverApiTest extends TestCase
 
         $request = $this->createJsonRequest($payload);
 
-        $actionService = $this->createMock(DriverActionService::class);
-        $actionService->method('register')->willReturn(true); // new action
-
-        $entityManager = $this->createMock(EntityManagerInterface::class);
-        $entityManager->method('persist');
-        $entityManager->method('flush');
-
-        $auditLogger = $this->createMock(AuditLogger::class);
-        $auditLogger->expects(self::once())->method('log');
+        $deliveryService = $this->createMock(DeliveryService::class);
+        $deliveryService->expects(self::once())
+            ->method('reportException')
+            ->willReturn(new ExceptionResult(idempotent: false));
 
         $validator = $this->createMock(ValidatorInterface::class);
         $validator->method('validate')->willReturn(new ConstraintViolationList());
-
-        $routeStopRepo = $this->createMock(RouteStopRepository::class);
-        $routeStopRepo->method('findOneByPublicId')->willReturn($stop);
-
-        $shipmentRepo = $this->createMock(ShipmentRepository::class);
 
         $controller = $this->createControllerWithUser($driver);
 
         $response = $controller->exception(
             $stop->getPublicIdString(),
             $request,
-            $actionService,
-            $entityManager,
-            $auditLogger,
+            $deliveryService,
             $this->errorResponder,
             $validator,
-            $routeStopRepo,
-            $shipmentRepo,
         );
 
         self::assertSame(201, $response->getStatusCode());
@@ -288,32 +228,22 @@ final class DriverApiTest extends TestCase
 
         $request = $this->createJsonRequest($payload);
 
-        $actionService = $this->createMock(DriverActionService::class);
-        $actionService->method('register')->willReturn(false); // duplicate
-
-        $entityManager = $this->createMock(EntityManagerInterface::class);
-        $auditLogger = $this->createMock(AuditLogger::class);
+        $deliveryService = $this->createMock(DeliveryService::class);
+        $deliveryService->expects(self::once())
+            ->method('reportException')
+            ->willReturn(new ExceptionResult(idempotent: true));
 
         $validator = $this->createMock(ValidatorInterface::class);
         $validator->method('validate')->willReturn(new ConstraintViolationList());
-
-        $routeStopRepo = $this->createMock(RouteStopRepository::class);
-        $routeStopRepo->method('findOneByPublicId')->willReturn($stop);
-
-        $shipmentRepo = $this->createMock(ShipmentRepository::class);
 
         $controller = $this->createControllerWithUser($driver);
 
         $response = $controller->exception(
             $stop->getPublicIdString(),
             $request,
-            $actionService,
-            $entityManager,
-            $auditLogger,
+            $deliveryService,
             $this->errorResponder,
             $validator,
-            $routeStopRepo,
-            $shipmentRepo,
         );
 
         self::assertSame(200, $response->getStatusCode());
@@ -340,35 +270,27 @@ final class DriverApiTest extends TestCase
 
         $request = $this->createJsonRequest($payload);
 
-        $actionService = $this->createMock(DriverActionService::class);
-        $actionService->method('register')->willReturn(true);
-
-        $entityManager = $this->createMock(EntityManagerInterface::class);
-        $entityManager->method('flush');
-
-        $auditLogger = $this->createMock(AuditLogger::class);
-        $auditLogger->method('log');
+        // The DeliveryService now handles marking the stop internally.
+        // We simulate the side effect by having the mock call markException on the stop.
+        $deliveryService = $this->createMock(DeliveryService::class);
+        $deliveryService->expects(self::once())
+            ->method('reportException')
+            ->willReturnCallback(function () use ($stop): ExceptionResult {
+                $stop->markException(ExceptionCode::WRONG_ADDRESS, 'Address does not exist');
+                return new ExceptionResult(idempotent: false);
+            });
 
         $validator = $this->createMock(ValidatorInterface::class);
         $validator->method('validate')->willReturn(new ConstraintViolationList());
-
-        $routeStopRepo = $this->createMock(RouteStopRepository::class);
-        $routeStopRepo->method('findOneByPublicId')->willReturn($stop);
-
-        $shipmentRepo = $this->createMock(ShipmentRepository::class);
 
         $controller = $this->createControllerWithUser($driver);
 
         $controller->exception(
             $stop->getPublicIdString(),
             $request,
-            $actionService,
-            $entityManager,
-            $auditLogger,
+            $deliveryService,
             $this->errorResponder,
             $validator,
-            $routeStopRepo,
-            $shipmentRepo,
         );
 
         self::assertSame(RouteStopStatus::EXCEPTION, $stop->getStatus());
@@ -384,18 +306,19 @@ final class DriverApiTest extends TestCase
 
         self::assertSame(RouteStatus::PLANNED, $route->getStatus());
 
-        $routeRepo = $this->createMock(RouteRepository::class);
-        $routeRepo->method('findOneByPublicId')->willReturn($route);
-
-        $entityManager = $this->createMock(EntityManagerInterface::class);
-        $entityManager->expects(self::once())->method('flush');
+        $lifecycleService = $this->createMock(RouteLifecycleService::class);
+        $lifecycleService->expects(self::once())
+            ->method('startRoute')
+            ->willReturnCallback(function () use ($route): Route {
+                $route->start();
+                return $route;
+            });
 
         $controller = $this->createControllerWithUser($driver);
 
         $response = $controller->start(
             $route->getPublicIdString(),
-            $routeRepo,
-            $entityManager,
+            $lifecycleService,
             $this->errorResponder,
         );
 
@@ -416,18 +339,19 @@ final class DriverApiTest extends TestCase
 
         self::assertSame(RouteStatus::ACTIVE, $route->getStatus());
 
-        $routeRepo = $this->createMock(RouteRepository::class);
-        $routeRepo->method('findOneByPublicId')->willReturn($route);
-
-        $entityManager = $this->createMock(EntityManagerInterface::class);
-        $entityManager->expects(self::once())->method('flush');
+        $lifecycleService = $this->createMock(RouteLifecycleService::class);
+        $lifecycleService->expects(self::once())
+            ->method('finishRoute')
+            ->willReturnCallback(function () use ($route): Route {
+                $route->finish();
+                return $route;
+            });
 
         $controller = $this->createControllerWithUser($driver);
 
         $response = $controller->finish(
             $route->getPublicIdString(),
-            $routeRepo,
-            $entityManager,
+            $lifecycleService,
             $this->errorResponder,
         );
 
@@ -444,17 +368,16 @@ final class DriverApiTest extends TestCase
     {
         $driver = $this->createDriver();
 
-        $routeRepo = $this->createMock(RouteRepository::class);
-        $routeRepo->method('findOneByPublicId')->willReturn(null);
-
-        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $lifecycleService = $this->createMock(RouteLifecycleService::class);
+        $lifecycleService->expects(self::once())
+            ->method('startRoute')
+            ->willThrowException(new RouteNotFoundException('nonexistent-route-id'));
 
         $controller = $this->createControllerWithUser($driver);
 
         $response = $controller->start(
             'nonexistent-route-id',
-            $routeRepo,
-            $entityManager,
+            $lifecycleService,
             $this->errorResponder,
         );
 
@@ -472,17 +395,16 @@ final class DriverApiTest extends TestCase
 
         $route = $this->createRouteForDriver($otherDriver);
 
-        $routeRepo = $this->createMock(RouteRepository::class);
-        $routeRepo->method('findOneByPublicId')->willReturn($route);
-
-        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $lifecycleService = $this->createMock(RouteLifecycleService::class);
+        $lifecycleService->expects(self::once())
+            ->method('startRoute')
+            ->willThrowException(new RouteNotOwnedException());
 
         $controller = $this->createControllerWithUser($driver);
 
         $response = $controller->start(
             $route->getPublicIdString(),
-            $routeRepo,
-            $entityManager,
+            $lifecycleService,
             $this->errorResponder,
         );
 
@@ -497,27 +419,17 @@ final class DriverApiTest extends TestCase
         // Send invalid JSON content
         $request = Request::create('/api/driver/stops/test/deliver', 'POST', [], [], [], [], 'not-json{{{');
 
-        $actionService = $this->createMock(DriverActionService::class);
-        $entityManager = $this->createMock(EntityManagerInterface::class);
-        $auditLogger = $this->createMock(AuditLogger::class);
+        $deliveryService = $this->createMock(DeliveryService::class);
         $validator = $this->createMock(ValidatorInterface::class);
-        $deliveryEvidenceFactory = new DeliveryEvidenceFactory();
-        $routeStopRepo = $this->createMock(RouteStopRepository::class);
-        $shipmentRepo = $this->createMock(ShipmentRepository::class);
 
         $controller = $this->createControllerWithUser($driver);
 
         $response = $controller->deliver(
             'test-stop-id',
             $request,
-            $actionService,
-            $entityManager,
-            $auditLogger,
+            $deliveryService,
             $this->errorResponder,
             $validator,
-            $deliveryEvidenceFactory,
-            $routeStopRepo,
-            $shipmentRepo,
         );
 
         self::assertSame(400, $response->getStatusCode());

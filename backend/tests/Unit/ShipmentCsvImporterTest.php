@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit;
 
+use App\Dto\CsvQualityReport;
 use App\Entity\Customer;
 use App\Entity\Shipment;
 use App\Entity\ShipmentEvent;
+use App\Service\CsvQualityAnalyzer;
 use App\Service\ImportRunTracker;
 use App\Service\ShipmentCsvImporter;
 use Doctrine\ORM\EntityManagerInterface;
@@ -21,6 +23,7 @@ final class ShipmentCsvImporterTest extends TestCase
 {
     private EntityManagerInterface&MockObject $entityManager;
     private ImportRunTracker&MockObject $importRunTracker;
+    private CsvQualityAnalyzer&MockObject $qualityAnalyzer;
     private ShipmentCsvImporter $importer;
     private string $tmpDir;
 
@@ -28,7 +31,10 @@ final class ShipmentCsvImporterTest extends TestCase
     {
         $this->entityManager = $this->createMock(EntityManagerInterface::class);
         $this->importRunTracker = $this->createMock(ImportRunTracker::class);
-        $this->importer = new ShipmentCsvImporter($this->entityManager, $this->importRunTracker);
+        $this->qualityAnalyzer = $this->createMock(CsvQualityAnalyzer::class);
+        $this->qualityAnalyzer->method('analyze')
+            ->willReturn(new CsvQualityReport(100, []));
+        $this->importer = new ShipmentCsvImporter($this->entityManager, $this->importRunTracker, $this->qualityAnalyzer);
         $this->tmpDir = sys_get_temp_dir() . '/csv_test_' . uniqid();
         mkdir($this->tmpDir, 0777, true);
     }
@@ -76,7 +82,7 @@ final class ShipmentCsvImporterTest extends TestCase
 
         $this->importRunTracker->expects(self::once())
             ->method('track')
-            ->with($customer, 2, 0);
+            ->with($customer, 2, 0, 100);
 
         $result = $this->importer->import($csvPath, $customer);
 
@@ -132,7 +138,7 @@ final class ShipmentCsvImporterTest extends TestCase
 
         $this->importRunTracker->expects(self::once())
             ->method('track')
-            ->with($customer, 1, 1);
+            ->with($customer, 1, 1, 100);
 
         $result = $this->importer->import($csvPath, $customer);
 
@@ -165,7 +171,7 @@ final class ShipmentCsvImporterTest extends TestCase
 
         $this->importRunTracker->expects(self::once())
             ->method('track')
-            ->with($customer, 1, 0);
+            ->with($customer, 1, 0, 100);
 
         $result = $this->importer->import($csvPath, $customer);
 

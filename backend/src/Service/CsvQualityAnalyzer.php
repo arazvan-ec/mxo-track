@@ -7,7 +7,7 @@ namespace App\Service;
 use App\Dto\CsvQualityReport;
 use App\Dto\CsvQualityWarning;
 
-final class CsvQualityAnalyzer
+class CsvQualityAnalyzer
 {
     /** Minimum rows needed for statistical outlier detection. */
     private const MIN_ROWS_FOR_OUTLIERS = 10;

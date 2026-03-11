@@ -8,7 +8,7 @@ use App\Entity\CsvImportRun;
 use App\Entity\Customer;
 use Doctrine\ORM\EntityManagerInterface;
 
-final class ImportRunTracker
+class ImportRunTracker
 {
     public function __construct(private readonly EntityManagerInterface $entityManager)
     {

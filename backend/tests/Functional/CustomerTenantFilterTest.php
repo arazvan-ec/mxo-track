@@ -51,17 +51,21 @@ final class CustomerTenantFilterTest extends TestCase
         $security = $this->createMock(Security::class);
         $security->method('getUser')->willReturn($user);
 
-        $filter = $this->createMock(\Doctrine\ORM\Query\Filter\SQLFilter::class);
-
         $filterCollection = $this->createMock(FilterCollection::class);
         $filterCollection->method('has')->with('customer_tenant')->willReturn(true);
         $filterCollection->method('isEnabled')->with('customer_tenant')->willReturn(false);
         $filterCollection->expects(self::once())->method('enable')->with('customer_tenant');
-        $filterCollection->expects(self::once())->method('getFilter')->with('customer_tenant')->willReturn($filter);
 
-        $filter->expects(self::once())
-            ->method('setParameter')
-            ->with('customer_id', '42');
+        $connection = $this->createMock(\Doctrine\DBAL\Connection::class);
+        $connection->method('quote')->willReturnCallback(fn (string $value) => "'" . $value . "'");
+
+        $filterEntityManager = $this->createMock(EntityManagerInterface::class);
+        $filterEntityManager->method('getFilters')->willReturn($filterCollection);
+        $filterEntityManager->method('getConnection')->willReturn($connection);
+
+        $filter = new CustomerTenantFilter($filterEntityManager);
+
+        $filterCollection->expects(self::once())->method('getFilter')->with('customer_tenant')->willReturn($filter);
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $entityManager->method('getFilters')->willReturn($filterCollection);
@@ -73,6 +77,9 @@ final class CustomerTenantFilterTest extends TestCase
         $event = new RequestEvent($kernel, $request, HttpKernelInterface::MAIN_REQUEST);
 
         $subscriber->onKernelRequest($event);
+
+        self::assertTrue($filter->hasParameter('customer_id'));
+        self::assertSame("'42'", $filter->getParameter('customer_id'));
     }
 
     #[Test]

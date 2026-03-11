@@ -11,6 +11,7 @@ use App\Entity\VehicleLastPosition;
 use App\Entity\VehiclePosition;
 use App\Enum\RouteStatus;
 use App\Service\TraccarIngestionService;
+use App\Tracking\DevicePosition;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\EntityRepository;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -19,25 +20,29 @@ use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\Update;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 #[CoversClass(TraccarIngestionService::class)]
 final class TraccarIngestionServiceTest extends TestCase
 {
     private EntityManagerInterface&MockObject $entityManager;
     private HubInterface&MockObject $hub;
+    private EventDispatcherInterface&MockObject $eventDispatcher;
     private TraccarIngestionService $service;
 
     protected function setUp(): void
     {
         $this->entityManager = $this->createMock(EntityManagerInterface::class);
         $this->hub = $this->createMock(HubInterface::class);
-        $this->service = new TraccarIngestionService($this->entityManager, $this->hub);
+        $this->eventDispatcher = $this->createMock(EventDispatcherInterface::class);
+        $this->service = new TraccarIngestionService($this->entityManager, $this->hub, $this->eventDispatcher);
     }
 
     #[Test]
     public function ingestCreatesPositionForNewData(): void
     {
         $vehicle = new Vehicle('Test Truck');
+        $vehicle->initializePublicId();
 
         $routeRepo = $this->createMock(EntityRepository::class);
         $routeRepo->method('findOneBy')
@@ -81,16 +86,16 @@ final class TraccarIngestionServiceTest extends TestCase
             ->with(self::isInstanceOf(Update::class));
 
         $positions = [
-            [
-                'latitude' => 40.4168,
-                'longitude' => -3.7038,
-                'deviceTime' => '2025-06-01T12:00:00+00:00',
-                'serverTime' => '2025-06-01T12:00:01+00:00',
-                'speed' => 45.5,
-                'course' => 180.0,
-                'accuracy' => 5.0,
-                'id' => 101,
-            ],
+            new DevicePosition(
+                latitude: 40.4168,
+                longitude: -3.7038,
+                speed: 45.5,
+                course: 180.0,
+                accuracy: 5.0,
+                deviceTime: new \DateTimeImmutable('2025-06-01T12:00:00+00:00'),
+                serverTime: new \DateTimeImmutable('2025-06-01T12:00:01+00:00'),
+                rawId: 101,
+            ),
         ];
 
         $created = $this->service->ingestForVehicle($vehicle, $positions);
@@ -102,6 +107,7 @@ final class TraccarIngestionServiceTest extends TestCase
     public function ingestSkipsDuplicatePositions(): void
     {
         $vehicle = new Vehicle('Test Van');
+        $vehicle->initializePublicId();
 
         $existingPosition = $this->createMock(VehiclePosition::class);
 
@@ -136,12 +142,15 @@ final class TraccarIngestionServiceTest extends TestCase
             ->method('flush');
 
         $positions = [
-            [
-                'latitude' => 40.4168,
-                'longitude' => -3.7038,
-                'deviceTime' => '2025-06-01T12:00:00+00:00',
-                'serverTime' => '2025-06-01T12:00:01+00:00',
-            ],
+            new DevicePosition(
+                latitude: 40.4168,
+                longitude: -3.7038,
+                speed: 0.0,
+                course: 0.0,
+                accuracy: 0.0,
+                deviceTime: new \DateTimeImmutable('2025-06-01T12:00:00+00:00'),
+                serverTime: new \DateTimeImmutable('2025-06-01T12:00:01+00:00'),
+            ),
         ];
 
         $created = $this->service->ingestForVehicle($vehicle, $positions);
@@ -153,6 +162,7 @@ final class TraccarIngestionServiceTest extends TestCase
     public function ingestCreatesMultiplePositions(): void
     {
         $vehicle = new Vehicle('Multi Truck');
+        $vehicle->initializePublicId();
 
         $routeRepo = $this->createMock(EntityRepository::class);
         $routeRepo->method('findOneBy')->willReturn(null);
@@ -187,18 +197,24 @@ final class TraccarIngestionServiceTest extends TestCase
             ->method('flush');
 
         $positions = [
-            [
-                'latitude' => 40.4168,
-                'longitude' => -3.7038,
-                'deviceTime' => '2025-06-01T12:00:00+00:00',
-                'serverTime' => '2025-06-01T12:00:01+00:00',
-            ],
-            [
-                'latitude' => 40.4200,
-                'longitude' => -3.7100,
-                'deviceTime' => '2025-06-01T12:01:00+00:00',
-                'serverTime' => '2025-06-01T12:01:01+00:00',
-            ],
+            new DevicePosition(
+                latitude: 40.4168,
+                longitude: -3.7038,
+                speed: 0.0,
+                course: 0.0,
+                accuracy: 0.0,
+                deviceTime: new \DateTimeImmutable('2025-06-01T12:00:00+00:00'),
+                serverTime: new \DateTimeImmutable('2025-06-01T12:00:01+00:00'),
+            ),
+            new DevicePosition(
+                latitude: 40.4200,
+                longitude: -3.7100,
+                speed: 0.0,
+                course: 0.0,
+                accuracy: 0.0,
+                deviceTime: new \DateTimeImmutable('2025-06-01T12:01:00+00:00'),
+                serverTime: new \DateTimeImmutable('2025-06-01T12:01:01+00:00'),
+            ),
         ];
 
         $created = $this->service->ingestForVehicle($vehicle, $positions);
@@ -210,6 +226,7 @@ final class TraccarIngestionServiceTest extends TestCase
     public function ingestAssociatesPositionWithActiveRoute(): void
     {
         $vehicle = new Vehicle('Route Truck');
+        $vehicle->initializePublicId();
         $activeRoute = new Route('Test Route');
         $activeRoute->setStatus(RouteStatus::ACTIVE);
 
@@ -247,12 +264,15 @@ final class TraccarIngestionServiceTest extends TestCase
         $this->entityManager->method('flush');
 
         $positions = [
-            [
-                'latitude' => 40.4168,
-                'longitude' => -3.7038,
-                'deviceTime' => '2025-06-01T12:00:00+00:00',
-                'serverTime' => '2025-06-01T12:00:01+00:00',
-            ],
+            new DevicePosition(
+                latitude: 40.4168,
+                longitude: -3.7038,
+                speed: 0.0,
+                course: 0.0,
+                accuracy: 0.0,
+                deviceTime: new \DateTimeImmutable('2025-06-01T12:00:00+00:00'),
+                serverTime: new \DateTimeImmutable('2025-06-01T12:00:01+00:00'),
+            ),
         ];
 
         $this->service->ingestForVehicle($vehicle, $positions);
@@ -274,6 +294,7 @@ final class TraccarIngestionServiceTest extends TestCase
     public function ingestContinuesOnMercureFailure(): void
     {
         $vehicle = new Vehicle('Mercure Fail Truck');
+        $vehicle->initializePublicId();
 
         $routeRepo = $this->createMock(EntityRepository::class);
         $routeRepo->method('findOneBy')->willReturn(null);
@@ -306,12 +327,15 @@ final class TraccarIngestionServiceTest extends TestCase
             ->willThrowException(new \RuntimeException('Mercure hub unavailable'));
 
         $positions = [
-            [
-                'latitude' => 40.4168,
-                'longitude' => -3.7038,
-                'deviceTime' => '2025-06-01T12:00:00+00:00',
-                'serverTime' => '2025-06-01T12:00:01+00:00',
-            ],
+            new DevicePosition(
+                latitude: 40.4168,
+                longitude: -3.7038,
+                speed: 0.0,
+                course: 0.0,
+                accuracy: 0.0,
+                deviceTime: new \DateTimeImmutable('2025-06-01T12:00:00+00:00'),
+                serverTime: new \DateTimeImmutable('2025-06-01T12:00:01+00:00'),
+            ),
         ];
 
         $created = $this->service->ingestForVehicle($vehicle, $positions);

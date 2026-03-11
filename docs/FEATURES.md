@@ -685,6 +685,7 @@ Columnas soportadas:
 | Fecha | Versión | Cambios |
 |---|---|---|
 | 2026-03-11 | 1.0.0 | Documento inicial con todas las características del sistema |
+| 2026-03-11 | 1.1.0 | Fase 3: +41 unit tests (92→133). Fase 4: fix APP_BASE_URL, deprecar legacy ShipmentApiController, archivar docs completados, añadir metadata a composer.json |
 
 ---
 

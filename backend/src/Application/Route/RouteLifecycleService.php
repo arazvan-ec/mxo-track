@@ -13,7 +13,7 @@ use App\Repository\RouteRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
-final readonly class RouteLifecycleService
+readonly class RouteLifecycleService
 {
     public function __construct(
         private EntityManagerInterface $em,

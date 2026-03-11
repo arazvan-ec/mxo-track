@@ -25,7 +25,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
-final readonly class DeliveryService
+readonly class DeliveryService
 {
     public function __construct(
         private EntityManagerInterface $em,

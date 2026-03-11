@@ -14,6 +14,10 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 
+/**
+ * @deprecated Use App\Controller\Api\V1\ShipmentApiController instead.
+ *             This legacy controller will be removed in a future version.
+ */
 #[Route('/api/shipments', name: 'api_shipments_')]
 class ShipmentApiController extends AbstractController
 {
