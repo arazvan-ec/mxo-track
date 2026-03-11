@@ -33,9 +33,6 @@ services:
       $username: '%env(TRACCAR_USERNAME)%'
       $password: '%env(TRACCAR_PASSWORD)%'
 
-  App\Tracking\GpsDeviceProviderInterface:
-    alias: App\Tracking\TraccarGpsProvider
-
   App\Service\TraccarWebSocketClient:
     arguments:
       $wsUrl: '%env(TRACCAR_WS_URL)%'
@@ -49,16 +46,58 @@ services:
     arguments:
       $vroomUrl: '%env(VROOM_URL)%'
 
-  App\RouteOptimization\RouteOptimizerInterface:
-    alias: App\RouteOptimization\VroomRouteOptimizer
-
   # Routing (Ports & Adapters)
   App\Routing\OsrmRoutingEngine:
     arguments:
       $osrmUrl: '%env(OSRM_URL)%'
 
+  # ── Provider Framework (tenant-configurable providers) ──────────────
+
+  # Factory wiring: inject env defaults into factories
+  App\Provider\RouteOptimizer\VroomFactory:
+    arguments:
+      $defaultVroomUrl: '%env(VROOM_URL)%'
+
+  App\Provider\Routing\OsrmFactory:
+    arguments:
+      $defaultOsrmUrl: '%env(OSRM_URL)%'
+
+  App\Provider\Gps\TraccarFactory:
+    arguments:
+      $defaultBaseUrl: '%env(TRACCAR_BASE_URL)%'
+      $defaultUsername: '%env(TRACCAR_USERNAME)%'
+      $defaultPassword: '%env(TRACCAR_PASSWORD)%'
+
+  # ProviderFactoryRegistry: collects all tagged factories + global defaults
+  App\Provider\ProviderFactoryRegistry:
+    arguments:
+      $factories: !tagged_iterator app.provider_factory
+      $defaults:
+        route_optimizer: '%env(DEFAULT_ROUTE_OPTIMIZER)%'
+        routing_engine: '%env(DEFAULT_ROUTING_ENGINE)%'
+        gps_provider: '%env(DEFAULT_GPS_PROVIDER)%'
+        realtime_publisher: '%env(DEFAULT_REALTIME_PUBLISHER)%'
+
+  # ProviderResolver: decorated with in-memory cache
+  App\Provider\ProviderResolverInterface:
+    alias: App\Provider\CachedProviderResolver
+
+  App\Provider\CachedProviderResolver:
+    arguments:
+      $inner: '@App\Provider\ProviderResolver'
+
+  # Transparent Proxies: replace direct aliases with tenant-aware resolution
+  App\RouteOptimization\RouteOptimizerInterface:
+    alias: App\Provider\RouteOptimizer\TenantAwareRouteOptimizer
+
   App\Routing\RoutingEngineInterface:
-    alias: App\Routing\OsrmRoutingEngine
+    alias: App\Provider\Routing\TenantAwareRoutingEngine
+
+  App\Tracking\GpsDeviceProviderInterface:
+    alias: App\Provider\Gps\TenantAwareGpsProvider
+
+  App\Realtime\RealtimePublisherInterface:
+    alias: App\Provider\Realtime\TenantAwareRealtimePublisher
 
   App\Service\WebhookNotificationService:
     arguments:
