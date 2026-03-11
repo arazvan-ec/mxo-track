@@ -4,12 +4,17 @@ declare(strict_types=1);
 
 namespace App\Service;
 
-use Doctrine\DBAL\Connection;
+use App\Entity\Route;
+use App\Entity\RouteStop;
+use App\Entity\VehicleLastPosition;
+use App\Enum\RouteStatus;
+use App\Enum\RouteStopStatus;
+use Doctrine\ORM\EntityManagerInterface;
 
 final class OperatorKpiService
 {
     public function __construct(
-        private readonly Connection $connection,
+        private readonly EntityManagerInterface $em,
     ) {}
 
     /**
@@ -25,73 +30,75 @@ final class OperatorKpiService
      */
     public function collectKpis(): array
     {
-        $todayStart = (new \DateTimeImmutable('today midnight'))->format('Y-m-d H:i:s');
-        $sevenDaysAgo = (new \DateTimeImmutable('-7 days midnight'))->format('Y-m-d H:i:s');
-
-        $activeRoutes = $this->countActiveRoutes();
-        $deliveriesToday = $this->countDeliveriesToday($todayStart);
-        $exceptionsToday = $this->countExceptionsToday();
-        $completionRate = $this->calculateCompletionRate();
-        $successRate7d = $this->calculateSuccessRate7d($sevenDaysAgo);
-        $vehiclesWithPosition = $this->countVehiclesWithPosition();
-        $topDrivers = $this->getTopDrivers($sevenDaysAgo);
+        $todayStart = new \DateTimeImmutable('today midnight');
+        $sevenDaysAgo = new \DateTimeImmutable('-7 days midnight');
 
         return [
-            'activeRoutes' => $activeRoutes,
-            'deliveriesToday' => $deliveriesToday,
-            'exceptionsToday' => $exceptionsToday,
-            'completionRate' => $completionRate,
-            'successRate7d' => $successRate7d,
-            'vehiclesWithPosition' => $vehiclesWithPosition,
-            'topDrivers' => $topDrivers,
+            'activeRoutes' => $this->countActiveRoutes(),
+            'deliveriesToday' => $this->countDeliveriesToday($todayStart),
+            'exceptionsToday' => $this->countExceptionsToday(),
+            'completionRate' => $this->calculateCompletionRate(),
+            'successRate7d' => $this->calculateSuccessRate7d($sevenDaysAgo),
+            'vehiclesWithPosition' => $this->countVehiclesWithPosition(),
+            'topDrivers' => $this->getTopDrivers($sevenDaysAgo),
         ];
     }
 
     private function countActiveRoutes(): int
     {
-        return (int) $this->connection->fetchOne(
-            "SELECT COUNT(*) FROM route_plan WHERE status IN ('ACTIVE', 'PLANNED') AND deleted_at IS NULL",
-        );
+        return (int) $this->em->createQueryBuilder()
+            ->select('COUNT(r.id)')
+            ->from(Route::class, 'r')
+            ->where('r.status IN (:statuses)')
+            ->setParameter('statuses', [RouteStatus::ACTIVE, RouteStatus::PLANNED])
+            ->getQuery()
+            ->getSingleScalarResult();
     }
 
-    private function countDeliveriesToday(string $todayStart): int
+    private function countDeliveriesToday(\DateTimeImmutable $todayStart): int
     {
-        return (int) $this->connection->fetchOne(
-            'SELECT COUNT(*) FROM route_stop WHERE status = :status AND delivered_at >= :today',
-            ['status' => 'DELIVERED', 'today' => $todayStart],
-        );
+        return (int) $this->em->createQueryBuilder()
+            ->select('COUNT(rs.id)')
+            ->from(RouteStop::class, 'rs')
+            ->where('rs.status = :status')
+            ->andWhere('rs.deliveredAt >= :today')
+            ->setParameter('status', RouteStopStatus::DELIVERED)
+            ->setParameter('today', $todayStart)
+            ->getQuery()
+            ->getSingleScalarResult();
     }
 
     private function countExceptionsToday(): int
     {
-        return (int) $this->connection->fetchOne(
-            <<<'SQL'
-                SELECT COUNT(*)
-                FROM route_stop rs
-                JOIN route_plan r ON rs.route_id = r.id
-                WHERE rs.status = 'EXCEPTION'
-                  AND r.status IN ('ACTIVE', 'PLANNED', 'DONE')
-                  AND r.deleted_at IS NULL
-            SQL,
-        );
+        return (int) $this->em->createQueryBuilder()
+            ->select('COUNT(rs.id)')
+            ->from(RouteStop::class, 'rs')
+            ->join('rs.route', 'r')
+            ->where('rs.status = :status')
+            ->andWhere('r.status IN (:routeStatuses)')
+            ->setParameter('status', RouteStopStatus::EXCEPTION)
+            ->setParameter('routeStatuses', [RouteStatus::ACTIVE, RouteStatus::PLANNED, RouteStatus::DONE])
+            ->getQuery()
+            ->getSingleScalarResult();
     }
 
     private function calculateCompletionRate(): float
     {
-        $rows = $this->connection->fetchAllAssociative(
-            <<<'SQL'
-                SELECT
-                    rs.route_id AS "routeId",
-                    COUNT(rs.id) AS total,
-                    SUM(CASE WHEN rs.status = 'DELIVERED' THEN 1 ELSE 0 END) AS delivered
-                FROM route_stop rs
-                JOIN route_plan r ON rs.route_id = r.id
-                WHERE r.status IN ('ACTIVE', 'PLANNED')
-                  AND r.deleted_at IS NULL
-                  AND rs.is_origin = false
-                GROUP BY rs.route_id
-            SQL,
-        );
+        $rows = $this->em->createQueryBuilder()
+            ->select(
+                'IDENTITY(rs.route) AS routeId',
+                'COUNT(rs.id) AS total',
+                'SUM(CASE WHEN rs.status = :delivered THEN 1 ELSE 0 END) AS delivered',
+            )
+            ->from(RouteStop::class, 'rs')
+            ->join('rs.route', 'r')
+            ->where('r.status IN (:statuses)')
+            ->andWhere('rs.isOrigin = false')
+            ->setParameter('delivered', RouteStopStatus::DELIVERED)
+            ->setParameter('statuses', [RouteStatus::ACTIVE, RouteStatus::PLANNED])
+            ->groupBy('rs.route')
+            ->getQuery()
+            ->getArrayResult();
 
         $totalStops = 0;
         $totalDelivered = 0;
@@ -103,33 +110,31 @@ final class OperatorKpiService
         return $totalStops > 0 ? round(($totalDelivered / $totalStops) * 100, 1) : 0.0;
     }
 
-    private function calculateSuccessRate7d(string $sevenDaysAgo): float
+    private function calculateSuccessRate7d(\DateTimeImmutable $sevenDaysAgo): float
     {
-        $delivered = (int) $this->connection->fetchOne(
-            <<<'SQL'
-                SELECT COUNT(*)
-                FROM route_stop rs
-                JOIN route_plan r ON rs.route_id = r.id
-                WHERE rs.status = 'DELIVERED'
-                  AND rs.is_origin = false
-                  AND r.start_at >= :since
-                  AND r.deleted_at IS NULL
-            SQL,
-            ['since' => $sevenDaysAgo],
-        );
+        $delivered = (int) $this->em->createQueryBuilder()
+            ->select('COUNT(rs.id)')
+            ->from(RouteStop::class, 'rs')
+            ->join('rs.route', 'r')
+            ->where('rs.status = :status')
+            ->andWhere('rs.isOrigin = false')
+            ->andWhere('r.startAt >= :since')
+            ->setParameter('status', RouteStopStatus::DELIVERED)
+            ->setParameter('since', $sevenDaysAgo)
+            ->getQuery()
+            ->getSingleScalarResult();
 
-        $exceptions = (int) $this->connection->fetchOne(
-            <<<'SQL'
-                SELECT COUNT(*)
-                FROM route_stop rs
-                JOIN route_plan r ON rs.route_id = r.id
-                WHERE rs.status = 'EXCEPTION'
-                  AND rs.is_origin = false
-                  AND r.start_at >= :since
-                  AND r.deleted_at IS NULL
-            SQL,
-            ['since' => $sevenDaysAgo],
-        );
+        $exceptions = (int) $this->em->createQueryBuilder()
+            ->select('COUNT(rs.id)')
+            ->from(RouteStop::class, 'rs')
+            ->join('rs.route', 'r')
+            ->where('rs.status = :status')
+            ->andWhere('rs.isOrigin = false')
+            ->andWhere('r.startAt >= :since')
+            ->setParameter('status', RouteStopStatus::EXCEPTION)
+            ->setParameter('since', $sevenDaysAgo)
+            ->getQuery()
+            ->getSingleScalarResult();
 
         $total = $delivered + $exceptions;
 
@@ -138,17 +143,25 @@ final class OperatorKpiService
 
     private function countVehiclesWithPosition(): int
     {
-        return (int) $this->connection->fetchOne(
-            'SELECT COUNT(*) FROM vehicle_last_position',
-        );
+        return (int) $this->em->createQueryBuilder()
+            ->select('COUNT(vlp.id)')
+            ->from(VehicleLastPosition::class, 'vlp')
+            ->getQuery()
+            ->getSingleScalarResult();
     }
 
     /**
+     * Top 3 drivers by deliveries in last 7 days.
+     *
+     * Uses DBAL for PostgreSQL-specific FILTER (WHERE ...) and COALESCE on User fields,
+     * which are not expressible in standard DQL. The soft_delete filter on Route is
+     * applied manually via deleted_at IS NULL.
+     *
      * @return list<array{driver_name: string, deliveries: int, exceptions: int, success_rate: float}>
      */
-    private function getTopDrivers(string $sevenDaysAgo): array
+    private function getTopDrivers(\DateTimeImmutable $sevenDaysAgo): array
     {
-        $rows = $this->connection->fetchAllAssociative(
+        $rows = $this->em->getConnection()->fetchAllAssociative(
             <<<'SQL'
                 SELECT
                     COALESCE(u.name, u.email) AS driver_name,
@@ -164,7 +177,7 @@ final class OperatorKpiService
                 ORDER BY deliveries DESC
                 LIMIT 3
             SQL,
-            ['since' => $sevenDaysAgo],
+            ['since' => $sevenDaysAgo->format('Y-m-d H:i:s')],
         );
 
         return array_map(function (array $row): array {
