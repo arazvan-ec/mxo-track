@@ -1,5 +1,7 @@
 {
   "name": "transporte-tracking/backend",
+  "description": "Logistics tracking portal — vehicle tracking, delivery routes, and proof-of-delivery management",
+  "license": "proprietary",
   "type": "project",
   "require": {
     "doctrine/doctrine-bundle": "^2.12",
