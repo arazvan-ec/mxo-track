@@ -544,6 +544,25 @@ Good agent prompts are:
 
 ---
 
+### Problema conocido: Fallos de infraestructura en subagentes
+
+Los subagentes (Agent tool) pueden fallar con errores de runtime del entorno de ejecución, como `undefined is not an object (evaluating 'H.includes')`. Cuando esto ocurre, **todas** las herramientas del subagente fallan (Read, Bash, Grep, Glob) y el agente no puede hacer ningún trabajo útil.
+
+**Síntomas:**
+- El subagente reporta que no puede ejecutar ninguna herramienta
+- Errores JavaScript internos en las llamadas a herramientas
+- El resultado del agente dice "infrastructure errors" o similar
+
+**Solución:**
+1. **No reintentar el mismo subagente** — el entorno está roto y reintentar no lo arregla
+2. **Ejecutar la tarea en el hilo principal** — si el subagente falla, hacer el trabajo directamente sin delegar
+3. **Alternativa: lanzar un nuevo subagente** — un nuevo agente obtiene un entorno fresco que puede funcionar
+4. **Si persiste:** informar al usuario y sugerir reiniciar la sesión de Claude Code
+
+**Regla:** Cuando un subagente falla por infraestructura, no marcar la tarea como completada. Reintentarla en el hilo principal o con un nuevo subagente.
+
+---
+
 ### Skill 7: Test-Driven Development
 
 ```yaml
