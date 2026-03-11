@@ -563,6 +563,37 @@ Los subagentes (Agent tool) pueden fallar con errores de runtime del entorno de 
 
 ---
 
+### Problema conocido: Error "tool_use ids must be unique" (API 400)
+
+La API de Claude rechaza peticiones con HTTP 400 y mensaje `tool_use ids must be unique` cuando el historial de conversación contiene bloques `tool_use` con IDs duplicados. Esto es un **bug del cliente** (Claude Code / Agent SDK), no del servidor.
+
+**Causas principales:**
+- Llamadas a herramientas en paralelo que generan IDs duplicados
+- Conversaciones largas con muchos turnos de tool_use donde la reconstrucción del historial introduce duplicados
+- Sesiones reanudadas (`--resume`) con historial corrupto
+
+**Síntomas:**
+- Error 400: `messages.N.content.M: tool_use ids must be unique`
+- La conversación se corta abruptamente y no se puede continuar
+- Las herramientas dejan de funcionar en la sesión actual
+
+**Mitigación (qué hacer Claude para reducir riesgo):**
+1. **Hacer commits frecuentes** — cada tarea completada debe committearse inmediatamente para que el progreso no se pierda si la sesión se corrompe
+2. **Documentar estado en TodoWrite** — mantener el todo list actualizado para que al reanudar se sepa qué falta
+3. **Preferir tareas atómicas** — dividir trabajo grande en pasos pequeños e independientes; si la sesión se rompe a mitad de un paso, se pierde menos trabajo
+4. **Limitar profundidad de subagentes** — conversaciones con muchas llamadas paralelas a herramientas son más propensas al error; si una tarea necesita >20 tool calls secuenciales, considerar dividirla
+
+**Recuperación (qué hacer cuando ocurre):**
+1. **Usar `/clear`** — resetea el historial de la conversación y puede permitir continuar
+2. **Iniciar nueva sesión** — `claude` sin `--resume` empieza con historial limpio
+3. **Resumir sesión anterior con cuidado** — `claude --resume <id>` puede funcionar si el error fue puntual, pero si el historial está corrupto fallará de nuevo
+4. **Revisar git log** — verificar qué commits se hicieron antes del error para saber desde dónde continuar
+5. **Leer TodoWrite** — si había una lista de tareas, verificar cuáles están completadas y cuáles pendientes
+
+**Regla:** Ante este error, NUNCA asumir que el trabajo previo se guardó. Verificar con `git log` y `git status` antes de continuar. Hacer commits más frecuentes es la mejor protección.
+
+---
+
 ### Skill 7: Test-Driven Development
 
 ```yaml
