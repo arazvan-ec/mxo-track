@@ -965,3 +965,117 @@ description: Use when [specific triggering conditions]
 - [ ] Add explicit counters
 - [ ] Build rationalization table
 - [ ] Re-test until bulletproof
+
+---
+
+### Skill 15: Autonomous Research (autoresearch)
+
+```yaml
+name: autonomous-research
+description: Use when running autonomous experimentation loops — modifying code, running experiments, measuring results, keeping improvements and discarding regressions
+```
+
+Autonomous experimentation loop inspired by [karpathy/autoresearch](https://github.com/karpathy/autoresearch). The agent iterates independently: modify code, run experiment, measure metric, keep or discard, repeat.
+
+**Core principle:** Autonomous iterative experimentation — keep what improves the metric, discard what doesn't. Never stop unless the human interrupts.
+
+#### When to Use
+
+- Optimizing a measurable metric (performance, accuracy, latency, bundle size, etc.)
+- Exploring multiple approaches where each can be tested independently in minutes
+- The human wants to leave the agent running autonomously (e.g. overnight)
+- Tuning hyperparameters, configurations, or algorithmic approaches
+
+#### Setup (MUST complete before experimenting)
+
+1. **Agree on a run tag** with the user: propose a tag based on today's date (e.g. `mar11`). The branch `autoresearch/<tag>` must not already exist.
+2. **Create the branch**: `git checkout -b autoresearch/<tag>` from current branch.
+3. **Read in-scope files**: Identify which files are modifiable and which are read-only (evaluation, data, constants).
+4. **Verify prerequisites**: Ensure dependencies, data, and tooling are ready.
+5. **Define the metric**: Agree on the single metric to optimize and how to extract it from output.
+6. **Initialize results.tsv**: Create `results.tsv` with header row. Leave it untracked by git.
+7. **Confirm and go**: Confirm setup looks good with user, then begin.
+
+#### The Experiment Loop
+
+```
+LOOP FOREVER:
+1. Review git state (current branch/commit)
+2. Modify the in-scope file(s) with an experimental idea
+3. git commit
+4. Run the experiment (redirect output to run.log)
+5. Extract metric from run.log
+6. If crashed → read tail of log, attempt fix (max 3 attempts), else log as crash and move on
+7. Log results to results.tsv
+8. If metric improved → keep commit (advance branch)
+9. If metric equal or worse → git reset back to previous good commit
+10. GOTO 1
+```
+
+#### Constraints
+
+**What you CAN do:**
+- Modify designated in-scope files (agreed during setup)
+- Change architecture, parameters, configuration, algorithms — anything within scope
+
+**What you CANNOT do:**
+- Modify read-only files (evaluation harness, data prep, fixed constants)
+- Install new packages or add dependencies beyond what's already available
+- Modify the evaluation/metric function
+
+#### Results Logging
+
+Log every experiment to `results.tsv` (tab-separated, NOT comma-separated):
+
+```
+commit	metric	status	description
+a1b2c3d	0.997900	keep	baseline
+b2c3d4e	0.993200	keep	increase batch size to 64
+c3d4e5f	1.005000	discard	switch to alternative algorithm
+d4e5f6g	0.000000	crash	double buffer size (OOM)
+```
+
+Columns: short commit hash (7 chars), metric value (0.000000 for crashes), status (`keep`/`discard`/`crash`), short description. Do NOT commit results.tsv — leave it untracked.
+
+#### Simplicity Criterion
+
+All else being equal, simpler is better:
+- Small improvement + ugly complexity = probably not worth it
+- Removing code + equal or better results = keep (simplification win)
+- ~0 improvement + much simpler code = keep
+- Weigh complexity cost against improvement magnitude
+
+#### Timeout and Crash Handling
+
+- **Timeout**: If a run exceeds 2x the expected duration, kill it and treat as failure (discard and revert).
+- **Crashes**: Use judgment — typo/import fix → fix and re-run. Fundamentally broken idea → log as crash, move on.
+- **Stuck after 3+ failed fixes**: Give up on that idea, revert, try something different.
+
+#### The Autonomy Rule
+
+```
+NEVER STOP TO ASK THE HUMAN IF YOU SHOULD CONTINUE
+```
+
+Once the loop begins, run indefinitely until manually interrupted. The human may be away. If you run out of ideas:
+- Re-read in-scope files for new angles
+- Try combining previous near-misses
+- Try more radical changes
+- Review discarded approaches for partial insights
+
+#### Red Flags — STOP and Reassess
+
+- Modifying read-only files
+- Multiple consecutive crashes on the same idea (>3 attempts)
+- Metric getting consistently worse across many experiments
+- Running out of VRAM/memory without recovery
+
+#### Adaptation to This Project (mxo-track)
+
+In the context of this Symfony/PHP logistics project, autoresearch can be applied to:
+- **Route optimization**: Tuning VROOM/OSRM parameters, vehicle capacity configurations, stop ordering heuristics
+- **Performance tuning**: Database query optimization, caching strategies, batch sizes
+- **Algorithm experimentation**: Different routing algorithms, distance calculations, load balancing across vehicles
+- The metric could be: route total distance, route computation time, delivery efficiency score, etc.
+- In-scope files would typically be service classes (`RouteBuilder`, `RouteOptimizationService`, etc.)
+- Read-only: entity definitions, database schema, evaluation/benchmark scripts
