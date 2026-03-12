@@ -117,7 +117,7 @@
         </div>
 
         {% if stops is defined and stops|length > 0 %}
-          <div class="overflow-hidden rounded-lg border border-gray-200 mb-6">
+          <div class="overflow-x-auto rounded-lg border border-gray-200 mb-6">
             <table class="min-w-full divide-y divide-gray-200">
               <thead class="bg-gray-50">
                 <tr>
@@ -309,10 +309,19 @@
           document.addEventListener('mousemove', onMouseMove);
           document.addEventListener('mouseup', onMouseUp);
         });
+
+        handle.addEventListener('touchstart', function(e) {
+          e.preventDefault();
+          dragRow = row;
+          row.classList.add('opacity-50', 'bg-blue-50');
+
+          document.addEventListener('touchmove', onTouchMove, {passive: false});
+          document.addEventListener('touchend', onTouchEnd);
+        }, {passive: false});
       });
     }
 
-    function onMouseMove(e) {
+    function onDragMove(clientY) {
       if (!dragRow) return;
 
       var allRows = Array.from(tbody.querySelectorAll('tr'));
@@ -320,7 +329,7 @@
 
       for (var i = 0; i < allRows.length; i++) {
         var rect = allRows[i].getBoundingClientRect();
-        if (e.clientY >= rect.top && e.clientY <= rect.bottom) {
+        if (clientY >= rect.top && clientY <= rect.bottom) {
           hoverRow = allRows[i];
           break;
         }
@@ -339,15 +348,33 @@
       }
     }
 
-    function onMouseUp() {
+    function onMouseMove(e) {
+      onDragMove(e.clientY);
+    }
+
+    function onTouchMove(e) {
+      e.preventDefault();
+      onDragMove(e.touches[0].clientY);
+    }
+
+    function onDragEnd() {
       if (dragRow) {
         dragRow.classList.remove('opacity-50', 'bg-blue-50');
         dragRow = null;
       }
+      saveNewOrder();
+    }
+
+    function onMouseUp() {
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
+      onDragEnd();
+    }
 
-      saveNewOrder();
+    function onTouchEnd() {
+      document.removeEventListener('touchmove', onTouchMove);
+      document.removeEventListener('touchend', onTouchEnd);
+      onDragEnd();
     }
 
     function saveNewOrder() {
