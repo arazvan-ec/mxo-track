@@ -41,6 +41,8 @@ services:
   App\Service\SystemHealthService:
     arguments:
       $mercureInternalUrl: '%env(string:default::MERCURE_URL)%'
+      $vroomUrl: '%env(string:default::VROOM_URL)%'
+      $osrmUrl: '%env(string:default::OSRM_URL)%'
 
   # Route Optimization (Ports & Adapters) — optional, only needed when using VROOM provider
   App\RouteOptimization\VroomRouteOptimizer:

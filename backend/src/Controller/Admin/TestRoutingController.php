@@ -48,6 +48,46 @@ class TestRoutingController extends AbstractController
     ) {
     }
 
+    #[SymfonyRoute('/osrm-check', name: 'admin_test_routing_osrm_check', methods: ['GET'])]
+    public function osrmCheck(): JsonResponse
+    {
+        $start = microtime(true);
+        $result = [
+            'osrm' => ['ok' => false, 'latency_ms' => 0, 'has_geometry' => false, 'distance_km' => 0, 'error' => null],
+            'vroom' => ['ok' => false, 'latency_ms' => 0, 'error' => null],
+        ];
+
+        // Test OSRM
+        try {
+            $osrmResult = $this->routingEngine->routeWithWaypoints([
+                new Coordinate(40.4168, -3.7038), // Madrid Centro
+                new Coordinate(40.4530, -3.6883), // Chamartin
+            ]);
+            $result['osrm']['ok'] = $osrmResult->totalDistanceKm > 0;
+            $result['osrm']['has_geometry'] = $osrmResult->geometry !== null;
+            $result['osrm']['distance_km'] = round($osrmResult->totalDistanceKm, 2);
+        } catch (\Throwable $e) {
+            $result['osrm']['error'] = $e->getMessage();
+        }
+        $result['osrm']['latency_ms'] = (int) round((microtime(true) - $start) * 1000);
+
+        // Test VROOM via optimizeStopOrder with minimal test data
+        $vroomStart = microtime(true);
+        try {
+            [$route] = $this->createTestData();
+            $this->em->flush();
+            $optimized = $this->optimizationService->optimizeStopOrder($route);
+            $result['vroom']['ok'] = $optimized['distanceAfter'] > 0;
+        } catch (\Throwable $e) {
+            $result['vroom']['error'] = $e->getMessage();
+        } finally {
+            $this->cleanup();
+        }
+        $result['vroom']['latency_ms'] = (int) round((microtime(true) - $vroomStart) * 1000);
+
+        return new JsonResponse($result);
+    }
+
     #[SymfonyRoute('/run', name: 'admin_test_routing_run', methods: ['GET'])]
     public function run(): JsonResponse
     {
@@ -184,6 +224,15 @@ class TestRoutingController extends AbstractController
 
             $timing = $this->optimizationService->estimateRouteTiming($route);
 
+            // Use OSRM distances when available, fall back to VROOM distances
+            $osrmAvailable = $routeBefore->geometry !== null && $routeAfter->geometry !== null;
+            $distanceBeforeKm = $routeBefore->totalDistanceKm > 0
+                ? round($routeBefore->totalDistanceKm, 2)
+                : round($result['distanceBefore'], 2);
+            $distanceAfterKm = $routeAfter->totalDistanceKm > 0
+                ? round($routeAfter->totalDistanceKm, 2)
+                : round($result['distanceAfter'], 2);
+
             $templateData = [
                 'origin' => [
                     'lat' => self::WAREHOUSE_LAT,
@@ -194,10 +243,13 @@ class TestRoutingController extends AbstractController
                 'stopsAfter' => $stopsAfter,
                 'polylineBefore' => $routeBefore->geometry,
                 'polylineAfter' => $routeAfter->geometry,
+                'osrmAvailable' => $osrmAvailable,
                 'metrics' => [
-                    'distanceBeforeKm' => round($result['distanceBefore'], 2),
-                    'distanceAfterKm' => round($result['distanceAfter'], 2),
-                    'savedPercent' => $saved,
+                    'distanceBeforeKm' => $distanceBeforeKm,
+                    'distanceAfterKm' => $distanceAfterKm,
+                    'savedPercent' => $distanceBeforeKm > 0
+                        ? round(($distanceBeforeKm - $distanceAfterKm) / $distanceBeforeKm * 100, 1)
+                        : $saved,
                     'durationMinutes' => $result['durationMinutes'],
                     'timing' => $timing,
                     'stopCount' => \count($stopsAfter),
