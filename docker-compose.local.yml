@@ -76,7 +76,7 @@ services:
     image: osrm/osrm-backend
     volumes:
       - ./docker/osrm/data:/data:ro
-    command: osrm-routed --algorithm mld /data/comunidad-de-madrid-latest.osrm
+    command: osrm-routed --algorithm mld /data/madrid-latest.osrm
     ports:
       - "5000:5000"
     restart: unless-stopped

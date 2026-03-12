@@ -12,16 +12,16 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DATA_DIR="${SCRIPT_DIR}/data"
-MAP_URL="https://download.geofabrik.de/europe/spain/comunidad-de-madrid-latest.osm.pbf"
-MAP_FILE="comunidad-de-madrid-latest.osm.pbf"
-OSRM_FILE="comunidad-de-madrid-latest.osrm"
+MAP_URL="https://download.geofabrik.de/europe/spain/madrid-latest.osm.pbf"
+MAP_FILE="madrid-latest.osm.pbf"
+OSRM_FILE="madrid-latest.osrm"
 
 mkdir -p "${DATA_DIR}"
 
 # Download map if not already present
 if [ ! -f "${DATA_DIR}/${MAP_FILE}" ]; then
     echo "Downloading Comunidad de Madrid map (~75 MB)..."
-    curl -L -o "${DATA_DIR}/${MAP_FILE}" "${MAP_URL}"
+    curl -fL -o "${DATA_DIR}/${MAP_FILE}" "${MAP_URL}"
 else
     echo "Map file already exists, skipping download."
 fi
