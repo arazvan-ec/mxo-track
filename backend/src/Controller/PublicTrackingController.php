@@ -6,7 +6,9 @@ namespace App\Controller;
 
 use App\Application\Tracking\PublicTrackingService;
 use App\Entity\DeliverySlot;
+use App\Entity\RecipientAction;
 use App\Entity\ShipmentEvent;
+use App\Enum\RecipientActionType;
 use App\Enum\ShipmentEventType;
 use App\Entity\RouteStop;
 use App\Notification\DeliveryRatingService;
@@ -40,6 +42,13 @@ class PublicTrackingController extends AbstractController
         if ($info === null) {
             throw $this->createNotFoundException('Envio no encontrado.');
         }
+
+        $action = new RecipientAction(
+            shipment: $info->shipment,
+            actionType: RecipientActionType::TrackingPageViewed,
+        );
+        $this->entityManager->persist($action);
+        $this->entityManager->flush();
 
         return $this->render('tracking/public.html.twig', [
             'shipment' => $info->shipment,
@@ -227,6 +236,57 @@ class PublicTrackingController extends AbstractController
 
         return $this->redirectToRoute('public_tracking', [
             'trackingToken' => $trackingToken,
+        ]);
+    }
+
+    #[Route('/track/{trackingToken}/confirm-presence', name: 'public_tracking_confirm_presence', methods: ['POST'])]
+    public function confirmPresence(string $trackingToken, Request $request): JsonResponse
+    {
+        $info = $this->trackingService->trackByToken($trackingToken);
+
+        if ($info === null) {
+            throw $this->createNotFoundException('Envio no encontrado.');
+        }
+
+        $confirmed = $request->request->getBoolean('confirmed');
+
+        $action = new RecipientAction(
+            shipment: $info->shipment,
+            actionType: $confirmed ? RecipientActionType::PresenceConfirmed : RecipientActionType::PresenceDenied,
+            payload: ['confirmed' => $confirmed],
+        );
+        $this->entityManager->persist($action);
+        $this->entityManager->flush();
+
+        return new JsonResponse([
+            'success' => true,
+            'confirmed' => $confirmed,
+        ]);
+    }
+
+    #[Route('/track/{trackingToken}/alternative', name: 'public_tracking_alternative', methods: ['POST'])]
+    public function alternative(string $trackingToken, Request $request): JsonResponse
+    {
+        $info = $this->trackingService->trackByToken($trackingToken);
+
+        if ($info === null) {
+            throw $this->createNotFoundException('Envio no encontrado.');
+        }
+
+        $option = $request->request->getString('option');
+        $instructions = $request->request->getString('instructions', '');
+
+        $action = new RecipientAction(
+            shipment: $info->shipment,
+            actionType: RecipientActionType::AlternativeRequested,
+            payload: ['option' => $option, 'instructions' => $instructions],
+        );
+        $this->entityManager->persist($action);
+        $this->entityManager->flush();
+
+        return new JsonResponse([
+            'success' => true,
+            'option' => $option,
         ]);
     }
 
