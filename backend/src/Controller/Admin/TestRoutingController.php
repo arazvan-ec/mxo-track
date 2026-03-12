@@ -10,6 +10,7 @@ use App\Entity\Route;
 use App\Entity\RouteStop;
 use App\Entity\Shipment;
 use App\Entity\Vehicle;
+use App\Provider\ProviderUnavailableException;
 use App\Routing\Coordinate;
 use App\Routing\RoutingEngineInterface;
 use App\Service\RouteOptimizationService;
@@ -109,7 +110,12 @@ class TestRoutingController extends AbstractController
             ];
         } catch (\Throwable $e) {
             $success = false;
-            $log[] = ['step' => 'ERROR', 'status' => 'failed', 'detail' => $e->getMessage()];
+            $hint = match (true) {
+                $e instanceof ProviderUnavailableException => 'Check that OSRM and VROOM are running and reachable.',
+                $e instanceof \InvalidArgumentException => 'Check your provider configuration and environment variables.',
+                default => null,
+            };
+            $log[] = ['step' => 'ERROR', 'status' => 'failed', 'detail' => $e->getMessage(), 'hint' => $hint];
         } finally {
             $this->cleanup();
         }
@@ -200,8 +206,15 @@ class TestRoutingController extends AbstractController
         } catch (\Throwable $e) {
             $this->cleanup();
 
+            $hint = '';
+            if ($e instanceof ProviderUnavailableException) {
+                $hint = '<p>Check that OSRM and VROOM are running and reachable.</p>';
+            } elseif ($e instanceof \InvalidArgumentException) {
+                $hint = '<p>Check your provider configuration and environment variables.</p>';
+            }
+
             return new Response(
-                sprintf('<h1>Error</h1><p>%s</p><p>Check that OSRM and VROOM are running.</p>', htmlspecialchars($e->getMessage())),
+                sprintf('<h1>Error</h1><p>%s</p>%s', htmlspecialchars($e->getMessage()), $hint),
                 500,
             );
         }

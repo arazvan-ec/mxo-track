@@ -22,6 +22,13 @@ final class GoogleDirectionsFactory implements ProviderFactoryInterface
             $config['api_key'] = $this->defaultApiKey;
         }
 
+        if (!isset($config['api_key']) || $config['api_key'] === '') {
+            throw new \InvalidArgumentException(
+                'Google Directions API key is not configured. '
+                . 'Set the GOOGLE_DIRECTIONS_API_KEY environment variable or configure an API key for the customer integration.'
+            );
+        }
+
         return new GoogleDirectionsEngine(
             $this->httpClient,
             GoogleDirectionsConfig::fromArray($config),
