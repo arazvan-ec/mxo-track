@@ -81,6 +81,7 @@ services:
         routing_engine: '%env(DEFAULT_ROUTING_ENGINE)%'
         gps_provider: '%env(DEFAULT_GPS_PROVIDER)%'
         realtime_publisher: '%env(DEFAULT_REALTIME_PUBLISHER)%'
+        sms_notifier: '%env(DEFAULT_SMS_NOTIFIER)%'
 
   # ProviderResolver: decorated with in-memory cache
   App\Provider\ProviderResolverInterface:
