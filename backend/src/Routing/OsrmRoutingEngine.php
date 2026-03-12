@@ -63,7 +63,7 @@ final class OsrmRoutingEngine implements RoutingEngineInterface
         }
 
         $url = sprintf(
-            '%s/route/v1/driving/%s?overview=false&steps=false',
+            '%s/route/v1/driving/%s?overview=full&geometries=polyline&steps=false',
             $this->osrmUrl,
             implode(';', $coordParts),
         );
@@ -99,6 +99,7 @@ final class OsrmRoutingEngine implements RoutingEngineInterface
             totalDistanceKm: ($route['distance'] ?? 0) / 1000.0,
             totalDurationSeconds: (float) ($route['duration'] ?? 0),
             legs: $legs,
+            geometry: $route['geometry'] ?? null,
         );
     }
 }
