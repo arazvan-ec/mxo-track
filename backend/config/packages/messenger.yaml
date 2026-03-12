@@ -24,6 +24,7 @@ framework:
             'App\Message\NlpClassificationMessage': async
             'App\Message\FleetAnomalyCheckMessage': async
             'App\Notification\Message\SendRecipientNotificationMessage': async
+            'App\Notification\Message\SendNotificationMessage': async
 
 when@test:
     framework:

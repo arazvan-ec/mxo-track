@@ -155,6 +155,10 @@ services:
     arguments:
       $defaultTransport: '@App\Notification\Transport\NullSmsTransport'
 
+  App\Notification\NotificationResolver:
+    arguments:
+      $appBaseUrl: '%env(string:default::APP_BASE_URL)%'
+
   App\Notification\Message\SendRecipientNotificationHandler:
     arguments:
       $appBaseUrl: '%env(string:default::APP_BASE_URL)%'
