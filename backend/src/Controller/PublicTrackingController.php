@@ -10,14 +10,15 @@ use App\Entity\ShipmentEvent;
 use App\Enum\ShipmentEventType;
 use App\Notification\DeliveryRatingService;
 use App\Notification\DeliverySlotService;
-use App\Notification\RecipientNotificationService;
-use App\Notification\Template\RescheduleConfirmationTemplate;
+use App\Notification\RescheduleConfirmedNotification;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Notifier\NotifierInterface;
+use Symfony\Component\Notifier\Recipient\Recipient;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
@@ -27,7 +28,7 @@ class PublicTrackingController extends AbstractController
         private readonly PublicTrackingService $trackingService,
         private readonly DeliverySlotService $deliverySlotService,
         private readonly DeliveryRatingService $deliveryRatingService,
-        private readonly RecipientNotificationService $notificationService,
+        private readonly NotifierInterface $notifier,
         private readonly EntityManagerInterface $entityManager,
         private readonly LoggerInterface $logger,
     ) {}
@@ -206,14 +207,14 @@ class PublicTrackingController extends AbstractController
                 $slotDate = $payload['slot_date'] ?? $payload['alternative_option'] ?? '';
                 $slotTimeRange = $payload['slot_time_range'] ?? '';
 
-                $template = new RescheduleConfirmationTemplate(
+                $notification = new RescheduleConfirmedNotification(
                     $shipment->getRecipientName() ?? 'Cliente',
                     $slotDate,
                     $slotTimeRange,
                     $trackingUrl,
                 );
 
-                $this->notificationService->notify($recipientPhone, 'sms', $template);
+                $this->notifier->send($notification, new Recipient('', $recipientPhone));
             } catch (\Throwable $e) {
                 $this->logger->error('Failed to send reschedule SMS: {error}', ['error' => $e->getMessage()]);
             }
