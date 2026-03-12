@@ -1,3 +1,4 @@
+# Deploy: 2026-03-12
 parameters:
   mercure.subscriber.ttl: '%env(int:MERCURE_SUBSCRIBER_TOKEN_TTL)%'
   app.rate_limit.login_max_failures: 10
