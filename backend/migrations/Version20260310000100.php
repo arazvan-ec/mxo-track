@@ -22,7 +22,7 @@ final class Version20260310000100 extends AbstractMigration
         $this->addSql('CREATE EXTENSION IF NOT EXISTS vector');
 
         $this->addSql(<<<'SQL'
-            CREATE TABLE ml_embedding (
+            CREATE TABLE IF NOT EXISTS ml_embedding (
                 id BIGSERIAL PRIMARY KEY,
                 entity_type VARCHAR(50) NOT NULL,
                 entity_id BIGINT NOT NULL,
@@ -32,12 +32,12 @@ final class Version20260310000100 extends AbstractMigration
             )
         SQL);
 
-        $this->addSql('CREATE UNIQUE INDEX uniq_ml_embedding_entity ON ml_embedding (entity_type, entity_id)');
-        $this->addSql('CREATE INDEX idx_ml_embedding_entity_type ON ml_embedding (entity_type)');
+        $this->addSql('CREATE UNIQUE INDEX IF NOT EXISTS uniq_ml_embedding_entity ON ml_embedding (entity_type, entity_id)');
+        $this->addSql('CREATE INDEX IF NOT EXISTS idx_ml_embedding_entity_type ON ml_embedding (entity_type)');
     }
 
     public function down(Schema $schema): void
     {
-        $this->addSql('DROP TABLE ml_embedding');
+        $this->addSql('DROP TABLE IF EXISTS ml_embedding');
     }
 }

@@ -16,11 +16,11 @@ final class Version20260222000200 extends AbstractMigration
 
     public function up(Schema $schema): void
     {
-        $this->addSql('ALTER TABLE customer DROP COLUMN contact_email');
+        $this->addSql('DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = \'customer\' AND column_name = \'contact_email\') THEN ALTER TABLE customer DROP COLUMN contact_email; END IF; END $$');
     }
 
     public function down(Schema $schema): void
     {
-        $this->addSql('ALTER TABLE customer ADD COLUMN contact_email VARCHAR(180) DEFAULT NULL');
+        $this->addSql('DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = \'customer\' AND column_name = \'contact_email\') THEN ALTER TABLE customer ADD COLUMN contact_email VARCHAR(180) DEFAULT NULL; END IF; END $$');
     }
 }

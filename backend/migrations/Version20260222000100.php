@@ -16,14 +16,14 @@ final class Version20260222000100 extends AbstractMigration
 
     public function up(Schema $schema): void
     {
-        $this->addSql('ALTER TABLE vehicle_positions ADD route_id BIGINT DEFAULT NULL');
-        $this->addSql('ALTER TABLE vehicle_positions ADD CONSTRAINT fk_vehicle_positions_route FOREIGN KEY (route_id) REFERENCES route_plan (id) ON DELETE SET NULL');
-        $this->addSql('CREATE INDEX idx_vehicle_positions_route_time ON vehicle_positions (route_id, device_time)');
+        $this->addSql('DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = \'vehicle_positions\' AND column_name = \'route_id\') THEN ALTER TABLE vehicle_positions ADD COLUMN route_id BIGINT DEFAULT NULL; END IF; END $$');
+        $this->addSql('DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = \'fk_vehicle_positions_route\') THEN ALTER TABLE vehicle_positions ADD CONSTRAINT fk_vehicle_positions_route FOREIGN KEY (route_id) REFERENCES route_plan (id) ON DELETE SET NULL; END IF; END $$');
+        $this->addSql('CREATE INDEX IF NOT EXISTS idx_vehicle_positions_route_time ON vehicle_positions (route_id, device_time)');
     }
 
     public function down(Schema $schema): void
     {
-        $this->addSql('DROP INDEX idx_vehicle_positions_route_time');
+        $this->addSql('DROP INDEX IF EXISTS idx_vehicle_positions_route_time');
         $this->addSql('ALTER TABLE vehicle_positions DROP CONSTRAINT fk_vehicle_positions_route');
         $this->addSql('ALTER TABLE vehicle_positions DROP COLUMN route_id');
     }

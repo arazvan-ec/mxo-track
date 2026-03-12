@@ -19,7 +19,7 @@ final class Version20260309000500 extends AbstractMigration
 
     public function up(Schema $schema): void
     {
-        $this->addSql('CREATE TABLE webhook_endpoint (
+        $this->addSql('CREATE TABLE IF NOT EXISTS webhook_endpoint (
             id BIGSERIAL NOT NULL,
             public_id UUID NOT NULL,
             customer_id BIGINT NOT NULL,
@@ -34,11 +34,10 @@ final class Version20260309000500 extends AbstractMigration
         $this->addSql('COMMENT ON COLUMN webhook_endpoint.public_id IS \'(DC2Type:ulid)\'');
         $this->addSql('COMMENT ON COLUMN webhook_endpoint.created_at IS \'(DC2Type:datetime_immutable)\'');
 
-        $this->addSql('CREATE UNIQUE INDEX uniq_webhook_endpoint_public_id ON webhook_endpoint (public_id)');
-        $this->addSql('CREATE INDEX idx_webhook_endpoint_customer ON webhook_endpoint (customer_id)');
+        $this->addSql('CREATE UNIQUE INDEX IF NOT EXISTS uniq_webhook_endpoint_public_id ON webhook_endpoint (public_id)');
+        $this->addSql('CREATE INDEX IF NOT EXISTS idx_webhook_endpoint_customer ON webhook_endpoint (customer_id)');
 
-        $this->addSql('ALTER TABLE webhook_endpoint ADD CONSTRAINT fk_webhook_endpoint_customer
-            FOREIGN KEY (customer_id) REFERENCES customer (id) ON DELETE CASCADE NOT DEFERRABLE INITIALLY IMMEDIATE');
+        $this->addSql('DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = \'fk_webhook_endpoint_customer\') THEN ALTER TABLE webhook_endpoint ADD CONSTRAINT fk_webhook_endpoint_customer FOREIGN KEY (customer_id) REFERENCES customer (id) ON DELETE CASCADE NOT DEFERRABLE INITIALLY IMMEDIATE; END IF; END $$');
     }
 
     public function down(Schema $schema): void

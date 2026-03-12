@@ -16,7 +16,7 @@ final class Version20260220010000 extends AbstractMigration
 
     public function up(Schema $schema): void
     {
-        $this->addSql('CREATE TABLE customer_location (
+        $this->addSql('CREATE TABLE IF NOT EXISTS customer_location (
             id BIGSERIAL NOT NULL,
             public_id UUID NOT NULL,
             customer_id BIGINT NOT NULL,
@@ -31,10 +31,10 @@ final class Version20260220010000 extends AbstractMigration
             CONSTRAINT fk_customer_location_customer FOREIGN KEY (customer_id) REFERENCES customer (id) ON DELETE CASCADE
         )');
 
-        $this->addSql('ALTER TABLE route_plan ADD COLUMN origin_location_id BIGINT DEFAULT NULL');
-        $this->addSql('ALTER TABLE route_plan ADD CONSTRAINT fk_route_origin_location FOREIGN KEY (origin_location_id) REFERENCES customer_location (id) ON DELETE SET NULL');
+        $this->addSql('DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = \'route_plan\' AND column_name = \'origin_location_id\') THEN ALTER TABLE route_plan ADD COLUMN origin_location_id BIGINT DEFAULT NULL; END IF; END $$');
+        $this->addSql('DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = \'fk_route_origin_location\') THEN ALTER TABLE route_plan ADD CONSTRAINT fk_route_origin_location FOREIGN KEY (origin_location_id) REFERENCES customer_location (id) ON DELETE SET NULL; END IF; END $$');
 
-        $this->addSql('ALTER TABLE route_stop ADD COLUMN is_origin BOOLEAN NOT NULL DEFAULT FALSE');
+        $this->addSql('DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = \'route_stop\' AND column_name = \'is_origin\') THEN ALTER TABLE route_stop ADD COLUMN is_origin BOOLEAN NOT NULL DEFAULT FALSE; END IF; END $$');
     }
 
     public function down(Schema $schema): void
@@ -44,6 +44,6 @@ final class Version20260220010000 extends AbstractMigration
         $this->addSql('ALTER TABLE route_plan DROP CONSTRAINT IF EXISTS fk_route_origin_location');
         $this->addSql('ALTER TABLE route_plan DROP COLUMN origin_location_id');
 
-        $this->addSql('DROP TABLE customer_location');
+        $this->addSql('DROP TABLE IF EXISTS customer_location');
     }
 }

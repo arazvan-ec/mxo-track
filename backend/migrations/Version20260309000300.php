@@ -20,7 +20,7 @@ final class Version20260309000300 extends AbstractMigration
     public function up(Schema $schema): void
     {
         $this->addSql(<<<'SQL'
-            CREATE TABLE recipient_notification (
+            CREATE TABLE IF NOT EXISTS recipient_notification (
                 id BIGSERIAL NOT NULL,
                 public_id UUID NOT NULL,
                 shipment_id BIGINT NOT NULL,
@@ -31,14 +31,14 @@ final class Version20260309000300 extends AbstractMigration
                 sent_at TIMESTAMP(0) WITHOUT TIME ZONE DEFAULT NULL,
                 error_message TEXT DEFAULT NULL,
                 created_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL,
-                PRIMARY KEY (id),
-                CONSTRAINT fk_recipient_notification_shipment FOREIGN KEY (shipment_id) REFERENCES shipment (id) ON DELETE CASCADE
+                PRIMARY KEY (id)
             )
         SQL);
 
-        $this->addSql('CREATE UNIQUE INDEX uniq_recipient_notification_public_id ON recipient_notification (public_id)');
-        $this->addSql('CREATE INDEX idx_recipient_notification_shipment ON recipient_notification (shipment_id)');
-        $this->addSql('CREATE INDEX idx_recipient_notification_status ON recipient_notification (status)');
+        $this->addSql('DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = \'fk_recipient_notification_shipment\') THEN ALTER TABLE recipient_notification ADD CONSTRAINT fk_recipient_notification_shipment FOREIGN KEY (shipment_id) REFERENCES shipment (id) ON DELETE CASCADE; END IF; END $$');
+        $this->addSql('CREATE UNIQUE INDEX IF NOT EXISTS uniq_recipient_notification_public_id ON recipient_notification (public_id)');
+        $this->addSql('CREATE INDEX IF NOT EXISTS idx_recipient_notification_shipment ON recipient_notification (shipment_id)');
+        $this->addSql('CREATE INDEX IF NOT EXISTS idx_recipient_notification_status ON recipient_notification (status)');
 
         $this->addSql("COMMENT ON COLUMN recipient_notification.sent_at IS '(DC2Type:datetime_immutable)'");
         $this->addSql("COMMENT ON COLUMN recipient_notification.created_at IS '(DC2Type:datetime_immutable)'");

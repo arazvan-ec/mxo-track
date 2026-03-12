@@ -20,10 +20,10 @@ final class Version20260309000200 extends AbstractMigration
     public function up(Schema $schema): void
     {
         $this->addSql(<<<'SQL'
-            CREATE TABLE driver_availability (
+            CREATE TABLE IF NOT EXISTS driver_availability (
                 id BIGSERIAL PRIMARY KEY,
-                public_id VARCHAR(26) NOT NULL UNIQUE,
-                driver_id BIGINT NOT NULL REFERENCES "user_account"(id) ON DELETE CASCADE,
+                public_id VARCHAR(26) NOT NULL,
+                driver_id BIGINT NOT NULL,
                 day_of_week SMALLINT NOT NULL,
                 start_time VARCHAR(5) NOT NULL,
                 end_time VARCHAR(5) NOT NULL,
@@ -33,8 +33,10 @@ final class Version20260309000200 extends AbstractMigration
             )
             SQL);
 
-        $this->addSql('CREATE INDEX idx_driver_availability_driver ON driver_availability (driver_id)');
-        $this->addSql('CREATE INDEX idx_driver_availability_day ON driver_availability (day_of_week)');
+        $this->addSql('CREATE UNIQUE INDEX IF NOT EXISTS uniq_driver_availability_public_id ON driver_availability (public_id)');
+        $this->addSql('DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = \'fk_driver_availability_driver\') THEN ALTER TABLE driver_availability ADD CONSTRAINT fk_driver_availability_driver FOREIGN KEY (driver_id) REFERENCES "user_account"(id) ON DELETE CASCADE; END IF; END $$');
+        $this->addSql('CREATE INDEX IF NOT EXISTS idx_driver_availability_driver ON driver_availability (driver_id)');
+        $this->addSql('CREATE INDEX IF NOT EXISTS idx_driver_availability_day ON driver_availability (day_of_week)');
     }
 
     public function down(Schema $schema): void

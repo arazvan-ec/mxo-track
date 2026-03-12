@@ -19,7 +19,7 @@ final class Version20260309000600 extends AbstractMigration
 
     public function up(Schema $schema): void
     {
-        $this->addSql('ALTER TABLE route_plan ADD auto_reoptimize BOOLEAN NOT NULL DEFAULT false');
+        $this->addSql('DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = \'route_plan\' AND column_name = \'auto_reoptimize\') THEN ALTER TABLE route_plan ADD auto_reoptimize BOOLEAN NOT NULL DEFAULT false; END IF; END $$');
     }
 
     public function down(Schema $schema): void

@@ -19,7 +19,7 @@ final class Version20260309000400 extends AbstractMigration
 
     public function up(Schema $schema): void
     {
-        $this->addSql('CREATE TABLE api_key (
+        $this->addSql('CREATE TABLE IF NOT EXISTS api_key (
             id BIGSERIAL NOT NULL,
             public_id UUID NOT NULL,
             customer_id BIGINT NOT NULL,
@@ -36,12 +36,11 @@ final class Version20260309000400 extends AbstractMigration
         $this->addSql('COMMENT ON COLUMN api_key.last_used_at IS \'(DC2Type:datetime_immutable)\'');
         $this->addSql('COMMENT ON COLUMN api_key.created_at IS \'(DC2Type:datetime_immutable)\'');
 
-        $this->addSql('CREATE UNIQUE INDEX uniq_api_key_public_id ON api_key (public_id)');
-        $this->addSql('CREATE UNIQUE INDEX uniq_api_key_key_hash ON api_key (key_hash)');
-        $this->addSql('CREATE INDEX idx_api_key_customer ON api_key (customer_id)');
+        $this->addSql('CREATE UNIQUE INDEX IF NOT EXISTS uniq_api_key_public_id ON api_key (public_id)');
+        $this->addSql('CREATE UNIQUE INDEX IF NOT EXISTS uniq_api_key_key_hash ON api_key (key_hash)');
+        $this->addSql('CREATE INDEX IF NOT EXISTS idx_api_key_customer ON api_key (customer_id)');
 
-        $this->addSql('ALTER TABLE api_key ADD CONSTRAINT fk_api_key_customer
-            FOREIGN KEY (customer_id) REFERENCES customer (id) ON DELETE CASCADE NOT DEFERRABLE INITIALLY IMMEDIATE');
+        $this->addSql('DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = \'fk_api_key_customer\') THEN ALTER TABLE api_key ADD CONSTRAINT fk_api_key_customer FOREIGN KEY (customer_id) REFERENCES customer (id) ON DELETE CASCADE NOT DEFERRABLE INITIALLY IMMEDIATE; END IF; END $$');
     }
 
     public function down(Schema $schema): void

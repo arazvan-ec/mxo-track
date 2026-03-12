@@ -20,22 +20,22 @@ final class Version20260222200000 extends AbstractMigration
     public function up(Schema $schema): void
     {
         // RouteStop: counting pending/delivered stops per route
-        $this->addSql('CREATE INDEX idx_route_stop_route_status ON route_stop (route_id, status)');
+        $this->addSql('CREATE INDEX IF NOT EXISTS idx_route_stop_route_status ON route_stop (route_id, status)');
 
         // Shipment: customer shipment lists ordered by date
-        $this->addSql('CREATE INDEX idx_shipment_customer_created ON shipment (customer_id, created_at DESC)');
+        $this->addSql('CREATE INDEX IF NOT EXISTS idx_shipment_customer_created ON shipment (customer_id, created_at DESC)');
 
         // ShipmentEvent: event timeline per shipment
-        $this->addSql('CREATE INDEX idx_shipment_event_shipment_created ON shipment_event (shipment_id, created_at DESC)');
+        $this->addSql('CREATE INDEX IF NOT EXISTS idx_shipment_event_shipment_created ON shipment_event (shipment_id, created_at DESC)');
 
         // VehiclePosition: latest positions query — DESC index for efficient ORDER BY ... DESC LIMIT
-        $this->addSql('CREATE INDEX idx_vehicle_positions_vehicle_time_desc ON vehicle_positions (vehicle_id, device_time DESC)');
+        $this->addSql('CREATE INDEX IF NOT EXISTS idx_vehicle_positions_vehicle_time_desc ON vehicle_positions (vehicle_id, device_time DESC)');
 
         // AuditLog: date-range queries for admin audit review
-        $this->addSql('CREATE INDEX idx_audit_log_created_at ON audit_log (created_at DESC)');
+        $this->addSql('CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log (created_at DESC)');
 
         // User: customer user lookups (used in customer admin, tenant filter)
-        $this->addSql('CREATE INDEX idx_user_account_customer ON user_account (customer_id)');
+        $this->addSql('CREATE INDEX IF NOT EXISTS idx_user_account_customer ON user_account (customer_id)');
     }
 
     public function down(Schema $schema): void
