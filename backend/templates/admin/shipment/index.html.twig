@@ -1,0 +1,132 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Envios - Admin{% endblock %}
+
+{% block content %}
+    {# Header #}
+    <div class="mb-6 flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">Envios</h1>
+        <p class="mt-1 text-sm text-gray-500">{{ total }} envio{{ total != 1 ? 's' : '' }} en total</p>
+      </div>
+      <a href="{{ path('admin_shipments_new') }}"
+         class="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
+        Nuevo envio
+      </a>
+    </div>
+
+    {# Customer filter #}
+    <div class="mb-4">
+      <form method="get" action="{{ path('admin_shipments_index') }}" class="flex items-center gap-3">
+        <label for="customer" class="text-sm font-medium text-gray-700">Filtrar por cliente:</label>
+        <select name="customer" id="customer" onchange="this.form.submit()"
+                class="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+          <option value="">Todos los clientes</option>
+          {% for c in customers %}
+            <option value="{{ c.publicIdString }}" {% if customerFilter == c.publicIdString %}selected{% endif %}>
+              {{ c.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </form>
+    </div>
+
+    {# Table #}
+    <div class="bg-white shadow rounded-lg overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Referencia</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Cliente</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Destinatario</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Direccion</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Prioridad</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Carga</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Creado</th>
+            <th scope="col" class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Acciones</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 bg-white">
+          {% for shipment in shipments %}
+            <tr>
+              <td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
+                {{ shipment.reference }}
+              </td>
+              <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                {{ shipment.customer.name }}
+              </td>
+              <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                {{ shipment.recipientName ?? '-' }}
+              </td>
+              <td class="px-6 py-4 text-sm text-gray-500 max-w-xs truncate" title="{{ shipment.address }}">
+                {{ shipment.address ?? '-' }}
+              </td>
+              <td class="whitespace-nowrap px-6 py-4 text-sm">
+                {% set priorityColors = {
+                  'CRITICAL': 'bg-red-100 text-red-800',
+                  'URGENT': 'bg-amber-100 text-amber-800',
+                  'HIGH': 'bg-orange-100 text-orange-800',
+                  'NORMAL': 'bg-blue-100 text-blue-800',
+                  'LOW': 'bg-gray-100 text-gray-800',
+                } %}
+                <span class="inline-flex rounded-full px-2 text-xs font-semibold leading-5 {{ priorityColors[shipment.priority.name] ?? 'bg-gray-100 text-gray-800' }}">
+                  {{ shipment.priority.label }}
+                </span>
+              </td>
+              <td class="px-6 py-4 text-sm text-gray-500">
+                <div class="space-y-0.5 text-xs">
+                  {% if shipment.totalWeightKg %}<div>{{ shipment.totalWeightKg }} kg</div>{% endif %}
+                  {% if shipment.totalVolumeM3 %}<div>{{ shipment.totalVolumeM3 }} m3</div>{% endif %}
+                  <div>{{ shipment.totalParcels }} bulto{{ shipment.totalParcels != 1 ? 's' : '' }}</div>
+                </div>
+              </td>
+              <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                {{ shipment.createdAt|date('d/m/Y H:i') }}
+              </td>
+              <td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
+                <a href="{{ path('admin_shipments_edit', {publicId: shipment.publicIdString}) }}"
+                   class="text-blue-600 hover:text-blue-900 mr-3">Editar</a>
+                {% if not shipment.deleted %}
+                  <form method="post" action="{{ path('admin_shipments_delete', {publicId: shipment.publicIdString}) }}" class="inline"
+                        onsubmit="return confirm('Eliminar este envio?');">
+                    <input type="hidden" name="_token" value="{{ csrf_token('delete-shipment-' ~ shipment.publicIdString) }}">
+                    <button type="submit" class="text-red-600 hover:text-red-900">Eliminar</button>
+                  </form>
+                {% endif %}
+              </td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="8" class="px-6 py-8 text-center text-sm text-gray-500">
+                No hay envios registrados.
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {# Pagination #}
+    {% if totalPages > 1 %}
+      <nav class="mt-6 flex items-center justify-between">
+        <div class="text-sm text-gray-700">
+          Pagina {{ page }} de {{ totalPages }}
+        </div>
+        <div class="flex space-x-2">
+          {% if page > 1 %}
+            <a href="{{ path('admin_shipments_index', {page: page - 1, customer: customerFilter}) }}"
+               class="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+              Anterior
+            </a>
+          {% endif %}
+          {% if page < totalPages %}
+            <a href="{{ path('admin_shipments_index', {page: page + 1, customer: customerFilter}) }}"
+               class="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+              Siguiente
+            </a>
+          {% endif %}
+        </div>
+      </nav>
+    {% endif %}
+
+{% endblock %}
