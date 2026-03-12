@@ -92,7 +92,9 @@ final class GoogleDirectionsEngine implements RoutingEngineInterface
             $totalDuration += $durationSeconds;
         }
 
-        return new MultiWaypointRouteResult($totalDistance, $totalDuration, $legs);
+        $geometry = $data['routes'][0]['overview_polyline']['points'] ?? null;
+
+        return new MultiWaypointRouteResult($totalDistance, $totalDuration, $legs, $geometry);
     }
 
     /**
