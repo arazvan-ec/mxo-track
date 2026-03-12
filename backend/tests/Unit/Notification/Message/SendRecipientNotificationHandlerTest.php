@@ -204,6 +204,74 @@ final class SendRecipientNotificationHandlerTest extends TestCase
     }
 
     #[Test]
+    public function sends_rescheduled_notification_with_metadata(): void
+    {
+        $shipment = $this->createMock(Shipment::class);
+        $shipment->method('getRecipientPhone')->willReturn('+34600000000');
+        $shipment->method('getRecipientName')->willReturn('Juan');
+        $shipment->method('getTrackingToken')->willReturn('abc123');
+
+        $route = $this->createMock(Route::class);
+        $route->method('getDriver')->willReturn(null);
+
+        $stop = $this->createMock(RouteStop::class);
+        $stop->method('getShipment')->willReturn($shipment);
+        $stop->method('getRecipientPhone')->willReturn('+34600000000');
+        $stop->method('getRoute')->willReturn($route);
+
+        $this->em->method('find')->willReturn($stop);
+        $this->notifier->expects(self::once())->method('send')
+            ->with(self::callback(function ($notification): bool {
+                self::assertInstanceOf(\App\Notification\RescheduleConfirmedNotification::class, $notification);
+                $sms = $notification->asSmsMessage(new \Symfony\Component\Notifier\Recipient\Recipient('', '+34600000000'));
+                self::assertStringContainsString('2026-03-15', $sms->getSubject());
+                self::assertStringContainsString('10:00-12:00', $sms->getSubject());
+
+                return true;
+            }), self::anything());
+
+        $handler = $this->createHandler();
+        $handler(new SendRecipientNotificationMessage('1', 'rescheduled', null, [
+            'slot_date' => '2026-03-15',
+            'slot_time_range' => '10:00-12:00',
+        ]));
+    }
+
+    #[Test]
+    public function sends_slot_confirmed_notification_with_metadata(): void
+    {
+        $shipment = $this->createMock(Shipment::class);
+        $shipment->method('getRecipientPhone')->willReturn('+34600000000');
+        $shipment->method('getRecipientName')->willReturn('Juan');
+        $shipment->method('getTrackingToken')->willReturn('abc123');
+
+        $route = $this->createMock(Route::class);
+        $route->method('getDriver')->willReturn(null);
+
+        $stop = $this->createMock(RouteStop::class);
+        $stop->method('getShipment')->willReturn($shipment);
+        $stop->method('getRecipientPhone')->willReturn('+34600000000');
+        $stop->method('getRoute')->willReturn($route);
+
+        $this->em->method('find')->willReturn($stop);
+        $this->notifier->expects(self::once())->method('send')
+            ->with(self::callback(function ($notification): bool {
+                self::assertInstanceOf(\App\Notification\DeliverySlotConfirmedNotification::class, $notification);
+                $sms = $notification->asSmsMessage(new \Symfony\Component\Notifier\Recipient\Recipient('', '+34600000000'));
+                self::assertStringContainsString('2026-03-16', $sms->getSubject());
+                self::assertStringContainsString('14:00-16:00', $sms->getSubject());
+
+                return true;
+            }), self::anything());
+
+        $handler = $this->createHandler();
+        $handler(new SendRecipientNotificationMessage('1', 'slot_confirmed', null, [
+            'slot_date' => '2026-03-16',
+            'slot_time_range' => '14:00-16:00',
+        ]));
+    }
+
+    #[Test]
     public function does_nothing_for_unknown_notification_type(): void
     {
         $shipment = $this->createMock(Shipment::class);

@@ -61,7 +61,7 @@ final class SendRecipientNotificationHandler
 
         try {
             $recipientName = $shipment->getRecipientName() ?? $stop->getRecipientName() ?? 'Cliente';
-            $notification = $this->buildNotification($message->notificationType, $stop, $shipment, $recipientName);
+            $notification = $this->buildNotification($message->notificationType, $stop, $shipment, $recipientName, $message->metadata);
 
             if ($notification === null) {
                 $this->logger->warning('Unknown notification type: {type}', [
@@ -87,11 +87,15 @@ final class SendRecipientNotificationHandler
     /**
      * @return (Notification&\App\Notification\DeliveryApproachingNotification)|(Notification&\App\Notification\DeliveryCompletedNotification)|(Notification&\App\Notification\RatingRequestNotification)|(Notification&\App\Notification\DeliverySlotConfirmedNotification)|(Notification&\App\Notification\RescheduleConfirmedNotification)|null
      */
+    /**
+     * @param array<string, string> $metadata
+     */
     private function buildNotification(
         string $type,
         RouteStop $stop,
         Shipment $shipment,
         string $recipientName,
+        array $metadata = [],
     ): ?Notification {
         $trackingUrl = $this->buildTrackingUrl($shipment->getTrackingToken());
         $ratingUrl = $this->buildRatingUrl($shipment->getTrackingToken());
@@ -115,13 +119,13 @@ final class SendRecipientNotificationHandler
             ),
             'slot_confirmed' => new DeliverySlotConfirmedNotification(
                 $recipientName,
-                '', // slot date — will be passed via extended message in the future
-                '', // slot time range
+                $metadata['slot_date'] ?? '',
+                $metadata['slot_time_range'] ?? '',
             ),
             'rescheduled' => new RescheduleConfirmedNotification(
                 $recipientName,
-                '',
-                '',
+                $metadata['slot_date'] ?? '',
+                $metadata['slot_time_range'] ?? '',
                 $trackingUrl,
             ),
             default => null,

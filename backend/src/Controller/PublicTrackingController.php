@@ -8,19 +8,18 @@ use App\Application\Tracking\PublicTrackingService;
 use App\Entity\DeliverySlot;
 use App\Entity\ShipmentEvent;
 use App\Enum\ShipmentEventType;
+use App\Entity\RouteStop;
 use App\Notification\DeliveryRatingService;
 use App\Notification\DeliverySlotService;
-use App\Notification\RescheduleConfirmedNotification;
+use App\Notification\Message\SendRecipientNotificationMessage;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Notifier\NotifierInterface;
-use Symfony\Component\Notifier\Recipient\Recipient;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 class PublicTrackingController extends AbstractController
 {
@@ -28,7 +27,7 @@ class PublicTrackingController extends AbstractController
         private readonly PublicTrackingService $trackingService,
         private readonly DeliverySlotService $deliverySlotService,
         private readonly DeliveryRatingService $deliveryRatingService,
-        private readonly NotifierInterface $notifier,
+        private readonly MessageBusInterface $bus,
         private readonly EntityManagerInterface $entityManager,
         private readonly LoggerInterface $logger,
     ) {}
@@ -199,25 +198,18 @@ class PublicTrackingController extends AbstractController
         $this->entityManager->persist($event);
         $this->entityManager->flush();
 
-        // Send SMS confirmation to recipient
-        $recipientPhone = $shipment->getRecipientPhone();
-        if ($recipientPhone !== null && $recipientPhone !== '') {
-            try {
-                $trackingUrl = $this->generateUrl('public_tracking', ['trackingToken' => $trackingToken], UrlGeneratorInterface::ABSOLUTE_URL);
-                $slotDate = $payload['slot_date'] ?? $payload['alternative_option'] ?? '';
-                $slotTimeRange = $payload['slot_time_range'] ?? '';
-
-                $notification = new RescheduleConfirmedNotification(
-                    $shipment->getRecipientName() ?? 'Cliente',
-                    $slotDate,
-                    $slotTimeRange,
-                    $trackingUrl,
-                );
-
-                $this->notifier->send($notification, new Recipient('', $recipientPhone));
-            } catch (\Throwable $e) {
-                $this->logger->error('Failed to send reschedule SMS: {error}', ['error' => $e->getMessage()]);
-            }
+        // Dispatch async SMS confirmation to recipient
+        $stop = $this->entityManager->getRepository(RouteStop::class)->findOneBy(['shipment' => $shipment]);
+        if ($stop !== null) {
+            $this->bus->dispatch(new SendRecipientNotificationMessage(
+                $stop->getId(),
+                'rescheduled',
+                $stop->getRoute()->getCustomer()?->getId(),
+                [
+                    'slot_date' => $payload['slot_date'] ?? $payload['alternative_option'] ?? '',
+                    'slot_time_range' => $payload['slot_time_range'] ?? '',
+                ],
+            ));
         }
 
         // Update delivery instructions for alternative options
