@@ -101,6 +101,8 @@ TRACCAR_USERNAME=admin
 TRACCAR_PASSWORD=<TRACCAR_PASSWORD generado>
 VROOM_URL=http://vroom-mxo.railway.internal:3000
 OSRM_URL=http://osrm-mxo.railway.internal:5000
+DEFAULT_ROUTE_OPTIMIZER=vroom
+DEFAULT_ROUTING_ENGINE=osrm
 POD_STORAGE=database
 TRUSTED_PROXIES=REMOTE_ADDR
 ```
@@ -128,6 +130,8 @@ TRACCAR_USERNAME=admin
 TRACCAR_PASSWORD=<mismo TRACCAR_PASSWORD>
 VROOM_URL=http://vroom-mxo.railway.internal:3000
 OSRM_URL=http://osrm-mxo.railway.internal:5000
+DEFAULT_ROUTE_OPTIMIZER=vroom
+DEFAULT_ROUTING_ENGINE=osrm
 ```
 
 ### mercure-mxo

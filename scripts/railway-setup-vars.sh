@@ -218,8 +218,8 @@ VROOM_INTERNAL="http://${SVC_VROOM}.railway.internal:3000"
 # =============================================================================
 echo ""
 echo -e "${BOLD}Summary — variables will be set on:${NC}"
-echo "  App ($SVC_APP):     18 variables"
-echo "  Worker ($SVC_WORKER):  13 variables"
+echo "  App ($SVC_APP):     20 variables"
+echo "  Worker ($SVC_WORKER):  15 variables"
 echo "  Mercure ($SVC_MERCURE): 7 variables"
 echo "  Traccar ($SVC_TRACCAR): 6 variables"
 echo "  OSRM ($SVC_OSRM):     1 variable"
@@ -256,7 +256,9 @@ set_vars "$SVC_APP" \
     "POD_STORAGE=database" \
     "TRUSTED_PROXIES=REMOTE_ADDR" \
     "OSRM_URL=${OSRM_INTERNAL}" \
-    "VROOM_URL=${VROOM_INTERNAL}"
+    "VROOM_URL=${VROOM_INTERNAL}" \
+    "DEFAULT_ROUTE_OPTIMIZER=vroom" \
+    "DEFAULT_ROUTING_ENGINE=osrm"
 
 # =============================================================================
 # WORKER service
@@ -274,7 +276,9 @@ set_vars "$SVC_WORKER" \
     "TRACCAR_USERNAME=admin" \
     "TRACCAR_PASSWORD=${TRACCAR_PASSWORD}" \
     "OSRM_URL=${OSRM_INTERNAL}" \
-    "VROOM_URL=${VROOM_INTERNAL}"
+    "VROOM_URL=${VROOM_INTERNAL}" \
+    "DEFAULT_ROUTE_OPTIMIZER=vroom" \
+    "DEFAULT_ROUTING_ENGINE=osrm"
 
 # =============================================================================
 # MERCURE service
