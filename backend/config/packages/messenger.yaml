@@ -23,6 +23,7 @@ framework:
             'App\Message\EnrichRouteNotesMessage': async
             'App\Message\NlpClassificationMessage': async
             'App\Message\FleetAnomalyCheckMessage': async
+            'App\Notification\Message\SendRecipientNotificationMessage': async
 
 when@test:
     framework:
