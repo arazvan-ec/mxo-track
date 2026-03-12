@@ -30,4 +30,36 @@ final class ShipmentRepository extends ServiceEntityRepository
     {
         return $this->findOneBy(['trackingToken' => $trackingToken]);
     }
+
+    /** @return Shipment[] */
+    public function findForTomorrow(): array
+    {
+        $tomorrow = new \DateTimeImmutable('tomorrow');
+        $dayAfter = new \DateTimeImmutable('+2 days midnight');
+
+        return $this->createQueryBuilder('s')
+            ->where('s.estimatedDeliveryDate >= :from')
+            ->andWhere('s.estimatedDeliveryDate < :to')
+            ->andWhere('s.recipientPhone IS NOT NULL')
+            ->setParameter('from', $tomorrow)
+            ->setParameter('to', $dayAfter)
+            ->getQuery()
+            ->getResult();
+    }
+
+    /** @return Shipment[] */
+    public function findWithEstimatedDeliveryWithinMinutes(int $minutes): array
+    {
+        $now = new \DateTimeImmutable();
+        $until = new \DateTimeImmutable(sprintf('+%d minutes', $minutes));
+
+        return $this->createQueryBuilder('s')
+            ->where('s.estimatedDeliveryDate >= :now')
+            ->andWhere('s.estimatedDeliveryDate <= :until')
+            ->andWhere('s.recipientPhone IS NOT NULL')
+            ->setParameter('now', $now)
+            ->setParameter('until', $until)
+            ->getQuery()
+            ->getResult();
+    }
 }
