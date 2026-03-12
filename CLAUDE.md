@@ -29,98 +29,36 @@ The system tracks vehicles via Traccar integration, manages delivery routes with
 ## Common Commands
 
 ```bash
-# Install dependencies
-cd backend && composer install
-
-# Verify Symfony is working
-php bin/console about
-
-# Run migrations
-php bin/console doctrine:migrations:migrate -n
-
-# Load fixtures (includes admin user)
-php bin/console doctrine:fixtures:load -n
-
-# PHP syntax lint (all src files)
-make lint
+cd backend && composer install          # Install dependencies
+php bin/console about                   # Verify Symfony is working
+php bin/console doctrine:migrations:migrate -n  # Run migrations
+php bin/console doctrine:fixtures:load -n       # Load fixtures (admin user)
+make lint                               # PHP syntax lint (all src files)
+php vendor/bin/phpunit                  # Run tests
 ```
 
-### Docker (local development)
+## Conventions
 
-No se usa PHP local. Todo el desarrollo se hace dentro del contenedor Docker `app`. La imagen es `php:8.4-cli-bookworm` (sin Apache/nginx), por lo que el servidor web se arranca manualmente con el built-in server de PHP.
+- All PHP files use `declare(strict_types=1)`
+- Doctrine mappings via PHP attributes (not XML/YAML)
+- Doctrine ORM 3.x: `naming_strategy: underscore_number_aware` required in doctrine.yaml
+- Controllers use attribute routing
+- API error responses via `ApiErrorResponder`
+- DTOs in `src/Dto/` with `fromArray()` factory + Symfony Validator constraints
+- Symfony 7.4 lock enforced: `extra.symfony.require=7.4.*`, `conflict >=8.0`
 
-#### Arranque rápido (desde la raíz del proyecto)
+## Critical Patterns
 
-```bash
-# 1. Construir y levantar todos los servicios (db, redis, mercure, traccar)
-docker compose -f docker-compose.local.yml up -d --build
+### Entity Identity (mandatory)
 
-# 2. Entrar al contenedor app
-docker compose -f docker-compose.local.yml exec app bash
+- **Internal PK**: BIGINT auto-increment (`id`) — joins, internal processing
+- **Public ID**: ULID (`public_id`) via `PublicIdTrait` — APIs, URLs, Mercure topics
+- **NEVER expose internal `id` in public APIs**
 
-# 3. Dentro del contenedor: instalar deps, preparar DB y arrancar servidor
-composer install
-php bin/console doctrine:schema:create          # primera vez (DB vacía)
-php bin/console doctrine:migrations:migrate -n  # siguientes veces
-php bin/console doctrine:fixtures:load -n
-php -S 0.0.0.0:8000 -t public                  # arranca el servidor web
-```
+### Multi-Tenancy
 
-#### Arranque en una línea (sin entrar al contenedor)
-
-```bash
-docker compose -f docker-compose.local.yml up -d --build
-docker compose -f docker-compose.local.yml exec app bash -c \
-  "composer install && php bin/console doctrine:migrations:migrate -n && php -S 0.0.0.0:8000 -t public"
-```
-
-#### URLs locales
-
-| Servicio | URL | Notas |
-|----------|-----|-------|
-| Backend (Symfony) | http://localhost:8000 | Built-in PHP server |
-| Traccar Web UI / API | http://localhost:8082 | Credenciales: `admin`/`admin` |
-| Mercure Hub | http://localhost:3000/.well-known/mercure | SSE realtime |
-| PostgreSQL (app) | localhost:5432 | User: `mxo`, DB: `mxo_track` |
-| PostgreSQL (traccar) | localhost:5433 | User: `traccar`, DB: `traccar` |
-| Redis | localhost:6379 | Sesiones |
-| OSRM (routing engine) | (internal only, port 5000) | Necesita mapa preparado previamente |
-| VROOM (VRP optimizer) | http://localhost:5100 | API de optimización de rutas |
-
-#### Preparación OSRM (primera vez)
-
-Antes del primer arranque, hay que descargar y procesar el mapa de Madrid para OSRM:
-
-```bash
-./docker/osrm/prepare-map.sh
-```
-
-Esto descarga ~75 MB de Geofabrik y genera los ficheros `.osrm.*` en `docker/osrm/data/`. Solo es necesario ejecutarlo una vez (o cuando se quiera actualizar el mapa).
-
-#### Notas
-
-- El servidor PHP built-in es **single-threaded** y solo para desarrollo. No usar en producción.
-- Traccar usa **PostgreSQL dedicado** (`traccar_db`, puerto 5433 en host). La configuración se monta desde `docker/traccar-local/traccar.xml`. **No crea usuario admin automáticamente** (ver sección "Inicialización de Traccar" más abajo). La app se conecta vía `TRACCAR_BASE_URL=http://traccar:8082`.
-- Si se cierra la terminal, el servidor PHP se detiene. Para arrancarlo de nuevo: entrar al contenedor y ejecutar `php -S 0.0.0.0:8000 -t public`.
-
-Services: `app` (PHP 8.4, puerto 8000), `db` (postgres:16, puerto 5432), `redis` (redis:7, puerto 6379), `mercure` (dunglas/mercure, puerto 3000), `traccar` (traccar/traccar, puerto 8082 API/Web + 5055 GPS), `traccar_db` (postgres:16, puerto 5433 — BD dedicada para Traccar), `osrm` (osrm/osrm-backend, puerto 5000 interno — routing engine), `vroom` (ghcr.io/vroom-project/vroom-docker, puerto 5100 host / 3000 interno — optimizador VRP).
-
-## Architecture
-
-### Entity Identity Pattern (mandatory)
-
-All entities (except `CustomerVehicle`) use `PublicIdTrait` which provides:
-- **Internal PK**: `BIGINT` auto-increment (`id`) — used for joins, internal processing
-- **Public ID**: `ULID` (`public_id`) — exposed in APIs, URLs, Mercure topics
-
-**Never expose internal `id` in public APIs.** Public endpoints use `{publicId}` route parameters. In Driver API payloads, shipment references use `shipment_public_id` (not `shipment_id`).
-
-### Multi-Tenant Isolation
-
-- `CustomerTenantFilter` (Doctrine SQL filter) scopes queries by `customer_id`
-- Entities implement `CustomerScopedEntityInterface` to opt-in to filtering
-- `DoctrineCustomerFilterSubscriber` auto-enables filter for `ROLE_CUSTOMER` and `ROLE_DRIVER` users with a customer association
-- Admin/Operator users bypass the filter
+- `CustomerTenantFilter` (Doctrine SQL filter) + `CustomerScopedEntityInterface`
+- Admin/Operator bypass; ROLE_CUSTOMER and ROLE_DRIVER scoped
 
 ### Role Hierarchy
 
@@ -129,298 +67,73 @@ ROLE_ADMIN > ROLE_OPERATOR > ROLE_CUSTOMER
 ROLE_ADMIN > ROLE_DRIVER
 ```
 
-Defined in `UserRole` enum. Access control: `/admin` requires ADMIN or OPERATOR; `/driver` and `/api/driver` require ADMIN or DRIVER.
+## Knowledge Modules (consultar bajo demanda)
 
-### Key Domain Concepts
+Antes de trabajar en un subsistema, **LEE el módulo relevante** en `docs/knowledge/`:
 
-- **Vehicle / VehiclePosition / VehicleLastPosition**: GPS tracking, positions from Traccar
-- **Route / RouteStop**: Delivery routes assigned to drivers, stops with sequence
-- **Shipment / ShipmentEvent**: Shipment lifecycle tracked via events (DELIVERED, EXCEPTION, etc.)
-- **Pod** (Proof of Delivery): Linked to RouteStop, stores recipient ID and driver confirmation
-- **DriverAction**: Idempotency tracking for driver operations via `clientActionId`
-- **AuditLog**: Structured audit trail for security-sensitive operations
+| Si vas a trabajar en... | Lee primero |
+|------------------------|-------------|
+| Entidades, relaciones, migraciones, enums | `docs/knowledge/domain-model.md` |
+| Providers, factories, resolución per-tenant | `docs/knowledge/provider-framework.md` |
+| Controllers, DTOs, APIs, endpoints | `docs/knowledge/api-surface.md` |
+| Docker, Railway, variables de entorno | `docs/knowledge/deployment.md` |
+| Tests, PHPUnit, coverage | `docs/knowledge/testing.md` |
+| Mercure, SSE, tokens JWT | `docs/knowledge/realtime.md` |
+| Traccar, posiciones GPS, simulación | `docs/knowledge/gps-tracking.md` |
+| SMS, WhatsApp, push, webhooks | `docs/knowledge/notifications.md` |
+| Claude AI, embeddings, ML | `docs/knowledge/ai-ml.md` |
+| VROOM, OSRM, capacidad, rutas | `docs/knowledge/route-optimization.md` |
+| Roles, multi-tenancy, CSRF, seguridad | `docs/knowledge/security.md` |
+| Skills de Superpowers (completo) | `docs/knowledge/superpowers-skills.md` |
+| Índice completo de módulos | `docs/knowledge/index.md` |
+| Análisis previos del codebase | `docs/analysis/` |
 
-### Route Optimization (VROOM + OSRM)
+**Regla:** No duplicar info entre CLAUDE.md y los módulos. Al modificar un subsistema, actualizar el módulo correspondiente.
 
-- `RouteBuilder`: Builds optimized routes using VROOM VRP solver. Distributes shipments across vehicles and orders stops optimally using real road distances.
-- `VroomApiClient`: HTTP client for VROOM Express API (POST JSON with vehicles + jobs)
-- `VroomRequestMapper`: Converts domain entities (Vehicle, Shipment) to VROOM format. Note: VROOM uses `[longitude, latitude]` coordinate order and integer capacities (grams, cm³, parcels).
-- `VroomResponseMapper`: Converts VROOM response back to Route/RouteStop entities
-- `RouteOptimizationService`: Re-optimizes stop order of existing routes via VROOM. Keeps Haversine distance helpers for UI display.
-- `RouteCapacityValidator`: Validates vehicle capacity constraints (weight, volume, parcels)
-- VROOM capacity dimensions: `[weight_grams, volume_cm3, parcels]` (3 dimensions)
-- OSRM provides the road network routing (distances, durations) used by VROOM
+## Regla de Gobernanza de CLAUDE.md
 
-### Traccar Integration
+**CLAUDE.md contiene dos tipos de contenido con reglas distintas:**
 
-- `TraccarApiClient`: HTTP client for Traccar REST API (devices, positions, createDevice)
-- `TraccarStreamCommand`: Polling-based position ingestion with backfill (--once, --sleep=5)
-- `TraccarSyncDevicesCommand`: Syncs Traccar devices to local Vehicle entities
-- `TraccarIngestionService`: Processes and stores position data
-- `SimulateGpsCommand`: Simula posiciones GPS para desarrollo (ver sección dedicada abajo)
+1. **Instrucciones de comportamiento** (skills, convenciones, critical patterns) — **SIEMPRE inline en CLAUDE.md**. Son instrucciones que Claude debe seguir en cada interacción. Moverlas a módulos externos degrada su efectividad porque Claude puede no leerlas a tiempo.
 
-#### Inicialización de Traccar (primer arranque)
+2. **Referencia bajo demanda** (domain model, deployment, API surface, etc.) — **En `docs/knowledge/`**. Son datos de contexto que se consultan cuando se trabaja en un subsistema específico. No necesitan estar presentes en cada turno.
 
-Traccar 6.x con H2 embebida arranca con la DB vacía y **sin usuario admin**. El endpoint `GET /api/server` devuelve `"newServer": true`. Hay que registrar manualmente el primer usuario:
+**Antes de modificar CLAUDE.md, preguntarse:**
+- ¿Es una instrucción de comportamiento? → **Debe quedarse inline en CLAUDE.md**
+- ¿Es información de referencia consultable? → **Va a `docs/knowledge/`**
+- ¿No estoy seguro? → **Preguntar al usuario antes de mover o recortar contenido**
 
-```bash
-# Desde dentro del contenedor app:
-curl -s -X POST 'http://traccar:8082/api/users' \
-  -H 'Content-Type: application/json' \
-  -d '{"name":"admin","email":"admin","password":"admin"}'
-```
-
-Notas importantes:
-- El primer usuario creado recibe `administrator: true` automáticamente.
-- **No incluir** el campo `"administrator"` en el JSON — provoca un `NullPointerException` porque Traccar intenta verificar permisos antes de que exista ningún usuario.
-- Después de esto, login funciona normalmente via `POST /api/session` con `email=admin&password=admin`.
-- Si Traccar se recrea (volumen `traccar_data` borrado), hay que repetir este paso.
-
-#### Simulación GPS para desarrollo
-
-El comando `app:dev:simulate-gps` crea devices en Traccar, envía posiciones simuladas y opcionalmente las ingesta en Symfony:
-
-```bash
-# Dentro del contenedor app:
-php bin/console app:dev:simulate-gps --points=10 --interval=1 --ingest
-```
-
-Opciones: `--points=N` (posiciones a enviar), `--interval=N` (segundos entre cada una), `--ingest` (ingestar en Symfony al terminar).
-
-Flujo interno:
-1. Busca un Vehicle activo (preferencia por nombre con "Demo")
-2. Crea device en Traccar via API REST si no existe (uniqueId: `sim-{nombre}`)
-3. Actualiza `Vehicle.traccarDeviceId` en la DB local
-4. Envía posiciones al protocolo OsmAnd de Traccar (puerto 5055)
-5. Si `--ingest`: espera 3s y llama a `TraccarIngestionService`
-
-Ruta simulada: circuito por el centro de Madrid (Sol → Gran Vía → Plaza España → Palacio Real → Puerta de Toledo → Atocha → Retiro → Cibeles → Sol).
-
-#### Tracking en vivo (Mercure + Traccar)
-
-Para ver el vehículo moverse en tiempo real en `/fleet/map`, se necesitan **dos procesos simultáneos**:
-
-```bash
-# 1. Arrancar el stream que lee Traccar y publica a Mercure
-docker compose -f docker-compose.local.yml exec -T -d app php bin/console app:traccar:stream --sleep=2
-
-# 2. Simular movimiento GPS (~2 minutos)
-docker compose -f docker-compose.local.yml exec -T app php bin/console app:dev:simulate-gps --points=120 --interval=1
-```
-
-**Nota**: `--ingest` de `simulate-gps` hace ingesta batch al final, no en tiempo real. Para tracking en vivo, usar `app:traccar:stream` en paralelo.
-
-### Mercure Realtime
-
-- Topics: `/vehicles/{public_id}/position`, `/operator/fleet`, `/customers/{id}/routes`, `/customers/{id}/shipments`
-- `MercureJwtFactory` generates subscriber tokens (HS256)
-- `MercureTokenController` provides tokens to frontend via `mercureAuthorization` cookie (just the JWT, no "Bearer" prefix)
-- `TopicResolver` handles topic authorization
-- Publisher config in `mercure.yaml` requires `publish: ['*']` to authorize publishing to all topics
-- CORS: Mercure hub must use specific origin (`cors_origins http://localhost:8000`), not `*`, because `EventSource` uses `withCredentials: true`
-- All JWT keys (publisher + subscriber) must match between `docker-compose.local.yml` `app` service and `mercure` service
-
-### Session & Security
-
-- Sessions stored in Redis with prefix `sess:transporte:`
-- Login via `form_login` with CSRF and rate limiting (5 attempts)
-- `SecurityHeadersSubscriber` adds X-Frame-Options, CSP, etc.
-- `UserChecker` validates user is active before authentication
+**Prohibido:** Recortar, resumir o mover instrucciones de comportamiento (skills, convenciones, patterns) a módulos externos sin aprobación explícita del usuario.
 
 ## Features Document
 
-El documento `docs/FEATURES.md` contiene la descripción completa de todas las características funcionales y técnicas del sistema. **Debe mantenerse actualizado:**
-
-- Cada PR que añada, modifique o elimine funcionalidad debe incluir la actualización correspondiente en `docs/FEATURES.md`
-- Añadir una entrada en la sección "Historial de Cambios" del documento
-- Al planificar nuevas features, consultar `docs/FEATURES.md` para entender el estado actual del sistema
-
----
-
-## Análisis Persistentes (Knowledge Base)
-
-Las conclusiones de exploraciones y análisis del codebase se guardan en `docs/analysis/` para reutilizarlas entre sesiones. Esto evita repetir investigaciones costosas y permite construir conocimiento acumulativo sobre el proyecto.
-
-### Reglas
-
-1. **Al explorar un tema complejo** (arquitectura, deployment, integración, debugging) — guardar las conclusiones en `docs/analysis/YYYY-MM-DD-<tema>.md` y hacer commit
-2. **Antes de investigar un tema** — consultar primero si ya existe un análisis en `docs/analysis/` para no repetir trabajo
-3. **Al descubrir algo nuevo** sobre un tema ya analizado — actualizar el archivo existente (no crear uno nuevo) y añadir fecha de actualización al final
-4. **Los subagentes también deben guardar sus conclusiones** — si un subagente de exploración genera hallazgos significativos, el agente principal debe persistirlos en `docs/analysis/`
-
-### Formato de cada archivo
-
-```markdown
-# [Título del análisis]
-
-**Fecha:** YYYY-MM-DD
-**Última actualización:** YYYY-MM-DD
-**Estado:** Vigente | Parcialmente desactualizado | Desactualizado
-**Contexto:** Qué se investigó y por qué
-
-## Hallazgos clave
-
-- Hallazgo concreto con rutas de archivos, configs, y detalles técnicos
-- ...
-
-## Implicaciones para futuras tareas
-
-- Qué tener en cuenta al trabajar en X
-- ...
-
-## Historial de actualizaciones
-
-- YYYY-MM-DD: Creación inicial
-- YYYY-MM-DD: Actualizado porque...
-```
-
-### Cuándo guardar análisis
-
-- Exploración de cómo funciona un subsistema (Traccar, Mercure, VROOM, providers, etc.)
-- Análisis de configuración de deployment (Railway, Docker, variables de entorno)
-- Debugging complejo donde se descubrió algo no obvio
-- Evaluación de alternativas técnicas con pros/contras
-- Cualquier investigación que tomó >5 minutos de exploración
-- Conclusiones de subagentes de exploración que contengan información reutilizable
-
-### Cuándo consultar análisis existentes
-
-- **Al inicio de cualquier tarea** que toque un subsistema ya analizado
-- Al planificar features que involucren componentes documentados
-- Al debuggear problemas en áreas ya investigadas
-- Antes de lanzar subagentes de exploración (puede que la respuesta ya esté documentada)
-
-### Diferencia con otros docs
-
-| Directorio | Propósito | Cuándo se crea |
-|-----------|-----------|----------------|
-| `docs/analysis/` | Conocimiento descubierto sobre el estado actual del código/infra | Al explorar/investigar |
-| `docs/superpowers/specs/` | Diseño validado de algo que se va a construir | Al terminar brainstorming |
-| `docs/superpowers/plans/` | Pasos de implementación | Al terminar diseño |
-| `docs/FEATURES.md` | Funcionalidades del sistema (user-facing) | Al completar features |
-
----
-
-## Conventions
-
-- All PHP files use `declare(strict_types=1)`
-- Doctrine mappings via PHP attributes (not XML/YAML)
-- Doctrine ORM 3.x does not default to snake_case — `naming_strategy: underscore_number_aware` is required in `doctrine.yaml` so that column names match `UniqueConstraint` references (e.g. `publicId` property maps to `public_id` column)
-- Controllers use attribute routing
-- API error responses via `ApiErrorResponder` (consistent error format)
-- DTOs in `src/Dto/` with `fromArray()` factory + Symfony Validator constraints
-- Symfony 7.4 lock enforced: `extra.symfony.require=7.4.*` in composer.json, `conflict` for `>=8.0`
-
----
+`docs/FEATURES.md` — descripción completa de todas las características. **Debe mantenerse actualizado** con cada PR que añada, modifique o elimine funcionalidad.
 
 ## Backlog Arquitectónico
-
-Registro vivo de decisiones arquitectónicas, alternativas descartadas (pero no olvidadas), y mejoras futuras. Cada entrada documenta **qué se eligió, qué se descartó y por qué**, para poder retomarlo con contexto completo.
-
-**Regla:** Cualquier decisión arquitectónica significativa debe quedar aquí. Al iniciar trabajo relacionado, consultar primero esta sección.
-
-### Formato de entrada
-
-```
-### [FECHA] Título corto
-**Estado:** Pendiente | En progreso | Resuelto | Descartado
-**Decisión:** Qué se eligió
-**Contexto:** Por qué se tomó esta decisión
-**Alternativas consideradas:**
-- Alternativa A — pros / contras
-- Alternativa B — pros / contras
-**Trigger para revisitar:** Cuándo tiene sentido reconsiderar
-**Spec/Plan relacionado:** link al doc si existe
-```
-
----
 
 ### [2026-03-11] Providers configurables: Proxy + Factory vs alternativas
 
 **Estado:** Pendiente de implementación
 **Decisión:** Transparent Proxy + Provider Factory + CustomerIntegration entity
-**Contexto:** Se necesita que cada Customer (tenant) pueda elegir qué providers usar para routing, optimización, GPS y realtime. Se eligió este enfoque en el brainstorming por su compatibilidad hacia atrás (los servicios existentes no cambian) y flexibilidad.
-
-**Alternativas consideradas:**
-
-1. **Transparent Proxy + Factory (elegida)**
-   - Pros: Zero cambios en servicios existentes, el proxy implementa la misma interfaz y resuelve en runtime. Fallback chains nativos via prioridad. Fácil de testear (Null implementations siguen funcionando).
-   - Contras: Una capa de indirección extra en cada llamada. El proxy necesita acceso al TenantContext (Security) lo que acopla ligeramente infraestructura con resolución. Cada nuevo servicio necesita un proxy dedicado (boilerplate).
-
-2. **Symfony Tagged Services + CompilerPass**
-   - Pros: Aprovecha el DI container nativo de Symfony. Autodiscovery de providers con `#[AutoconfigureTag]`. Muy type-safe y optimizado en compilación.
-   - Contras: La resolución per-tenant en runtime no encaja bien con el container compilado de Symfony (que es estático). Requeriría un ServiceLocator custom + lógica de resolución similar al proxy. No simplifica realmente vs. la opción elegida.
-   - Trigger para revisitar: Si Symfony introduce soporte nativo para "scoped services" o "tenant-aware DI" en futuras versiones.
-
-3. **Event-Driven / Middleware Pattern**
-   - Pros: Los servicios emiten un evento "necesito routing" y un listener resuelve el provider. Desacoplamiento máximo. Fácil de añadir logging, métricas, circuit breaker como middleware.
-   - Contras: Más complejo de entender y debuggear. Flujo indirecto (difícil saber qué provider se usó mirando el código). Symfony Messenger podría servir pero añade overhead para llamadas síncronas. Over-engineering para el caso actual.
-   - Trigger para revisitar: Si se necesita circuit breaker automático, métricas por provider, o A/B testing entre providers.
-
-4. **Config en YAML/ENV (sin DB)**
-   - Pros: Simple, sin entidad extra, sin queries. Cada tenant tendría su propio `.env` override o config file.
-   - Contras: No configurable desde UI. Requiere redeploy para cambiar providers. No escala con muchos tenants. No soporta fallback chains dinámicos.
-   - Trigger para revisitar: Si hay muy pocos tenants (< 5) y la configuración casi nunca cambia.
-
-**Trigger para revisitar:** Si el boilerplate de proxies se vuelve tedioso (> 6 servicios con proxy), considerar codegen o un proxy genérico basado en reflection. Si se necesitan métricas/circuit breaker, evaluar el enfoque middleware.
-
 **Spec:** `docs/superpowers/specs/2026-03-11-user-configurable-providers-design.md`
 **Plan:** `docs/superpowers/plans/2026-03-11-user-configurable-providers.md`
+**Trigger para revisitar:** Si boilerplate de proxies > 6 servicios, considerar codegen o proxy genérico.
 
----
-
-### [2026-03-11] GpsDeviceProviderInterface: Refactoring de métodos Traccar-específicos
-
-**Estado:** Pendiente
-**Decisión:** Pospuesto — se implementará WebhookGpsProvider con stubs (login→no-op, getSessionCookie→null) como paso intermedio.
-**Contexto:** La interfaz actual `GpsDeviceProviderInterface` tiene `login()` y `getSessionCookie()` que son conceptos de Traccar. Para providers genéricos (webhook, APIs SaaS) estos métodos no tienen sentido.
-
-**Alternativas consideradas:**
-
-1. **Refactoring previo a la implementación de providers (ideal)**
-   - Narrowing del port: solo `getDevices()`, `createDevice()`, `getPositions(string $deviceId)`, `isAvailable()`
-   - Mover `login()`/`getSessionCookie()` a `TraccarGpsProvider` directamente
-   - Cambiar `$deviceId` de `int` a `string` (identifier genérico)
-   - Pros: Interfaz limpia desde el inicio
-   - Contras: Requiere actualizar todos los consumidores de la interfaz actual
-
-2. **Stubs en providers no-Traccar (elegida temporalmente)**
-   - `login()` → no-op, `getSessionCookie()` → null
-   - Pros: No rompe nada, rápido de implementar
-   - Contras: Interfaz "sucia", viola Interface Segregation Principle
-
-**Trigger para revisitar:** Cuando se implemente el segundo provider de GPS (después de webhook), el refactoring se vuelve obligatorio para evitar más stubs.
-
----
-
-### [2026-03-11] Mercure: EventListeners usan HubInterface directamente en lugar del port
+### [2026-03-11] GpsDeviceProviderInterface: Métodos Traccar-específicos
 
 **Estado:** Pendiente
-**Decisión:** Se documentó como deuda técnica. Los listeners `MercurePositionListener` y `MercureRouteProgressListener` usan `HubInterface` directamente en lugar de `RealtimePublisherInterface`.
-**Contexto:** El port `RealtimePublisherInterface` existe pero no se usa consistentemente. `TraccarIngestionService` también usa `HubInterface` directamente.
+**Decisión:** Stubs en WebhookGpsProvider (login→no-op, getSessionCookie→null)
+**Trigger:** Al implementar tercer provider GPS, refactoring obligatorio.
 
-**Acción futura:**
-- Refactorizar listeners para usar `RealtimePublisherInterface`
-- Refactorizar `TraccarIngestionService` para publicar solo via domain events (ya emite `VehiclePositionReceived`)
-- Esto es prerequisito para que el TenantAwareRealtimePublisher funcione correctamente en todos los flujos
-
-**Trigger para revisitar:** Antes de configurar un customer con `HttpPollingPublisher`, ya que sin este refactoring los listeners seguirán publicando a Mercure independientemente de la config del customer.
-
----
-
-### [2026-03-11] Encriptación de credenciales en CustomerIntegration
+### [2026-03-11] Mercure listeners usan HubInterface directamente
 
 **Estado:** Pendiente
-**Decisión:** Las API keys se almacenan en JSON plano en la columna `config` de `CustomerIntegration`. Sin encriptación por ahora.
-**Contexto:** La encriptación añade complejidad (key management, rotación). Para v1 se prioriza funcionalidad.
+**Decisión:** Deuda técnica documentada. Refactorizar antes de configurar tenant con HttpPolling.
 
-**Alternativas para el futuro:**
-1. **Symfony Secrets** — vault encriptado, pero es por entorno, no por tenant
-2. **Encriptación a nivel de columna (Doctrine listener)** — transparente, pero requiere gestión de keys
-3. **Vault externo (HashiCorp Vault, AWS Secrets Manager)** — enterprise, escalable
-4. **Encriptación campo-a-campo en el JSON** — solo encriptar `api_key`, no todo el JSON
+### [2026-03-11] Sin encriptación de credenciales en CustomerIntegration
 
-**Trigger para revisitar:** Antes de ir a producción con customers reales que configuren API keys de terceros.
+**Estado:** Pendiente
+**Trigger:** Antes de producción con customers configurando API keys de terceros.
 
 ---
 
@@ -1181,22 +894,3 @@ description: Use when [specific triggering conditions]
 - **NEVER summarize the skill's process in the description** (Claude may follow description instead of reading full skill)
 - Use concrete triggers, symptoms, and situations
 - Keywords throughout for search (errors, symptoms, tools)
-
-#### Skill Creation Checklist
-
-**RED Phase:**
-- [ ] Create pressure scenarios (3+ combined pressures for discipline skills)
-- [ ] Run scenarios WITHOUT skill - document baseline behavior
-- [ ] Identify patterns in rationalizations/failures
-
-**GREEN Phase:**
-- [ ] Name, YAML frontmatter, description starts with "Use when..."
-- [ ] Clear overview with core principle
-- [ ] Address specific baseline failures
-- [ ] Run scenarios WITH skill - verify compliance
-
-**REFACTOR Phase:**
-- [ ] Identify NEW rationalizations
-- [ ] Add explicit counters
-- [ ] Build rationalization table
-- [ ] Re-test until bulletproof

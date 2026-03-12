@@ -119,13 +119,6 @@ Shipment ←── ShipmentEvent (ManyToOne cascade)
 | GET | `/api/vehicles/{publicId}/positions` | `api_vehicle_positions` | Historial con paginación (`from`/`to`/`limit`/`offset`/`order`) |
 | GET | `/api/vehicles/{publicId}/positions.csv` | `api_vehicle_positions_csv` | Export CSV posiciones |
 
-### ShipmentApiController — API envíos
-
-| Método | Ruta | Nombre | Descripción |
-|--------|------|--------|-------------|
-| GET | `/api/shipments` | `api_shipments_` | Lista envíos (`CUSTOMER`: solo los suyos) |
-| GET | `/api/shipments/{publicId}` | — | Detalle con timeline de eventos |
-
 ### MercureTokenController — Token Mercure
 
 | Método | Ruta | Nombre | Descripción |

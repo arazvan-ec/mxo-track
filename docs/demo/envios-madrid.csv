@@ -1,0 +1,56 @@
+reference,recipient_name,address,latitude,longitude,phone,notes,service_type,weight_kg,volume_m3,num_parcels,ean,description,service_time_seconds,priority
+DEMO-CSV-0001,María García,Calle Gran Vía 1 28013 Madrid,40.4200,-3.7025,612345001,Entregar en portería,DELIVERY,5.2,0.03,1,8412345000001,Paquete documentos,180,normal
+DEMO-CSV-0002,Carlos López,Calle de Alcalá 50 28014 Madrid,40.4190,-3.6950,612345002,Llamar al llegar,DELIVERY,12.5,0.08,2,8412345000002,Material oficina,300,high
+DEMO-CSV-0003,Ana Martínez,Calle de Serrano 45 28001 Madrid,40.4260,-3.6880,612345003,Producto refrigerado,DELIVERY,25.0,0.15,1,8412345000003,Alimentos frescos,240,critical
+DEMO-CSV-0004,Pedro Sánchez,Calle de Goya 30 28001 Madrid,40.4240,-3.6830,612345004,,DELIVERY,3.8,0.02,1,8412345000004,Electrónica,180,normal
+DEMO-CSV-0005,Laura Fernández,Calle de Velázquez 60 28001 Madrid,40.4280,-3.6850,612345005,Frágil manejar con cuidado,DELIVERY,1.2,0.01,1,8412345000005,Cristalería,300,high
+DEMO-CSV-0006,Javier Ruiz,Paseo de la Castellana 100 28046 Madrid,40.4500,-3.6920,612345006,Oficina planta 5,DELIVERY,45.0,0.35,3,8412345000006,Mobiliario oficina,420,normal
+DEMO-CSV-0007,Elena Torres,Calle de Fuencarral 80 28004 Madrid,40.4270,-3.7010,612345007,,DELIVERY,2.1,0.01,1,8412345000007,Ropa,180,low
+DEMO-CSV-0008,Miguel Díaz,Calle de Hortaleza 55 28004 Madrid,40.4250,-3.6990,612345008,Horario: 9-14h,DELIVERY,8.7,0.05,1,8412345000008,Herramientas,240,normal
+DEMO-CSV-0009,Carmen Moreno,Calle del Pez 20 28004 Madrid,40.4230,-3.7060,612345009,,DELIVERY_AND_PICKUP,4.5,0.03,2,8412345000009,Devolución + entrega,360,normal
+DEMO-CSV-0010,Roberto Jiménez,Plaza de Chueca 5 28004 Madrid,40.4225,-3.6975,612345010,Zona peatonal,DELIVERY,1.8,0.01,1,8412345000010,Farmacia,180,urgent
+DEMO-CSV-0011,Isabel Navarro,Calle de Atocha 40 28012 Madrid,40.4120,-3.6960,612345011,,DELIVERY,15.3,0.12,2,8412345000011,Libros,300,normal
+DEMO-CSV-0012,Francisco Romero,Calle de Embajadores 70 28012 Madrid,40.4060,-3.7020,612345012,Portero automático 3B,DELIVERY,6.4,0.04,1,8412345000012,Alimentación seca,240,normal
+DEMO-CSV-0013,Lucía Vargas,Calle de Toledo 35 28005 Madrid,40.4100,-3.7080,612345013,,DELIVERY,22.0,0.18,1,8412345000013,Electrodoméstico pequeño,300,high
+DEMO-CSV-0014,Antonio Castillo,Calle de Segovia 15 28005 Madrid,40.4130,-3.7130,612345014,Carga pesada necesita rampa,DELIVERY,180.0,2.5,4,8412345000014,Maquinaria industrial,600,critical
+DEMO-CSV-0015,Marta Ortega,Calle Mayor 70 28013 Madrid,40.4160,-3.7100,612345015,,DELIVERY,3.2,0.02,1,8412345000015,Cosmética,180,normal
+DEMO-CSV-0016,Daniel Guerrero,Calle del Arenal 25 28013 Madrid,40.4175,-3.7070,612345016,,DELIVERY,7.8,0.06,1,8412345000016,Deportes,240,low
+DEMO-CSV-0017,Sofía Medina,Calle de Preciados 10 28013 Madrid,40.4185,-3.7040,612345017,Tienda planta baja,DELIVERY,9.5,0.07,2,8412345000017,Textil comercial,300,normal
+DEMO-CSV-0018,Alejandro Vega,Paseo del Prado 30 28014 Madrid,40.4140,-3.6930,612345018,,DELIVERY,2.3,0.02,1,8412345000018,Material arte,240,normal
+DEMO-CSV-0019,Patricia Herrero,Calle de Lope de Vega 20 28014 Madrid,40.4155,-3.6960,612345019,Producto refrigerado urgente,DELIVERY,18.0,0.14,1,8412345000019,Productos lácteos,240,critical
+DEMO-CSV-0020,Raúl Campos,Calle de las Huertas 40 28014 Madrid,40.4145,-3.6975,612345020,,RETURN,5.0,0.04,1,8412345000020,Devolución cliente,300,normal
+DEMO-CSV-0021,Cristina Peña,Calle de Santa Isabel 30 28012 Madrid,40.4100,-3.6950,612345021,Bar restaurante,DELIVERY,35.0,0.25,3,8412345000021,Bebidas,420,high
+DEMO-CSV-0022,Sergio Delgado,Calle de Argumosa 15 28012 Madrid,40.4085,-3.6985,612345022,,DELIVERY,4.1,0.03,1,8412345000022,Papelería,180,normal
+DEMO-CSV-0023,Beatriz Fuentes,Ronda de Valencia 10 28012 Madrid,40.4065,-3.6965,612345023,Acceso difícil zona obras,DELIVERY,11.2,0.09,1,8412345000023,Fontanería,300,normal
+DEMO-CSV-0024,Andrés Reyes,Calle de Alberto Aguilera 40 28015 Madrid,40.4300,-3.7100,612345024,,DELIVERY,2.7,0.02,1,8412345000024,Complementos,180,low
+DEMO-CSV-0025,Natalia Blanco,Calle de San Bernardo 60 28015 Madrid,40.4260,-3.7050,612345025,Universidad - conserjería,DELIVERY,28.0,0.20,2,8412345000025,Material educativo,360,normal
+DEMO-CSV-0026,Óscar Ibáñez,Calle de la Princesa 25 28008 Madrid,40.4310,-3.7150,612345026,,DELIVERY,6.9,0.05,1,8412345000026,Informática,240,normal
+DEMO-CSV-0027,Paula Aguilar,Paseo de Rosales 50 28008 Madrid,40.4340,-3.7200,612345027,Frágil cristal,DELIVERY,3.5,0.03,1,8412345000027,Vajilla,300,high
+DEMO-CSV-0028,Víctor Caballero,Calle de Ferraz 30 28008 Madrid,40.4290,-3.7170,612345028,,DELIVERY,14.6,0.11,2,8412345000028,Ferretería,300,normal
+DEMO-CSV-0029,Adriana Parra,Calle de Bravo Murillo 100 28020 Madrid,40.4450,-3.7040,612345029,Mercado local puesto 23,DELIVERY,42.0,0.30,3,8412345000029,Productos gourmet,420,normal
+DEMO-CSV-0030,Rubén Molina,Calle de Ríos Rosas 35 28003 Madrid,40.4410,-3.6990,612345030,,DELIVERY_AND_PICKUP,8.3,0.06,1,8412345000030,Recogida + entrega,360,urgent
+DEMO-CSV-0031,Irene Domínguez,Calle de Santa Engracia 70 28010 Madrid,40.4370,-3.6980,612345031,,DELIVERY,5.6,0.04,1,8412345000031,Floristería,240,normal
+DEMO-CSV-0032,Álvaro Pascual,Calle de Ponzano 40 28003 Madrid,40.4380,-3.6960,612345032,Restaurante horario 8-11h,DELIVERY,55.0,0.40,4,8412345000032,Proveedores hostelería,480,high
+DEMO-CSV-0033,Claudia Herrera,Calle de Zurbano 55 28010 Madrid,40.4350,-3.6940,612345033,,DELIVERY,1.5,0.01,1,8412345000033,Joyería,180,critical
+DEMO-CSV-0034,Manuel Crespo,Calle de Génova 20 28004 Madrid,40.4280,-3.6930,612345034,Oficinas consultoría piso 3,DELIVERY,7.2,0.05,1,8412345000034,Material impresión,240,normal
+DEMO-CSV-0035,Teresa Nieto,Calle de Sagasta 15 28004 Madrid,40.4290,-3.6970,612345035,,DELIVERY,3.9,0.03,1,8412345000035,Perfumería,180,low
+DEMO-CSV-0036,Jorge Gallardo,Calle del Conde de Peñalver 30 28006 Madrid,40.4310,-3.6810,612345036,,DELIVERY,19.0,0.15,2,8412345000036,Equipamiento deportivo,300,normal
+DEMO-CSV-0037,Verónica Soto,Calle de Narváez 40 28009 Madrid,40.4220,-3.6780,612345037,Producto refrigerado,DELIVERY,30.0,0.22,2,8412345000037,Carnicería selecta,360,high
+DEMO-CSV-0038,Iván Carrasco,Calle de O'Donnell 25 28009 Madrid,40.4210,-3.6760,612345038,,DELIVERY,10.5,0.08,1,8412345000038,Bricolaje,240,normal
+DEMO-CSV-0039,Alicia Ramos,Calle de Ibiza 15 28009 Madrid,40.4200,-3.6730,612345039,Zona peatonal acceso moto,DELIVERY,2.0,0.01,1,8412345000039,Parafarmacia,180,normal
+DEMO-CSV-0040,David Prieto,Avenida de Menéndez Pelayo 60 28007 Madrid,40.4150,-3.6800,612345040,,DELIVERY,13.7,0.10,1,8412345000040,Óptica,300,normal
+DEMO-CSV-0041,Silvia Montero,Calle de Arturo Soria 120 28043 Madrid,40.4520,-3.6400,612345041,Urbanización privada,DELIVERY,6.3,0.04,1,8412345000041,Jardinería,240,normal
+DEMO-CSV-0042,Raquel Bermejo,Calle de López de Hoyos 80 28002 Madrid,40.4480,-3.6720,612345042,,DELIVERY,24.0,0.18,2,8412345000042,Decoración hogar,360,high
+DEMO-CSV-0043,Fernando Gil,Avenida de América 35 28028 Madrid,40.4380,-3.6700,612345043,Centro comercial planta -1,DELIVERY,8.9,0.07,1,8412345000043,Juguetería,240,normal
+DEMO-CSV-0044,Nuria Cabrera,Calle de Alcántara 40 28006 Madrid,40.4290,-3.6780,612345044,,DELIVERY,4.2,0.03,1,8412345000044,Dietética,180,normal
+DEMO-CSV-0045,Marcos Peláez,Calle de Jorge Juan 30 28001 Madrid,40.4250,-3.6830,612345045,Manejar con cuidado frágil,DELIVERY,0.8,0.01,1,8412345000045,Antigüedades,300,critical
+DEMO-CSV-0046,Eva Contreras,Paseo de la Habana 50 28036 Madrid,40.4570,-3.6850,612345046,,DELIVERY,16.0,0.12,2,8412345000046,Catering evento,300,urgent
+DEMO-CSV-0047,Pablo Roldán,Calle de María de Molina 25 28006 Madrid,40.4400,-3.6830,612345047,Entregar antes 12h,DELIVERY,33.0,0.24,3,8412345000047,Cajas mudanza,420,high
+DEMO-CSV-0048,Lorena Sáez,Calle de Velázquez 120 28006 Madrid,40.4350,-3.6860,612345048,,RETURN,2.5,0.02,1,8412345000048,Devolución moda,240,normal
+DEMO-CSV-0049,Héctor Bernal,Calle de Cea Bermúdez 40 28003 Madrid,40.4400,-3.7050,612345049,Portería código 4521,DELIVERY,7.5,0.05,1,8412345000049,Electrodoméstico,240,normal
+DEMO-CSV-0050,Rosa Camacho,Calle de Hermosilla 90 28001 Madrid,40.4270,-3.6790,612345050,,DELIVERY_AND_PICKUP,9.8,0.07,2,8412345000050,Intercambio tallas,360,normal
+DEMO-CSV-0051,Diego Montes,Calle de Ayala 55 28001 Madrid,40.4260,-3.6810,612345051,,DELIVERY,120.0,1.80,3,8412345000051,Mueble desmontado,540,high
+DEMO-CSV-0052,Lucía Rivas,Calle de Claudio Coello 70 28001 Madrid,40.4300,-3.6830,612345052,Producto refrigerado Bio,DELIVERY,15.5,0.12,1,8412345000052,Productos ecológicos,240,normal
+DEMO-CSV-0053,Gonzalo Pardo,Avenida del Mediterráneo 30 28007 Madrid,40.4070,-3.6780,612345053,,DELIVERY,5.7,0.04,1,8412345000053,Librería técnica,180,low
+DEMO-CSV-0054,Marina Lozano,Calle de Bailén 20 28013 Madrid,40.4160,-3.7140,612345054,Palacio Real zona turística,DELIVERY,3.3,0.02,1,8412345000054,Souvenirs premium,180,normal
+DEMO-CSV-0055,Adrián Vera,Calle del Doctor Esquerdo 45 28028 Madrid,40.4180,-3.6730,612345055,,DELIVERY,21.0,0.16,2,8412345000055,Material sanitario,300,critical

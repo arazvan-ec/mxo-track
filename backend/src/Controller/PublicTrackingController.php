@@ -6,20 +6,22 @@ namespace App\Controller;
 
 use App\Application\Tracking\PublicTrackingService;
 use App\Entity\DeliverySlot;
+use App\Entity\RecipientAction;
 use App\Entity\ShipmentEvent;
+use App\Enum\RecipientActionType;
 use App\Enum\ShipmentEventType;
+use App\Entity\RouteStop;
 use App\Notification\DeliveryRatingService;
 use App\Notification\DeliverySlotService;
-use App\Notification\RecipientNotificationService;
-use App\Notification\Template\RescheduleConfirmationTemplate;
+use App\Notification\Message\SendRecipientNotificationMessage;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 class PublicTrackingController extends AbstractController
 {
@@ -27,7 +29,7 @@ class PublicTrackingController extends AbstractController
         private readonly PublicTrackingService $trackingService,
         private readonly DeliverySlotService $deliverySlotService,
         private readonly DeliveryRatingService $deliveryRatingService,
-        private readonly RecipientNotificationService $notificationService,
+        private readonly MessageBusInterface $bus,
         private readonly EntityManagerInterface $entityManager,
         private readonly LoggerInterface $logger,
     ) {}
@@ -40,6 +42,13 @@ class PublicTrackingController extends AbstractController
         if ($info === null) {
             throw $this->createNotFoundException('Envio no encontrado.');
         }
+
+        $action = new RecipientAction(
+            shipment: $info->shipment,
+            actionType: RecipientActionType::TrackingPageViewed,
+        );
+        $this->entityManager->persist($action);
+        $this->entityManager->flush();
 
         return $this->render('tracking/public.html.twig', [
             'shipment' => $info->shipment,
@@ -198,25 +207,18 @@ class PublicTrackingController extends AbstractController
         $this->entityManager->persist($event);
         $this->entityManager->flush();
 
-        // Send SMS confirmation to recipient
-        $recipientPhone = $shipment->getRecipientPhone();
-        if ($recipientPhone !== null && $recipientPhone !== '') {
-            try {
-                $trackingUrl = $this->generateUrl('public_tracking', ['trackingToken' => $trackingToken], UrlGeneratorInterface::ABSOLUTE_URL);
-                $slotDate = $payload['slot_date'] ?? $payload['alternative_option'] ?? '';
-                $slotTimeRange = $payload['slot_time_range'] ?? '';
-
-                $template = new RescheduleConfirmationTemplate(
-                    $shipment->getRecipientName() ?? 'Cliente',
-                    $slotDate,
-                    $slotTimeRange,
-                    $trackingUrl,
-                );
-
-                $this->notificationService->notify($recipientPhone, 'sms', $template);
-            } catch (\Throwable $e) {
-                $this->logger->error('Failed to send reschedule SMS: {error}', ['error' => $e->getMessage()]);
-            }
+        // Dispatch async SMS confirmation to recipient
+        $stop = $this->entityManager->getRepository(RouteStop::class)->findOneBy(['shipment' => $shipment]);
+        if ($stop !== null) {
+            $this->bus->dispatch(new SendRecipientNotificationMessage(
+                $stop->getId(),
+                'rescheduled',
+                $stop->getRoute()->getCustomer()?->getId(),
+                [
+                    'slot_date' => $payload['slot_date'] ?? $payload['alternative_option'] ?? '',
+                    'slot_time_range' => $payload['slot_time_range'] ?? '',
+                ],
+            ));
         }
 
         // Update delivery instructions for alternative options
@@ -234,6 +236,57 @@ class PublicTrackingController extends AbstractController
 
         return $this->redirectToRoute('public_tracking', [
             'trackingToken' => $trackingToken,
+        ]);
+    }
+
+    #[Route('/track/{trackingToken}/confirm-presence', name: 'public_tracking_confirm_presence', methods: ['POST'])]
+    public function confirmPresence(string $trackingToken, Request $request): JsonResponse
+    {
+        $info = $this->trackingService->trackByToken($trackingToken);
+
+        if ($info === null) {
+            throw $this->createNotFoundException('Envio no encontrado.');
+        }
+
+        $confirmed = $request->request->getBoolean('confirmed');
+
+        $action = new RecipientAction(
+            shipment: $info->shipment,
+            actionType: $confirmed ? RecipientActionType::PresenceConfirmed : RecipientActionType::PresenceDenied,
+            payload: ['confirmed' => $confirmed],
+        );
+        $this->entityManager->persist($action);
+        $this->entityManager->flush();
+
+        return new JsonResponse([
+            'success' => true,
+            'confirmed' => $confirmed,
+        ]);
+    }
+
+    #[Route('/track/{trackingToken}/alternative', name: 'public_tracking_alternative', methods: ['POST'])]
+    public function alternative(string $trackingToken, Request $request): JsonResponse
+    {
+        $info = $this->trackingService->trackByToken($trackingToken);
+
+        if ($info === null) {
+            throw $this->createNotFoundException('Envio no encontrado.');
+        }
+
+        $option = $request->request->getString('option');
+        $instructions = $request->request->getString('instructions', '');
+
+        $action = new RecipientAction(
+            shipment: $info->shipment,
+            actionType: RecipientActionType::AlternativeRequested,
+            payload: ['option' => $option, 'instructions' => $instructions],
+        );
+        $this->entityManager->persist($action);
+        $this->entityManager->flush();
+
+        return new JsonResponse([
+            'success' => true,
+            'option' => $option,
         ]);
     }
 

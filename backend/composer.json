@@ -32,7 +32,9 @@
     "phrity/websocket": "^3.6",
     "symfony/monolog-bundle": "^3.10",
     "symfony/translation": "^7.4",
-    "nelmio/api-doc-bundle": "^5.9"
+    "nelmio/api-doc-bundle": "^5.9",
+    "symfony/notifier": "7.4.*",
+    "symfony/twilio-notifier": "7.4.*"
   },
   "require-dev": {
     "doctrine/doctrine-fixtures-bundle": "^3.6",

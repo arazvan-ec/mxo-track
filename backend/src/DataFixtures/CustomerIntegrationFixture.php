@@ -22,7 +22,7 @@ class CustomerIntegrationFixture extends Fixture implements DependentFixtureInte
             return;
         }
 
-        // Zero-infra setup: greedy optimizer + haversine routing (no external services needed)
+        // Demo setup: greedy optimizer + google_directions routing (uses global API key)
         $manager->persist(new CustomerIntegration(
             $customer,
             ServiceType::RouteOptimizer,
@@ -35,8 +35,8 @@ class CustomerIntegrationFixture extends Fixture implements DependentFixtureInte
         $manager->persist(new CustomerIntegration(
             $customer,
             ServiceType::RoutingEngine,
-            'haversine',
-            ['correction_factor' => 1.3, 'average_speed_kmh' => 30],
+            'google_directions',
+            [],
             true,
             0,
         ));

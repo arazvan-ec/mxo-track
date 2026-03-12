@@ -25,9 +25,8 @@ final class ProviderEnumsTest extends TestCase
     public function routing_provider_has_correct_cases(): void
     {
         self::assertSame('osrm', RoutingProvider::Osrm->value);
-        self::assertSame('haversine', RoutingProvider::Haversine->value);
         self::assertSame('google_directions', RoutingProvider::GoogleDirections->value);
-        self::assertCount(3, RoutingProvider::cases());
+        self::assertCount(2, RoutingProvider::cases());
     }
 
     #[Test]

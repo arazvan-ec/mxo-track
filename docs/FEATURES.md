@@ -365,28 +365,102 @@ Accesible sin autenticación mediante token único por envío.
 | `/operator` | Dashboard de métricas del operador |
 | `/operator/dashboard/live` | Dashboard en tiempo real con conteos de rutas/paradas via Mercure |
 
+#### `OperatorKpiService`
+
+Servicio dedicado que calcula KPIs operacionales usando DQL QueryBuilder (Doctrine ORM). Consultas tipadas contra entidades `Route`, `RouteStop` y `VehicleLastPosition` con enums `RouteStatus` y `RouteStopStatus`. El método `getTopDrivers()` usa DBAL nativo para funciones PostgreSQL-específicas (`FILTER (WHERE ...)`).
+
+KPIs calculados:
+- **activeRoutes**: Rutas con estado ACTIVE o PLANNED
+- **deliveriesToday**: Paradas entregadas desde medianoche
+- **exceptionsToday**: Excepciones en rutas activas/planificadas/completadas
+- **completionRate**: % de paradas entregadas en rutas activas
+- **successRate7d**: % de entregas exitosas vs excepciones (últimos 7 días)
+- **vehiclesWithPosition**: Vehículos con posición GPS registrada
+- **topDrivers**: Top 3 conductores por entregas (últimos 7 días)
+
 ---
 
 ## 14. Inteligencia Artificial
 
 ### Servicios IA Integrados
 
-| Servicio | Descripción | Provider |
-|---|---|---|
-| `ExceptionClassifierService` | Clasifica excepciones de entrega en subcategorías con confianza | Claude API |
-| `PostRouteAnalyzer` | Analiza rutas completadas (eficiencia, anomalías, recomendaciones) | LLM |
-| `DeliveryNoteAiEnricher` | Enriquece notas de entrega con resúmenes/recomendaciones | Claude API |
-| `AiAssistantService` | Asistente IA de propósito general para lógica de negocio | LLM |
-| `EmbeddingService` | Embeddings vectoriales para búsqueda semántica de envíos | OpenAI API |
+| Servicio | Descripción | Provider | Estado |
+|---|---|---|---|
+| `ExceptionClassifierService` | Clasifica excepciones de entrega en 9 subcategorías con confianza | Claude API | Activo |
+| `PostRouteAnalyzer` | Analiza rutas completadas (eficiencia, planned vs actual, insights, recomendaciones) | Claude API | Activo |
+| `DeliveryNoteAiEnricher` | Genera notas de entrega basadas en historial de excepciones y feedback de conductores | Claude API | Activo |
+| `AiAssistantService` | Asistente conversacional con 5 herramientas (buscar envíos, reportes, rutas, alertas, patrones) | Claude API | Activo |
+| `EmbeddingService` | Embeddings vectoriales para búsqueda semántica de envíos (pgvector) | OpenAI API | Activo |
+| `DeliveryRiskService` | Predicción de riesgo de fallo en entrega (LOW/MEDIUM/HIGH) | ML Service | Activo |
+| `AddressRiskService` | Evaluación de riesgo por dirección basada en historial de excepciones | SQL Analytics | Activo |
+
+### Clasificación de Excepciones
+
+Cuando un conductor reporta una excepción, `NlpClassificationHandler` clasifica automáticamente el texto en una de 9 subcategorías:
+
+| Subcategoría | Descripción |
+|---|---|
+| `AUSENTE_REPETIDO` | Ausencias frecuentes en la misma dirección |
+| `HORARIO_INADECUADO` | Entrega fuera del horario preferido |
+| `ACCESO_DIFICIL` | Problemas de acceso al edificio/zona |
+| `DIRECCION_INCORRECTA` | Dirección errónea o incompleta |
+| `RECHAZO_CLIENTE` | El destinatario rechaza el paquete |
+| `DANO_PAQUETE` | Paquete dañado durante el transporte |
+| `VEHICULO_INADECUADO` | Vehículo no apto para la entrega |
+| `ZONA_PELIGROSA` | Zona con problemas de seguridad |
+| `OTRO` | No clasificable en las anteriores |
+
+La clasificación incluye: subcategoría, confianza (0.0-1.0), insight accionable y acción sugerida. Se almacena en `ShipmentEvent.payload['ai_classification']`.
+
+### Análisis Post-Ruta
+
+Al completarse una ruta (`RouteCompleted` event), `PostRouteAnalysisHandler` genera un análisis que incluye:
+- **Summary**: Resumen ejecutivo de la ruta
+- **Planned vs Actual**: Comparación de métricas planificadas vs reales
+- **Insights**: Observaciones sobre el rendimiento
+- **Recommendations**: Sugerencias para futuras rutas similares
+
+Almacenado en `Route.aiAnalysis` (JSON). Incluye fallback estadístico cuando Claude API no está disponible.
+
+### Predicción de Riesgo de Entrega
+
+`DeliveryRiskService` calcula un score de riesgo (0.0-1.0) para cada envío:
+- **LOW** (< 0.3): Entrega sin problemas esperados
+- **MEDIUM** (0.3 - 0.7): Riesgo moderado, precaución recomendada
+- **HIGH** (> 0.7): Alto riesgo de fallo
+
+Factores: historial de excepciones en la dirección (+0.15 boost), predicción ML, y datos del envío. Se muestra como badge de color en el planificador de rutas.
+
+### Notas de Entrega con IA
+
+`DeliveryNoteAiEnricher` genera notas para conductores (máximo 200 caracteres) basándose en:
+- Excepciones previas en la misma dirección
+- Feedback de conductores (notas de acceso, coordenadas corregidas, comentarios)
+
+Se activa al iniciar ruta (`RouteStarted` → `EnrichRouteNotesMessage`). Almacena en `RouteStop.aiNotes`.
+
+### Asistente IA para Operadores
+
+Interfaz de chat (`/admin/ai-assistant`) con 5 herramientas integradas:
+
+| Herramienta | Descripción |
+|---|---|
+| `search_shipments` | Buscar envíos por referencia, nombre o dirección |
+| `get_delivery_report` | Reporte de entregas con tasas de éxito y desglose |
+| `get_route_details` | Detalles de ruta con paradas, progreso y conductor |
+| `get_active_alerts` | Vehículos offline y rutas con excepciones excesivas |
+| `get_exception_patterns` | Análisis de patrones por código, conductor y dirección |
+
+Rate limiting: 20 mensajes/minuto por usuario.
 
 ### Procesamiento Asíncrono (Messenger)
 
 | Mensaje | Handler | Trigger |
 |---|---|---|
+| `NlpClassificationMessage` | Clasifica excepción con Claude, persiste en `ShipmentEvent.payload` | `DeliveryService` al reportar excepción |
 | `PostRouteAnalysisMessage` | Analiza ruta completada, guarda en `Route.aiAnalysis` | Evento `RouteCompleted` |
+| `EnrichRouteNotesMessage` | Enriquece notas de paradas con IA | Evento `RouteStarted` |
 | `FleetAnomalyCheckMessage` | Detecta anomalías de flota via ML | Evento `VehiclePositionReceived` |
-| `EnrichRouteNotesMessage` | Enriquece notas de paradas con IA | Manual |
-| `NlpClassificationMessage` | Clasifica texto de excepciones con Claude | Evento de excepción |
 
 ---
 
@@ -663,7 +737,7 @@ Columnas soportadas:
 | `ShipmentPriority` | LOW, NORMAL, HIGH, URGENT, CRITICAL |
 | `ClientFrequency` | NOT_FREQUENT, FREQUENT, VERY_FREQUENT, SUPER_FREQUENT |
 | `ServiceType` | ROUTING, ROUTE_OPTIMIZER, GPS, REALTIME |
-| `RoutingProvider` | OSRM, HAVERSINE, GOOGLE_DIRECTIONS |
+| `RoutingProvider` | OSRM, GOOGLE_DIRECTIONS |
 | `RouteOptimizerProvider` | VROOM, GREEDY |
 | `GpsProviderType` | TRACCAR, WEBHOOK |
 | `RealtimeProviderType` | MERCURE, HTTP_POLLING |
@@ -682,8 +756,9 @@ Columnas soportadas:
 ### Modalidades
 
 - **Keyword**: SQL LIKE en referencias, nombres, direcciones (rutas, envíos, vehículos)
-- **Semántica**: Embeddings vectoriales (OpenAI) con similitud coseno para envíos
+- **Semántica**: Embeddings vectoriales (OpenAI) con similitud coseno para envíos (pgvector)
 - **Híbrida**: Combina keyword + semántica, hasta 10 resultados por tipo
+- **Fallback**: Si embeddings no disponibles (sin API key), solo búsqueda keyword. Si keyword devuelve <3 resultados, intenta búsqueda semántica automáticamente.
 
 ---
 
@@ -712,7 +787,7 @@ Configuración per-tenant almacenada en DB:
 |---|---|---|
 | `customer` | ManyToOne | Tenant propietario |
 | `serviceType` | `ServiceType` enum | routing, route_optimizer, gps, realtime |
-| `providerType` | string | Identificador del provider (ej. `osrm`, `haversine`, `google_directions`) |
+| `providerType` | string | Identificador del provider (ej. `osrm`, `google_directions`) |
 | `config` | JSON | Configuración específica del provider (API keys, URLs, etc.) |
 | `enabled` | boolean | Activar/desactivar sin eliminar |
 | `priority` | integer | Orden en fallback chain (menor = mayor prioridad) |
@@ -723,9 +798,8 @@ Configuración per-tenant almacenada en DB:
 
 | Provider | Tipo | Infraestructura | Descripción |
 |---|---|---|---|
-| OSRM | `osrm` | Requiere servidor OSRM | Routing con distancias reales por carretera (existente) |
-| Haversine | `haversine` | Ninguna | Distancia en línea recta con factor de corrección configurable |
-| Google Directions | `google_directions` | API key de Google | Routing via Google Directions API |
+| OSRM | `osrm` | Requiere servidor OSRM | Routing con distancias reales por carretera |
+| Google Directions | `google_directions` | API key de Google | Routing via Google Directions API (default) |
 
 #### Optimización de Rutas (`RouteOptimizerInterface`)
 
@@ -786,7 +860,7 @@ Cuando un tenant no tiene `CustomerIntegration` configurada, se usan estos defau
 | Enum | Valores |
 |---|---|
 | `ServiceType` | ROUTING, ROUTE_OPTIMIZER, GPS, REALTIME |
-| `RoutingProvider` | OSRM, HAVERSINE, GOOGLE_DIRECTIONS |
+| `RoutingProvider` | OSRM, GOOGLE_DIRECTIONS |
 | `RouteOptimizerProvider` | VROOM, GREEDY |
 | `GpsProviderType` | TRACCAR, WEBHOOK |
 | `RealtimeProviderType` | MERCURE, HTTP_POLLING |
@@ -799,7 +873,9 @@ Cuando un tenant no tiene `CustomerIntegration` configurada, se usan estos defau
 |---|---|---|
 | 2026-03-11 | 1.0.0 | Documento inicial con todas las características del sistema |
 | 2026-03-11 | 1.1.0 | Fase 3: +41 unit tests (92→133). Fase 4: fix APP_BASE_URL, deprecar legacy ShipmentApiController, archivar docs completados, añadir metadata a composer.json |
-| 2026-03-11 | 1.2.0 | Providers configurables por tenant: framework de proxy transparente + factory, 5 providers nuevos (Haversine, Greedy, Google Directions, Webhook GPS, HTTP Polling), entidad CustomerIntegration, API de polling, admin CRUD, fallback chains, caché Redis. 255 tests (122 nuevos). |
+| 2026-03-11 | 1.2.0 | Providers configurables por tenant: framework de proxy transparente + factory, 4 providers nuevos (Greedy, Google Directions, Webhook GPS, HTTP Polling), entidad CustomerIntegration, API de polling, admin CRUD, fallback chains, caché Redis. 255 tests (122 nuevos). |
+| 2026-03-11 | 1.3.0 | Fase 2 — IA Activa: 55 tests nuevos para servicios AI/ML (304 total). Tests para ExceptionClassifier, PostRouteAnalyzer, DeliveryRisk, AddressRisk, EmbeddingService, SearchService, AiAssistant, DeliveryNoteAiEnricher. Fix bug DeliveryRiskService (array vs entity). Fix bug AiAssistantService (customerId int→string). UI: clasificación AI en excepciones (badge + insight + acción sugerida). UI: badge de riesgo en planificador de rutas. |
+| 2026-03-12 | 1.3.1 | Refactor: OperatorKpiService migrado de DBAL (SQL crudo) a DQL QueryBuilder (Doctrine ORM). Consultas ahora tipadas con entidades y enums. `getTopDrivers()` mantiene DBAL nativo por funciones PostgreSQL-específicas. Tests actualizados con mocks de EntityManager/QueryBuilder. |
 
 ---
 

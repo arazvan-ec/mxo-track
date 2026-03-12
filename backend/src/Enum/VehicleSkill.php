@@ -22,4 +22,20 @@ enum VehicleSkill: int
             self::FRAGILE => 'Artículos frágiles',
         };
     }
+
+    public function markerColor(): string
+    {
+        return match ($this) {
+            self::REFRIGERATED => '#0ea5e9',
+            self::HEAVY_LOAD => '#f97316',
+            self::PEDESTRIAN_ACCESS => '#22c55e',
+            self::HAZMAT => '#ef4444',
+            self::FRAGILE => '#ec4899',
+        };
+    }
+
+    public static function defaultMarkerColor(): string
+    {
+        return '#6366f1';
+    }
 }

@@ -13,10 +13,10 @@ use PHPUnit\Framework\TestCase;
 final class ServiceTypeTest extends TestCase
 {
     #[Test]
-    public function it_has_four_cases(): void
+    public function it_has_five_cases(): void
     {
         $cases = ServiceType::cases();
-        self::assertCount(4, $cases);
+        self::assertCount(5, $cases);
     }
 
     #[Test]
@@ -26,5 +26,6 @@ final class ServiceTypeTest extends TestCase
         self::assertSame('routing_engine', ServiceType::RoutingEngine->value);
         self::assertSame('gps_provider', ServiceType::GpsProvider->value);
         self::assertSame('realtime_publisher', ServiceType::RealtimePublisher->value);
+        self::assertSame('sms_notifier', ServiceType::SmsNotifier->value);
     }
 }

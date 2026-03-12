@@ -62,7 +62,7 @@ final class ShipmentCsvImporter
         $dataRows = [];
         $lineNumber = 0;
 
-        while (($row = fgetcsv($fh, 0, ',')) !== false) {
+        while (($row = fgetcsv($fh, 0, ',', '"', '')) !== false) {
             $lineNumber++;
 
             if ($lineNumber === 1) {

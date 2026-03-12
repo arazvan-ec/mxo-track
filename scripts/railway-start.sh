@@ -69,6 +69,12 @@ php bin/console doctrine:schema:update --force --env=prod --no-interaction
 echo "==> Warming up cache..."
 php bin/console cache:warmup --env=prod
 
+# Load demo data if LOAD_DEMO is set
+if [ "${LOAD_DEMO:-false}" = "true" ]; then
+    echo "==> Loading demo scenario..."
+    php bin/console app:demo:setup --env=prod --no-interaction || echo "    Demo setup failed (may already exist)"
+fi
+
 # Auto-create Traccar admin user if Traccar is available and new
 if [ -n "$TRACCAR_BASE_URL" ]; then
     echo "==> Checking Traccar at $TRACCAR_BASE_URL..."

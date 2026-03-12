@@ -5,13 +5,15 @@ declare(strict_types=1);
 namespace App\EventSubscriber;
 
 use App\Domain\Event\VehiclePositionReceived;
-use App\Entity\RecipientNotification;
 use App\Entity\Route;
 use App\Entity\RouteStop;
 use App\Entity\Vehicle;
+use App\Enum\NotificationChannel;
+use App\Enum\NotificationTriggerType;
 use App\Enum\RouteStatus;
 use App\Enum\RouteStopStatus;
 use App\Notification\RecipientNotificationService;
+use App\Repository\NotificationLogRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -23,6 +25,7 @@ final class ApproachingNotificationSubscriber implements EventSubscriberInterfac
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly RecipientNotificationService $notificationService,
+        private readonly NotificationLogRepository $logRepo,
         private readonly LoggerInterface $logger,
     ) {}
 
@@ -72,12 +75,13 @@ final class ApproachingNotificationSubscriber implements EventSubscriberInterfac
             return;
         }
 
-        $alreadySent = $this->em->getRepository(RecipientNotification::class)->findOneBy([
-            'shipment' => $shipment,
-            'templateName' => 'pre_delivery',
-        ]);
+        $alreadySent = $this->logRepo->hasBeenSent(
+            $shipment,
+            NotificationTriggerType::PresenceCheck,
+            NotificationChannel::Sms,
+        );
 
-        if ($alreadySent !== null) {
+        if ($alreadySent) {
             return;
         }
 
