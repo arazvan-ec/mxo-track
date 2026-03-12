@@ -7,9 +7,9 @@ namespace App\Notification\Message;
 final readonly class SendRecipientNotificationMessage
 {
     public function __construct(
-        public int $routeStopId,
+        public string $routeStopId,
         public string $notificationType,
-        public ?int $customerId = null,
+        public ?string $customerId = null,
     ) {
     }
 }

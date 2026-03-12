@@ -51,7 +51,7 @@ final class SendRecipientNotificationHandlerTest extends TestCase
         $this->notifier->expects(self::never())->method('send');
 
         $handler = $this->createHandler();
-        $handler(new SendRecipientNotificationMessage(999, 'approaching'));
+        $handler(new SendRecipientNotificationMessage('999', 'approaching'));
     }
 
     #[Test]
@@ -64,7 +64,7 @@ final class SendRecipientNotificationHandlerTest extends TestCase
         $this->notifier->expects(self::never())->method('send');
 
         $handler = $this->createHandler();
-        $handler(new SendRecipientNotificationMessage(1, 'approaching'));
+        $handler(new SendRecipientNotificationMessage('1', 'approaching'));
     }
 
     #[Test]
@@ -81,7 +81,7 @@ final class SendRecipientNotificationHandlerTest extends TestCase
         $this->notifier->expects(self::never())->method('send');
 
         $handler = $this->createHandler();
-        $handler(new SendRecipientNotificationMessage(1, 'approaching'));
+        $handler(new SendRecipientNotificationMessage('1', 'approaching'));
     }
 
     #[Test]
@@ -106,7 +106,7 @@ final class SendRecipientNotificationHandlerTest extends TestCase
         $this->em->expects(self::once())->method('flush');
 
         $handler = $this->createHandler();
-        $handler(new SendRecipientNotificationMessage(1, 'approaching'));
+        $handler(new SendRecipientNotificationMessage('1', 'approaching'));
     }
 
     #[Test]
@@ -127,7 +127,7 @@ final class SendRecipientNotificationHandlerTest extends TestCase
         $this->em->expects(self::once())->method('persist');
 
         $handler = $this->createHandler();
-        $handler(new SendRecipientNotificationMessage(1, 'delivered'));
+        $handler(new SendRecipientNotificationMessage('1', 'delivered'));
     }
 
     #[Test]
@@ -173,7 +173,7 @@ final class SendRecipientNotificationHandlerTest extends TestCase
         $this->notifier->expects(self::once())->method('send');
 
         $handler = $this->createHandler();
-        $handler(new SendRecipientNotificationMessage(1, 'approaching', 42));
+        $handler(new SendRecipientNotificationMessage('1', 'approaching', '42'));
     }
 
     #[Test]
@@ -200,7 +200,7 @@ final class SendRecipientNotificationHandlerTest extends TestCase
         $this->expectExceptionMessage('Twilio error');
 
         $handler = $this->createHandler();
-        $handler(new SendRecipientNotificationMessage(1, 'approaching'));
+        $handler(new SendRecipientNotificationMessage('1', 'approaching'));
     }
 
     #[Test]
@@ -218,6 +218,6 @@ final class SendRecipientNotificationHandlerTest extends TestCase
         $this->notifier->expects(self::never())->method('send');
 
         $handler = $this->createHandler();
-        $handler(new SendRecipientNotificationMessage(1, 'unknown_type'));
+        $handler(new SendRecipientNotificationMessage('1', 'unknown_type'));
     }
 }

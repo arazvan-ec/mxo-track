@@ -9,7 +9,7 @@ use Symfony\Component\Messenger\Stamp\StampInterface;
 final class CustomerStamp implements StampInterface
 {
     public function __construct(
-        public readonly ?int $customerId,
+        public readonly ?string $customerId,
     ) {
     }
 }
