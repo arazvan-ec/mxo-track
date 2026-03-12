@@ -29,7 +29,7 @@ final class Version20260216000100 extends AbstractMigration
 
         $this->addSql('CREATE TABLE IF NOT EXISTS customer_vehicle (id BIGSERIAL NOT NULL, public_id UUID NOT NULL, customer_id BIGINT NOT NULL, vehicle_id BIGINT NOT NULL, PRIMARY KEY(id));');
         $this->addSql('CREATE UNIQUE INDEX IF NOT EXISTS uniq_customer_vehicle ON customer_vehicle (customer_id, vehicle_id);');
-        $this->addSql('CREATE UNIQUE INDEX IF NOT EXISTS uniq_customer_vehicle_public_id ON customer_vehicle (public_id);');
+        $this->addSql('DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = \'customer_vehicle\' AND column_name = \'public_id\') THEN EXECUTE \'CREATE UNIQUE INDEX IF NOT EXISTS uniq_customer_vehicle_public_id ON customer_vehicle (public_id)\'; END IF; END $$;');
 
         $this->addSql('CREATE TABLE IF NOT EXISTS vehicle_last_position (id BIGSERIAL NOT NULL, public_id UUID NOT NULL, vehicle_id BIGINT NOT NULL, lat DOUBLE PRECISION NOT NULL, lng DOUBLE PRECISION NOT NULL, speed DOUBLE PRECISION NOT NULL, course DOUBLE PRECISION NOT NULL, accuracy DOUBLE PRECISION NOT NULL, device_time TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL, server_time TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL, PRIMARY KEY(id));');
         $this->addSql('CREATE UNIQUE INDEX IF NOT EXISTS uniq_vehicle_last_position_public_id ON vehicle_last_position (public_id);');
