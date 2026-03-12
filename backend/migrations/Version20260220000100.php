@@ -17,31 +17,31 @@ final class Version20260220000100 extends AbstractMigration
     public function up(Schema $schema): void
     {
         // RouteStop: add coordinates and recipient info
-        $this->addSql('ALTER TABLE route_stop ADD COLUMN latitude DOUBLE PRECISION DEFAULT NULL;');
-        $this->addSql('ALTER TABLE route_stop ADD COLUMN longitude DOUBLE PRECISION DEFAULT NULL;');
-        $this->addSql('ALTER TABLE route_stop ADD COLUMN recipient_name VARCHAR(150) DEFAULT NULL;');
-        $this->addSql('ALTER TABLE route_stop ADD COLUMN recipient_phone VARCHAR(30) DEFAULT NULL;');
-        $this->addSql('ALTER TABLE route_stop ADD COLUMN notes TEXT DEFAULT NULL;');
-        $this->addSql('ALTER TABLE route_stop ADD COLUMN shipment_id BIGINT DEFAULT NULL;');
-        $this->addSql('ALTER TABLE route_stop ADD CONSTRAINT fk_route_stop_shipment FOREIGN KEY (shipment_id) REFERENCES shipment (id) ON DELETE SET NULL;');
+        $this->addSql('DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = \'route_stop\' AND column_name = \'latitude\') THEN ALTER TABLE route_stop ADD COLUMN latitude DOUBLE PRECISION DEFAULT NULL; END IF; END $$');
+        $this->addSql('DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = \'route_stop\' AND column_name = \'longitude\') THEN ALTER TABLE route_stop ADD COLUMN longitude DOUBLE PRECISION DEFAULT NULL; END IF; END $$');
+        $this->addSql('DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = \'route_stop\' AND column_name = \'recipient_name\') THEN ALTER TABLE route_stop ADD COLUMN recipient_name VARCHAR(150) DEFAULT NULL; END IF; END $$');
+        $this->addSql('DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = \'route_stop\' AND column_name = \'recipient_phone\') THEN ALTER TABLE route_stop ADD COLUMN recipient_phone VARCHAR(30) DEFAULT NULL; END IF; END $$');
+        $this->addSql('DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = \'route_stop\' AND column_name = \'notes\') THEN ALTER TABLE route_stop ADD COLUMN notes TEXT DEFAULT NULL; END IF; END $$');
+        $this->addSql('DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = \'route_stop\' AND column_name = \'shipment_id\') THEN ALTER TABLE route_stop ADD COLUMN shipment_id BIGINT DEFAULT NULL; END IF; END $$');
+        $this->addSql('DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = \'fk_route_stop_shipment\') THEN ALTER TABLE route_stop ADD CONSTRAINT fk_route_stop_shipment FOREIGN KEY (shipment_id) REFERENCES shipment (id) ON DELETE SET NULL; END IF; END $$');
 
         // Shipment: add delivery data
-        $this->addSql('ALTER TABLE shipment ADD COLUMN recipient_name VARCHAR(150) DEFAULT NULL;');
-        $this->addSql('ALTER TABLE shipment ADD COLUMN recipient_phone VARCHAR(30) DEFAULT NULL;');
-        $this->addSql('ALTER TABLE shipment ADD COLUMN address VARCHAR(255) DEFAULT NULL;');
-        $this->addSql('ALTER TABLE shipment ADD COLUMN latitude DOUBLE PRECISION DEFAULT NULL;');
-        $this->addSql('ALTER TABLE shipment ADD COLUMN longitude DOUBLE PRECISION DEFAULT NULL;');
-        $this->addSql('ALTER TABLE shipment ADD COLUMN notes TEXT DEFAULT NULL;');
+        $this->addSql('DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = \'shipment\' AND column_name = \'recipient_name\') THEN ALTER TABLE shipment ADD COLUMN recipient_name VARCHAR(150) DEFAULT NULL; END IF; END $$');
+        $this->addSql('DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = \'shipment\' AND column_name = \'recipient_phone\') THEN ALTER TABLE shipment ADD COLUMN recipient_phone VARCHAR(30) DEFAULT NULL; END IF; END $$');
+        $this->addSql('DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = \'shipment\' AND column_name = \'address\') THEN ALTER TABLE shipment ADD COLUMN address VARCHAR(255) DEFAULT NULL; END IF; END $$');
+        $this->addSql('DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = \'shipment\' AND column_name = \'latitude\') THEN ALTER TABLE shipment ADD COLUMN latitude DOUBLE PRECISION DEFAULT NULL; END IF; END $$');
+        $this->addSql('DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = \'shipment\' AND column_name = \'longitude\') THEN ALTER TABLE shipment ADD COLUMN longitude DOUBLE PRECISION DEFAULT NULL; END IF; END $$');
+        $this->addSql('DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = \'shipment\' AND column_name = \'notes\') THEN ALTER TABLE shipment ADD COLUMN notes TEXT DEFAULT NULL; END IF; END $$');
 
         // Customer: add contact info and active flag
-        $this->addSql('ALTER TABLE customer ADD COLUMN address VARCHAR(255) DEFAULT NULL;');
-        $this->addSql('ALTER TABLE customer ADD COLUMN contact_email VARCHAR(180) DEFAULT NULL;');
-        $this->addSql('ALTER TABLE customer ADD COLUMN contact_phone VARCHAR(30) DEFAULT NULL;');
-        $this->addSql('ALTER TABLE customer ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT TRUE;');
+        $this->addSql('DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = \'customer\' AND column_name = \'address\') THEN ALTER TABLE customer ADD COLUMN address VARCHAR(255) DEFAULT NULL; END IF; END $$');
+        $this->addSql('DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = \'customer\' AND column_name = \'contact_email\') THEN ALTER TABLE customer ADD COLUMN contact_email VARCHAR(180) DEFAULT NULL; END IF; END $$');
+        $this->addSql('DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = \'customer\' AND column_name = \'contact_phone\') THEN ALTER TABLE customer ADD COLUMN contact_phone VARCHAR(30) DEFAULT NULL; END IF; END $$');
+        $this->addSql('DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = \'customer\' AND column_name = \'is_active\') THEN ALTER TABLE customer ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT TRUE; END IF; END $$');
 
         // Route: add customer_id for linking routes to warehouses
-        $this->addSql('ALTER TABLE route_plan ADD COLUMN customer_id BIGINT DEFAULT NULL;');
-        $this->addSql('ALTER TABLE route_plan ADD CONSTRAINT fk_route_customer FOREIGN KEY (customer_id) REFERENCES customer (id) ON DELETE SET NULL;');
+        $this->addSql('DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = \'route_plan\' AND column_name = \'customer_id\') THEN ALTER TABLE route_plan ADD COLUMN customer_id BIGINT DEFAULT NULL; END IF; END $$');
+        $this->addSql('DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = \'fk_route_customer\') THEN ALTER TABLE route_plan ADD CONSTRAINT fk_route_customer FOREIGN KEY (customer_id) REFERENCES customer (id) ON DELETE SET NULL; END IF; END $$');
     }
 
     public function down(Schema $schema): void

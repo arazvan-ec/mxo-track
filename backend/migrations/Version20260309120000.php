@@ -20,7 +20,7 @@ final class Version20260309120000 extends AbstractMigration
     public function up(Schema $schema): void
     {
         $this->addSql(<<<'SQL'
-            CREATE TABLE route_plan_template (
+            CREATE TABLE IF NOT EXISTS route_plan_template (
                 id BIGSERIAL NOT NULL,
                 public_id UUID NOT NULL,
                 customer_id BIGINT NOT NULL,
@@ -32,9 +32,9 @@ final class Version20260309120000 extends AbstractMigration
             )
         SQL);
 
-        $this->addSql('CREATE UNIQUE INDEX uniq_route_plan_template_public_id ON route_plan_template (public_id)');
-        $this->addSql('CREATE INDEX idx_route_plan_template_customer ON route_plan_template (customer_id)');
-        $this->addSql('ALTER TABLE route_plan_template ADD CONSTRAINT fk_route_plan_template_customer FOREIGN KEY (customer_id) REFERENCES customer (id) ON DELETE CASCADE NOT DEFERRABLE INITIALLY IMMEDIATE');
+        $this->addSql('CREATE UNIQUE INDEX IF NOT EXISTS uniq_route_plan_template_public_id ON route_plan_template (public_id)');
+        $this->addSql('CREATE INDEX IF NOT EXISTS idx_route_plan_template_customer ON route_plan_template (customer_id)');
+        $this->addSql('DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = \'fk_route_plan_template_customer\') THEN ALTER TABLE route_plan_template ADD CONSTRAINT fk_route_plan_template_customer FOREIGN KEY (customer_id) REFERENCES customer (id) ON DELETE CASCADE NOT DEFERRABLE INITIALLY IMMEDIATE; END IF; END $$');
 
         $this->addSql("COMMENT ON COLUMN route_plan_template.public_id IS '(DC2Type:ulid)'");
         $this->addSql("COMMENT ON COLUMN route_plan_template.created_at IS '(DC2Type:datetime_immutable)'");
@@ -43,6 +43,6 @@ final class Version20260309120000 extends AbstractMigration
 
     public function down(Schema $schema): void
     {
-        $this->addSql('DROP TABLE route_plan_template');
+        $this->addSql('DROP TABLE IF EXISTS route_plan_template');
     }
 }
