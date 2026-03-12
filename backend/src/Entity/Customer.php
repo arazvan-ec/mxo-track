@@ -42,6 +42,9 @@ class Customer implements SoftDeletableInterface
     #[ORM\Column]
     private bool $isActive = true;
 
+    #[ORM\Column(nullable: true)]
+    private ?int $notificationQuota = null;
+
     public function __construct(string $name)
     {
         $this->name = $name;
@@ -61,4 +64,6 @@ class Customer implements SoftDeletableInterface
     public function setPreferredDeliverySlot(?string $slot): void { $this->preferredDeliverySlot = $slot; }
     public function isActive(): bool { return $this->isActive; }
     public function setActive(bool $isActive): void { $this->isActive = $isActive; }
+    public function getNotificationQuota(): ?int { return $this->notificationQuota; }
+    public function setNotificationQuota(?int $notificationQuota): void { $this->notificationQuota = $notificationQuota; }
 }
