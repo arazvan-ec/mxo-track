@@ -6,15 +6,14 @@ namespace App\Notification;
 
 use App\Entity\Route;
 use App\Entity\RouteStop;
-use App\Notification\Message\SendRecipientNotificationMessage;
+use App\Enum\NotificationTriggerType;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\Messenger\MessageBusInterface;
 
 final class RecipientNotificationService
 {
     public function __construct(
-        private readonly MessageBusInterface $bus,
+        private readonly NotificationDispatcher $dispatcher,
         private readonly EntityManagerInterface $em,
         private readonly LoggerInterface $logger,
     ) {
@@ -34,23 +33,18 @@ final class RecipientNotificationService
             ->getQuery()
             ->getResult();
 
-        $customerId = $route->getCustomer()?->getId();
-
         /** @var RouteStop $stop */
         foreach ($stops as $stop) {
             if ($stop->isOrigin()) {
                 continue;
             }
 
-            if (!$this->hasPhone($stop)) {
+            $shipment = $stop->getShipment();
+            if ($shipment === null || !$this->hasPhone($stop)) {
                 continue;
             }
 
-            $this->bus->dispatch(new SendRecipientNotificationMessage(
-                $stop->getId(),
-                'route_started',
-                $customerId,
-            ));
+            $this->dispatcher->dispatchForShipment($shipment, NotificationTriggerType::OutForDelivery);
         }
     }
 
@@ -63,13 +57,12 @@ final class RecipientNotificationService
             return;
         }
 
-        $customerId = $stop->getRoute()->getCustomer()?->getId();
+        $shipment = $stop->getShipment();
+        if ($shipment === null) {
+            return;
+        }
 
-        $this->bus->dispatch(new SendRecipientNotificationMessage(
-            $stop->getId(),
-            'approaching',
-            $customerId,
-        ));
+        $this->dispatcher->dispatchForShipment($shipment, NotificationTriggerType::PresenceCheck);
     }
 
     /**
@@ -81,13 +74,12 @@ final class RecipientNotificationService
             return;
         }
 
-        $customerId = $stop->getRoute()->getCustomer()?->getId();
+        $shipment = $stop->getShipment();
+        if ($shipment === null) {
+            return;
+        }
 
-        $this->bus->dispatch(new SendRecipientNotificationMessage(
-            $stop->getId(),
-            'delivered',
-            $customerId,
-        ));
+        $this->dispatcher->dispatchForShipment($shipment, NotificationTriggerType::Delivered);
     }
 
     private function hasPhone(RouteStop $stop): bool
