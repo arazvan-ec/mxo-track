@@ -31,7 +31,7 @@ final class Version20260309000100 extends AbstractMigration
             )
         SQL);
         $this->addSql('DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = \'fk_vehicle_inspection_route\') THEN ALTER TABLE vehicle_inspection ADD CONSTRAINT fk_vehicle_inspection_route FOREIGN KEY (route_id) REFERENCES route_plan(id) ON DELETE CASCADE; END IF; END $$');
-        $this->addSql('DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = \'fk_vehicle_inspection_driver\') THEN ALTER TABLE vehicle_inspection ADD CONSTRAINT fk_vehicle_inspection_driver FOREIGN KEY (driver_id) REFERENCES "user"(id) ON DELETE CASCADE; END IF; END $$');
+        $this->addSql('DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = \'fk_vehicle_inspection_driver\') THEN ALTER TABLE vehicle_inspection ADD CONSTRAINT fk_vehicle_inspection_driver FOREIGN KEY (driver_id) REFERENCES user_account(id) ON DELETE CASCADE; END IF; END $$');
         $this->addSql('CREATE UNIQUE INDEX IF NOT EXISTS uniq_vehicle_inspection_public_id ON vehicle_inspection (public_id)');
     }
 
