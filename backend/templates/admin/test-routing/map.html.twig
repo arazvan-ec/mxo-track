@@ -1,0 +1,275 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Test Routing - VROOM + OSRM - Admin{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<style>
+  #routing-map { height: 600px; width: 100%; border-radius: 0.5rem; }
+  .legend-item { display: flex; align-items: center; gap: 0.5rem; }
+  .legend-line { width: 24px; height: 3px; border-radius: 2px; }
+  .legend-before { background-color: #ef4444; border-top: 2px dashed #ef4444; background: none; }
+  .legend-after { background-color: #3b82f6; }
+</style>
+{% endblock %}
+
+{% block content %}
+  {# Header #}
+  <div class="mb-6 flex items-center justify-between">
+    <div class="flex items-center gap-4">
+      <a href="{{ path('admin_dashboard') }}"
+         class="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+        <svg class="mr-1.5 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/>
+        </svg>
+        Volver
+      </a>
+      <h1 class="text-2xl font-bold text-gray-900">Test Routing: VROOM + OSRM</h1>
+    </div>
+    <span class="inline-flex rounded-full bg-green-100 px-3 py-1 text-xs font-semibold leading-5 text-green-800">
+      {{ metrics.stopCount }} paradas
+    </span>
+  </div>
+
+  {# Map #}
+  <div class="bg-white shadow rounded-lg overflow-hidden mb-6">
+    <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+      <h2 class="text-lg font-semibold text-gray-900">Mapa de optimizacion</h2>
+      <div class="flex items-center gap-6 text-sm text-gray-600">
+        <div class="legend-item">
+          <div class="legend-line legend-before"></div>
+          <span>Original (sin optimizar)</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-line legend-after"></div>
+          <span>Optimizada (VROOM)</span>
+        </div>
+      </div>
+    </div>
+    <div id="routing-map"></div>
+  </div>
+
+  {# Metrics panel #}
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    {# Distance before #}
+    <div class="bg-white shadow rounded-lg p-5">
+      <div class="flex items-center gap-3">
+        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-red-100">
+          <svg class="h-5 w-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-sm text-gray-500">Distancia original</p>
+          <p class="text-xl font-bold text-gray-900">{{ metrics.distanceBeforeKm }} km</p>
+        </div>
+      </div>
+    </div>
+
+    {# Distance after #}
+    <div class="bg-white shadow rounded-lg p-5">
+      <div class="flex items-center gap-3">
+        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
+          <svg class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-sm text-gray-500">Distancia optimizada</p>
+          <p class="text-xl font-bold text-gray-900">{{ metrics.distanceAfterKm }} km</p>
+        </div>
+      </div>
+    </div>
+
+    {# Saved #}
+    <div class="bg-white shadow rounded-lg p-5">
+      <div class="flex items-center gap-3">
+        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100">
+          <svg class="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-sm text-gray-500">Ahorro</p>
+          <p class="text-xl font-bold text-green-600">{{ metrics.savedPercent }}%</p>
+        </div>
+      </div>
+    </div>
+
+    {# Duration #}
+    <div class="bg-white shadow rounded-lg p-5">
+      <div class="flex items-center gap-3">
+        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100">
+          <svg class="h-5 w-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-sm text-gray-500">Tiempo total estimado</p>
+          <p class="text-xl font-bold text-gray-900">{{ metrics.timing.totalTimeMinutes }} min</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# Timing details #}
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <div class="bg-white shadow rounded-lg overflow-hidden">
+      <div class="px-4 py-3 border-b border-gray-200">
+        <h3 class="text-base font-semibold text-gray-900">Desglose de tiempos</h3>
+      </div>
+      <div class="px-4 py-4 space-y-3 text-sm">
+        <div class="flex justify-between">
+          <span class="text-gray-500">Distancia total (optimizada)</span>
+          <span class="font-medium text-gray-900">{{ metrics.timing.totalDistanceKm }} km</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-gray-500">Tiempo conduccion</span>
+          <span class="font-medium text-gray-900">{{ metrics.timing.drivingTimeMinutes }} min</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-gray-500">Tiempo entregas (5 min/parada)</span>
+          <span class="font-medium text-gray-900">{{ metrics.timing.deliveryTimeMinutes }} min</span>
+        </div>
+        <div class="flex justify-between border-t pt-3">
+          <span class="font-medium text-gray-700">Tiempo total</span>
+          <span class="font-bold text-gray-900">{{ metrics.timing.totalTimeMinutes }} min</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white shadow rounded-lg overflow-hidden">
+      <div class="px-4 py-3 border-b border-gray-200">
+        <h3 class="text-base font-semibold text-gray-900">Orden de paradas optimizado</h3>
+      </div>
+      <div class="px-4 py-2 max-h-64 overflow-y-auto">
+        <table class="w-full text-sm">
+          <thead class="text-xs text-gray-500 uppercase">
+            <tr>
+              <th class="py-2 text-left">#</th>
+              <th class="py-2 text-left">Destinatario</th>
+              <th class="py-2 text-left">Direccion</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            {% for stop in stopsAfter %}
+            <tr>
+              <td class="py-2 font-medium text-blue-600">{{ stop.seq }}</td>
+              <td class="py-2 text-gray-900">{{ stop.recipient }}</td>
+              <td class="py-2 text-gray-500 truncate max-w-xs">{{ stop.address }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+(function() {
+  // Decode Google encoded polyline (OSRM format)
+  function decodePolyline(encoded) {
+    var points = [], lat = 0, lng = 0, index = 0;
+    while (index < encoded.length) {
+      var b, shift = 0, result = 0;
+      do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+      lat += (result & 1) ? ~(result >> 1) : (result >> 1);
+      shift = 0; result = 0;
+      do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+      lng += (result & 1) ? ~(result >> 1) : (result >> 1);
+      points.push([lat / 1e5, lng / 1e5]);
+    }
+    return points;
+  }
+
+  var origin = {{ origin|json_encode|raw }};
+  var stopsBefore = {{ stopsBefore|json_encode|raw }};
+  var stopsAfter = {{ stopsAfter|json_encode|raw }};
+  var polylineBefore = {{ polylineBefore|json_encode|raw }};
+  var polylineAfter = {{ polylineAfter|json_encode|raw }};
+
+  var map = L.map('routing-map');
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 19
+  }).addTo(map);
+
+  var allPoints = [];
+
+  // Original route polyline (red dashed)
+  if (polylineBefore) {
+    var pointsBefore = decodePolyline(polylineBefore);
+    L.polyline(pointsBefore, {
+      color: '#ef4444',
+      weight: 4,
+      opacity: 0.6,
+      dashArray: '10, 8'
+    }).addTo(map);
+    pointsBefore.forEach(function(p) { allPoints.push(p); });
+  }
+
+  // Optimized route polyline (blue solid)
+  if (polylineAfter) {
+    var pointsAfter = decodePolyline(polylineAfter);
+    L.polyline(pointsAfter, {
+      color: '#3b82f6',
+      weight: 5,
+      opacity: 0.85
+    }).addTo(map);
+    pointsAfter.forEach(function(p) { allPoints.push(p); });
+  }
+
+  // Origin marker (green)
+  var originIcon = L.divIcon({
+    html: '<div style="background:#059669;color:#fff;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3);">O</div>',
+    className: '',
+    iconSize: [32, 32],
+    iconAnchor: [16, 16]
+  });
+  L.marker([origin.lat, origin.lng], { icon: originIcon })
+    .bindPopup('<strong>Almacen (Origen)</strong><br>' + origin.address)
+    .addTo(map);
+  allPoints.push([origin.lat, origin.lng]);
+
+  // Original stop markers (red, smaller, behind)
+  stopsBefore.forEach(function(stop) {
+    var icon = L.divIcon({
+      html: '<div style="background:#ef4444;color:#fff;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3);opacity:0.7;">' + stop.seq + '</div>',
+      className: '',
+      iconSize: [22, 22],
+      iconAnchor: [11, 11]
+    });
+    L.marker([stop.lat, stop.lng], { icon: icon, zIndexOffset: -100 })
+      .bindPopup('<strong>Original #' + stop.seq + '</strong><br>' + stop.recipient + '<br>' + stop.address)
+      .addTo(map);
+    allPoints.push([stop.lat, stop.lng]);
+  });
+
+  // Optimized stop markers (blue, larger, in front)
+  stopsAfter.forEach(function(stop) {
+    var icon = L.divIcon({
+      html: '<div style="background:#3b82f6;color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,.3);">' + stop.seq + '</div>',
+      className: '',
+      iconSize: [28, 28],
+      iconAnchor: [14, 14]
+    });
+    L.marker([stop.lat, stop.lng], { icon: icon, zIndexOffset: 100 })
+      .bindPopup('<strong>Optimizada #' + stop.seq + '</strong><br>' + stop.recipient + '<br>' + stop.address)
+      .addTo(map);
+  });
+
+  // Fit bounds
+  if (allPoints.length > 0) {
+    map.fitBounds(allPoints, { padding: [40, 40] });
+  } else {
+    map.setView([40.4168, -3.7038], 12);
+  }
+})();
+</script>
+{% endblock %}

@@ -9,13 +9,14 @@ use App\Entity\CustomerLocation;
 use App\Entity\Route;
 use App\Entity\RouteStop;
 use App\Entity\Shipment;
-use App\Entity\User;
 use App\Entity\Vehicle;
-use App\Enum\UserRole;
+use App\Routing\Coordinate;
+use App\Routing\RoutingEngineInterface;
 use App\Service\RouteOptimizationService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route as SymfonyRoute;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
@@ -42,6 +43,7 @@ class TestRoutingController extends AbstractController
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly RouteOptimizationService $optimizationService,
+        private readonly RoutingEngineInterface $routingEngine,
     ) {
     }
 
@@ -52,68 +54,11 @@ class TestRoutingController extends AbstractController
         $success = true;
 
         try {
-            // --- Step 1: Create test data ---
             $log[] = ['step' => '1. Creating test data', 'status' => 'running'];
-
-            $customer = new Customer('Test Routing Customer');
-            $customer->setAddress('Test Address, Madrid');
-            $customer->setContactPhone('600000000');
-
-            $warehouse = new CustomerLocation($customer, 'Almacén Test', 'Polígono Industrial de Villaverde, Madrid');
-            $warehouse->setLatitude(self::WAREHOUSE_LAT);
-            $warehouse->setLongitude(self::WAREHOUSE_LNG);
-            $warehouse->setDefault(true);
-
-            $vehicle = new Vehicle('Test Vehicle');
-            $vehicle->setMaxWeightKg(1000.0);
-            $vehicle->setMaxVolumeM3(8.0);
-            $vehicle->setMaxParcels(50);
-
-            $this->em->persist($customer);
-            $this->em->persist($warehouse);
-            $this->em->persist($vehicle);
-
-            $shipments = [];
-            foreach (self::DELIVERIES as $i => [$address, $lat, $lng, $name]) {
-                $shipment = new Shipment(sprintf('TEST-RT-%04d', $i + 1), $customer);
-                $shipment->setRecipientName($name);
-                $shipment->setAddress($address);
-                $shipment->setLatitude($lat);
-                $shipment->setLongitude($lng);
-                $shipment->setTotalWeightKg(round(mt_rand(100, 1500) / 100, 2));
-                $shipment->setTotalVolumeM3(round(mt_rand(1, 50) / 100, 2));
-                $shipment->setTotalParcels(1);
-                $this->em->persist($shipment);
-                $shipments[] = $shipment;
-            }
-
-            $route = new Route('Test Routing Route');
-            $route->setCustomer($customer);
-            $route->setVehicle($vehicle);
-            $route->setOriginLocation($warehouse);
-            $this->em->persist($route);
-
-            $originStop = new RouteStop($route, 0, 'Polígono Industrial de Villaverde, Madrid');
-            $originStop->setLatitude(self::WAREHOUSE_LAT);
-            $originStop->setLongitude(self::WAREHOUSE_LNG);
-            $originStop->setOrigin(true);
-            $this->em->persist($originStop);
-
-            $stopsBefore = [];
-            foreach ($shipments as $i => $shipment) {
-                $stop = new RouteStop($route, $i + 1, $shipment->getAddress());
-                $stop->setLatitude($shipment->getLatitude());
-                $stop->setLongitude($shipment->getLongitude());
-                $stop->setRecipientName($shipment->getRecipientName());
-                $stop->setShipment($shipment);
-                $this->em->persist($stop);
-                $stopsBefore[] = ['seq' => $i + 1, 'recipient' => $shipment->getRecipientName(), 'address' => $shipment->getAddress()];
-            }
-
+            [$route, $shipments] = $this->createTestData();
             $this->em->flush();
             $log[] = ['step' => '1. Creating test data', 'status' => 'ok', 'detail' => sprintf('%d shipments, 1 route', \count($shipments))];
 
-            // --- Step 2: Test OSRM point-to-point ---
             $log[] = ['step' => '2. Testing OSRM (point-to-point)', 'status' => 'running'];
             $p2p = $this->optimizationService->getRoadDistance(
                 self::WAREHOUSE_LAT, self::WAREHOUSE_LNG,
@@ -125,7 +70,6 @@ class TestRoutingController extends AbstractController
                 'detail' => sprintf('Warehouse → %s: %.2f km, %d min', self::DELIVERIES[0][3], $p2p['distanceKm'], (int) round($p2p['durationSeconds'] / 60)),
             ];
 
-            // --- Step 3: Optimize with VROOM ---
             $log[] = ['step' => '3. Optimizing route (VROOM)', 'status' => 'running'];
             $result = $this->optimizationService->optimizeStopOrder($route);
             $this->optimizationService->applyOptimizedOrder($result['optimized']);
@@ -156,7 +100,6 @@ class TestRoutingController extends AbstractController
                 ],
             ];
 
-            // --- Step 4: Route timing ---
             $log[] = ['step' => '4. Estimating timing (OSRM multi-waypoint)', 'status' => 'running'];
             $timing = $this->optimizationService->estimateRouteTiming($route);
             $log[] = [
@@ -168,16 +111,166 @@ class TestRoutingController extends AbstractController
             $success = false;
             $log[] = ['step' => 'ERROR', 'status' => 'failed', 'detail' => $e->getMessage()];
         } finally {
-            // Always cleanup test data
             $this->cleanup();
         }
 
         return new JsonResponse([
             'success' => $success,
-            'stopsBefore' => $stopsBefore ?? [],
             'stopsAfter' => $stopsAfter ?? [],
             'log' => $log,
         ]);
+    }
+
+    #[SymfonyRoute('/map', name: 'admin_test_routing_map', methods: ['GET'])]
+    public function map(): Response
+    {
+        try {
+            // Step 1: Create test data
+            [$route, $shipments] = $this->createTestData();
+            $this->em->flush();
+
+            // Step 2: Get OSRM polyline for ORIGINAL stop order
+            $waypointsBefore = [new Coordinate(self::WAREHOUSE_LAT, self::WAREHOUSE_LNG)];
+            $stopsBefore = [];
+            foreach ($shipments as $i => $shipment) {
+                $waypointsBefore[] = new Coordinate($shipment->getLatitude(), $shipment->getLongitude());
+                $stopsBefore[] = [
+                    'seq' => $i + 1,
+                    'recipient' => $shipment->getRecipientName(),
+                    'address' => $shipment->getAddress(),
+                    'lat' => $shipment->getLatitude(),
+                    'lng' => $shipment->getLongitude(),
+                ];
+            }
+            // Return to warehouse
+            $waypointsBefore[] = new Coordinate(self::WAREHOUSE_LAT, self::WAREHOUSE_LNG);
+            $routeBefore = $this->routingEngine->routeWithWaypoints($waypointsBefore);
+
+            // Step 3: Optimize with VROOM
+            $result = $this->optimizationService->optimizeStopOrder($route);
+            $this->optimizationService->applyOptimizedOrder($result['optimized']);
+
+            // Step 4: Get OSRM polyline for OPTIMIZED stop order
+            $waypointsAfter = [new Coordinate(self::WAREHOUSE_LAT, self::WAREHOUSE_LNG)];
+            $stopsAfter = [];
+            foreach ($result['optimized'] as $item) {
+                $stop = $item['stop'];
+                if ($stop->isOrigin()) {
+                    continue;
+                }
+                $waypointsAfter[] = new Coordinate($stop->getLatitude(), $stop->getLongitude());
+                $stopsAfter[] = [
+                    'seq' => $item['newSequence'],
+                    'recipient' => $stop->getRecipientName(),
+                    'address' => $stop->getAddress(),
+                    'lat' => $stop->getLatitude(),
+                    'lng' => $stop->getLongitude(),
+                ];
+            }
+            // Return to warehouse
+            $waypointsAfter[] = new Coordinate(self::WAREHOUSE_LAT, self::WAREHOUSE_LNG);
+            $routeAfter = $this->routingEngine->routeWithWaypoints($waypointsAfter);
+
+            // Step 5: Compute metrics
+            $saved = $result['distanceBefore'] > 0
+                ? round(($result['distanceBefore'] - $result['distanceAfter']) / $result['distanceBefore'] * 100, 1)
+                : 0;
+
+            $timing = $this->optimizationService->estimateRouteTiming($route);
+
+            $templateData = [
+                'origin' => [
+                    'lat' => self::WAREHOUSE_LAT,
+                    'lng' => self::WAREHOUSE_LNG,
+                    'address' => 'Polígono Industrial de Villaverde, Madrid',
+                ],
+                'stopsBefore' => $stopsBefore,
+                'stopsAfter' => $stopsAfter,
+                'polylineBefore' => $routeBefore->geometry,
+                'polylineAfter' => $routeAfter->geometry,
+                'metrics' => [
+                    'distanceBeforeKm' => round($result['distanceBefore'], 2),
+                    'distanceAfterKm' => round($result['distanceAfter'], 2),
+                    'savedPercent' => $saved,
+                    'durationMinutes' => $result['durationMinutes'],
+                    'timing' => $timing,
+                    'stopCount' => \count($stopsAfter),
+                ],
+            ];
+        } catch (\Throwable $e) {
+            $this->cleanup();
+
+            return new Response(
+                sprintf('<h1>Error</h1><p>%s</p><p>Check that OSRM and VROOM are running.</p>', htmlspecialchars($e->getMessage())),
+                500,
+            );
+        }
+
+        // Cleanup BEFORE rendering (data is already extracted)
+        $this->cleanup();
+
+        return $this->render('admin/test-routing/map.html.twig', $templateData);
+    }
+
+    /**
+     * @return array{Route, list<Shipment>}
+     */
+    private function createTestData(): array
+    {
+        $customer = new Customer('Test Routing Customer');
+        $customer->setAddress('Test Address, Madrid');
+        $customer->setContactPhone('600000000');
+
+        $warehouse = new CustomerLocation($customer, 'Almacén Test', 'Polígono Industrial de Villaverde, Madrid');
+        $warehouse->setLatitude(self::WAREHOUSE_LAT);
+        $warehouse->setLongitude(self::WAREHOUSE_LNG);
+        $warehouse->setDefault(true);
+
+        $vehicle = new Vehicle('Test Vehicle');
+        $vehicle->setMaxWeightKg(1000.0);
+        $vehicle->setMaxVolumeM3(8.0);
+        $vehicle->setMaxParcels(50);
+
+        $this->em->persist($customer);
+        $this->em->persist($warehouse);
+        $this->em->persist($vehicle);
+
+        $shipments = [];
+        foreach (self::DELIVERIES as $i => [$address, $lat, $lng, $name]) {
+            $shipment = new Shipment(sprintf('TEST-RT-%04d', $i + 1), $customer);
+            $shipment->setRecipientName($name);
+            $shipment->setAddress($address);
+            $shipment->setLatitude($lat);
+            $shipment->setLongitude($lng);
+            $shipment->setTotalWeightKg(round(mt_rand(100, 1500) / 100, 2));
+            $shipment->setTotalVolumeM3(round(mt_rand(1, 50) / 100, 2));
+            $shipment->setTotalParcels(1);
+            $this->em->persist($shipment);
+            $shipments[] = $shipment;
+        }
+
+        $route = new Route('Test Routing Route');
+        $route->setCustomer($customer);
+        $route->setVehicle($vehicle);
+        $route->setOriginLocation($warehouse);
+        $this->em->persist($route);
+
+        $originStop = new RouteStop($route, 0, 'Polígono Industrial de Villaverde, Madrid');
+        $originStop->setLatitude(self::WAREHOUSE_LAT);
+        $originStop->setLongitude(self::WAREHOUSE_LNG);
+        $originStop->setOrigin(true);
+        $this->em->persist($originStop);
+
+        foreach ($shipments as $i => $shipment) {
+            $stop = new RouteStop($route, $i + 1, $shipment->getAddress());
+            $stop->setLatitude($shipment->getLatitude());
+            $stop->setLongitude($shipment->getLongitude());
+            $stop->setRecipientName($shipment->getRecipientName());
+            $stop->setShipment($shipment);
+            $this->em->persist($stop);
+        }
+
+        return [$route, $shipments];
     }
 
     private function cleanup(): void
