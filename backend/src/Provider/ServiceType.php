@@ -10,4 +10,5 @@ enum ServiceType: string
     case RoutingEngine = 'routing_engine';
     case GpsProvider = 'gps_provider';
     case RealtimePublisher = 'realtime_publisher';
+    case SmsNotifier = 'sms_notifier';
 }

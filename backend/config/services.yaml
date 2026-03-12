@@ -81,6 +81,7 @@ services:
         routing_engine: '%env(DEFAULT_ROUTING_ENGINE)%'
         gps_provider: '%env(DEFAULT_GPS_PROVIDER)%'
         realtime_publisher: '%env(DEFAULT_REALTIME_PUBLISHER)%'
+        sms_notifier: '%env(DEFAULT_SMS_NOTIFIER)%'
 
   # ProviderResolver: decorated with in-memory cache
   App\Provider\ProviderResolverInterface:
@@ -146,35 +147,14 @@ services:
   App\Geocoding\GeocoderInterface:
     alias: App\Geocoding\CachedGeocoder
 
-  # --- Recipient Notification System (Track D) ---
+  # --- Recipient Notification System (symfony/notifier + Messenger async) ---
 
-  # Notification channels (tagged for injection)
-  App\Notification\Channel\SmsChannel:
-    tags: ['app.notification_channel']
-  App\Notification\Channel\WhatsAppChannel:
-    tags: ['app.notification_channel']
-  App\Notification\Channel\LogChannel:
-    tags: ['app.notification_channel']
+  App\Notification\Transport\NullSmsTransport: ~
 
-  App\Notification\RecipientNotificationService:
+  App\Notification\Transport\TenantAwareSmsTransport:
     arguments:
-      $channels: !tagged_iterator app.notification_channel
+      $defaultTransport: '@App\Notification\Transport\NullSmsTransport'
+
+  App\Notification\Message\SendRecipientNotificationHandler:
+    arguments:
       $appBaseUrl: '%env(string:default::APP_BASE_URL)%'
-
-  # Provider wiring — default to Null for dev, swap to Twilio in prod
-  App\Notification\Provider\SmsProviderInterface:
-    alias: App\Notification\Provider\NullSmsProvider
-  App\Notification\Provider\WhatsAppProviderInterface:
-    alias: App\Notification\Provider\NullWhatsAppProvider
-
-  # Twilio config (ready to activate by changing aliases above)
-  App\Notification\Provider\TwilioSmsProvider:
-    arguments:
-      $accountSid: '%env(string:default::TWILIO_ACCOUNT_SID)%'
-      $authToken: '%env(string:default::TWILIO_AUTH_TOKEN)%'
-      $fromNumber: '%env(string:default::TWILIO_FROM_NUMBER)%'
-  App\Notification\Provider\TwilioWhatsAppProvider:
-    arguments:
-      $accountSid: '%env(string:default::TWILIO_ACCOUNT_SID)%'
-      $authToken: '%env(string:default::TWILIO_AUTH_TOKEN)%'
-      $fromNumber: '%env(string:default::TWILIO_WHATSAPP_FROM)%'

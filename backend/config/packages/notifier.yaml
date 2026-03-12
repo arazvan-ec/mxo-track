@@ -1,0 +1,7 @@
+framework:
+    notifier:
+        texter_transports:
+            default: 'null://null'
+        channel_policy:
+            urgent: ['sms']
+            high: ['sms']
