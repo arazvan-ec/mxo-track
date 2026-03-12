@@ -14,21 +14,25 @@ Enhance the operator live dashboard with additional KPIs, top drivers leaderboar
 
 ## Design
 
-### 1. New `OperatorKpiService`
+### 1. `OperatorKpiService`
 
-Extract KPI computation from controller into a testable service.
+Extract KPI computation from controller into a testable service. Uses DQL QueryBuilder (Doctrine ORM) for type-safe queries against `Route`, `RouteStop`, and `VehicleLastPosition` entities with `RouteStatus` and `RouteStopStatus` enums. `getTopDrivers()` uses native DBAL for PostgreSQL-specific `FILTER (WHERE ...)` syntax.
 
 ```php
 final class OperatorKpiService {
+    public function __construct(
+        private readonly EntityManagerInterface $em,
+    ) {}
+
     public function collectKpis(): array {
         return [
-            'activeRoutes' => ...,
-            'deliveriesToday' => ...,
-            'exceptionsToday' => ...,
-            'completionRate' => ...,
-            'successRate7d' => ...,       // NEW
-            'vehiclesWithPosition' => ..., // NEW
-            'topDrivers' => [...],         // NEW: top 3
+            'activeRoutes' => ...,       // DQL: Route entity
+            'deliveriesToday' => ...,     // DQL: RouteStop entity
+            'exceptionsToday' => ...,     // DQL: RouteStop + Route join
+            'completionRate' => ...,      // DQL: RouteStop grouped by route
+            'successRate7d' => ...,       // DQL: RouteStop + Route join
+            'vehiclesWithPosition' => ..., // DQL: VehicleLastPosition entity
+            'topDrivers' => [...],         // DBAL: PostgreSQL FILTER (WHERE ...)
         ];
     }
 }
@@ -39,9 +43,9 @@ KPIs:
 - **deliveriesToday**: Stops delivered since midnight
 - **exceptionsToday**: Exception stops in active/planned/done routes
 - **completionRate**: delivered/total across active routes (%)
-- **successRate7d** (NEW): Delivered / (Delivered + Exceptions) over last 7 days (%)
-- **vehiclesWithPosition** (NEW): Count of vehicles that have a VehicleLastPosition record
-- **topDrivers** (NEW): Top 3 drivers by deliveries in last 7 days (name, deliveries, success_rate)
+- **successRate7d**: Delivered / (Delivered + Exceptions) over last 7 days (%)
+- **vehiclesWithPosition**: Count of vehicles that have a VehicleLastPosition record
+- **topDrivers**: Top 3 drivers by deliveries in last 7 days (name, deliveries, success_rate)
 
 ### 2. JSON KPI Endpoint
 

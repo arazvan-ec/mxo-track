@@ -365,6 +365,19 @@ Accesible sin autenticación mediante token único por envío.
 | `/operator` | Dashboard de métricas del operador |
 | `/operator/dashboard/live` | Dashboard en tiempo real con conteos de rutas/paradas via Mercure |
 
+#### `OperatorKpiService`
+
+Servicio dedicado que calcula KPIs operacionales usando DQL QueryBuilder (Doctrine ORM). Consultas tipadas contra entidades `Route`, `RouteStop` y `VehicleLastPosition` con enums `RouteStatus` y `RouteStopStatus`. El método `getTopDrivers()` usa DBAL nativo para funciones PostgreSQL-específicas (`FILTER (WHERE ...)`).
+
+KPIs calculados:
+- **activeRoutes**: Rutas con estado ACTIVE o PLANNED
+- **deliveriesToday**: Paradas entregadas desde medianoche
+- **exceptionsToday**: Excepciones en rutas activas/planificadas/completadas
+- **completionRate**: % de paradas entregadas en rutas activas
+- **successRate7d**: % de entregas exitosas vs excepciones (últimos 7 días)
+- **vehiclesWithPosition**: Vehículos con posición GPS registrada
+- **topDrivers**: Top 3 conductores por entregas (últimos 7 días)
+
 ---
 
 ## 14. Inteligencia Artificial
@@ -862,6 +875,7 @@ Cuando un tenant no tiene `CustomerIntegration` configurada, se usan estos defau
 | 2026-03-11 | 1.1.0 | Fase 3: +41 unit tests (92→133). Fase 4: fix APP_BASE_URL, deprecar legacy ShipmentApiController, archivar docs completados, añadir metadata a composer.json |
 | 2026-03-11 | 1.2.0 | Providers configurables por tenant: framework de proxy transparente + factory, 4 providers nuevos (Greedy, Google Directions, Webhook GPS, HTTP Polling), entidad CustomerIntegration, API de polling, admin CRUD, fallback chains, caché Redis. 255 tests (122 nuevos). |
 | 2026-03-11 | 1.3.0 | Fase 2 — IA Activa: 55 tests nuevos para servicios AI/ML (304 total). Tests para ExceptionClassifier, PostRouteAnalyzer, DeliveryRisk, AddressRisk, EmbeddingService, SearchService, AiAssistant, DeliveryNoteAiEnricher. Fix bug DeliveryRiskService (array vs entity). Fix bug AiAssistantService (customerId int→string). UI: clasificación AI en excepciones (badge + insight + acción sugerida). UI: badge de riesgo en planificador de rutas. |
+| 2026-03-12 | 1.3.1 | Refactor: OperatorKpiService migrado de DBAL (SQL crudo) a DQL QueryBuilder (Doctrine ORM). Consultas ahora tipadas con entidades y enums. `getTopDrivers()` mantiene DBAL nativo por funciones PostgreSQL-específicas. Tests actualizados con mocks de EntityManager/QueryBuilder. |
 
 ---
 

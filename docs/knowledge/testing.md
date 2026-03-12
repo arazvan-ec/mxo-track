@@ -38,7 +38,7 @@ backend/tests/
 │   │   ├── Gps/           # Traccar, Webhook
 │   │   ├── Realtime/      # Mercure, HttpPolling
 │   │   └── ProviderFactoryRegistryTest.php
-│   ├── Service/           # 8 archivos — servicios core
+│   ├── Service/           # 8 archivos — servicios core (OperatorKpiService usa mocks ORM/QueryBuilder)
 │   ├── Validation/        # 3 archivos
 │   ├── Dto/               # 5+ archivos
 │   ├── ExceptionClassifierServiceTest.php     # 8 tests — clasificación NLP
@@ -104,3 +104,4 @@ Requieren base de datos y servicios. Verifican:
 
 - 2026-03-11: Creación inicial
 - 2026-03-11: Phase 2 — +55 tests AI/ML (249→304 tests, 701→886 assertions, 44→53 test files)
+- 2026-03-12: OperatorKpiServiceTest migrado de mocks DBAL (Connection/Result) a mocks ORM (EntityManager/QueryBuilder/Query)
