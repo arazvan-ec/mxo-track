@@ -12,7 +12,7 @@ use App\Entity\Shipment;
 use App\Entity\Vehicle;
 use App\Provider\ProviderUnavailableException;
 use App\Routing\Coordinate;
-use App\Routing\RoutingEngineInterface;
+use App\Routing\OsrmRoutingEngine;
 use App\Service\RouteOptimizationService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -44,7 +44,7 @@ class TestRoutingController extends AbstractController
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly RouteOptimizationService $optimizationService,
-        private readonly RoutingEngineInterface $routingEngine,
+        private readonly OsrmRoutingEngine $routingEngine,
     ) {
     }
 
