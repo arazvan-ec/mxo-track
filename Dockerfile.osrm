@@ -1,5 +1,7 @@
 FROM osrm/osrm-backend:latest
 
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+
 COPY scripts/osrm-start.sh /opt/osrm-start.sh
 RUN chmod +x /opt/osrm-start.sh
 
