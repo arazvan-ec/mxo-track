@@ -12,9 +12,9 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DATA_DIR="${SCRIPT_DIR}/data"
-MAP_URL="https://download.geofabrik.de/europe/spain/comunidad-de-madrid-latest.osm.pbf"
-MAP_FILE="comunidad-de-madrid-latest.osm.pbf"
-OSRM_FILE="comunidad-de-madrid-latest.osrm"
+MAP_URL="https://download.geofabrik.de/europe/spain/madrid-latest.osm.pbf"
+MAP_FILE="madrid-latest.osm.pbf"
+OSRM_FILE="madrid-latest.osrm"
 
 mkdir -p "${DATA_DIR}"
 
