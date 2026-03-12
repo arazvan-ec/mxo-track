@@ -63,13 +63,22 @@ class RoutePlannerController extends AbstractController
     {
         $customerId = $request->query->getString('customer_id', '');
 
+        // Subquery: shipment IDs that are assigned to route stops of non-deleted routes.
+        // The SoftDeleteFilter on Route automatically adds "r.deleted_at IS NULL",
+        // so shipments from soft-deleted routes are treated as unassigned.
+        $assignedDql = $this->em->createQueryBuilder()
+            ->select('IDENTITY(rs_sub.shipment)')
+            ->from(RouteStop::class, 'rs_sub')
+            ->join('rs_sub.route', 'r_sub')
+            ->where('rs_sub.shipment IS NOT NULL')
+            ->getDQL();
+
         $qb = $this->em->createQueryBuilder()
             ->select('s')
             ->from(Shipment::class, 's')
-            ->leftJoin(RouteStop::class, 'rs', 'WITH', 'rs.shipment = s')
-            ->where('rs.id IS NULL')
-            ->andWhere('s.latitude IS NOT NULL')
-            ->andWhere('s.longitude IS NOT NULL');
+            ->where('s.latitude IS NOT NULL')
+            ->andWhere('s.longitude IS NOT NULL')
+            ->andWhere(sprintf('s.id NOT IN (%s)', $assignedDql));
 
         if ($customerId !== '') {
             $customer = $this->em->getRepository(Customer::class)->findOneBy(['publicId' => $customerId]);
