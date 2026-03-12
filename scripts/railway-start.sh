@@ -64,7 +64,10 @@ echo "==> Running database migrations..."
 php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration --env=prod
 
 echo "==> Updating database schema..."
-php bin/console doctrine:schema:update --force --env=prod --no-interaction
+php bin/console doctrine:schema:update --force --env=prod --no-interaction || {
+    echo "    WARNING: schema:update failed (non-fatal). Continuing startup..."
+    echo "    Review pending schema changes with: doctrine:schema:update --dump-sql"
+}
 
 echo "==> Warming up cache..."
 php bin/console cache:warmup --env=prod
