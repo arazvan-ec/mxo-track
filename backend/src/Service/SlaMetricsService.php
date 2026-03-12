@@ -418,7 +418,7 @@ final class SlaMetricsService
                 COUNT(*) FILTER (WHERE rs.status IN ('DELIVERED', 'EXCEPTION')) AS total_completed
             FROM route_stop rs
             JOIN route_plan r ON rs.route_id = r.id
-            JOIN "user" u ON r.driver_id = u.id
+            JOIN "user_account" u ON r.driver_id = u.id
             WHERE rs.is_origin = false
               AND r.start_at >= :from_date
               AND r.start_at <= :to_date
