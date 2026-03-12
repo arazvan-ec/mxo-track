@@ -15,7 +15,17 @@ else
     echo "[osrm] First boot — downloading and processing map data..."
 
     echo "[osrm] Step 1/4: Downloading Comunidad de Madrid map (~75 MB)..."
-    curl -L -o "${MAP_FILE}" "${MAP_URL}"
+    curl -fSL --retry 3 --retry-delay 5 --connect-timeout 30 -o "${MAP_FILE}" "${MAP_URL}"
+
+    # Validate download: actual PBF file should be >1 MB
+    FILE_SIZE=$(stat -c%s "${MAP_FILE}" 2>/dev/null || echo 0)
+    if [ "${FILE_SIZE}" -lt 1048576 ]; then
+        echo "[osrm] ERROR: Downloaded file is only ${FILE_SIZE} bytes (expected ~75 MB)."
+        echo "[osrm] This usually means a TLS/certificate issue or the URL returned an error page."
+        rm -f "${MAP_FILE}"
+        exit 1
+    fi
+    echo "[osrm] Downloaded ${FILE_SIZE} bytes."
 
     echo "[osrm] Step 2/4: Extracting road network..."
     osrm-extract -p /opt/car.lua "${MAP_FILE}"

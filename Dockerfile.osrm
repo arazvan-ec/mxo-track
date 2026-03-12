@@ -7,7 +7,8 @@ RUN sed -i 's|http://deb.debian.org/debian|http://archive.debian.org/debian|g' /
     sed -i '/stretch-updates/d' /etc/apt/sources.list && \
     apt-get -o Acquire::Check-Valid-Until=false update && \
     apt-get install -y --no-install-recommends curl ca-certificates && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* && \
+    curl --insecure -fsSL -o /etc/ssl/certs/ca-certificates.crt https://curl.se/ca/cacert.pem
 
 COPY scripts/osrm-start.sh /opt/osrm-start.sh
 RUN chmod +x /opt/osrm-start.sh
