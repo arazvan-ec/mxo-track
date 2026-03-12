@@ -169,7 +169,7 @@ final class OperatorKpiService
                     COUNT(*) FILTER (WHERE rs.status = 'EXCEPTION') AS exceptions
                 FROM route_stop rs
                 JOIN route_plan r ON rs.route_id = r.id
-                JOIN "user" u ON r.driver_id = u.id
+                JOIN "user_account" u ON r.driver_id = u.id
                 WHERE rs.is_origin = false
                   AND r.start_at >= :since
                   AND r.deleted_at IS NULL
