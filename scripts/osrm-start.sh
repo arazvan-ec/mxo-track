@@ -5,9 +5,9 @@ set -euo pipefail
 # Prepares map data on first boot (stored in persistent volume at /data/),
 # then starts osrm-routed. Subsequent boots skip preparation.
 
-MAP_URL="https://download.geofabrik.de/europe/spain/comunidad-de-madrid-latest.osm.pbf"
-MAP_FILE="/data/comunidad-de-madrid-latest.osm.pbf"
-OSRM_FILE="/data/comunidad-de-madrid-latest.osrm"
+MAP_URL="https://download.geofabrik.de/europe/spain/madrid-latest.osm.pbf"
+MAP_FILE="/data/madrid-latest.osm.pbf"
+OSRM_FILE="/data/madrid-latest.osrm"
 
 if [ -f "${OSRM_FILE}.mldgr" ]; then
     echo "[osrm] Map data already processed, starting server..."
