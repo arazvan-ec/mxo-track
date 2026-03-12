@@ -129,6 +129,48 @@
       </div>
     </div>
 
+    {# OSRM #}
+    <div class="rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5 p-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="flex h-10 w-10 items-center justify-center rounded-lg"
+               :class="health.osrm_ok ? 'bg-emerald-50' : 'bg-red-50'">
+            <svg class="h-5 w-5" :class="health.osrm_ok ? 'text-emerald-600' : 'text-red-600'" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-sm font-medium text-gray-900">OSRM (Routing)</p>
+            <p class="text-xs" :class="health.osrm_ok ? 'text-emerald-600' : 'text-red-600'" x-text="health.osrm_ok ? 'Conectado' : 'Sin conexion'"></p>
+          </div>
+        </div>
+        <span class="text-xs font-mono tabular-nums"
+              :class="liveData.osrm.latency_ms > 500 ? 'text-amber-600' : 'text-gray-400'"
+              x-text="liveData.osrm.latency_ms + 'ms'"></span>
+      </div>
+    </div>
+
+    {# VROOM #}
+    <div class="rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5 p-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="flex h-10 w-10 items-center justify-center rounded-lg"
+               :class="health.vroom_ok ? 'bg-emerald-50' : 'bg-red-50'">
+            <svg class="h-5 w-5" :class="health.vroom_ok ? 'text-emerald-600' : 'text-red-600'" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-sm font-medium text-gray-900">VROOM (Optimizer)</p>
+            <p class="text-xs" :class="health.vroom_ok ? 'text-emerald-600' : 'text-red-600'" x-text="health.vroom_ok ? 'Conectado' : 'Sin conexion'"></p>
+          </div>
+        </div>
+        <span class="text-xs font-mono tabular-nums"
+              :class="liveData.vroom.latency_ms > 500 ? 'text-amber-600' : 'text-gray-400'"
+              x-text="liveData.vroom.latency_ms + 'ms'"></span>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -430,12 +472,16 @@ function adminDashboard() {
       mercure_ok: {{ health.mercure_ok ? 'true' : 'false' }},
       db_ok: {{ health.db_ok ? 'true' : 'false' }},
       redis_ok: {{ health.redis_ok ? 'true' : 'false' }},
+      osrm_ok: {{ health.osrm_ok ? 'true' : 'false' }},
+      vroom_ok: {{ health.vroom_ok ? 'true' : 'false' }},
     },
     liveData: {
       database: { ok: {{ live.database.ok ? 'true' : 'false' }}, latency_ms: {{ live.database.latency_ms }} },
       redis: { ok: {{ live.redis.ok ? 'true' : 'false' }}, latency_ms: {{ live.redis.latency_ms }} },
       traccar: { ok: {{ live.traccar.ok ? 'true' : 'false' }}, latency_ms: {{ live.traccar.latency_ms }} },
       mercure: { ok: {{ live.mercure.ok ? 'true' : 'false' }}, latency_ms: {{ live.mercure.latency_ms }} },
+      osrm: { ok: {{ live.osrm.ok ? 'true' : 'false' }}, latency_ms: {{ live.osrm.latency_ms }} },
+      vroom: { ok: {{ live.vroom.ok ? 'true' : 'false' }}, latency_ms: {{ live.vroom.latency_ms }} },
       positions: { row_count: {{ live.positions.row_count }}, warning: {{ live.positions.warning ? 'true' : 'false' }} },
       disk: { db_size_mb: {{ live.disk.db_size_mb }} },
       last_ingestion: {
@@ -556,12 +602,16 @@ function adminDashboard() {
             this.health.mercure_ok = data.health.mercure_ok ?? this.health.mercure_ok;
             this.health.db_ok = data.health.db_ok ?? this.health.db_ok;
             this.health.redis_ok = data.health.redis_ok ?? this.health.redis_ok;
+            this.health.osrm_ok = data.health.osrm_ok ?? this.health.osrm_ok;
+            this.health.vroom_ok = data.health.vroom_ok ?? this.health.vroom_ok;
           }
           if (data.live) {
             this.liveData.database = data.live.database ?? this.liveData.database;
             this.liveData.redis = data.live.redis ?? this.liveData.redis;
             this.liveData.traccar = data.live.traccar ?? this.liveData.traccar;
             this.liveData.mercure = data.live.mercure ?? this.liveData.mercure;
+            this.liveData.osrm = data.live.osrm ?? this.liveData.osrm;
+            this.liveData.vroom = data.live.vroom ?? this.liveData.vroom;
             this.liveData.positions = data.live.positions ?? this.liveData.positions;
             this.liveData.disk = data.live.disk ?? this.liveData.disk;
             this.liveData.last_ingestion = data.live.last_ingestion ?? this.liveData.last_ingestion;

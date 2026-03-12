@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Routing\Coordinate;
+use App\Routing\OsrmRoutingEngine;
 use App\Tracking\GpsDeviceProviderInterface;
 use Doctrine\DBAL\Connection;
 use Predis\Client as RedisClient;
@@ -18,10 +20,13 @@ final class SystemHealthService
         private readonly Connection $connection,
         private readonly RedisClient $redis,
         private readonly string $mercureInternalUrl,
+        private readonly OsrmRoutingEngine $osrmEngine,
+        private readonly string $vroomUrl = '',
+        private readonly string $osrmUrl = '',
     ) {
     }
 
-    /** @return array{traccar_ok:bool,mercure_ok:bool,db_ok:bool,redis_ok:bool} */
+    /** @return array{traccar_ok:bool,mercure_ok:bool,db_ok:bool,redis_ok:bool,osrm_ok:bool,vroom_ok:bool} */
     public function check(): array
     {
         $live = $this->checkLive();
@@ -31,6 +36,8 @@ final class SystemHealthService
             'mercure_ok' => $live['mercure']['ok'],
             'db_ok' => $live['database']['ok'],
             'redis_ok' => $live['redis']['ok'],
+            'osrm_ok' => $live['osrm']['ok'],
+            'vroom_ok' => $live['vroom']['ok'],
         ];
     }
 
@@ -42,9 +49,65 @@ final class SystemHealthService
             'redis' => $this->checkRedis(),
             'traccar' => $this->checkTraccar(),
             'mercure' => $this->checkMercure(),
+            'osrm' => $this->checkOsrm(),
+            'vroom' => $this->checkVroom(),
             'positions' => $this->checkPositionsTable(),
             'disk' => $this->checkDiskUsage(),
             'last_ingestion' => $this->getLastIngestionTimestamp(),
+        ];
+    }
+
+    /** @return array{ok:bool,latency_ms:int,has_geometry:bool} */
+    private function checkOsrm(): array
+    {
+        $start = microtime(true);
+        $ok = false;
+        $hasGeometry = false;
+
+        try {
+            // Test with two known Madrid coordinates
+            $result = $this->osrmEngine->routeWithWaypoints([
+                new Coordinate(40.4168, -3.7038),
+                new Coordinate(40.4530, -3.6883),
+            ]);
+            $ok = $result->totalDistanceKm > 0;
+            $hasGeometry = $result->geometry !== null;
+        } catch (\Throwable) {
+        }
+
+        return [
+            'ok' => $ok,
+            'latency_ms' => (int) round((microtime(true) - $start) * 1000),
+            'has_geometry' => $hasGeometry,
+        ];
+    }
+
+    /** @return array{ok:bool,latency_ms:int} */
+    private function checkVroom(): array
+    {
+        if ($this->vroomUrl === '') {
+            return ['ok' => false, 'latency_ms' => 0];
+        }
+
+        $start = microtime(true);
+        $ok = false;
+
+        try {
+            $response = $this->httpClient->request('POST', $this->vroomUrl, [
+                'json' => [
+                    'vehicles' => [['id' => 0, 'start' => [-3.7038, 40.4168]]],
+                    'jobs' => [['id' => 0, 'location' => [-3.6883, 40.4530]]],
+                ],
+                'timeout' => 5,
+            ]);
+            $data = $response->toArray();
+            $ok = ($data['code'] ?? -1) === 0;
+        } catch (\Throwable) {
+        }
+
+        return [
+            'ok' => $ok,
+            'latency_ms' => (int) round((microtime(true) - $start) * 1000),
         ];
     }
 

@@ -184,6 +184,15 @@ class TestRoutingController extends AbstractController
 
             $timing = $this->optimizationService->estimateRouteTiming($route);
 
+            // Use OSRM distances when available, fall back to VROOM distances
+            $osrmAvailable = $routeBefore->geometry !== null && $routeAfter->geometry !== null;
+            $distanceBeforeKm = $routeBefore->totalDistanceKm > 0
+                ? round($routeBefore->totalDistanceKm, 2)
+                : round($result['distanceBefore'], 2);
+            $distanceAfterKm = $routeAfter->totalDistanceKm > 0
+                ? round($routeAfter->totalDistanceKm, 2)
+                : round($result['distanceAfter'], 2);
+
             $templateData = [
                 'origin' => [
                     'lat' => self::WAREHOUSE_LAT,
@@ -194,10 +203,13 @@ class TestRoutingController extends AbstractController
                 'stopsAfter' => $stopsAfter,
                 'polylineBefore' => $routeBefore->geometry,
                 'polylineAfter' => $routeAfter->geometry,
+                'osrmAvailable' => $osrmAvailable,
                 'metrics' => [
-                    'distanceBeforeKm' => round($result['distanceBefore'], 2),
-                    'distanceAfterKm' => round($result['distanceAfter'], 2),
-                    'savedPercent' => $saved,
+                    'distanceBeforeKm' => $distanceBeforeKm,
+                    'distanceAfterKm' => $distanceAfterKm,
+                    'savedPercent' => $distanceBeforeKm > 0
+                        ? round(($distanceBeforeKm - $distanceAfterKm) / $distanceBeforeKm * 100, 1)
+                        : $saved,
                     'durationMinutes' => $result['durationMinutes'],
                     'timing' => $timing,
                     'stopCount' => \count($stopsAfter),

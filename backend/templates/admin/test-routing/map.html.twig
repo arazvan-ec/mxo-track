@@ -32,6 +32,20 @@
     </span>
   </div>
 
+  {% if not osrmAvailable %}
+  <div class="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-4">
+    <div class="flex items-center gap-2">
+      <svg class="h-5 w-5 text-amber-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+      </svg>
+      <div>
+        <p class="text-sm font-medium text-amber-800">OSRM no disponible</p>
+        <p class="text-xs text-amber-700">Las rutas se muestran como lineas rectas (no siguen calles). Las distancias son estimaciones de VROOM. Verifica que el servicio OSRM este corriendo.</p>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   {# Map #}
   <div class="bg-white shadow rounded-lg overflow-hidden mb-6">
     <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
@@ -202,28 +216,36 @@
 
   var allPoints = [];
 
-  // Original route polyline (red dashed)
-  if (polylineBefore) {
-    var pointsBefore = decodePolyline(polylineBefore);
-    L.polyline(pointsBefore, {
-      color: '#ef4444',
-      weight: 4,
-      opacity: 0.6,
-      dashArray: '10, 8'
-    }).addTo(map);
-    pointsBefore.forEach(function(p) { allPoints.push(p); });
+  // Helper: build straight-line points from origin + stops array
+  function buildFallbackPoints(stopsList) {
+    var pts = [[origin.lat, origin.lng]];
+    stopsList.forEach(function(s) { pts.push([s.lat, s.lng]); });
+    pts.push([origin.lat, origin.lng]); // return to origin
+    return pts;
   }
 
+  // Original route polyline (red dashed)
+  var pointsBefore = polylineBefore
+    ? decodePolyline(polylineBefore)
+    : buildFallbackPoints(stopsBefore);
+  L.polyline(pointsBefore, {
+    color: '#ef4444',
+    weight: 4,
+    opacity: 0.6,
+    dashArray: '10, 8'
+  }).addTo(map);
+  pointsBefore.forEach(function(p) { allPoints.push(p); });
+
   // Optimized route polyline (blue solid)
-  if (polylineAfter) {
-    var pointsAfter = decodePolyline(polylineAfter);
-    L.polyline(pointsAfter, {
-      color: '#3b82f6',
-      weight: 5,
-      opacity: 0.85
-    }).addTo(map);
-    pointsAfter.forEach(function(p) { allPoints.push(p); });
-  }
+  var pointsAfter = polylineAfter
+    ? decodePolyline(polylineAfter)
+    : buildFallbackPoints(stopsAfter);
+  L.polyline(pointsAfter, {
+    color: '#3b82f6',
+    weight: 5,
+    opacity: 0.85
+  }).addTo(map);
+  pointsAfter.forEach(function(p) { allPoints.push(p); });
 
   // Origin marker (green)
   var originIcon = L.divIcon({
