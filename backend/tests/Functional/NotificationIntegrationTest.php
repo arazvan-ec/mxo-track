@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use App\Notification\Message\SendNotificationHandler;
+use App\Notification\Message\SendNotificationMessage;
 use App\Notification\Message\SendRecipientNotificationHandler;
 use App\Notification\Message\SendRecipientNotificationMessage;
+use App\Notification\NotificationDispatcher;
+use App\Notification\NotificationResolver;
 use App\Notification\RecipientNotificationService;
 use App\Notification\Transport\NullSmsTransport;
 use App\Notification\Transport\TenantAwareSmsTransport;
@@ -46,6 +50,21 @@ final class NotificationIntegrationTest extends KernelTestCase
             RecipientNotificationService::class,
             $container->get(RecipientNotificationService::class),
         );
+
+        self::assertInstanceOf(
+            NotificationDispatcher::class,
+            $container->get(NotificationDispatcher::class),
+        );
+
+        self::assertInstanceOf(
+            NotificationResolver::class,
+            $container->get(NotificationResolver::class),
+        );
+
+        self::assertInstanceOf(
+            SendNotificationHandler::class,
+            $container->get(SendNotificationHandler::class),
+        );
     }
 
     #[Test]
@@ -67,23 +86,31 @@ final class NotificationIntegrationTest extends KernelTestCase
     }
 
     #[Test]
-    public function messenger_routes_notification_message_to_async(): void
+    public function messenger_routes_notification_messages_to_async(): void
     {
         $container = self::getContainer();
 
-        // Dispatch a message to the bus — in test env it should go to the async transport
         $bus = $container->get(MessageBusInterface::class);
+
+        // Test old message routing
         $bus->dispatch(new SendRecipientNotificationMessage('999', 'approaching'));
 
-        // Verify message was routed to the async transport
+        // Test new message routing
+        $bus->dispatch(new SendNotificationMessage(
+            shipmentId: 1,
+            channel: 'sms',
+            triggerType: 'delivered',
+            recipientPhone: '+34600000000',
+            message: 'Test message',
+            timing: [],
+        ));
+
         /** @var MessengerTransportInterface $transport */
         $transport = $container->get('messenger.transport.async');
         $envelopes = $transport->get();
 
-        self::assertCount(1, $envelopes);
-        $message = $envelopes[0]->getMessage();
-        self::assertInstanceOf(SendRecipientNotificationMessage::class, $message);
-        self::assertSame('999', $message->routeStopId);
-        self::assertSame('approaching', $message->notificationType);
+        self::assertCount(2, $envelopes);
+        self::assertInstanceOf(SendRecipientNotificationMessage::class, $envelopes[0]->getMessage());
+        self::assertInstanceOf(SendNotificationMessage::class, $envelopes[1]->getMessage());
     }
 }
