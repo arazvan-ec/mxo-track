@@ -40,12 +40,28 @@ fi
 echo "[vroom-entrypoint] Config contents:"
 cat /conf/config.yml
 
-# Replicate what the original docker-entrypoint.sh does:
-# 1. Copy config to app dir
-cp /conf/config.yml /usr/src/app/config.yml
-# 2. Ensure access log exists
-touch /conf/access.log
+# Find where vroom-express lives and copy config there
+VROOM_APP_DIR=""
+for dir in /usr/src/app /usr/local/src/vroom-express /opt/vroom-express /vroom-express; do
+  if [ -d "$dir" ]; then
+    VROOM_APP_DIR="$dir"
+    break
+  fi
+done
 
-echo "[vroom-entrypoint] Starting VROOM (npm start)..."
-cd /usr/src/app
-exec npm start
+echo "[vroom-entrypoint] Detected app dir: ${VROOM_APP_DIR:-NOT FOUND}"
+echo "[vroom-entrypoint] Filesystem layout:"
+ls -la / 2>/dev/null | head -20
+
+if [ -n "$VROOM_APP_DIR" ]; then
+  cp /conf/config.yml "${VROOM_APP_DIR}/config.yml"
+  touch /conf/access.log
+  echo "[vroom-entrypoint] Starting VROOM (npm start) from ${VROOM_APP_DIR}..."
+  cd "$VROOM_APP_DIR"
+  exec npm start
+else
+  # Fallback: try the original entrypoint with chmod
+  echo "[vroom-entrypoint] No app dir found. Trying chmod + original entrypoint..."
+  chmod +x /docker-entrypoint.sh 2>/dev/null || true
+  exec /docker-entrypoint.sh "$@"
+fi
