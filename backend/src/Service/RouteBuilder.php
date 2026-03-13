@@ -32,6 +32,7 @@ final class RouteBuilder
         private readonly RouteOptimizerInterface $optimizer,
         private readonly RouteCapacityValidator $capacityValidator,
         private readonly OptimizationLogger $optimizationLogger,
+        private readonly RouteSnapshotManager $snapshotManager,
     ) {
     }
 
@@ -97,6 +98,21 @@ final class RouteBuilder
                 OptimizationStepCategory::CAPACITY_CHECK,
                 sprintf('Ruta "%s": %d paradas, dist=%.1fkm', $route->getName(), \count($mr['stops']), $route->getTotalDistanceKm() ?? 0),
                 ['routeName' => $route->getName(), 'stopsCount' => \count($mr['stops']), 'validation' => $mr['validation']],
+            );
+
+            // Create RouteSnapshot with optimization results
+            $originalStopOrder = array_map(static fn(RouteStop $s) => [
+                'sequence' => $s->getSequence(),
+                'address' => $s->getAddress(),
+                'recipientName' => $s->getRecipientName(),
+                'lat' => $s->getLatitude(),
+                'lng' => $s->getLongitude(),
+                'isOrigin' => $s->isOrigin(),
+            ], $mr['stops']);
+
+            $this->snapshotManager->createSnapshot(
+                $route,
+                originalStopOrder: $originalStopOrder,
             );
         }
 
