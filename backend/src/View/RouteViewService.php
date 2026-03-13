@@ -170,8 +170,13 @@ final class RouteViewService
             return [];
         }
 
+        $etas = $snapshot->getEtas() ?? [];
+
         $views = [];
         foreach ($stopStates as $state) {
+            $publicId = $state['publicId'] ?? null;
+            $stopEta = $publicId !== null ? ($etas[$publicId] ?? null) : null;
+
             $views[] = new StopViewData(
                 sequence: $state['sequence'] ?? 0,
                 address: $state['address'] ?? '',
@@ -184,6 +189,9 @@ final class RouteViewService
                 deliveredAt: $state['deliveredAt'] ?? null,
                 exceptionCode: $state['exceptionCode'] ?? null,
                 exceptionNotes: $state['exceptionNotes'] ?? null,
+                etaMinutes: $stopEta['minutes'] ?? null,
+                etaTime: $stopEta !== null ? (new \DateTimeImmutable($stopEta['eta']))->format('H:i') : null,
+                etaDistanceKm: $stopEta['distance_km'] ?? null,
             );
         }
 

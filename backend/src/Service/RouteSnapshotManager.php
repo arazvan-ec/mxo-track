@@ -119,6 +119,44 @@ final class RouteSnapshotManager
     }
 
     /**
+     * Updates ETAs in the snapshot. Returns previous ETAs for comparison.
+     *
+     * @param array<string, array{eta: \DateTimeImmutable, remainingMinutes: int, distanceKm: float}> $etas
+     * @return array<string, int>|null Previous ETAs as stop_public_id => minutes (null if no previous)
+     */
+    public function updateEtas(Route $route, array $etas): ?array
+    {
+        $snapshot = $this->snapshotRepo->findByRoute($route);
+
+        if ($snapshot === null) {
+            $snapshot = new RouteSnapshot($route);
+            $this->em->persist($snapshot);
+        }
+
+        $previousEtas = $snapshot->getEtas();
+        $previousMinutes = null;
+        if ($previousEtas !== null) {
+            $previousMinutes = [];
+            foreach ($previousEtas as $stopId => $data) {
+                $previousMinutes[$stopId] = $data['minutes'];
+            }
+        }
+
+        $etaData = [];
+        foreach ($etas as $stopPublicId => $data) {
+            $etaData[$stopPublicId] = [
+                'eta' => $data['eta']->format(\DateTimeInterface::ATOM),
+                'minutes' => $data['remainingMinutes'],
+                'distance_km' => $data['distanceKm'],
+            ];
+        }
+
+        $snapshot->setEtas($etaData);
+
+        return $previousMinutes;
+    }
+
+    /**
      * Refreshes the polyline after stop reordering.
      */
     public function refreshPolyline(Route $route): RouteSnapshot
