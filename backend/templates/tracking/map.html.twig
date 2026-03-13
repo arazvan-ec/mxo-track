@@ -632,11 +632,16 @@ function fleetMap() {
 
       const hub = new URL(this.mercureUrl);
 
-      // Subscribe to all vehicle topics and operator fleet topic
+      // Subscribe to all vehicle position topics
       this.vehicles.forEach(v => {
         hub.searchParams.append('topic', `/vehicles/${v.public_id}/position`);
       });
       hub.searchParams.append('topic', '/operator/fleet');
+
+      // Subscribe to route update topics (real-time stop status changes)
+      this.routes.forEach(r => {
+        hub.searchParams.append('topic', `/routes/${r.public_id}/view/admin`);
+      });
 
       if (this._mercureToken) {
         hub.searchParams.set('authorization', this._mercureToken);
@@ -656,6 +661,14 @@ function fleetMap() {
         this.sseConnected = true;
         try {
           const payload = JSON.parse(event.data);
+
+          // Route update (MapViewData with routes[].stops[])
+          if (payload.routes && Array.isArray(payload.routes) && payload.routes.length > 0) {
+            this.handleRouteUpdate(payload);
+            return;
+          }
+
+          // Vehicle position update
           const vid = payload.vehicle_public_id || payload.vehicleId;
           if (vid && Number.isFinite(payload.lat) && Number.isFinite(payload.lng)) {
             payload.vehicle_public_id = vid;
@@ -722,6 +735,65 @@ function fleetMap() {
           this.trailPolyline.addLatLng(latlng);
         }
       }
+    },
+
+    handleRouteUpdate(mapViewData) {
+      const updatedRoute = mapViewData.routes[0];
+      if (!updatedRoute || !updatedRoute.publicId) return;
+
+      // Find matching route in our local data
+      const routeIdx = this.routes.findIndex(r => r.public_id === updatedRoute.publicId);
+      if (routeIdx === -1) return;
+
+      const route = this.routes[routeIdx];
+
+      // Update stops with new statuses from the MapViewData
+      const newStops = (updatedRoute.stops || []).map(s => ({
+        lat: s.lat,
+        lng: s.lng,
+        address: s.address || '',
+        sequence: s.sequence,
+        status: s.status || 'PENDING',
+        recipient: s.recipientName || null,
+        isOrigin: s.isOrigin || false,
+      }));
+
+      route.stops = newStops;
+
+      // Recalculate delivery counts
+      const nonOriginStops = newStops.filter(s => !s.isOrigin);
+      route.total_stops = nonOriginStops.length;
+      route.delivered_stops = nonOriginStops.filter(s => s.status === 'DELIVERED').length;
+
+      // Update route status if changed
+      if (updatedRoute.status) {
+        route.status = updatedRoute.status;
+      }
+
+      // Force Alpine reactivity by replacing the route object
+      this.routes[routeIdx] = Object.assign({}, route);
+
+      // If this route is currently displayed on the map, re-render stops
+      var isDisplayedRoute = false;
+      if (this.selectedRoute && this.selectedRoute.public_id === route.public_id) {
+        isDisplayedRoute = true;
+        this.selectedRoute = this.routes[routeIdx];
+      }
+      if (this.selectedVehicle && route.vehicle_public_id === this.selectedVehicle.public_id) {
+        isDisplayedRoute = true;
+      }
+
+      if (isDisplayedRoute) {
+        this.showRouteStops(this.routes[routeIdx]);
+      }
+
+      // Update KPI pending stops count
+      var totalPending = 0;
+      this.routes.forEach(function(r) {
+        var stops = (r.stops || []).filter(function(s) { return !s.isOrigin; });
+        totalPending += stops.filter(function(s) { return s.status === 'PENDING'; }).length;
+      });
+      this.kpi.pending_stops = totalPending;
     },
   };
 }
