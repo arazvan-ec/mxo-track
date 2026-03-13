@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Command;
 
+use App\Application\Route\BuildRoutesInput;
+use App\Application\Route\RoutePlanningService;
 use App\Service\DemoScenarioBuilder;
 use App\Service\ShipmentCsvImporter;
 use Doctrine\ORM\EntityManagerInterface;
@@ -25,6 +27,7 @@ final class DemoSetupCommand extends Command
         private readonly DemoScenarioBuilder $scenarioBuilder,
         private readonly EntityManagerInterface $em,
         private readonly ShipmentCsvImporter $csvImporter,
+        private readonly RoutePlanningService $routePlanningService,
         #[Autowire('%kernel.project_dir%')]
         private readonly string $projectDir = '',
     ) {
@@ -108,8 +111,37 @@ final class DemoSetupCommand extends Command
 
         if (!$skipRoutes) {
             $io->section('Building optimized routes...');
-            $io->warning('Route building requires VROOM. Use --skip-routes to skip.');
-            // TODO: integrate RoutePlanningService when VROOM is available
+
+            $shipmentIds = array_map(
+                static fn ($s) => $s->getPublicIdString(),
+                $result->shipments,
+            );
+            $vehicleIds = array_map(
+                static fn ($v) => $v->getPublicIdString(),
+                $result->vehicles,
+            );
+
+            try {
+                $buildResult = $this->routePlanningService->buildRoutes(new BuildRoutesInput(
+                    shipmentPublicIds: $shipmentIds,
+                    vehiclePublicIds: $vehicleIds,
+                    originPublicId: $result->warehouse->getPublicIdString(),
+                ));
+
+                $io->success(sprintf('%d routes created.', $buildResult->routesCreated));
+                foreach ($buildResult->routes as $routeData) {
+                    $io->text(sprintf(
+                        '  - %s (%s): %d stops, %.1f km',
+                        $routeData['route']['name'],
+                        $routeData['route']['vehicle'] ?? 'unassigned',
+                        $routeData['stopsCount'],
+                        $routeData['route']['totalDistanceKm'] ?? 0,
+                    ));
+                }
+            } catch (\Throwable $e) {
+                $io->error(sprintf('Route building failed: %s', $e->getMessage()));
+                $io->warning('Use --skip-routes to skip route building if VROOM is unavailable.');
+            }
         }
 
         return Command::SUCCESS;
