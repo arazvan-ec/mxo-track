@@ -136,7 +136,7 @@ class DebugRoutingController extends AbstractController
                 ];
 
                 if ($vroomCode !== 0) {
-                    $results['vroom']['hint'] = 'VROOM cannot reach OSRM. Check VROOM logs and OSRM_HOST env var on vroom-mxo service.';
+                    $results['vroom']['hint'] = 'VROOM cannot reach OSRM. Check: (1) OSRM_HOST and OSRM_PORT env vars on vroom-mxo service, (2) OSRM port must be an unquoted integer in config.yml (not a string).';
                 }
             } catch (\Throwable $e) {
                 $results['vroom']['error'] = $e->getMessage();

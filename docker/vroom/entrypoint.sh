@@ -26,7 +26,7 @@ routingServers:
   osrm:
     car:
       host: "${OSRM_HOST}"
-      port: "${OSRM_PORT}"
+      port: ${OSRM_PORT}
 EOF
 
 echo "[vroom-entrypoint] Config written. Testing DNS resolution for ${OSRM_HOST}..."
