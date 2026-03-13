@@ -1,0 +1,297 @@
+{#
+  MxoRouteMap — Shared JS class for rendering route maps.
+  Include ONCE per page in the {% block scripts %} section.
+  Requires: Leaflet 1.9.4, leaflet-polylinedecorator 1.6.0
+#}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://unpkg.com/leaflet-polylinedecorator@1.6.0/dist/leaflet.polylineDecorator.js"></script>
+<script>
+(function() {
+  'use strict';
+
+  // ── Color constants ──
+  var COLORS = {
+    routes: ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6'],
+    stopStatus: {
+      PENDING: '#3b82f6',
+      DELIVERED: '#22c55e',
+      EXCEPTION: '#ef4444',
+      SKIPPED: '#6b7280'
+    },
+    origin: '#059669',
+    vehicle: '#1e3a8a',
+    originalRoute: '#ef4444',
+    comparisonActual: '#ef4444',
+    comparisonPlanned: '#3b82f6'
+  };
+
+  // ── Decode Google/OSRM encoded polyline ──
+  function decodePolyline(encoded) {
+    var points = [], lat = 0, lng = 0, index = 0;
+    while (index < encoded.length) {
+      var b, shift = 0, result = 0;
+      do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+      lat += (result & 1) ? ~(result >> 1) : (result >> 1);
+      shift = 0; result = 0;
+      do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+      lng += (result & 1) ? ~(result >> 1) : (result >> 1);
+      points.push([lat / 1e5, lng / 1e5]);
+    }
+    return points;
+  }
+
+  // ── MxoRouteMap class ──
+  function MxoRouteMap(elementId, data) {
+    this.elementId = elementId;
+    this.data = data;
+    this.map = null;
+    this.routeLayers = [];
+    this.vehicleMarker = null;
+    this.allPoints = [];
+
+    this.init();
+
+    if (data.mercureTopic) {
+      this.subscribeMercure(data.mercureTopic);
+    }
+  }
+
+  MxoRouteMap.COLORS = COLORS;
+  MxoRouteMap.decodePolyline = decodePolyline;
+
+  MxoRouteMap.prototype.init = function() {
+    var el = document.getElementById(this.elementId);
+    if (!el) return;
+
+    this.map = L.map(this.elementId, { zoomControl: true });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      maxZoom: 19
+    }).addTo(this.map);
+
+    this.renderRoutes();
+    this.renderOrigin();
+    this.renderVehicle();
+    this.fitBounds();
+    this.addResetControl();
+
+    var self = this;
+    setTimeout(function() { self.map.invalidateSize(); }, 100);
+  };
+
+  MxoRouteMap.prototype.renderRoutes = function() {
+    var self = this;
+    var routes = this.data.routes || [];
+    this.routeLayers = [];
+
+    routes.forEach(function(rd, routeIdx) {
+      var color = rd.color || COLORS.routes[routeIdx % COLORS.routes.length];
+      var layer = L.layerGroup();
+      var stops = rd.stops || [];
+
+      // Polyline
+      var points;
+      if (rd.polyline) {
+        points = decodePolyline(rd.polyline);
+      } else {
+        // Fallback: straight lines through stops
+        points = [];
+        stops.forEach(function(s) {
+          if (s.lat && s.lng) points.push([s.lat, s.lng]);
+        });
+      }
+
+      if (points.length >= 2) {
+        var poly = L.polyline(points, {
+          color: color,
+          weight: 5,
+          opacity: 0.85
+        }).addTo(layer);
+
+        try {
+          L.polylineDecorator(poly, {
+            patterns: [
+              { offset: 25, repeat: 80, symbol: L.Symbol.arrowHead({
+                  pixelSize: 12, polygon: false,
+                  pathOptions: { color: color, weight: 2, opacity: 0.9 }
+                })
+              }
+            ]
+          }).addTo(layer);
+        } catch(e) { /* polyline decorator optional */ }
+
+        points.forEach(function(p) { self.allPoints.push(p); });
+      }
+
+      // Comparison polyline (planned vs actual)
+      if (rd.comparisonPolyline) {
+        var actualPoints = decodePolyline(rd.comparisonPolyline);
+        if (actualPoints.length >= 2) {
+          L.polyline(actualPoints, {
+            color: COLORS.comparisonActual,
+            weight: 4,
+            opacity: 0.7,
+            dashArray: '8, 6'
+          }).addTo(layer);
+        }
+      }
+
+      // Stop markers
+      stops.forEach(function(stop) {
+        if (!stop.lat || !stop.lng || stop.isOrigin) return;
+
+        var statusColor = COLORS.stopStatus[stop.status] || COLORS.stopStatus.PENDING;
+        var icon = L.divIcon({
+          html: '<div style="background:' + statusColor + ';color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,.3);">' + stop.sequence + '</div>',
+          className: '',
+          iconSize: [28, 28],
+          iconAnchor: [14, 14]
+        });
+
+        var popupHtml = '<strong>' + (rd.name || 'Ruta') + ' #' + stop.sequence + '</strong>';
+        if (stop.recipientName) popupHtml += '<br>' + stop.recipientName;
+        popupHtml += '<br><small>' + stop.address + '</small>';
+        if (stop.status === 'DELIVERED' && stop.deliveredAt) {
+          popupHtml += '<br><span style="color:#22c55e;font-size:11px;">Entregado: ' + new Date(stop.deliveredAt).toLocaleTimeString() + '</span>';
+        }
+        if (stop.status === 'EXCEPTION') {
+          popupHtml += '<br><span style="color:#ef4444;font-size:11px;">Excepcion' + (stop.exceptionCode ? ': ' + stop.exceptionCode : '') + '</span>';
+        }
+
+        L.marker([stop.lat, stop.lng], { icon: icon, zIndexOffset: 100 + routeIdx * 10 })
+          .bindPopup(popupHtml)
+          .addTo(layer);
+
+        self.allPoints.push([stop.lat, stop.lng]);
+      });
+
+      layer.addTo(self.map);
+      self.routeLayers.push({ layer: layer, color: color, name: rd.name });
+    });
+  };
+
+  MxoRouteMap.prototype.renderOrigin = function() {
+    var origin = this.data.origin;
+    if (!origin || !origin.lat || !origin.lng) return;
+
+    var icon = L.divIcon({
+      html: '<div style="background:#059669;color:#fff;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3);">O</div>',
+      className: '',
+      iconSize: [32, 32],
+      iconAnchor: [16, 16]
+    });
+
+    L.marker([origin.lat, origin.lng], { icon: icon, zIndexOffset: 1000 })
+      .bindPopup('<strong>Origen</strong>' + (origin.address ? '<br>' + origin.address : ''))
+      .addTo(this.map);
+
+    this.allPoints.push([origin.lat, origin.lng]);
+  };
+
+  MxoRouteMap.prototype.renderVehicle = function() {
+    // Vehicle position from initial data (if provided)
+    var routes = this.data.routes || [];
+    // Vehicle tracking is handled via Mercure subscription
+  };
+
+  MxoRouteMap.prototype.fitBounds = function() {
+    if (this.allPoints.length > 0) {
+      this.map.fitBounds(this.allPoints, { padding: [40, 40] });
+    } else {
+      this.map.setView([40.4168, -3.7038], 12);
+    }
+  };
+
+  MxoRouteMap.prototype.addResetControl = function() {
+    var self = this;
+    var ResetControl = L.Control.extend({
+      options: { position: 'topright' },
+      onAdd: function() {
+        var btn = L.DomUtil.create('div', 'leaflet-control-reset leaflet-bar');
+        btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>';
+        btn.title = 'Centrar mapa';
+        btn.style.cssText = 'background:#fff;cursor:pointer;width:34px;height:34px;display:flex;align-items:center;justify-content:center;';
+        L.DomEvent.disableClickPropagation(btn);
+        btn.addEventListener('click', function() { self.fitBounds(); });
+        return btn;
+      }
+    });
+    this.map.addControl(new ResetControl());
+  };
+
+  MxoRouteMap.prototype.clearLayers = function() {
+    var self = this;
+    this.routeLayers.forEach(function(rl) {
+      self.map.removeLayer(rl.layer);
+    });
+    this.routeLayers = [];
+    this.allPoints = [];
+
+    // Remove all non-tile layers
+    self.map.eachLayer(function(layer) {
+      if (!(layer instanceof L.TileLayer)) {
+        self.map.removeLayer(layer);
+      }
+    });
+  };
+
+  MxoRouteMap.prototype.update = function(newData) {
+    this.data = Object.assign({}, this.data, newData);
+    this.clearLayers();
+    this.renderRoutes();
+    this.renderOrigin();
+    this.fitBounds();
+
+    // Emit custom event for external components (metrics, stop list, etc.)
+    document.dispatchEvent(new CustomEvent('mxo:route-updated', {
+      detail: { mapId: this.elementId, data: this.data }
+    }));
+  };
+
+  MxoRouteMap.prototype.subscribeMercure = function(topic) {
+    var self = this;
+    fetch('/api/mercure-token', { credentials: 'include' })
+      .then(function(res) { return res.json(); })
+      .then(function(tokenData) {
+        var mercureUrl = self.data.mercureUrl || tokenData.mercureUrl;
+        if (!mercureUrl) return;
+
+        var hub = new URL(mercureUrl);
+        hub.searchParams.set('topic', topic);
+        if (tokenData.token) {
+          hub.searchParams.set('authorization', tokenData.token);
+        }
+
+        var es = new EventSource(hub);
+        es.onmessage = function(e) {
+          try {
+            var newData = JSON.parse(e.data);
+            self.update(newData);
+          } catch(err) {
+            console.warn('MxoRouteMap: failed to parse Mercure update', err);
+          }
+        };
+
+        window.addEventListener('beforeunload', function() { es.close(); });
+      })
+      .catch(function(err) {
+        console.warn('MxoRouteMap: failed to subscribe to Mercure', err);
+      });
+  };
+
+  // Toggle route visibility (call from external controls)
+  MxoRouteMap.prototype.toggleRoute = function(routeIndex, visible) {
+    var rl = this.routeLayers[routeIndex];
+    if (!rl) return;
+    if (visible) {
+      rl.layer.addTo(this.map);
+    } else {
+      this.map.removeLayer(rl.layer);
+    }
+  };
+
+  // Expose globally
+  window.MxoRouteMap = MxoRouteMap;
+})();
+</script>
