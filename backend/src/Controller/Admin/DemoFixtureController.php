@@ -36,6 +36,8 @@ class DemoFixtureController extends AbstractController
             return $this->redirectToRoute('admin_fixtures_index');
         }
 
+        $this->purgeExistingDemoData();
+
         $result = $this->scenarioBuilder->buildScenario(200);
 
         $this->em->persist($result->customer);
@@ -62,5 +64,17 @@ class DemoFixtureController extends AbstractController
         ));
 
         return $this->redirectToRoute('admin_shipments_index');
+    }
+
+    private function purgeExistingDemoData(): void
+    {
+        $conn = $this->em->getConnection();
+        $conn->executeStatement("DELETE FROM shipment WHERE customer_id IN (SELECT id FROM customer WHERE name = 'Logística Express Madrid')");
+        $conn->executeStatement("DELETE FROM route_stop WHERE route_id IN (SELECT r.id FROM route r JOIN customer c ON r.customer_id = c.id WHERE c.name = 'Logística Express Madrid')");
+        $conn->executeStatement("DELETE FROM route WHERE customer_id IN (SELECT id FROM customer WHERE name = 'Logística Express Madrid')");
+        $conn->executeStatement("DELETE FROM vehicle WHERE name LIKE 'Furgoneta Madrid%' OR name LIKE 'Camión Refrigerado%' OR name LIKE 'Moto Express%'");
+        $conn->executeStatement("DELETE FROM \"user\" WHERE email LIKE '%@demo.local'");
+        $conn->executeStatement("DELETE FROM customer_location WHERE customer_id IN (SELECT id FROM customer WHERE name = 'Logística Express Madrid')");
+        $conn->executeStatement("DELETE FROM customer WHERE name = 'Logística Express Madrid'");
     }
 }
