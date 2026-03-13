@@ -169,6 +169,73 @@ final class MapViewDataTest extends TestCase
     }
 
     #[Test]
+    public function mapViewDataIncludesVehicleDataWhenTrackingEnabled(): void
+    {
+        $options = new MapViewOptions(
+            showVehicleTracking: true,
+            vehiclePublicId: 'veh-abc123',
+            vehiclePosition: ['lat' => 40.42, 'lng' => -3.70, 'speed' => 45.0, 'course' => 180.0],
+        );
+
+        $routeView = new RouteViewData(
+            publicId: 'route1',
+            name: 'Test',
+            color: '#10b981',
+            vehicleName: null,
+            driverName: null,
+            status: 'ACTIVE',
+            stops: [],
+        );
+
+        $mapView = new MapViewData(
+            routes: [$routeView],
+            options: $options,
+            mercureUrl: 'https://mercure.example.com/.well-known/mercure',
+        );
+
+        $array = $mapView->toArray();
+
+        self::assertSame('veh-abc123', $array['vehiclePublicId']);
+        self::assertSame(40.42, $array['vehiclePosition']['lat']);
+        self::assertSame(-3.70, $array['vehiclePosition']['lng']);
+        self::assertSame('https://mercure.example.com/.well-known/mercure', $array['mercureUrl']);
+    }
+
+    #[Test]
+    public function withMercureUrlReturnsNewInstanceWithUrl(): void
+    {
+        $options = new MapViewOptions();
+        $original = new MapViewData(routes: [], options: $options, mercureTopic: '/routes/x/view/customer');
+
+        $withUrl = $original->withMercureUrl('https://mercure.example.com/.well-known/mercure');
+
+        self::assertNotSame($original, $withUrl);
+        self::assertNull($original->mercureUrl);
+        self::assertSame('https://mercure.example.com/.well-known/mercure', $withUrl->mercureUrl);
+        self::assertSame('/routes/x/view/customer', $withUrl->mercureTopic);
+
+        $array = $withUrl->toArray();
+        self::assertSame('https://mercure.example.com/.well-known/mercure', $array['mercureUrl']);
+    }
+
+    #[Test]
+    public function mapViewDataExcludesVehicleDataWhenTrackingDisabled(): void
+    {
+        $options = new MapViewOptions(showVehicleTracking: false);
+
+        $mapView = new MapViewData(
+            routes: [],
+            options: $options,
+        );
+
+        $array = $mapView->toArray();
+
+        self::assertArrayNotHasKey('vehiclePublicId', $array);
+        self::assertArrayNotHasKey('vehiclePosition', $array);
+        self::assertArrayNotHasKey('mercureUrl', $array);
+    }
+
+    #[Test]
     public function routeViewDataWithAllOptionalFields(): void
     {
         $routeView = new RouteViewData(

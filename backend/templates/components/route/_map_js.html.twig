@@ -190,9 +190,78 @@
   };
 
   MxoRouteMap.prototype.renderVehicle = function() {
-    // Vehicle position from initial data (if provided)
-    var routes = this.data.routes || [];
-    // Vehicle tracking is handled via Mercure subscription
+    var pos = this.data.vehiclePosition;
+    if (!pos || !pos.lat || !pos.lng) return;
+
+    var icon = this.createVehicleIcon(pos.course);
+    this.vehicleMarker = L.marker([pos.lat, pos.lng], { icon: icon, zIndexOffset: 2000 })
+      .bindTooltip('Vehiculo' + (pos.speed ? ' - ' + Math.round(pos.speed) + ' km/h' : ''), {
+        direction: 'top', offset: [0, -20]
+      })
+      .addTo(this.map);
+    this.allPoints.push([pos.lat, pos.lng]);
+
+    // Subscribe to vehicle position updates via Mercure
+    var vehicleId = this.data.vehiclePublicId;
+    if (vehicleId) {
+      this.subscribeVehicle(vehicleId);
+    }
+  };
+
+  MxoRouteMap.prototype.createVehicleIcon = function(course) {
+    var rotation = course || 0;
+    return L.divIcon({
+      className: '',
+      iconSize: [36, 36],
+      iconAnchor: [18, 18],
+      html: '<div style="background:#1e3a8a;border:2px solid #3b82f6;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.4);transform:rotate(' + rotation + 'deg);">' +
+        '<svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" xmlns="http://www.w3.org/2000/svg">' +
+        '<path d="M18 18.5a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm-12 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM19.92 6.09C19.72 5.46 19.16 5 18.5 5h-11c-.66 0-1.21.42-1.42 1.02L4 12v6c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h10v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-6l-2.08-5.91zM7.5 15a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm9 0a1.5 1.5 0 110-3 1.5 1.5 0 010 3zM5.81 10l1.04-3h10.29l1.04 3H5.81z"/>' +
+        '</svg></div>'
+    });
+  };
+
+  MxoRouteMap.prototype.subscribeVehicle = function(vehiclePublicId) {
+    var self = this;
+    fetch('/api/mercure-token', { credentials: 'include' })
+      .then(function(res) { return res.json(); })
+      .then(function(tokenData) {
+        var mercureUrl = self.data.mercureUrl || tokenData.mercureUrl;
+        if (!mercureUrl) return;
+
+        var hub = new URL(mercureUrl);
+        hub.searchParams.set('topic', '/vehicles/' + vehiclePublicId + '/position');
+        if (tokenData.token) {
+          hub.searchParams.set('authorization', tokenData.token);
+        }
+
+        var es = new EventSource(hub);
+        es.onmessage = function(e) {
+          try {
+            var d = JSON.parse(e.data);
+            if (d.lat && d.lng) {
+              if (self.vehicleMarker) {
+                self.vehicleMarker.setLatLng([d.lat, d.lng]);
+                self.vehicleMarker.setIcon(self.createVehicleIcon(d.course));
+                if (self.vehicleMarker.getTooltip()) self.vehicleMarker.unbindTooltip();
+                self.vehicleMarker.bindTooltip('Vehiculo - ' + Math.round(d.speed || 0) + ' km/h', {
+                  direction: 'top', offset: [0, -20]
+                });
+              } else {
+                self.vehicleMarker = L.marker([d.lat, d.lng], {
+                  icon: self.createVehicleIcon(d.course), zIndexOffset: 2000
+                }).bindTooltip('Vehiculo', { direction: 'top', offset: [0, -20] })
+                  .addTo(self.map);
+              }
+            }
+          } catch(err) { /* ignore */ }
+        };
+
+        window.addEventListener('beforeunload', function() { es.close(); });
+      })
+      .catch(function(err) {
+        console.warn('MxoRouteMap: vehicle tracking failed', err);
+      });
   };
 
   MxoRouteMap.prototype.fitBounds = function() {

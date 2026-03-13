@@ -17,6 +17,7 @@ final class MapViewData
         public readonly ?array $origin = null,
         public readonly ?array $globalMetrics = null,
         public readonly ?string $mercureTopic = null,
+        public readonly ?string $mercureUrl = null,
     ) {}
 
     /**
@@ -24,12 +25,36 @@ final class MapViewData
      */
     public function toArray(): array
     {
-        return array_filter([
+        $data = array_filter([
             'routes' => array_map(static fn(RouteViewData $r) => $r->toArray(), $this->routes),
             'origin' => $this->origin,
             'globalMetrics' => $this->globalMetrics,
             'mercureTopic' => $this->mercureTopic,
+            'mercureUrl' => $this->mercureUrl,
         ], static fn($v) => $v !== null);
+
+        if ($this->options->showVehicleTracking) {
+            if ($this->options->vehiclePublicId !== null) {
+                $data['vehiclePublicId'] = $this->options->vehiclePublicId;
+            }
+            if ($this->options->vehiclePosition !== null) {
+                $data['vehiclePosition'] = $this->options->vehiclePosition;
+            }
+        }
+
+        return $data;
+    }
+
+    public function withMercureUrl(string $mercureUrl): self
+    {
+        return new self(
+            routes: $this->routes,
+            options: $this->options,
+            origin: $this->origin,
+            globalMetrics: $this->globalMetrics,
+            mercureTopic: $this->mercureTopic,
+            mercureUrl: $mercureUrl,
+        );
     }
 
     public function toJson(): string
