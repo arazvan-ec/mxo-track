@@ -24,6 +24,7 @@
 | **VehiclePosition** | Posición GPS histórica |
 | **VehicleLastPosition** | Cache desnormalizada de última posición |
 | **VehicleCheckpoint** | Checkpoint de ingesta Traccar |
+| **RouteSnapshot** | Snapshot de visualización de ruta (polylines, métricas, timing, stop states, capacidad) |
 | **VehicleInspection** | Inspección pre-ruta |
 | **CustomerIntegration** | Config de providers por tenant |
 | **CustomerLocation** | Hub/depósito |
@@ -83,6 +84,7 @@ Customer (root)
 ├── User (ManyToOne nullable SET NULL)
 ├── Shipment (ManyToOne required) → Parcel, ShipmentEvent, DeliverySlot, DeliveryRating, RecipientNotification
 ├── Route (ManyToOne nullable SET NULL) → RouteStop → Pod, DriverFeedback
+│                                      → RouteSnapshot (OneToOne CASCADE)
 ├── CustomerLocation (ManyToOne required CASCADE)
 ├── CustomerVehicle (bridge) → Vehicle
 ├── CustomerIntegration (ManyToOne required)
@@ -103,12 +105,13 @@ Vehicle (global, no scoped)
 | Evento | Disparado por | Listeners |
 |--------|--------------|-----------|
 | `VehiclePositionReceived` | TraccarIngestionService | MercurePositionListener, ApproachingNotificationSubscriber, FleetAnomalyCheckListener |
-| `StopDelivered` | DeliveryService | MercureRouteProgressListener, NotifyDeliveryListener, AuditDeliveryListener |
-| `StopExceptionReported` | DeliveryService | NotifyDeliveryListener, AuditDeliveryListener |
+| `StopDelivered` | DeliveryService | MercureRouteProgressListener, NotifyDeliveryListener, AuditDeliveryListener, RouteSnapshotListener |
+| `StopExceptionReported` | DeliveryService | NotifyDeliveryListener, AuditDeliveryListener, RouteSnapshotListener |
 | `RouteStarted` | RouteLifecycleService | MercureRouteProgressListener, AiEnrichmentListener |
-| `RouteCompleted` | RouteLifecycleService | MercureRouteProgressListener, PostRouteAnalysisListener |
+| `RouteCompleted` | RouteLifecycleService | MercureRouteProgressListener, PostRouteAnalysisListener, RouteSnapshotListener |
 | `ShipmentCreated` | ShipmentService | ShipmentEmbeddingListener |
 
 ## Historial
 
 - 2026-03-11: Creación inicial
+- 2026-03-13: Añadida entidad RouteSnapshot (OneToOne con Route, persistencia de polylines/métricas/timing/stop states). RouteSnapshotListener añadido a eventos StopDelivered, StopExceptionReported, RouteCompleted.

@@ -92,6 +92,30 @@ Para optimización con VROOM, se necesita:
 | `RouteComparisonService` | Comparación planificado vs real (usa haversine interno) |
 | `PostRouteAnalyzer` | Análisis de eficiencia post-ruta |
 
+## Persistencia de Resultados — RouteSnapshot
+
+Los resultados de optimización se persisten en `RouteSnapshot` (OneToOne con Route) para evitar recalcular polylines y métricas en cada carga de página.
+
+| Campo persistido | Origen | Cuándo se escribe |
+|-----------------|--------|------------------|
+| `polyline` | OSRM route (encoded) | Al crear/optimizar ruta |
+| `originalPolyline` | OSRM route pre-optimización | Al optimizar ruta |
+| `actualPolyline` | GPS trail del vehículo | Al completar ruta |
+| `distanceBeforeKm` / `distanceAfterKm` | OSRM distances | Al optimizar ruta |
+| `savingsPercent` | Cálculo (before-after)/before | Al optimizar ruta |
+| `drivingTimeMinutes` / `totalTimeMinutes` | OSRM durations + service times | Al crear/optimizar ruta |
+| `originalStopOrder` | Secuencia pre-optimización | Al optimizar ruta |
+| `stopStates` | Status actual de cada parada | En cada evento de entrega/excepción |
+| `capacityValidation` | RouteCapacityValidator | Al crear/optimizar ruta |
+
+**Servicios involucrados:**
+- `RouteSnapshotManager`: Crea/actualiza snapshots (llamado por RouteBuilder y RoutePlanningService)
+- `RouteViewService`: Lee snapshots para generar vistas (sin llamadas OSRM)
+- `RouteSnapshotListener`: Actualiza stopStates en respuesta a eventos de dominio
+
+**Spec completa:** `docs/superpowers/specs/2026-03-13-unified-route-view-design.md`
+
 ## Historial
 
 - 2026-03-11: Creación inicial
+- 2026-03-13: Añadida sección de persistencia RouteSnapshot

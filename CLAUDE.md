@@ -146,6 +146,15 @@ Antes de trabajar en un subsistema, **LEE el módulo relevante** en `docs/knowle
 **Estado:** Pendiente
 **Trigger:** Antes de producción con customers configurando API keys de terceros.
 
+### [2026-03-13] Unified Route View Layer
+
+**Estado:** Diseño completado, pendiente de implementación
+**Decisión:** Arquitectura de 3 capas: RouteSnapshot entity (persistencia) + RouteViewService (filtro por rol) + MxoRouteMap JS (frontend compartido)
+**Spec:** `docs/superpowers/specs/2026-03-13-unified-route-view-design.md`
+**Plan:** `docs/superpowers/plans/2026-03-13-unified-route-view.md`
+**Alcance:** 5 vistas (test-routing, planner step 3, customer route show, driver route show, route analysis)
+**Trigger para revisitar:** Si se añaden más vistas de mapa fuera de alcance (fleet map, operator dashboard).
+
 ---
 
 ## Superpowers Skills (from [obra/superpowers](https://github.com/obra/superpowers))

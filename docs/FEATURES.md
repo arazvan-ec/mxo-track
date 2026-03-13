@@ -1,7 +1,7 @@
 # Características del Software — mxo-track
 
-> **Última actualización:** 2026-03-11
-> **Versión del documento:** 1.0.0
+> **Última actualización:** 2026-03-13
+> **Versión del documento:** 1.4.0
 >
 > Este documento describe todas las características funcionales y técnicas del sistema.
 > Debe actualizarse cada vez que se añada, modifique o elimine una funcionalidad.
@@ -35,7 +35,8 @@
 23. [Modelo de Datos](#23-modelo-de-datos)
 24. [Búsqueda](#24-búsqueda)
 25. [Providers Configurables por Tenant](#25-providers-configurables-por-tenant)
-26. [Historial de Cambios](#26-historial-de-cambios)
+26. [Capa de Visualización de Rutas (Route View Layer)](#26-capa-de-visualización-de-rutas-route-view-layer)
+27. [Historial de Cambios](#27-historial-de-cambios)
 
 ---
 
@@ -705,12 +706,12 @@ Columnas soportadas:
 | `SoftDeleteTrait` | 7 entidades con borrado lógico: User, Customer, Vehicle, Route, Shipment |
 | `CustomerScopedEntityInterface` | 9 entidades con aislamiento multi-tenant |
 
-### Entidades Principales (36 total)
+### Entidades Principales (37 total)
 
 | Categoría | Entidades |
 |---|---|
 | **Core** | User, Customer, Vehicle, CustomerVehicle |
-| **Rutas** | Route, RouteStop |
+| **Rutas** | Route, RouteStop, RouteSnapshot |
 | **Envíos** | Shipment, Parcel, ShipmentEvent |
 | **Tracking GPS** | VehiclePosition, VehicleLastPosition, VehicleCheckpoint |
 | **Entrega** | Pod, DriverAction, DriverFeedback, VehicleInspection |
@@ -867,7 +868,101 @@ Cuando un tenant no tiene `CustomerIntegration` configurada, se usan estos defau
 
 ---
 
-## 26. Historial de Cambios
+## 26. Capa de Visualización de Rutas (Route View Layer)
+
+### Arquitectura de 3 capas
+
+El sistema de visualización de rutas sigue una arquitectura de 3 capas que elimina código duplicado y persiste resultados de optimización.
+
+| Capa | Componente | Responsabilidad |
+|------|-----------|----------------|
+| **Domain** | `RouteSnapshot` (entity) | Persiste polylines, métricas, timing, stop states, capacidad. OneToOne con Route |
+| **View Service** | `RouteViewService` | Lee RouteSnapshot, aplica filtro por rol, produce DTOs (MapViewData) |
+| **Frontend** | Twig Components + `MxoRouteMap` JS | Renderiza mapa Leaflet, escucha Mercure para re-render en tiempo real |
+
+### Entidad RouteSnapshot
+
+Captura el estado completo de visualización de una ruta. Se crea al construir/optimizar y se actualiza parcialmente con cada evento de entrega.
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `polyline` | text | Polyline optimizada (encoded Google format desde OSRM) |
+| `originalPolyline` | text | Polyline pre-optimización |
+| `actualPolyline` | text | Polyline real (GPS trail, post-ruta) |
+| `distanceBeforeKm` / `distanceAfterKm` | decimal | Distancias pre/post optimización |
+| `savingsPercent` | decimal | % de ahorro en distancia |
+| `drivingTimeMinutes` / `totalTimeMinutes` | int | Tiempos estimados |
+| `originalStopOrder` | JSON | Secuencia de paradas pre-optimización |
+| `stopStates` | JSON | Estado actual de cada parada (actualizado por eventos) |
+| `capacityValidation` | JSON | Resultado de validación de capacidad |
+
+### Servicios
+
+| Servicio | Responsabilidad |
+|----------|----------------|
+| `RouteSnapshotManager` | Crea/actualiza snapshots (createSnapshot, updateStopStates, refreshPolyline, generateActualPolyline) |
+| `RouteViewService` | Lee snapshots y produce MapViewData/RouteViewData/StopViewData DTOs filtrados por rol |
+| `RouteSnapshotListener` | Escucha eventos de dominio (StopDelivered, StopExceptionReported, RouteCompleted) y actualiza snapshot + publica Mercure |
+
+### DTOs de Vista
+
+| DTO | Contenido |
+|-----|-----------|
+| `MapViewData` | Rutas, origen, métricas globales, opciones, topic Mercure |
+| `MapViewOptions` | Flags de features (showOptimizationMetrics, showVehicleTracking, etc.) |
+| `RouteViewData` | Datos de una ruta (stops, polyline, métricas, timing, validación) |
+| `StopViewData` | Datos de una parada (seq, address, recipient, lat/lng, status) |
+
+### Filtro por Rol
+
+| Dato | Admin | Customer | Driver |
+|------|-------|----------|--------|
+| Stops + status | Sí | Sí | Sí |
+| Polyline | Sí | Sí | Sí |
+| Vehicle tracking | Sí | Sí | Sí |
+| Métricas de optimización | Sí | No | No |
+| Timing breakdown | Sí | No | No |
+| Capacity validation | Sí | No | No |
+| Original stop order | Sí | No | No |
+| Comparison polyline | Sí | No | No |
+
+### Vistas que usan el Route View Layer
+
+| Vista | Rol | Tipo | Features |
+|-------|-----|------|----------|
+| `customer/route/show` | Customer | 1 ruta | Stops + status, vehicle tracking |
+| `driver/routes/show` | Driver | 1 ruta | Stops + status, vehicle tracking |
+| `admin/test-routing/map` | Admin | N rutas | Polylines, optimization before/after, metrics |
+| `admin/route_planner step 3` | Admin | N rutas | Polylines, capacity bars, driver suggestions |
+| `admin/route/analysis` | Admin | 1 ruta | Planned vs actual polylines, AI analysis |
+
+### Frontend: MxoRouteMap JS + Twig Components
+
+Componentes compartidos en `templates/components/route/`:
+
+| Componente | Función |
+|-----------|---------|
+| `_map.html.twig` | Mapa Leaflet con polylines, marcadores numerados por status, origen, vehículo |
+| `_map_js.html.twig` | Clase JS MxoRouteMap (init, render, Mercure subscribe, update) |
+| `_metrics.html.twig` | Cards de métricas globales (distancias, ahorro, timing) |
+| `_stop_list.html.twig` | Tabla/lista de paradas con status |
+| `_route_card.html.twig` | Card detalle por ruta |
+| `_optimization_log.html.twig` | Panel de log de optimización |
+
+### Mercure Topics para Route View
+
+```
+/routes/{publicId}/view/role_admin      → MapViewData completo
+/routes/{publicId}/view/role_customer   → MapViewData filtrado
+/routes/{publicId}/view/role_driver     → MapViewData filtrado
+```
+
+**Spec completa:** `docs/superpowers/specs/2026-03-13-unified-route-view-design.md`
+**Plan de implementación:** `docs/superpowers/plans/2026-03-13-unified-route-view.md`
+
+---
+
+## 27. Historial de Cambios
 
 | Fecha | Versión | Cambios |
 |---|---|---|
@@ -876,6 +971,7 @@ Cuando un tenant no tiene `CustomerIntegration` configurada, se usan estos defau
 | 2026-03-11 | 1.2.0 | Providers configurables por tenant: framework de proxy transparente + factory, 4 providers nuevos (Greedy, Google Directions, Webhook GPS, HTTP Polling), entidad CustomerIntegration, API de polling, admin CRUD, fallback chains, caché Redis. 255 tests (122 nuevos). |
 | 2026-03-11 | 1.3.0 | Fase 2 — IA Activa: 55 tests nuevos para servicios AI/ML (304 total). Tests para ExceptionClassifier, PostRouteAnalyzer, DeliveryRisk, AddressRisk, EmbeddingService, SearchService, AiAssistant, DeliveryNoteAiEnricher. Fix bug DeliveryRiskService (array vs entity). Fix bug AiAssistantService (customerId int→string). UI: clasificación AI en excepciones (badge + insight + acción sugerida). UI: badge de riesgo en planificador de rutas. |
 | 2026-03-12 | 1.3.1 | Refactor: OperatorKpiService migrado de DBAL (SQL crudo) a DQL QueryBuilder (Doctrine ORM). Consultas ahora tipadas con entidades y enums. `getTopDrivers()` mantiene DBAL nativo por funciones PostgreSQL-específicas. Tests actualizados con mocks de EntityManager/QueryBuilder. |
+| 2026-03-13 | 1.4.0 | Route View Layer: arquitectura de 3 capas (RouteSnapshot entity, RouteViewService, MxoRouteMap JS). Persistencia de polylines/métricas/timing/stop states. DTOs MapViewData/RouteViewData/StopViewData. Filtro por rol. Componentes Twig compartidos. Mercure topics por rol para re-render en tiempo real. |
 
 ---
 
