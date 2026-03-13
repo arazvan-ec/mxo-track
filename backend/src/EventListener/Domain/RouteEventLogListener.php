@@ -20,6 +20,8 @@ use App\Repository\RouteStopRepository;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
+use Symfony\Component\Mercure\HubInterface;
+use Symfony\Component\Mercure\Update;
 
 final readonly class RouteEventLogListener
 {
@@ -28,6 +30,7 @@ final readonly class RouteEventLogListener
         private RouteRepository $routeRepo,
         private UserRepository $userRepo,
         private RouteStopRepository $stopRepo,
+        private HubInterface $hub,
     ) {}
 
     #[AsEventListener]
@@ -39,7 +42,7 @@ final readonly class RouteEventLogListener
                 continue;
             }
 
-            $this->em->persist(new RouteEvent(
+            $this->persistAndPublish(new RouteEvent(
                 route: $route,
                 eventType: RouteEventType::CREATED,
                 actorType: 'system',
@@ -49,9 +52,8 @@ final readonly class RouteEventLogListener
                 ],
                 snapshotMetrics: $this->buildSnapshotMetrics($route),
                 occurredAt: $event->occurredAt,
-            ));
+            ), $routePublicId);
         }
-        $this->em->flush();
     }
 
     #[AsEventListener]
@@ -62,7 +64,7 @@ final readonly class RouteEventLogListener
             return;
         }
 
-        $this->em->persist(new RouteEvent(
+        $this->persistAndPublish(new RouteEvent(
             route: $route,
             eventType: RouteEventType::OPTIMIZED,
             actorType: 'system',
@@ -73,8 +75,7 @@ final readonly class RouteEventLogListener
             ],
             snapshotMetrics: $this->buildSnapshotMetrics($route),
             occurredAt: $event->occurredAt,
-        ));
-        $this->em->flush();
+        ), $event->routePublicId);
     }
 
     #[AsEventListener]
@@ -87,7 +88,7 @@ final readonly class RouteEventLogListener
 
         $actor = $this->userRepo->find($event->driverUserId);
 
-        $this->em->persist(new RouteEvent(
+        $this->persistAndPublish(new RouteEvent(
             route: $route,
             eventType: RouteEventType::STARTED,
             actorType: 'driver',
@@ -95,8 +96,7 @@ final readonly class RouteEventLogListener
             payload: ['driver_user_id' => $event->driverUserId],
             snapshotMetrics: $this->buildSnapshotMetrics($route),
             occurredAt: $event->occurredAt,
-        ));
-        $this->em->flush();
+        ), $event->routePublicId);
     }
 
     #[AsEventListener]
@@ -109,7 +109,7 @@ final readonly class RouteEventLogListener
 
         $actor = $this->userRepo->find($event->driverUserId);
 
-        $this->em->persist(new RouteEvent(
+        $this->persistAndPublish(new RouteEvent(
             route: $route,
             eventType: RouteEventType::COMPLETED,
             actorType: 'driver',
@@ -117,8 +117,7 @@ final readonly class RouteEventLogListener
             payload: ['driver_user_id' => $event->driverUserId],
             snapshotMetrics: $this->buildSnapshotMetrics($route),
             occurredAt: $event->occurredAt,
-        ));
-        $this->em->flush();
+        ), $event->routePublicId);
     }
 
     #[AsEventListener]
@@ -131,7 +130,7 @@ final readonly class RouteEventLogListener
 
         $actor = $this->userRepo->find($event->driverUserId);
 
-        $this->em->persist(new RouteEvent(
+        $this->persistAndPublish(new RouteEvent(
             route: $route,
             eventType: RouteEventType::STOP_DELIVERED,
             actorType: 'driver',
@@ -143,8 +142,7 @@ final readonly class RouteEventLogListener
             ],
             snapshotMetrics: $this->buildSnapshotMetrics($route),
             occurredAt: $event->occurredAt,
-        ));
-        $this->em->flush();
+        ), $event->routePublicId);
     }
 
     #[AsEventListener]
@@ -157,7 +155,7 @@ final readonly class RouteEventLogListener
 
         $actor = $this->userRepo->find($event->driverUserId);
 
-        $this->em->persist(new RouteEvent(
+        $this->persistAndPublish(new RouteEvent(
             route: $route,
             eventType: RouteEventType::STOP_EXCEPTION,
             actorType: 'driver',
@@ -169,8 +167,7 @@ final readonly class RouteEventLogListener
             ],
             snapshotMetrics: $this->buildSnapshotMetrics($route),
             occurredAt: $event->occurredAt,
-        ));
-        $this->em->flush();
+        ), $event->routePublicId);
     }
 
     #[AsEventListener]
@@ -183,7 +180,7 @@ final readonly class RouteEventLogListener
 
         $actor = $this->userRepo->find($event->cancelledByUserId);
 
-        $this->em->persist(new RouteEvent(
+        $this->persistAndPublish(new RouteEvent(
             route: $route,
             eventType: RouteEventType::CANCELLED,
             actorType: 'admin',
@@ -191,8 +188,7 @@ final readonly class RouteEventLogListener
             payload: ['reason' => $event->reason],
             snapshotMetrics: $this->buildSnapshotMetrics($route),
             occurredAt: $event->occurredAt,
-        ));
-        $this->em->flush();
+        ), $event->routePublicId);
     }
 
     #[AsEventListener]
@@ -205,7 +201,7 @@ final readonly class RouteEventLogListener
 
         $actor = $this->userRepo->find($event->assignedByUserId);
 
-        $this->em->persist(new RouteEvent(
+        $this->persistAndPublish(new RouteEvent(
             route: $route,
             eventType: RouteEventType::ASSIGNED,
             actorType: 'admin',
@@ -216,8 +212,29 @@ final readonly class RouteEventLogListener
             ],
             snapshotMetrics: $this->buildSnapshotMetrics($route),
             occurredAt: $event->occurredAt,
-        ));
+        ), $event->routePublicId);
+    }
+
+    private function persistAndPublish(RouteEvent $routeEvent, string $routePublicId): void
+    {
+        $this->em->persist($routeEvent);
         $this->em->flush();
+
+        try {
+            $this->hub->publish(new Update(
+                sprintf('/routes/%s/events', $routePublicId),
+                json_encode([
+                    'type' => $routeEvent->getEventType()->value,
+                    'actor_type' => $routeEvent->getActorType(),
+                    'actor_email' => $routeEvent->getActorUser()?->getEmail(),
+                    'payload' => $routeEvent->getPayload(),
+                    'snapshot_metrics' => $routeEvent->getSnapshotMetrics(),
+                    'occurred_at' => $routeEvent->getOccurredAt()->format('c'),
+                ], JSON_THROW_ON_ERROR),
+            ));
+        } catch (\Throwable) {
+            // Mercure failure must not break event logging
+        }
     }
 
     private function buildSnapshotMetrics(\App\Entity\Route $route): array
