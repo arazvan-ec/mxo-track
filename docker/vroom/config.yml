@@ -7,9 +7,12 @@ cliArgs:
   planmode: true
   router: "osrm"
   threads: 4
+  explore: 5
   timeout: 300000
+  limit: "1mb"
   maxlocations: 1000
   maxvehicles: 200
+  override: ["c", "g", "l", "t", "x"]
 
 routingServers:
   osrm:

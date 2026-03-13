@@ -8,12 +8,15 @@ cliArgs:
   router: "osrm"
   path: "/usr/local/bin/"
   threads: 4
+  explore: 5
   timeout: 300000
+  limit: "1mb"
   maxlocations: 1000
   maxvehicles: 200
+  override: ["c", "g", "l", "t", "x"]
 
 routingServers:
   osrm:
     car:
       host: "osrm-mxo.railway.internal"
-      port: 5000
+      port: "5000"
