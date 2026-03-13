@@ -16,6 +16,7 @@ cliArgs:
   geometry: true
   planmode: true
   router: "osrm"
+  path: "/usr/local/bin/"
   threads: 4
   timeout: 300000
   maxlocations: 1000
@@ -50,27 +51,19 @@ for dir in /usr/src/app /usr/local/src/vroom-express /opt/vroom-express /vroom-e
 done
 
 echo "[vroom-entrypoint] Detected app dir: ${VROOM_APP_DIR:-NOT FOUND}"
-echo "[vroom-entrypoint] Filesystem layout:"
-ls -la / 2>/dev/null | head -20
 
 if [ -n "$VROOM_APP_DIR" ]; then
   cp /conf/config.yml "${VROOM_APP_DIR}/config.yml"
   touch /conf/access.log
-
-  # VROOM_ROUTER must point to the vroom binary — ALWAYS override to prevent
-  # Railway env vars or stale values from breaking it (the "undefinedvroom" bug)
-  export VROOM_ROUTER="/usr/local/bin/vroom"
   export VROOM_LOG="/conf/access.log"
 
-  # Verify binary exists
-  if [ ! -x "$VROOM_ROUTER" ]; then
-    echo "[vroom-entrypoint] ERROR: vroom binary not found at ${VROOM_ROUTER}"
-    echo "[vroom-entrypoint] Searching for vroom binary..."
-    find / -name "vroom" -type f 2>/dev/null | head -5
+  # Verify vroom binary exists at the path specified in config.yml
+  if [ ! -x "/usr/local/bin/vroom" ]; then
+    echo "[vroom-entrypoint] ERROR: vroom binary not found at /usr/local/bin/vroom"
     exit 1
   fi
 
-  echo "[vroom-entrypoint] VROOM_ROUTER=${VROOM_ROUTER} (verified)"
+  echo "[vroom-entrypoint] vroom binary OK: /usr/local/bin/vroom"
   echo "[vroom-entrypoint] Starting VROOM (npm start) from ${VROOM_APP_DIR}..."
   cd "$VROOM_APP_DIR"
   exec npm start
