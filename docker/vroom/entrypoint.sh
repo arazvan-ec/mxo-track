@@ -18,15 +18,18 @@ cliArgs:
   router: "osrm"
   path: "/usr/local/bin/"
   threads: 4
+  explore: 5
   timeout: 300000
+  limit: "1mb"
   maxlocations: 1000
   maxvehicles: 200
+  override: ["c", "g", "l", "t", "x"]
 
 routingServers:
   osrm:
     car:
       host: "${OSRM_HOST}"
-      port: ${OSRM_PORT}
+      port: "${OSRM_PORT}"
 EOF
 
 echo "[vroom-entrypoint] Config written. Testing DNS resolution for ${OSRM_HOST}..."
