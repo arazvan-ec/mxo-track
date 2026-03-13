@@ -19,6 +19,7 @@ use App\Service\OptimizationLogger;
 use App\Service\RouteBuilder;
 use App\Service\RouteCapacityValidator;
 use App\Service\RouteOptimizationService;
+use App\Service\RouteSnapshotManager;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Uid\Ulid;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
@@ -34,6 +35,7 @@ final readonly class RoutePlanningService
         private RouteStopRepository $stopRepo,
         private EventDispatcherInterface $eventDispatcher,
         private OptimizationLogger $optimizationLogger,
+        private RouteSnapshotManager $snapshotManager,
     ) {}
 
     /**
@@ -218,9 +220,32 @@ final readonly class RoutePlanningService
 
         $stops = [];
         if ($apply) {
+            // Capture original order before applying optimization
+            $originalStopOrder = [];
+            foreach ($result['optimized'] as $item) {
+                $stop = $item['stop'];
+                $originalStopOrder[] = [
+                    'sequence' => $stop->getSequence(),
+                    'address' => $stop->getAddress(),
+                    'recipientName' => $stop->getRecipientName(),
+                    'lat' => $stop->getLatitude(),
+                    'lng' => $stop->getLongitude(),
+                    'isOrigin' => $stop->isOrigin(),
+                ];
+            }
+
             $this->optimizationService->applyOptimizedOrder($result['optimized']);
             $route->setTotalDistanceKm($distanceAfter);
             $route->setEstimatedDurationMinutes($result['durationMinutes']);
+            $this->em->flush();
+
+            // Create/update RouteSnapshot with optimization results
+            $this->snapshotManager->createSnapshot(
+                $route,
+                distanceBeforeKm: $distanceBefore,
+                distanceAfterKm: $distanceAfter,
+                originalStopOrder: $originalStopOrder,
+            );
             $this->em->flush();
 
             $this->eventDispatcher->dispatch(new RouteOptimized(

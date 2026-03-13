@@ -11,6 +11,8 @@ use App\Entity\VehicleLastPosition;
 use App\Enum\RouteStatus;
 use App\Enum\RouteStopStatus;
 use App\Repository\RouteRepository;
+use App\View\MapViewOptions;
+use App\View\RouteViewService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -28,6 +30,7 @@ class CustomerRouteController extends AbstractController
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly RouteRepository $routeRepository,
+        private readonly RouteViewService $routeViewService,
         #[Autowire('%env(MERCURE_PUBLIC_URL)%')] private readonly string $mercurePublicUrl,
     ) {}
 
@@ -131,7 +134,7 @@ class CustomerRouteController extends AbstractController
             throw $this->createAccessDeniedException('No tiene acceso a esta ruta.');
         }
 
-        // Load stops ordered by sequence
+        // Load stops from entity (always populated, even without snapshot)
         $stops = $this->em->createQueryBuilder()
             ->select('rs')
             ->from(RouteStop::class, 'rs')
@@ -141,20 +144,9 @@ class CustomerRouteController extends AbstractController
             ->getQuery()
             ->getResult();
 
-        // Prepare stops JSON for the map
-        $stopsJson = json_encode(array_map(static fn (RouteStop $stop) => [
-            'lat' => $stop->getLatitude(),
-            'lng' => $stop->getLongitude(),
-            'status' => $stop->getStatus()->value,
-            'address' => $stop->getAddress(),
-            'sequence' => $stop->getSequence(),
-            'recipientName' => $stop->getRecipientName(),
-            'deliveredAt' => $stop->getDeliveredAt()?->format('d/m/Y H:i'),
-        ], $stops), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_THROW_ON_ERROR);
-
-        // Load vehicle last position if route has a vehicle
-        $vehiclePositionJson = 'null';
-        $vehiclePublicId = '';
+        // Build vehicle tracking data
+        $vehiclePublicId = null;
+        $vehiclePosition = null;
         $vehicle = $route->getVehicle();
 
         if ($vehicle !== null) {
@@ -164,20 +156,28 @@ class CustomerRouteController extends AbstractController
             ]);
 
             if ($lastPosition instanceof VehicleLastPosition) {
-                $vehiclePositionJson = json_encode([
+                $vehiclePosition = [
                     'lat' => $lastPosition->getLat(),
                     'lng' => $lastPosition->getLng(),
-                ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_THROW_ON_ERROR);
+                ];
             }
         }
+
+        // Build map view data via RouteViewService
+        $mapOptions = new MapViewOptions(
+            showVehicleTracking: $vehicle !== null,
+            showStopStatus: true,
+            vehiclePublicId: $vehiclePublicId,
+            vehiclePosition: $vehiclePosition,
+        );
+
+        $mapView = $this->routeViewService->buildSingleRouteView($route, 'ROLE_CUSTOMER', $mapOptions);
+        $mapView = $mapView->withMercureUrl($this->mercurePublicUrl);
 
         return $this->render('customer/route/show.html.twig', [
             'route' => $route,
             'stops' => $stops,
-            'stops_json' => $stopsJson,
-            'vehicle_position_json' => $vehiclePositionJson,
-            'vehicle_public_id' => $vehiclePublicId,
-            'mercure_public_url' => $this->mercurePublicUrl,
+            'mapViewJson' => $mapView->toJson(),
         ]);
     }
 }

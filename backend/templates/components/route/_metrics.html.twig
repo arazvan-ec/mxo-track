@@ -1,0 +1,41 @@
+{#
+  Global Metrics Component
+  Params:
+    - globalMetrics: array (from MapViewData.globalMetrics)
+      Keys: totalDistanceBeforeKm, totalDistanceAfterKm, totalSavingsPercent, routeCount
+#}
+{% if globalMetrics is defined and globalMetrics is not null %}
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  {# Distance Before #}
+  <div class="rounded-lg border border-gray-200 bg-white p-4">
+    <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Distancia Original</dt>
+    <dd class="mt-1 text-2xl font-bold text-gray-900">
+      {{ globalMetrics.totalDistanceBeforeKm is defined ? globalMetrics.totalDistanceBeforeKm|number_format(1) : '—' }} km
+    </dd>
+  </div>
+
+  {# Distance After #}
+  <div class="rounded-lg border border-gray-200 bg-white p-4">
+    <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Distancia Optimizada</dt>
+    <dd class="mt-1 text-2xl font-bold text-blue-600">
+      {{ globalMetrics.totalDistanceAfterKm is defined ? globalMetrics.totalDistanceAfterKm|number_format(1) : '—' }} km
+    </dd>
+  </div>
+
+  {# Savings #}
+  <div class="rounded-lg border border-gray-200 bg-white p-4">
+    <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Ahorro</dt>
+    <dd class="mt-1 text-2xl font-bold {{ globalMetrics.totalSavingsPercent is defined and globalMetrics.totalSavingsPercent > 0 ? 'text-green-600' : 'text-gray-900' }}">
+      {{ globalMetrics.totalSavingsPercent is defined ? globalMetrics.totalSavingsPercent|number_format(1) : '0' }}%
+    </dd>
+  </div>
+
+  {# Route Count #}
+  <div class="rounded-lg border border-gray-200 bg-white p-4">
+    <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Rutas</dt>
+    <dd class="mt-1 text-2xl font-bold text-gray-900">
+      {{ globalMetrics.routeCount is defined ? globalMetrics.routeCount : '—' }}
+    </dd>
+  </div>
+</div>
+{% endif %}

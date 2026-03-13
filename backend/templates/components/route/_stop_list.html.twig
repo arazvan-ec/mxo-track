@@ -1,0 +1,74 @@
+{#
+  Stop List Component
+  Params:
+    - stops: array (list of StopViewData arrays)
+    - showStatus: bool (default true)
+    - mapId: string (optional, to listen for mxo:route-updated events)
+#}
+{% set showStatus = showStatus|default(true) %}
+
+<div class="rounded-lg border border-gray-200 bg-white"
+     {% if mapId is defined %}
+     x-data="{ stops: {{ stops|json_encode|e('html_attr') }} }"
+     x-init="document.addEventListener('mxo:route-updated', function(e) {
+       if (e.detail.mapId === '{{ mapId }}' && e.detail.data.routes && e.detail.data.routes[0]) {
+         stops = e.detail.data.routes[0].stops || [];
+       }
+     })"
+     {% endif %}
+>
+  <div class="border-b border-gray-200 px-4 py-3">
+    <h3 class="text-sm font-semibold text-gray-900">Paradas</h3>
+  </div>
+  <div class="max-h-[600px] overflow-y-auto divide-y divide-gray-100">
+    {% for stop in stops %}
+      {% if not stop.isOrigin|default(false) %}
+      <div class="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors">
+        {# Sequence number with status color #}
+        {% set statusColor = 'bg-blue-500' %}
+        {% if stop.status|default('PENDING') == 'DELIVERED' %}
+          {% set statusColor = 'bg-green-500' %}
+        {% elseif stop.status|default('PENDING') == 'EXCEPTION' %}
+          {% set statusColor = 'bg-red-500' %}
+        {% elseif stop.status|default('PENDING') == 'SKIPPED' %}
+          {% set statusColor = 'bg-gray-400' %}
+        {% endif %}
+
+        <div class="flex-shrink-0 {{ statusColor }} text-white w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold">
+          {{ stop.sequence }}
+        </div>
+
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-medium text-gray-900 truncate">
+            {{ stop.recipientName|default('Sin destinatario') }}
+          </p>
+          <p class="text-xs text-gray-500 truncate">{{ stop.address }}</p>
+        </div>
+
+        {% if showStatus %}
+        <div class="flex-shrink-0">
+          {% if stop.status|default('PENDING') == 'DELIVERED' %}
+            <span class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+              <svg class="mr-0.5 h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+              Entregado
+            </span>
+          {% elseif stop.status|default('PENDING') == 'EXCEPTION' %}
+            <span class="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+              Excepcion
+            </span>
+          {% elseif stop.status|default('PENDING') == 'SKIPPED' %}
+            <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+              Omitida
+            </span>
+          {% else %}
+            <span class="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
+              Pendiente
+            </span>
+          {% endif %}
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+</div>

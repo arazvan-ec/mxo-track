@@ -13,11 +13,13 @@
   .legend-item { display: flex; align-items: center; gap: 0.5rem; }
   .legend-line { width: 24px; height: 3px; border-radius: 2px; }
   .legend-before { background-color: #ef4444; border-top: 2px dashed #ef4444; background: none; }
-  .legend-after { background-color: #3b82f6; }
   .route-toggle { display: flex; align-items: center; gap: 0.4rem; cursor: pointer; user-select: none; }
   .route-toggle input[type="checkbox"] { width: 14px; height: 14px; cursor: pointer; }
   .leaflet-control-reset { background: #fff; cursor: pointer; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; }
   .leaflet-control-reset:hover { background: #f4f4f4; }
+  .route-tab { cursor: pointer; padding: 0.5rem 1rem; border-bottom: 2px solid transparent; font-size: 0.875rem; font-weight: 500; color: #6b7280; transition: all 0.15s; }
+  .route-tab:hover { color: #374151; }
+  .route-tab.active { border-bottom-color: #3b82f6; color: #3b82f6; }
 </style>
 {% endblock %}
 
@@ -34,9 +36,14 @@
       </a>
       <h1 class="text-2xl font-bold text-gray-900">Test Routing: VROOM + OSRM</h1>
     </div>
-    <span class="inline-flex rounded-full bg-green-100 px-3 py-1 text-xs font-semibold leading-5 text-green-800">
-      {{ metrics.stopCount }} paradas
-    </span>
+    <div class="flex items-center gap-3">
+      <span class="inline-flex rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold leading-5 text-blue-800">
+        {{ metrics.routeCount }} rutas
+      </span>
+      <span class="inline-flex rounded-full bg-green-100 px-3 py-1 text-xs font-semibold leading-5 text-green-800">
+        {{ metrics.stopCount }} paradas
+      </span>
+    </div>
   </div>
 
   {% if not osrmAvailable %}
@@ -63,17 +70,19 @@
           <div class="legend-line legend-before"></div>
           <span>Original (sin optimizar)</span>
         </label>
+        {% for rd in routesData %}
         <label class="route-toggle">
-          <input type="checkbox" id="toggle-optimized" checked>
-          <div class="legend-line legend-after"></div>
-          <span>Optimizada (VROOM)</span>
+          <input type="checkbox" class="toggle-route" data-route-idx="{{ loop.index0 }}" checked>
+          <div class="legend-line" style="background-color: {{ ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6'][loop.index0] }};"></div>
+          <span>{{ rd.name }}</span>
         </label>
+        {% endfor %}
       </div>
     </div>
     <div id="routing-map"></div>
   </div>
 
-  {# Metrics panel #}
+  {# Global metrics panel #}
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
     {# Distance before #}
     <div class="bg-white shadow rounded-lg p-5">
@@ -84,7 +93,7 @@
           </svg>
         </div>
         <div>
-          <p class="text-sm text-gray-500">Distancia original</p>
+          <p class="text-sm text-gray-500">Distancia original (1 ruta)</p>
           <p class="text-xl font-bold text-gray-900">{{ metrics.distanceBeforeKm }} km</p>
         </div>
       </div>
@@ -99,7 +108,7 @@
           </svg>
         </div>
         <div>
-          <p class="text-sm text-gray-500">Distancia optimizada</p>
+          <p class="text-sm text-gray-500">Distancia optimizada ({{ metrics.routeCount }} rutas)</p>
           <p class="text-xl font-bold text-gray-900">{{ metrics.distanceAfterKm }} km</p>
         </div>
       </div>
@@ -114,7 +123,7 @@
           </svg>
         </div>
         <div>
-          <p class="text-sm text-gray-500">Ahorro</p>
+          <p class="text-sm text-gray-500">Ahorro total</p>
           <p class="text-xl font-bold text-green-600">{{ metrics.savedPercent }}%</p>
         </div>
       </div>
@@ -130,7 +139,7 @@
         </div>
         <div>
           <p class="text-sm text-gray-500">Tiempo total estimado</p>
-          <p class="text-xl font-bold text-gray-900">{{ metrics.timing.totalTimeMinutes }} min</p>
+          <p class="text-xl font-bold text-gray-900">{{ metrics.totalDurationMinutes }} min</p>
         </div>
       </div>
     </div>
@@ -139,112 +148,162 @@
   {# Optimization Log Panel #}
   {% include 'components/_optimization_log_panel.html.twig' %}
 
-  {# Timing details + route order tables #}
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-    <div class="bg-white shadow rounded-lg overflow-hidden">
-      <div class="px-4 py-3 border-b border-gray-200">
-        <h3 class="text-base font-semibold text-gray-900">Desglose de tiempos</h3>
+  {# Original stop order (all stops, single route) #}
+  <div class="bg-white shadow rounded-lg overflow-hidden mb-6">
+    <div class="px-4 py-3 border-b border-gray-200">
+      <h3 class="text-base font-semibold text-gray-900">Orden de paradas original (1 sola ruta, sin optimizar)</h3>
+    </div>
+    <div class="px-4 py-2 max-h-64 overflow-y-auto">
+      <table class="w-full text-sm">
+        <thead class="text-xs text-gray-500 uppercase">
+          <tr>
+            <th class="py-2 text-left">#</th>
+            <th class="py-2 text-left">Destinatario</th>
+            <th class="py-2 text-left">Direccion</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          {% for stop in allStopsBefore %}
+          <tr>
+            <td class="py-2 font-medium text-red-500">{{ stop.seq }}</td>
+            <td class="py-2 text-gray-900">{{ stop.recipient }}</td>
+            <td class="py-2 text-gray-500 truncate max-w-xs">{{ stop.address }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {# Per-route details #}
+  {% for rd in routesData %}
+  {% set routeColor = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6'][loop.index0] %}
+  <div class="bg-white shadow rounded-lg overflow-hidden mb-6">
+    <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-4 h-4 rounded-full" style="background-color: {{ routeColor }};"></div>
+        <h3 class="text-base font-semibold text-gray-900">{{ rd.name }}</h3>
+        <span class="text-sm text-gray-500">{{ rd.vehicle }}</span>
       </div>
-      <div class="px-4 py-4 space-y-3 text-sm">
+      <span class="inline-flex rounded-full bg-blue-100 px-2 text-xs font-semibold leading-5 text-blue-800">
+        {{ rd.stopCount }} paradas
+      </span>
+    </div>
+
+    {# Route metrics #}
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 px-4 py-4">
+      <div class="text-center p-3 rounded-lg bg-gray-50">
+        <p class="text-xs text-gray-500">Distancia (sin optimizar)</p>
+        <p class="text-lg font-bold text-gray-900">{{ rd.distanceBeforeKm }} km</p>
+      </div>
+      <div class="text-center p-3 rounded-lg bg-gray-50">
+        <p class="text-xs text-gray-500">Distancia optimizada</p>
+        <p class="text-lg font-bold text-gray-900">{{ rd.distanceAfterKm }} km</p>
+      </div>
+      <div class="text-center p-3 rounded-lg bg-gray-50">
+        <p class="text-xs text-gray-500">Ahorro</p>
+        <p class="text-lg font-bold text-green-600">{{ rd.savedPercent }}%</p>
+      </div>
+      <div class="text-center p-3 rounded-lg bg-gray-50">
+        <p class="text-xs text-gray-500">Tiempo total</p>
+        <p class="text-lg font-bold text-gray-900">{{ rd.timing.totalTimeMinutes ?? rd.durationMinutes }} min</p>
+      </div>
+    </div>
+
+    {# Timing breakdown #}
+    {% if rd.timing %}
+    <div class="px-4 pb-2">
+      <div class="bg-gray-50 rounded-lg p-3 space-y-2 text-sm">
         <div class="flex justify-between">
           <span class="text-gray-500">Distancia total (optimizada)</span>
-          <span class="font-medium text-gray-900">{{ metrics.timing.totalDistanceKm }} km</span>
+          <span class="font-medium text-gray-900">{{ rd.timing.totalDistanceKm }} km</span>
         </div>
         <div class="flex justify-between">
           <span class="text-gray-500">Tiempo conduccion</span>
-          <span class="font-medium text-gray-900">{{ metrics.timing.drivingTimeMinutes }} min</span>
+          <span class="font-medium text-gray-900">{{ rd.timing.drivingTimeMinutes }} min</span>
         </div>
         <div class="flex justify-between">
           <span class="text-gray-500">Tiempo entregas (5 min/parada)</span>
-          <span class="font-medium text-gray-900">{{ metrics.timing.deliveryTimeMinutes }} min</span>
+          <span class="font-medium text-gray-900">{{ rd.timing.deliveryTimeMinutes }} min</span>
         </div>
-        <div class="flex justify-between border-t pt-3">
+        <div class="flex justify-between border-t pt-2">
           <span class="font-medium text-gray-700">Tiempo total</span>
-          <span class="font-bold text-gray-900">{{ metrics.timing.totalTimeMinutes }} min</span>
+          <span class="font-bold text-gray-900">{{ rd.timing.totalTimeMinutes }} min</span>
         </div>
       </div>
     </div>
+    {% endif %}
 
-    <div class="bg-white shadow rounded-lg overflow-hidden">
-      <div class="px-4 py-3 border-b border-gray-200">
-        <h3 class="text-base font-semibold text-gray-900">Orden de paradas original</h3>
+    {# Stop order tables: before and after side by side #}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 px-4 pb-4">
+      <div class="bg-gray-50 rounded-lg overflow-hidden">
+        <div class="px-3 py-2 border-b border-gray-200">
+          <h4 class="text-sm font-semibold text-gray-700">Orden asignado</h4>
+        </div>
+        <div class="px-3 py-1 max-h-48 overflow-y-auto">
+          <table class="w-full text-sm">
+            <thead class="text-xs text-gray-500 uppercase">
+              <tr>
+                <th class="py-1.5 text-left">#</th>
+                <th class="py-1.5 text-left">Destinatario</th>
+                <th class="py-1.5 text-left">Direccion</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              {% for stop in rd.stopsBefore %}
+              <tr>
+                <td class="py-1.5 font-medium text-gray-500">{{ stop.seq }}</td>
+                <td class="py-1.5 text-gray-900">{{ stop.recipient }}</td>
+                <td class="py-1.5 text-gray-500 truncate max-w-xs">{{ stop.address }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
       </div>
-      <div class="px-4 py-2 max-h-64 overflow-y-auto">
-        <table class="w-full text-sm">
-          <thead class="text-xs text-gray-500 uppercase">
-            <tr>
-              <th class="py-2 text-left">#</th>
-              <th class="py-2 text-left">Destinatario</th>
-              <th class="py-2 text-left">Direccion</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-100">
-            {% for stop in stopsBefore %}
-            <tr>
-              <td class="py-2 font-medium text-red-500">{{ stop.seq }}</td>
-              <td class="py-2 text-gray-900">{{ stop.recipient }}</td>
-              <td class="py-2 text-gray-500 truncate max-w-xs">{{ stop.address }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
 
-    <div class="bg-white shadow rounded-lg overflow-hidden">
-      <div class="px-4 py-3 border-b border-gray-200">
-        <h3 class="text-base font-semibold text-gray-900">Orden de paradas optimizado</h3>
-      </div>
-      <div class="px-4 py-2 max-h-64 overflow-y-auto">
-        <table class="w-full text-sm">
-          <thead class="text-xs text-gray-500 uppercase">
-            <tr>
-              <th class="py-2 text-left">#</th>
-              <th class="py-2 text-left">Destinatario</th>
-              <th class="py-2 text-left">Direccion</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-100">
-            {% for stop in stopsAfter %}
-            <tr>
-              <td class="py-2 font-medium text-blue-600">{{ stop.seq }}</td>
-              <td class="py-2 text-gray-900">{{ stop.recipient }}</td>
-              <td class="py-2 text-gray-500 truncate max-w-xs">{{ stop.address }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+      <div class="bg-gray-50 rounded-lg overflow-hidden">
+        <div class="px-3 py-2 border-b border-gray-200">
+          <h4 class="text-sm font-semibold text-gray-700">Orden optimizado</h4>
+        </div>
+        <div class="px-3 py-1 max-h-48 overflow-y-auto">
+          <table class="w-full text-sm">
+            <thead class="text-xs text-gray-500 uppercase">
+              <tr>
+                <th class="py-1.5 text-left">#</th>
+                <th class="py-1.5 text-left">Destinatario</th>
+                <th class="py-1.5 text-left">Direccion</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              {% for stop in rd.stopsAfter %}
+              <tr>
+                <td class="py-1.5 font-medium" style="color: {{ routeColor }};">{{ stop.seq }}</td>
+                <td class="py-1.5 text-gray-900">{{ stop.recipient }}</td>
+                <td class="py-1.5 text-gray-500 truncate max-w-xs">{{ stop.address }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
+  {% endfor %}
 {% endblock %}
 
 {% block scripts %}
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<script src="https://unpkg.com/leaflet-polylinedecorator@1.6.0/dist/leaflet.polylineDecorator.js"></script>
+{% include 'components/route/_map_js.html.twig' %}
 <script>
 (function() {
-  // Decode Google encoded polyline (OSRM format)
-  function decodePolyline(encoded) {
-    var points = [], lat = 0, lng = 0, index = 0;
-    while (index < encoded.length) {
-      var b, shift = 0, result = 0;
-      do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
-      lat += (result & 1) ? ~(result >> 1) : (result >> 1);
-      shift = 0; result = 0;
-      do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
-      lng += (result & 1) ? ~(result >> 1) : (result >> 1);
-      points.push([lat / 1e5, lng / 1e5]);
-    }
-    return points;
-  }
+  var decodePolyline = MxoRouteMap.decodePolyline;
 
   var origin = {{ origin|json_encode|raw }};
-  var stopsBefore = {{ stopsBefore|json_encode|raw }};
-  var stopsAfter = {{ stopsAfter|json_encode|raw }};
+  var allStopsBefore = {{ allStopsBefore|json_encode|raw }};
   var polylineBefore = {{ polylineBefore|json_encode|raw }};
-  var polylineAfter = {{ polylineAfter|json_encode|raw }};
+  var routesData = {{ routesData|json_encode|raw }};
+
+  var routeColors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6'];
 
   var map = L.map('routing-map');
 
@@ -254,21 +313,20 @@
   }).addTo(map);
 
   var allPoints = [];
-  var layerOriginal = L.layerGroup();
-  var layerOptimized = L.layerGroup();
 
-  // Helper: build straight-line points from origin + stops array
+  // ── Original route layer (red dashed, all stops in one route) ──
+  var layerOriginal = L.layerGroup();
+
   function buildFallbackPoints(stopsList) {
     var pts = [[origin.lat, origin.lng]];
     stopsList.forEach(function(s) { pts.push([s.lat, s.lng]); });
-    pts.push([origin.lat, origin.lng]); // return to origin
+    pts.push([origin.lat, origin.lng]);
     return pts;
   }
 
-  // Original route polyline (red dashed)
   var pointsBefore = polylineBefore
     ? decodePolyline(polylineBefore)
-    : buildFallbackPoints(stopsBefore);
+    : buildFallbackPoints(allStopsBefore);
   var polyOriginal = L.polyline(pointsBefore, {
     color: '#ef4444',
     weight: 4,
@@ -285,26 +343,67 @@
   }).addTo(layerOriginal);
   pointsBefore.forEach(function(p) { allPoints.push(p); });
 
-  // Optimized route polyline (blue solid)
-  var pointsAfter = polylineAfter
-    ? decodePolyline(polylineAfter)
-    : buildFallbackPoints(stopsAfter);
-  var polyOptimized = L.polyline(pointsAfter, {
-    color: '#3b82f6',
-    weight: 5,
-    opacity: 0.85
-  }).addTo(layerOptimized);
-  L.polylineDecorator(polyOptimized, {
-    patterns: [
-      { offset: 25, repeat: 80, symbol: L.Symbol.arrowHead({
-          pixelSize: 12, polygon: false, pathOptions: { color: '#3b82f6', weight: 2, opacity: 0.9 }
-        })
-      }
-    ]
-  }).addTo(layerOptimized);
-  pointsAfter.forEach(function(p) { allPoints.push(p); });
+  // Original stop markers (red, smaller, behind)
+  allStopsBefore.forEach(function(stop) {
+    var icon = L.divIcon({
+      html: '<div style="background:#ef4444;color:#fff;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3);opacity:0.7;">' + stop.seq + '</div>',
+      className: '',
+      iconSize: [22, 22],
+      iconAnchor: [11, 11]
+    });
+    L.marker([stop.lat, stop.lng], { icon: icon, zIndexOffset: -100 })
+      .bindPopup('<strong>Original #' + stop.seq + '</strong><br>' + stop.recipient + '<br>' + stop.address)
+      .addTo(layerOriginal);
+  });
 
-  // Origin marker (green) - always visible, not part of either layer group
+  layerOriginal.addTo(map);
+
+  // ── Per-route optimized layers ──
+  var routeLayers = [];
+
+  routesData.forEach(function(rd, routeIdx) {
+    var color = routeColors[routeIdx % routeColors.length];
+    var layer = L.layerGroup();
+
+    // Polyline
+    var stopsAfter = rd.stopsAfter || [];
+    var pointsAfter = rd.polylineAfter
+      ? decodePolyline(rd.polylineAfter)
+      : buildFallbackPoints(stopsAfter);
+
+    var poly = L.polyline(pointsAfter, {
+      color: color,
+      weight: 5,
+      opacity: 0.85
+    }).addTo(layer);
+    L.polylineDecorator(poly, {
+      patterns: [
+        { offset: 25, repeat: 80, symbol: L.Symbol.arrowHead({
+            pixelSize: 12, polygon: false, pathOptions: { color: color, weight: 2, opacity: 0.9 }
+          })
+        }
+      ]
+    }).addTo(layer);
+    pointsAfter.forEach(function(p) { allPoints.push(p); });
+
+    // Stop markers
+    stopsAfter.forEach(function(stop) {
+      var icon = L.divIcon({
+        html: '<div style="background:' + color + ';color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,.3);">' + stop.seq + '</div>',
+        className: '',
+        iconSize: [28, 28],
+        iconAnchor: [14, 14]
+      });
+      L.marker([stop.lat, stop.lng], { icon: icon, zIndexOffset: 100 + routeIdx * 10 })
+        .bindPopup('<strong>' + rd.name + ' #' + stop.seq + '</strong><br>' + stop.recipient + '<br><small>' + stop.address + '</small>')
+        .addTo(layer);
+    });
+
+    layer.addTo(map);
+    routeLayers.push(layer);
+  });
+
+  // Origin marker (green) - always visible
   var originIcon = L.divIcon({
     html: '<div style="background:#059669;color:#fff;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3);">O</div>',
     className: '',
@@ -316,43 +415,18 @@
     .addTo(map);
   allPoints.push([origin.lat, origin.lng]);
 
-  // Original stop markers (red, smaller, behind)
-  stopsBefore.forEach(function(stop) {
-    var icon = L.divIcon({
-      html: '<div style="background:#ef4444;color:#fff;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3);opacity:0.7;">' + stop.seq + '</div>',
-      className: '',
-      iconSize: [22, 22],
-      iconAnchor: [11, 11]
-    });
-    L.marker([stop.lat, stop.lng], { icon: icon, zIndexOffset: -100 })
-      .bindPopup('<strong>Original #' + stop.seq + '</strong><br>' + stop.recipient + '<br>' + stop.address)
-      .addTo(layerOriginal);
-    allPoints.push([stop.lat, stop.lng]);
-  });
-
-  // Optimized stop markers (blue, larger, in front)
-  stopsAfter.forEach(function(stop) {
-    var icon = L.divIcon({
-      html: '<div style="background:#3b82f6;color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,.3);">' + stop.seq + '</div>',
-      className: '',
-      iconSize: [28, 28],
-      iconAnchor: [14, 14]
-    });
-    L.marker([stop.lat, stop.lng], { icon: icon, zIndexOffset: 100 })
-      .bindPopup('<strong>Optimizada #' + stop.seq + '</strong><br>' + stop.recipient + '<br>' + stop.address)
-      .addTo(layerOptimized);
-  });
-
-  // Add both layer groups to map
-  layerOriginal.addTo(map);
-  layerOptimized.addTo(map);
-
   // Toggle visibility
   document.getElementById('toggle-original').addEventListener('change', function() {
     this.checked ? layerOriginal.addTo(map) : map.removeLayer(layerOriginal);
   });
-  document.getElementById('toggle-optimized').addEventListener('change', function() {
-    this.checked ? layerOptimized.addTo(map) : map.removeLayer(layerOptimized);
+
+  document.querySelectorAll('.toggle-route').forEach(function(cb) {
+    cb.addEventListener('change', function() {
+      var idx = parseInt(this.dataset.routeIdx, 10);
+      if (routeLayers[idx]) {
+        this.checked ? routeLayers[idx].addTo(map) : map.removeLayer(routeLayers[idx]);
+      }
+    });
   });
 
   // Fit bounds
@@ -371,21 +445,14 @@
       btn.title = 'Centrar mapa';
       L.DomEvent.disableClickPropagation(btn);
       btn.addEventListener('click', function() {
-        var bounds = [[origin.lat, origin.lng]];
-        if (map.hasLayer(layerOriginal)) {
-          pointsBefore.forEach(function(p) { bounds.push(p); });
-        }
-        if (map.hasLayer(layerOptimized)) {
-          pointsAfter.forEach(function(p) { bounds.push(p); });
-        }
-        map.fitBounds(bounds, { padding: [40, 40] });
+        map.fitBounds(allPoints, { padding: [40, 40] });
       });
       return btn;
     }
   });
   map.addControl(new ResetControl());
 
-  // Force re-render after layout settles (fixes Tailwind/Leaflet timing issues)
+  // Force re-render after layout settles
   setTimeout(function() { map.invalidateSize(); }, 100);
 })();
 
