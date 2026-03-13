@@ -42,6 +42,8 @@
 | **RealtimeEvent** | Evento para polling HTTP |
 | **RoutePlanTemplate** | Plantilla de ruta reutilizable |
 | **CsvImportRun** | Metadata de importación CSV |
+| **RouteEvent** | Histórico inmutable de eventos de ruta (append-only) |
+| **RouteSnapshot** | Cache de métricas de optimización y progreso (1:1 con Route) |
 | **AuditLog** | Auditoría de seguridad |
 | **ApiKey** | API key (hash SHA-256, nunca plain) |
 
@@ -55,6 +57,7 @@
 | **ExceptionCode** | ABSENT, WRONG_ADDRESS, REFUSED, DAMAGED, OTHER | Razón de excepción |
 | **ShipmentEventType** | CREATED, PICKED_UP, IN_HUB, IN_TRANSIT, OUT_FOR_DELIVERY, DELIVERED, EXCEPTION, RESCHEDULE_REQUESTED | Ciclo de vida |
 | **ShipmentPriority** | LOW(0), NORMAL(25), HIGH(50), URGENT(75), CRITICAL(100) | Prioridad int-backed |
+| **RouteEventType** | CREATED, OPTIMIZED, ASSIGNED, STARTED, COMPLETED, CANCELLED, STOP_DELIVERED, STOP_EXCEPTION, STOP_SKIPPED, REOPTIMIZED, STOPS_REORDERED, DEVIATION_DETECTED, ETA_CHANGED, NOTE_ADDED | Tipo de evento de ruta |
 | **ServiceType** | ROUTING, ROUTE_OPTIMIZER, GPS, REALTIME | Tipos de provider |
 | **VehicleSkill** | REFRIGERATED, HEAVY_LOAD, FRAGILE, etc. | Skills de vehículo (int-backed, JSON array) |
 | **ParcelStatus** | REGISTERED → IN_WAREHOUSE → LOADED → IN_TRANSIT → DELIVERED | Estado de bulto |
@@ -103,12 +106,17 @@ Vehicle (global, no scoped)
 | Evento | Disparado por | Listeners |
 |--------|--------------|-----------|
 | `VehiclePositionReceived` | TraccarIngestionService | MercurePositionListener, ApproachingNotificationSubscriber, FleetAnomalyCheckListener |
-| `StopDelivered` | DeliveryService | MercureRouteProgressListener, NotifyDeliveryListener, AuditDeliveryListener |
-| `StopExceptionReported` | DeliveryService | NotifyDeliveryListener, AuditDeliveryListener |
-| `RouteStarted` | RouteLifecycleService | MercureRouteProgressListener, AiEnrichmentListener |
-| `RouteCompleted` | RouteLifecycleService | MercureRouteProgressListener, PostRouteAnalysisListener |
+| `RoutesBuilt` | RoutePlanningService | RouteEventLogListener |
+| `RouteOptimized` | RoutePlanningService | RouteEventLogListener |
+| `RouteStarted` | RouteLifecycleService | MercureRouteProgressListener, AiEnrichmentListener, RouteSnapshotListener, RouteEventLogListener |
+| `RouteCompleted` | RouteLifecycleService | MercureRouteProgressListener, PostRouteAnalysisListener, RouteSnapshotListener, RouteEventLogListener |
+| `StopDelivered` | DeliveryService | MercureRouteProgressListener, NotifyDeliveryListener, AuditDeliveryListener, RouteSnapshotListener, RouteEventLogListener |
+| `StopExceptionReported` | DeliveryService | NotifyDeliveryListener, AuditDeliveryListener, RouteSnapshotListener, RouteEventLogListener |
+| `RouteCancelled` | RouteAdminController | RouteEventLogListener |
+| `RouteAssigned` | RouteAdminController | RouteEventLogListener |
 | `ShipmentCreated` | ShipmentService | ShipmentEmbeddingListener |
 
 ## Historial
 
 - 2026-03-11: Creación inicial
+- 2026-03-13: Añadir RouteEvent, RouteSnapshot, RouteEventType, RouteCancelled, RouteAssigned, RouteEventLogListener

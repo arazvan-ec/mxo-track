@@ -18,6 +18,7 @@ El sistema usa **Mercure** como hub de Server-Sent Events (SSE) para actualizaci
 | `/routes/{publicId}/view/admin` | Vista completa para admin | RouteSnapshotListener | `MapViewData.toJson()` (incluye métricas) |
 | `/routes/{publicId}/view/customer` | Vista completa para cliente | RouteSnapshotListener | `MapViewData.toJson()` |
 | `/routes/{publicId}/view/driver` | Vista completa para conductor | RouteSnapshotListener | `MapViewData.toJson()` |
+| `/routes/{publicId}/events` | Evento del historial de ruta | RouteEventLogListener | `{type, actor_type, payload, snapshot_metrics, occurred_at}` |
 
 ### Tipos de evento en `/customers/{id}/routes`
 
@@ -107,3 +108,4 @@ Para tenants sin Mercure:
 
 - 2026-03-11: Creación inicial
 - 2026-03-13: Documentar flujo completo de actualización en tiempo real, topics por rol, RouteSnapshotListener, componentes frontend reactivos
+- 2026-03-13: Añadir topic `/routes/{publicId}/events` para historial de eventos en tiempo real

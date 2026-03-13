@@ -51,6 +51,7 @@ API keys almacenadas como SHA-256 hash en `ApiKey` entity.
 | `/api/mercure-token` | GET | Token JWT para SSE |
 | `/api/fleet/summary` | GET | Resumen de flota |
 | `/api/search` | GET | Búsqueda full-text |
+| `/api/routes/{publicId}/events` | GET | Historial de eventos de ruta |
 
 ## Public (Sin Auth)
 
