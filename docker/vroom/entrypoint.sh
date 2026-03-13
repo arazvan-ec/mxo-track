@@ -54,8 +54,6 @@ echo "[vroom-entrypoint] Detected app dir: ${VROOM_APP_DIR:-NOT FOUND}"
 
 if [ -n "$VROOM_APP_DIR" ]; then
   cp /conf/config.yml "${VROOM_APP_DIR}/config.yml"
-  touch /conf/access.log
-  export VROOM_LOG="/conf/access.log"
 
   # Verify vroom binary exists at the path specified in config.yml
   if [ ! -x "/usr/local/bin/vroom" ]; then
