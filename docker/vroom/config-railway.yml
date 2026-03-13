@@ -6,6 +6,7 @@ cliArgs:
   geometry: true
   planmode: true
   router: "osrm"
+  path: "/usr/local/bin/"
   threads: 4
   timeout: 300000
   maxlocations: 1000

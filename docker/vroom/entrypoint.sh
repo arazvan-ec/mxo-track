@@ -16,6 +16,7 @@ cliArgs:
   geometry: true
   planmode: true
   router: "osrm"
+  path: "/usr/local/bin/"
   threads: 4
   timeout: 300000
   maxlocations: 1000
@@ -50,31 +51,19 @@ for dir in /usr/src/app /usr/local/src/vroom-express /opt/vroom-express /vroom-e
 done
 
 echo "[vroom-entrypoint] Detected app dir: ${VROOM_APP_DIR:-NOT FOUND}"
-echo "[vroom-entrypoint] Filesystem layout:"
-ls -la / 2>/dev/null | head -20
 
 if [ -n "$VROOM_APP_DIR" ]; then
   cp /conf/config.yml "${VROOM_APP_DIR}/config.yml"
   touch /conf/access.log
+  export VROOM_LOG="/conf/access.log"
 
-  # Find the vroom binary (required by vroom-express)
-  VROOM_BIN=$(which vroom 2>/dev/null || echo "")
-  if [ -z "$VROOM_BIN" ]; then
-    # Common locations in vroom-docker image
-    for bin in /usr/local/bin/vroom /opt/vroom/bin/vroom /usr/bin/vroom; do
-      if [ -x "$bin" ]; then
-        VROOM_BIN="$bin"
-        break
-      fi
-    done
+  # Verify vroom binary exists at the path specified in config.yml
+  if [ ! -x "/usr/local/bin/vroom" ]; then
+    echo "[vroom-entrypoint] ERROR: vroom binary not found at /usr/local/bin/vroom"
+    exit 1
   fi
-  echo "[vroom-entrypoint] VROOM binary: ${VROOM_BIN:-NOT FOUND}"
 
-  # Export VROOM_ROUTER (path to vroom binary) — required by vroom-express
-  export VROOM_ROUTER="${VROOM_ROUTER:-$VROOM_BIN}"
-  export VROOM_LOG="${VROOM_LOG:-/conf/access.log}"
-
-  echo "[vroom-entrypoint] VROOM_ROUTER=${VROOM_ROUTER}"
+  echo "[vroom-entrypoint] vroom binary OK: /usr/local/bin/vroom"
   echo "[vroom-entrypoint] Starting VROOM (npm start) from ${VROOM_APP_DIR}..."
   cd "$VROOM_APP_DIR"
   exec npm start
