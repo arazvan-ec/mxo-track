@@ -63,7 +63,7 @@ final readonly class RoutePlanningService
         $shipments = $this->em->getRepository(Shipment::class)
             ->createQueryBuilder('s')
             ->where('s.publicId IN (:ids)')
-            ->setParameter('ids', $shipmentUlids)
+            ->setParameter('ids', array_map(fn(Ulid $u) => $u->toRfc4122(), $shipmentUlids))
             ->getQuery()
             ->getResult();
 
@@ -82,7 +82,7 @@ final readonly class RoutePlanningService
         $vehicles = $this->em->getRepository(Vehicle::class)
             ->createQueryBuilder('v')
             ->where('v.publicId IN (:ids)')
-            ->setParameter('ids', $vehicleUlids)
+            ->setParameter('ids', array_map(fn(Ulid $u) => $u->toRfc4122(), $vehicleUlids))
             ->getQuery()
             ->getResult();
 
