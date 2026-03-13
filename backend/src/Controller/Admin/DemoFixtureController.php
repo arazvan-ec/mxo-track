@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Admin;
 
 use App\Service\DemoScenarioBuilder;
+use Doctrine\DBAL\Exception\TableNotFoundException;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -69,12 +70,23 @@ class DemoFixtureController extends AbstractController
     private function purgeExistingDemoData(): void
     {
         $conn = $this->em->getConnection();
-        $conn->executeStatement("DELETE FROM shipment WHERE customer_id IN (SELECT id FROM customer WHERE name = 'Logística Express Madrid')");
-        $conn->executeStatement("DELETE FROM route_stop WHERE route_id IN (SELECT r.id FROM route r JOIN customer c ON r.customer_id = c.id WHERE c.name = 'Logística Express Madrid')");
-        $conn->executeStatement("DELETE FROM route WHERE customer_id IN (SELECT id FROM customer WHERE name = 'Logística Express Madrid')");
-        $conn->executeStatement("DELETE FROM vehicle WHERE name LIKE 'Furgoneta Madrid%' OR name LIKE 'Camión Refrigerado%' OR name LIKE 'Moto Express%'");
-        $conn->executeStatement("DELETE FROM \"user\" WHERE email LIKE '%@demo.local'");
-        $conn->executeStatement("DELETE FROM customer_location WHERE customer_id IN (SELECT id FROM customer WHERE name = 'Logística Express Madrid')");
-        $conn->executeStatement("DELETE FROM customer WHERE name = 'Logística Express Madrid'");
+
+        $statements = [
+            "DELETE FROM shipment WHERE customer_id IN (SELECT id FROM customer WHERE name = 'Logística Express Madrid')",
+            "DELETE FROM route_stop WHERE route_id IN (SELECT r.id FROM route r JOIN customer c ON r.customer_id = c.id WHERE c.name = 'Logística Express Madrid')",
+            "DELETE FROM route WHERE customer_id IN (SELECT id FROM customer WHERE name = 'Logística Express Madrid')",
+            "DELETE FROM vehicle WHERE name LIKE 'Furgoneta Madrid%' OR name LIKE 'Camión Refrigerado%' OR name LIKE 'Moto Express%'",
+            "DELETE FROM \"user\" WHERE email LIKE '%@demo.local'",
+            "DELETE FROM customer_location WHERE customer_id IN (SELECT id FROM customer WHERE name = 'Logística Express Madrid')",
+            "DELETE FROM customer WHERE name = 'Logística Express Madrid'",
+        ];
+
+        foreach ($statements as $sql) {
+            try {
+                $conn->executeStatement($sql);
+            } catch (TableNotFoundException) {
+                // Table may not exist yet if migrations are pending — safe to skip
+            }
+        }
     }
 }
