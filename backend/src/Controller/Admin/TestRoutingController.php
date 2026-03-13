@@ -16,6 +16,7 @@ use App\Provider\ProviderUnavailableException;
 use App\Routing\Coordinate;
 use App\Routing\OsrmRoutingEngine;
 use App\Service\OptimizationLogger;
+use App\Service\RouteBuilder;
 use App\Service\RouteOptimizationService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -49,6 +50,7 @@ class TestRoutingController extends AbstractController
         private readonly RouteOptimizationService $optimizationService,
         private readonly OsrmRoutingEngine $routingEngine,
         private readonly OptimizationLogger $optimizationLogger,
+        private readonly RouteBuilder $routeBuilder,
     ) {
     }
 
@@ -177,28 +179,29 @@ class TestRoutingController extends AbstractController
         try {
             $this->optimizationLogger->startOperation(OptimizationOperation::TEST_ROUTING, [
                 'deliveryCount' => \count(self::DELIVERIES),
+                'vehicleCount' => 2,
                 'warehouseLat' => self::WAREHOUSE_LAT,
                 'warehouseLng' => self::WAREHOUSE_LNG,
             ]);
 
-            // Step 1: Create test data
+            // Step 1: Create test data (2 vehicles, shipments, no routes yet)
             $this->optimizationLogger->logStep(
                 OptimizationStepCategory::JOB_MAPPING,
-                sprintf('Creando datos de test: %d envios, 1 vehiculo, 1 ruta', \count(self::DELIVERIES)),
+                sprintf('Creando datos de test: %d envios, 2 vehiculos', \count(self::DELIVERIES)),
             );
-            [$route, $shipments] = $this->createTestData();
+            [$vehicles, $shipments, $customer, $warehouse] = $this->createTestDataMultiRoute();
             $this->em->flush();
 
-            // Step 2: Get OSRM polyline for ORIGINAL stop order
+            // Step 2: Get OSRM polyline for ORIGINAL stop order (all stops, single route, no optimization)
             $this->optimizationLogger->logStep(
                 OptimizationStepCategory::DISTANCE_CALCULATION,
-                'Calculando ruta original via OSRM (sin optimizar)',
+                'Calculando ruta original via OSRM (sin optimizar, 1 sola ruta)',
             );
             $waypointsBefore = [new Coordinate(self::WAREHOUSE_LAT, self::WAREHOUSE_LNG)];
-            $stopsBefore = [];
+            $allStopsBefore = [];
             foreach ($shipments as $i => $shipment) {
                 $waypointsBefore[] = new Coordinate($shipment->getLatitude(), $shipment->getLongitude());
-                $stopsBefore[] = [
+                $allStopsBefore[] = [
                     'seq' => $i + 1,
                     'recipient' => $shipment->getRecipientName(),
                     'address' => $shipment->getAddress(),
@@ -206,72 +209,131 @@ class TestRoutingController extends AbstractController
                     'lng' => $shipment->getLongitude(),
                 ];
             }
-            // Return to warehouse
             $waypointsBefore[] = new Coordinate(self::WAREHOUSE_LAT, self::WAREHOUSE_LNG);
             $routeBefore = $this->routingEngine->routeWithWaypoints($waypointsBefore);
 
-            // Step 3: Optimize with VROOM
+            // Step 3: Build optimized routes using RouteBuilder (VRP distributes across vehicles)
             $this->optimizationLogger->logStep(
                 OptimizationStepCategory::OPTIMIZER_CALL,
-                'Iniciando optimizacion de orden de paradas',
+                sprintf('Construyendo rutas con %d vehiculos via RouteBuilder', \count($vehicles)),
             );
-            $result = $this->optimizationService->optimizeStopOrder($route);
-            $this->optimizationService->applyOptimizedOrder($result['optimized']);
+            $builtRoutes = $this->routeBuilder->buildRoutes(
+                $shipments,
+                $vehicles,
+                $customer,
+                $warehouse,
+                5, // max 5 stops per route to force distribution
+            );
+            $this->em->flush();
 
-            // Step 4: Get OSRM polyline for OPTIMIZED stop order
-            $this->optimizationLogger->logStep(
-                OptimizationStepCategory::DISTANCE_CALCULATION,
-                'Calculando ruta optimizada via OSRM',
-            );
-            $waypointsAfter = [new Coordinate(self::WAREHOUSE_LAT, self::WAREHOUSE_LNG)];
-            $stopsAfter = [];
-            foreach ($result['optimized'] as $item) {
-                $stop = $item['stop'];
-                if ($stop->isOrigin()) {
-                    continue;
+            // Step 4: Process each route - optimize and compute OSRM polylines
+            $routesData = [];
+            $totalDistanceAfterKm = 0.0;
+            $totalDurationMinutes = 0;
+            $osrmAvailable = true;
+
+            foreach ($builtRoutes as $routeIdx => $builtRoute) {
+                $route = $builtRoute['route'];
+                $stops = $builtRoute['stops'];
+
+                $this->optimizationLogger->logStep(
+                    OptimizationStepCategory::OPTIMIZER_CALL,
+                    sprintf('Optimizando orden de paradas para %s (%d paradas)', $route->getName(), \count($stops)),
+                );
+
+                // Get original stop order (before VROOM re-ordering within route)
+                $stopsBeforeOpt = [];
+                foreach ($stops as $stop) {
+                    if ($stop->isOrigin()) {
+                        continue;
+                    }
+                    $stopsBeforeOpt[] = [
+                        'seq' => $stop->getSequence(),
+                        'recipient' => $stop->getRecipientName(),
+                        'address' => $stop->getAddress(),
+                        'lat' => $stop->getLatitude(),
+                        'lng' => $stop->getLongitude(),
+                    ];
                 }
-                $waypointsAfter[] = new Coordinate($stop->getLatitude(), $stop->getLongitude());
-                $stopsAfter[] = [
-                    'seq' => $item['newSequence'],
-                    'recipient' => $stop->getRecipientName(),
-                    'address' => $stop->getAddress(),
-                    'lat' => $stop->getLatitude(),
-                    'lng' => $stop->getLongitude(),
+
+                // Optimize stop order within this route
+                $optResult = $this->optimizationService->optimizeStopOrder($route);
+                $this->optimizationService->applyOptimizedOrder($optResult['optimized']);
+
+                // Get optimized stops
+                $stopsAfterOpt = [];
+                $waypointsAfter = [new Coordinate(self::WAREHOUSE_LAT, self::WAREHOUSE_LNG)];
+                foreach ($optResult['optimized'] as $item) {
+                    $stop = $item['stop'];
+                    if ($stop->isOrigin()) {
+                        continue;
+                    }
+                    $waypointsAfter[] = new Coordinate($stop->getLatitude(), $stop->getLongitude());
+                    $stopsAfterOpt[] = [
+                        'seq' => $item['newSequence'],
+                        'recipient' => $stop->getRecipientName(),
+                        'address' => $stop->getAddress(),
+                        'lat' => $stop->getLatitude(),
+                        'lng' => $stop->getLongitude(),
+                    ];
+                }
+                $waypointsAfter[] = new Coordinate(self::WAREHOUSE_LAT, self::WAREHOUSE_LNG);
+
+                // OSRM polyline for optimized route
+                $this->optimizationLogger->logStep(
+                    OptimizationStepCategory::DISTANCE_CALCULATION,
+                    sprintf('Calculando ruta optimizada via OSRM para %s', $route->getName()),
+                );
+                $osrmResult = $this->routingEngine->routeWithWaypoints($waypointsAfter);
+
+                if ($osrmResult->geometry === null) {
+                    $osrmAvailable = false;
+                }
+
+                $distanceAfterKm = $osrmResult->totalDistanceKm > 0
+                    ? round($osrmResult->totalDistanceKm, 2)
+                    : round($optResult['distanceAfter'], 2);
+
+                // Timing
+                $timing = $this->optimizationService->estimateRouteTiming($route);
+
+                $totalDistanceAfterKm += $distanceAfterKm;
+                $totalDurationMinutes += $timing['totalTimeMinutes'] ?? 0;
+
+                $routesData[] = [
+                    'name' => $route->getName(),
+                    'vehicle' => $route->getVehicle()?->getName(),
+                    'stopsBefore' => $stopsBeforeOpt,
+                    'stopsAfter' => $stopsAfterOpt,
+                    'polylineAfter' => $osrmResult->geometry,
+                    'distanceBeforeKm' => round($optResult['distanceBefore'], 2),
+                    'distanceAfterKm' => $distanceAfterKm,
+                    'savedPercent' => $optResult['distanceBefore'] > 0
+                        ? round(($optResult['distanceBefore'] - $distanceAfterKm) / $optResult['distanceBefore'] * 100, 1)
+                        : 0,
+                    'durationMinutes' => $optResult['durationMinutes'],
+                    'timing' => $timing,
+                    'stopCount' => \count($stopsAfterOpt),
+                    'validation' => $builtRoute['validation'],
                 ];
             }
-            // Return to warehouse
-            $waypointsAfter[] = new Coordinate(self::WAREHOUSE_LAT, self::WAREHOUSE_LNG);
-            $routeAfter = $this->routingEngine->routeWithWaypoints($waypointsAfter);
 
-            // Step 5: Compute metrics
-            $this->optimizationLogger->logStep(
-                OptimizationStepCategory::TIMING_ESTIMATION,
-                'Calculando metricas y tiempos estimados',
-            );
-            $saved = $result['distanceBefore'] > 0
-                ? round(($result['distanceBefore'] - $result['distanceAfter']) / $result['distanceBefore'] * 100, 1)
-                : 0;
-
-            $timing = $this->optimizationService->estimateRouteTiming($route);
-
-            // Use OSRM distances when available, fall back to VROOM distances
-            $osrmAvailable = $routeBefore->geometry !== null && $routeAfter->geometry !== null;
+            // Global metrics
             $distanceBeforeKm = $routeBefore->totalDistanceKm > 0
                 ? round($routeBefore->totalDistanceKm, 2)
-                : round($result['distanceBefore'], 2);
-            $distanceAfterKm = $routeAfter->totalDistanceKm > 0
-                ? round($routeAfter->totalDistanceKm, 2)
-                : round($result['distanceAfter'], 2);
+                : round(array_sum(array_column($routesData, 'distanceBeforeKm')), 2);
 
-            $savedPercent = $distanceBeforeKm > 0
-                ? round(($distanceBeforeKm - $distanceAfterKm) / $distanceBeforeKm * 100, 1)
-                : $saved;
+            $totalDistanceAfterKm = round($totalDistanceAfterKm, 2);
+            $globalSavedPercent = $distanceBeforeKm > 0
+                ? round(($distanceBeforeKm - $totalDistanceAfterKm) / $distanceBeforeKm * 100, 1)
+                : 0;
 
             $this->optimizationLogger->logStep(
                 OptimizationStepCategory::RESULT_SUMMARY,
-                sprintf('Test routing completado: %.1fkm → %.1fkm (ahorro %.1f%%)', $distanceBeforeKm, $distanceAfterKm, $savedPercent),
-                ['distanceBeforeKm' => $distanceBeforeKm, 'distanceAfterKm' => $distanceAfterKm, 'savedPercent' => $savedPercent,
-                 'timing' => $timing, 'osrmAvailable' => $osrmAvailable],
+                sprintf('Test routing completado: %.1fkm → %.1fkm (ahorro %.1f%%), %d rutas',
+                    $distanceBeforeKm, $totalDistanceAfterKm, $globalSavedPercent, \count($routesData)),
+                ['distanceBeforeKm' => $distanceBeforeKm, 'distanceAfterKm' => $totalDistanceAfterKm,
+                 'savedPercent' => $globalSavedPercent, 'routeCount' => \count($routesData)],
             );
 
             $templateData = [
@@ -280,18 +342,17 @@ class TestRoutingController extends AbstractController
                     'lng' => self::WAREHOUSE_LNG,
                     'address' => 'Polígono Industrial de Villaverde, Madrid',
                 ],
-                'stopsBefore' => $stopsBefore,
-                'stopsAfter' => $stopsAfter,
+                'allStopsBefore' => $allStopsBefore,
                 'polylineBefore' => $routeBefore->geometry,
-                'polylineAfter' => $routeAfter->geometry,
                 'osrmAvailable' => $osrmAvailable,
+                'routesData' => $routesData,
                 'metrics' => [
                     'distanceBeforeKm' => $distanceBeforeKm,
-                    'distanceAfterKm' => $distanceAfterKm,
-                    'savedPercent' => $savedPercent,
-                    'durationMinutes' => $result['durationMinutes'],
-                    'timing' => $timing,
-                    'stopCount' => \count($stopsAfter),
+                    'distanceAfterKm' => $totalDistanceAfterKm,
+                    'savedPercent' => $globalSavedPercent,
+                    'totalDurationMinutes' => $totalDurationMinutes,
+                    'stopCount' => \count(self::DELIVERIES),
+                    'routeCount' => \count($routesData),
                 ],
                 'optimizationLog' => $this->optimizationLogger->getLogData(),
             ];
@@ -378,13 +439,61 @@ class TestRoutingController extends AbstractController
         return [$route, $shipments];
     }
 
+    /**
+     * Create test data for multi-route optimization: 2 vehicles, shipments (no routes).
+     *
+     * @return array{list<Vehicle>, list<Shipment>, Customer, CustomerLocation}
+     */
+    private function createTestDataMultiRoute(): array
+    {
+        $customer = new Customer('Test Routing Customer');
+        $customer->setAddress('Test Address, Madrid');
+        $customer->setContactPhone('600000000');
+
+        $warehouse = new CustomerLocation($customer, 'Almacén Test', 'Polígono Industrial de Villaverde, Madrid');
+        $warehouse->setLatitude(self::WAREHOUSE_LAT);
+        $warehouse->setLongitude(self::WAREHOUSE_LNG);
+        $warehouse->setDefault(true);
+
+        $vehicle1 = new Vehicle('Test Vehicle A');
+        $vehicle1->setMaxWeightKg(500.0);
+        $vehicle1->setMaxVolumeM3(4.0);
+        $vehicle1->setMaxParcels(25);
+
+        $vehicle2 = new Vehicle('Test Vehicle B');
+        $vehicle2->setMaxWeightKg(500.0);
+        $vehicle2->setMaxVolumeM3(4.0);
+        $vehicle2->setMaxParcels(25);
+
+        $this->em->persist($customer);
+        $this->em->persist($warehouse);
+        $this->em->persist($vehicle1);
+        $this->em->persist($vehicle2);
+
+        $shipments = [];
+        foreach (self::DELIVERIES as $i => [$address, $lat, $lng, $name]) {
+            $shipment = new Shipment(sprintf('TEST-RT-%04d', $i + 1), $customer);
+            $shipment->setRecipientName($name);
+            $shipment->setAddress($address);
+            $shipment->setLatitude($lat);
+            $shipment->setLongitude($lng);
+            $shipment->setTotalWeightKg(round(mt_rand(100, 1500) / 100, 2));
+            $shipment->setTotalVolumeM3(round(mt_rand(1, 50) / 100, 2));
+            $shipment->setTotalParcels(1);
+            $this->em->persist($shipment);
+            $shipments[] = $shipment;
+        }
+
+        return [[$vehicle1, $vehicle2], $shipments, $customer, $warehouse];
+    }
+
     private function cleanup(): void
     {
         $conn = $this->em->getConnection();
         $conn->executeStatement("DELETE FROM route_stop WHERE route_id IN (SELECT r.id FROM route_plan r JOIN customer c ON r.customer_id = c.id WHERE c.name = 'Test Routing Customer')");
         $conn->executeStatement("DELETE FROM route_plan WHERE customer_id IN (SELECT id FROM customer WHERE name = 'Test Routing Customer')");
         $conn->executeStatement("DELETE FROM shipment WHERE customer_id IN (SELECT id FROM customer WHERE name = 'Test Routing Customer')");
-        $conn->executeStatement("DELETE FROM vehicle WHERE name = 'Test Vehicle'");
+        $conn->executeStatement("DELETE FROM vehicle WHERE name IN ('Test Vehicle', 'Test Vehicle A', 'Test Vehicle B')");
         $conn->executeStatement("DELETE FROM customer_location WHERE customer_id IN (SELECT id FROM customer WHERE name = 'Test Routing Customer')");
         $conn->executeStatement("DELETE FROM customer WHERE name = 'Test Routing Customer'");
     }
