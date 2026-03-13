@@ -313,7 +313,9 @@ set_vars "$SVC_OSRM" \
 # VROOM service — internal VRP optimizer, no public access needed
 # =============================================================================
 set_vars "$SVC_VROOM" \
-    "PORT=3000"
+    "PORT=3000" \
+    "OSRM_HOST=osrm-mxo.railway.internal" \
+    "OSRM_PORT=5000"
 
 # =============================================================================
 # Done

@@ -16,4 +16,4 @@ routingServers:
   osrm:
     car:
       host: "osrm-mxo.railway.internal"
-      port: "5000"
+      port: 5000
