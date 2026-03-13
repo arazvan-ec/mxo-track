@@ -12,6 +12,8 @@ use App\Enum\RouteStatus;
 use App\Enum\RouteStopStatus;
 use App\Repository\RouteRepository;
 use App\Service\EtaService;
+use App\View\MapViewOptions;
+use App\View\RouteViewService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -27,6 +29,7 @@ final class DriverWebController extends AbstractController
         private readonly EntityManagerInterface $em,
         private readonly RouteRepository $routeRepository,
         private readonly EtaService $etaService,
+        private readonly RouteViewService $routeViewService,
         #[Autowire('%env(MERCURE_PUBLIC_URL)%')] private readonly string $mercurePublicUrl,
     ) {}
 
@@ -103,23 +106,9 @@ final class DriverWebController extends AbstractController
             ->getQuery()
             ->getResult();
 
-        // JSON for map
-        $stopsJson = json_encode(array_map(static fn (RouteStop $stop) => [
-            'public_id' => $stop->getPublicIdString(),
-            'lat' => $stop->getLatitude(),
-            'lng' => $stop->getLongitude(),
-            'status' => $stop->getStatus()->value,
-            'address' => $stop->getAddress(),
-            'sequence' => $stop->getSequence(),
-            'recipientName' => $stop->getRecipientName(),
-            'recipientPhone' => $stop->getRecipientPhone(),
-            'notes' => $stop->getNotes(),
-            'deliveredAt' => $stop->getDeliveredAt()?->format('d/m/Y H:i'),
-        ], $stops), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_THROW_ON_ERROR);
-
-        // Vehicle last position
-        $vehiclePositionJson = 'null';
-        $vehiclePublicId = '';
+        // Build vehicle tracking data
+        $vehiclePublicId = null;
+        $vehiclePosition = null;
         $vehicle = $route->getVehicle();
 
         if ($vehicle !== null) {
@@ -127,12 +116,23 @@ final class DriverWebController extends AbstractController
             $lastPosition = $this->em->getRepository(VehicleLastPosition::class)->findOneBy(['vehicle' => $vehicle]);
 
             if ($lastPosition instanceof VehicleLastPosition) {
-                $vehiclePositionJson = json_encode([
+                $vehiclePosition = [
                     'lat' => $lastPosition->getLat(),
                     'lng' => $lastPosition->getLng(),
-                ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_THROW_ON_ERROR);
+                ];
             }
         }
+
+        // Build map view data via RouteViewService
+        $mapOptions = new MapViewOptions(
+            showVehicleTracking: $vehicle !== null,
+            showStopStatus: true,
+            vehiclePublicId: $vehiclePublicId,
+            vehiclePosition: $vehiclePosition,
+        );
+
+        $mapView = $this->routeViewService->buildSingleRouteView($route, 'ROLE_DRIVER', $mapOptions);
+        $mapView = $mapView->withMercureUrl($this->mercurePublicUrl);
 
         // Calculate ETAs for active routes
         $etas = [];
@@ -154,9 +154,7 @@ final class DriverWebController extends AbstractController
         return $this->render('driver/routes/show.html.twig', [
             'route' => $route,
             'stops' => $stops,
-            'stops_json' => $stopsJson,
-            'vehicle_position_json' => $vehiclePositionJson,
-            'vehicle_public_id' => $vehiclePublicId,
+            'mapViewJson' => $mapView->toJson(),
             'mercure_public_url' => $this->mercurePublicUrl,
             'etas' => $etas,
             'etas_json' => $etasJson,
