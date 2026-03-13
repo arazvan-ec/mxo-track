@@ -57,24 +57,20 @@ if [ -n "$VROOM_APP_DIR" ]; then
   cp /conf/config.yml "${VROOM_APP_DIR}/config.yml"
   touch /conf/access.log
 
-  # Find the vroom binary (required by vroom-express)
-  VROOM_BIN=$(which vroom 2>/dev/null || echo "")
-  if [ -z "$VROOM_BIN" ]; then
-    # Common locations in vroom-docker image
-    for bin in /usr/local/bin/vroom /opt/vroom/bin/vroom /usr/bin/vroom; do
-      if [ -x "$bin" ]; then
-        VROOM_BIN="$bin"
-        break
-      fi
-    done
+  # VROOM_ROUTER must point to the vroom binary — ALWAYS override to prevent
+  # Railway env vars or stale values from breaking it (the "undefinedvroom" bug)
+  export VROOM_ROUTER="/usr/local/bin/vroom"
+  export VROOM_LOG="/conf/access.log"
+
+  # Verify binary exists
+  if [ ! -x "$VROOM_ROUTER" ]; then
+    echo "[vroom-entrypoint] ERROR: vroom binary not found at ${VROOM_ROUTER}"
+    echo "[vroom-entrypoint] Searching for vroom binary..."
+    find / -name "vroom" -type f 2>/dev/null | head -5
+    exit 1
   fi
-  echo "[vroom-entrypoint] VROOM binary: ${VROOM_BIN:-NOT FOUND}"
 
-  # Export VROOM_ROUTER (path to vroom binary) — required by vroom-express
-  export VROOM_ROUTER="${VROOM_ROUTER:-$VROOM_BIN}"
-  export VROOM_LOG="${VROOM_LOG:-/conf/access.log}"
-
-  echo "[vroom-entrypoint] VROOM_ROUTER=${VROOM_ROUTER}"
+  echo "[vroom-entrypoint] VROOM_ROUTER=${VROOM_ROUTER} (verified)"
   echo "[vroom-entrypoint] Starting VROOM (npm start) from ${VROOM_APP_DIR}..."
   cd "$VROOM_APP_DIR"
   exec npm start
