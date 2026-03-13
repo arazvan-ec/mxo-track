@@ -244,8 +244,8 @@ final class RouteBuilder
             $route->setTotalDistanceKm($optimizedRoute->distanceMeters / 1000.0);
             $route->setEstimatedDurationMinutes((int) round($optimizedRoute->durationSeconds / 60.0));
 
-            // Validate capacity
-            $validation = $this->capacityValidator->validate($route);
+            // Validate capacity (pass in-memory stops since Route is not yet flushed)
+            $validation = $this->capacityValidator->validate($route, $stops);
 
             $routes[] = [
                 'route' => $route,

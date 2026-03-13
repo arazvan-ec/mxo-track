@@ -104,8 +104,8 @@ final class VroomResponseMapper
             $route->setTotalDistanceKm($distanceKm);
             $route->setEstimatedDurationMinutes($durationMinutes);
 
-            // Validate capacity
-            $validation = $this->capacityValidator->validate($route);
+            // Validate capacity (pass in-memory stops since Route is not yet flushed)
+            $validation = $this->capacityValidator->validate($route, $stops);
 
             $routes[] = [
                 'route' => $route,
