@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventListener\Domain;
 
+use App\Domain\Event\EtaChanged;
 use App\Domain\Event\RouteAssigned;
 use App\Domain\Event\RouteCancelled;
 use App\Domain\Event\RouteCompleted;
@@ -209,6 +210,28 @@ final readonly class RouteEventLogListener
             payload: [
                 'vehicle_public_id' => $event->vehiclePublicId,
                 'driver_user_id' => $event->driverUserId,
+            ],
+            snapshotMetrics: $this->buildSnapshotMetrics($route),
+            occurredAt: $event->occurredAt,
+        ), $event->routePublicId);
+    }
+
+    #[AsEventListener]
+    public function onEtaChanged(EtaChanged $event): void
+    {
+        $route = $this->routeRepo->findOneByPublicId($event->routePublicId);
+        if (!$route) {
+            return;
+        }
+
+        $this->persistAndPublish(new RouteEvent(
+            route: $route,
+            eventType: RouteEventType::ETA_CHANGED,
+            actorType: 'system',
+            payload: [
+                'max_delta_minutes' => $event->maxDeltaMinutes,
+                'previous_etas' => $event->previousEtas,
+                'current_etas' => $event->currentEtas,
             ],
             snapshotMetrics: $this->buildSnapshotMetrics($route),
             occurredAt: $event->occurredAt,
