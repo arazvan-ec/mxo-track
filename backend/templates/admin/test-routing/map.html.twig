@@ -7,6 +7,9 @@
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 <style>
   #routing-map { height: 600px; width: 100%; border-radius: 0.5rem; }
+  /* Override Tailwind Preflight reset that breaks Leaflet tile rendering */
+  #routing-map img { max-width: none !important; max-height: none !important; }
+  #routing-map .leaflet-tile { max-width: none !important; max-height: none !important; }
   .legend-item { display: flex; align-items: center; gap: 0.5rem; }
   .legend-line { width: 24px; height: 3px; border-radius: 2px; }
   .legend-before { background-color: #ef4444; border-top: 2px dashed #ef4444; background: none; }
@@ -47,7 +50,7 @@
   {% endif %}
 
   {# Map #}
-  <div class="bg-white shadow rounded-lg overflow-hidden mb-6">
+  <div class="bg-white shadow rounded-lg overflow-hidden mb-6 isolate">
     <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
       <h2 class="text-lg font-semibold text-gray-900">Mapa de optimizacion</h2>
       <div class="flex items-center gap-6 text-sm text-gray-600">
@@ -292,6 +295,9 @@
   } else {
     map.setView([40.4168, -3.7038], 12);
   }
+
+  // Force re-render after layout settles (fixes Tailwind/Leaflet timing issues)
+  setTimeout(function() { map.invalidateSize(); }, 100);
 })();
 </script>
 {% endblock %}
