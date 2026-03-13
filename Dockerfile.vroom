@@ -1,5 +1,8 @@
 FROM ghcr.io/vroom-project/vroom-docker:v1.14.0
 
-COPY docker/vroom/config-railway.yml /conf/config.yml
+COPY docker/vroom/entrypoint.sh /custom-entrypoint.sh
+RUN chmod +x /custom-entrypoint.sh
 
 EXPOSE 3000
+
+ENTRYPOINT ["/custom-entrypoint.sh"]
