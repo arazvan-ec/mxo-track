@@ -17,6 +17,7 @@ use App\Service\RouteBuilder;
 use App\Service\RouteCapacityValidator;
 use App\Service\RouteOptimizationService;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Uid\Ulid;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 final readonly class RoutePlanningService
@@ -36,17 +37,41 @@ final readonly class RoutePlanningService
      */
     public function buildRoutes(BuildRoutesInput $input): BuildRoutesResult
     {
+        $shipmentUlids = [];
+        foreach ($input->shipmentPublicIds as $id) {
+            try {
+                $shipmentUlids[] = Ulid::fromString((string) $id);
+            } catch (\InvalidArgumentException) {
+                continue;
+            }
+        }
+
+        if ($shipmentUlids === []) {
+            throw new \InvalidArgumentException('No valid shipment IDs provided.');
+        }
         $shipments = $this->em->getRepository(Shipment::class)
             ->createQueryBuilder('s')
             ->where('s.publicId IN (:ids)')
-            ->setParameter('ids', $input->shipmentPublicIds)
+            ->setParameter('ids', $shipmentUlids)
             ->getQuery()
             ->getResult();
 
+        $vehicleUlids = [];
+        foreach ($input->vehiclePublicIds as $id) {
+            try {
+                $vehicleUlids[] = Ulid::fromString((string) $id);
+            } catch (\InvalidArgumentException) {
+                continue;
+            }
+        }
+
+        if ($vehicleUlids === []) {
+            throw new \InvalidArgumentException('No valid vehicle IDs provided.');
+        }
         $vehicles = $this->em->getRepository(Vehicle::class)
             ->createQueryBuilder('v')
             ->where('v.publicId IN (:ids)')
-            ->setParameter('ids', $input->vehiclePublicIds)
+            ->setParameter('ids', $vehicleUlids)
             ->getQuery()
             ->getResult();
 
