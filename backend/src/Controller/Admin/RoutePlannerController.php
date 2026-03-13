@@ -268,6 +268,8 @@ class RoutePlannerController extends AbstractController
             $result = $this->routePlanningService->buildRoutes($input);
         } catch (\InvalidArgumentException $e) {
             return new JsonResponse(['error' => $e->getMessage()], 400);
+        } catch (\Throwable $e) {
+            return new JsonResponse(['error' => 'Error al generar rutas: ' . $e->getMessage()], 500);
         }
 
         return new JsonResponse($result->toArray());
