@@ -37,5 +37,15 @@ else
   echo "[vroom-entrypoint] WARNING: Cannot resolve ${OSRM_HOST} — VROOM routing will fail!"
 fi
 
-echo "[vroom-entrypoint] Starting VROOM..."
-exec /docker-entrypoint.sh "$@"
+echo "[vroom-entrypoint] Config contents:"
+cat /conf/config.yml
+
+# Replicate what the original docker-entrypoint.sh does:
+# 1. Copy config to app dir
+cp /conf/config.yml /usr/src/app/config.yml
+# 2. Ensure access log exists
+touch /conf/access.log
+
+echo "[vroom-entrypoint] Starting VROOM (npm start)..."
+cd /usr/src/app
+exec npm start
