@@ -136,6 +136,9 @@
     </div>
   </div>
 
+  {# Optimization Log Panel #}
+  {% include 'components/_optimization_log_panel.html.twig' %}
+
   {# Timing details + route order tables #}
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
     <div class="bg-white shadow rounded-lg overflow-hidden">
@@ -384,6 +387,14 @@
 
   // Force re-render after layout settles (fixes Tailwind/Leaflet timing issues)
   setTimeout(function() { map.invalidateSize(); }, 100);
+})();
+
+// Initialize optimization log panel
+(function() {
+  var logData = {{ optimizationLog|json_encode|raw }};
+  if (logData && window.OptLogPanel) {
+    window.OptLogPanel.render(logData);
+  }
 })();
 </script>
 {% endblock %}

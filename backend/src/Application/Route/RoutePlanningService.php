@@ -11,8 +11,11 @@ use App\Entity\Route;
 use App\Entity\RouteStop;
 use App\Entity\Shipment;
 use App\Entity\Vehicle;
+use App\Enum\OptimizationOperation;
+use App\Enum\OptimizationStepCategory;
 use App\Repository\RouteRepository;
 use App\Repository\RouteStopRepository;
+use App\Service\OptimizationLogger;
 use App\Service\RouteBuilder;
 use App\Service\RouteCapacityValidator;
 use App\Service\RouteOptimizationService;
@@ -30,6 +33,7 @@ final readonly class RoutePlanningService
         private RouteRepository $routeRepo,
         private RouteStopRepository $stopRepo,
         private EventDispatcherInterface $eventDispatcher,
+        private OptimizationLogger $optimizationLogger,
     ) {}
 
     /**
@@ -37,6 +41,13 @@ final readonly class RoutePlanningService
      */
     public function buildRoutes(BuildRoutesInput $input): BuildRoutesResult
     {
+        $this->optimizationLogger->startOperation(OptimizationOperation::BUILD_ROUTES, [
+            'shipmentCount' => \count($input->shipmentPublicIds),
+            'vehicleCount' => \count($input->vehiclePublicIds),
+            'originPublicId' => $input->originPublicId,
+            'maxStopsPerRoute' => $input->maxStopsPerRoute,
+        ]);
+
         $shipmentUlids = [];
         foreach ($input->shipmentPublicIds as $id) {
             try {
@@ -75,7 +86,14 @@ final readonly class RoutePlanningService
             ->getQuery()
             ->getResult();
 
+        $this->optimizationLogger->logStep(
+            OptimizationStepCategory::JOB_MAPPING,
+            sprintf('Resolvidos %d shipments y %d vehiculos desde base de datos', \count($shipments), \count($vehicles)),
+            ['resolvedShipments' => \count($shipments), 'resolvedVehicles' => \count($vehicles)],
+        );
+
         // Filter out shipments with invalid or missing coordinates
+        $totalBeforeFilter = \count($shipments);
         $shipments = array_values(array_filter($shipments, static function (Shipment $s): bool {
             $lat = $s->getLatitude();
             $lng = $s->getLongitude();
@@ -84,6 +102,15 @@ final readonly class RoutePlanningService
                 && $lat >= -90.0 && $lat <= 90.0
                 && $lng >= -180.0 && $lng <= 180.0;
         }));
+
+        $filteredOut = $totalBeforeFilter - \count($shipments);
+        if ($filteredOut > 0) {
+            $this->optimizationLogger->logStep(
+                OptimizationStepCategory::JOB_MAPPING,
+                sprintf('Filtrados %d shipments sin coordenadas validas', $filteredOut),
+                ['filteredOut' => $filteredOut],
+            );
+        }
 
         if (\count($shipments) === 0) {
             throw new \InvalidArgumentException('No valid shipments found.');
@@ -144,9 +171,24 @@ final readonly class RoutePlanningService
             vehicleCount: \count($vehicles),
         ));
 
+        $resultSummary = [
+            'routesCreated' => \count($results),
+            'shipmentCount' => \count($shipments),
+            'vehicleCount' => \count($vehicles),
+        ];
+
+        $firstRoute = $results[0]['route'] ?? null;
+        $this->optimizationLogger->finishOperation(
+            $resultSummary,
+            $firstRoute instanceof Route ? $firstRoute : null,
+            $customer,
+        );
+        $this->em->flush();
+
         return new BuildRoutesResult(
             routesCreated: \count($results),
             routes: $response,
+            optimizationLog: $this->optimizationLogger->getLogData(),
         );
     }
 
@@ -161,6 +203,11 @@ final readonly class RoutePlanningService
         if (!$route instanceof Route) {
             throw new RouteNotFoundException($routePublicId);
         }
+
+        $this->optimizationLogger->startOperation(OptimizationOperation::OPTIMIZE_STOPS, [
+            'routePublicId' => $routePublicId,
+            'apply' => $apply,
+        ]);
 
         $result = $this->optimizationService->optimizeStopOrder($route);
         $distanceBefore = $result['distanceBefore'];
@@ -194,6 +241,14 @@ final readonly class RoutePlanningService
                 ];
             }
         }
+
+        $this->optimizationLogger->finishOperation(
+            ['distanceBeforeKm' => round($distanceBefore, 2), 'distanceAfterKm' => round($distanceAfter, 2),
+             'improvementPercent' => round($improvement, 1), 'durationMinutes' => $result['durationMinutes'], 'applied' => $apply],
+            $route,
+            $route->getCustomer(),
+        );
+        $this->em->flush();
 
         return new OptimizationResult(
             applied: $apply,

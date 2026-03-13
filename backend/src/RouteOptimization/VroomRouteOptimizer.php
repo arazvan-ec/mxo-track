@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\RouteOptimization;
 
+use App\Enum\OptimizationStepCategory;
+use App\Service\OptimizationLogger;
 use Psr\Log\LoggerInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -21,21 +23,55 @@ final class VroomRouteOptimizer implements RouteOptimizerInterface
     public function __construct(
         private readonly HttpClientInterface $httpClient,
         private readonly LoggerInterface $logger,
+        private readonly OptimizationLogger $optimizationLogger,
         private readonly string $vroomUrl,
     ) {
     }
 
     public function optimize(array $vehicles, array $jobs): OptimizationResult
     {
+        $this->optimizationLogger->setOptimizerUsed('vroom');
+
         if ($vehicles === [] || $jobs === []) {
+            $this->optimizationLogger->logStep(
+                OptimizationStepCategory::OPTIMIZER_CALL,
+                'VROOM: sin vehiculos o jobs, retornando sin optimizar',
+            );
+
             return new OptimizationResult(
                 routes: [],
                 unassignedJobIds: array_map(static fn(OptimizableJob $j) => $j->id, $jobs),
             );
         }
 
+        // Log vehicle mapping
+        foreach ($vehicles as $i => $v) {
+            $this->optimizationLogger->logStep(
+                OptimizationStepCategory::VEHICLE_MAPPING,
+                sprintf('Vehiculo %d: peso max=%.1fkg, volumen max=%.2fm³, parcels max=%s, tasks max=%s',
+                    $i, $v->maxWeightKg ?? 0, $v->maxVolumeM3 ?? 0, $v->maxParcels ?? 'ilim', $v->maxTasks ?? 'ilim'),
+                ['vehicleId' => $v->id, 'skills' => $v->skills, 'startLat' => $v->startLatitude, 'startLng' => $v->startLongitude],
+            );
+        }
+
+        // Log job mapping
+        foreach ($jobs as $i => $j) {
+            $this->optimizationLogger->logStep(
+                OptimizationStepCategory::JOB_MAPPING,
+                sprintf('Job %d: [%.4f,%.4f] peso=%.2fkg vol=%.3fm³ prioridad=%d',
+                    $i, $j->latitude, $j->longitude, $j->weightKg, $j->volumeM3, $j->priority),
+                ['jobId' => $j->id, 'timeWindows' => $j->timeWindows, 'requiredSkills' => $j->requiredSkills, 'serviceTimeSec' => $j->serviceTimeSeconds],
+            );
+        }
+
         $vroomVehicles = $this->mapVehicles($vehicles);
         $vroomJobs = $this->mapJobs($jobs);
+
+        $this->optimizationLogger->logStep(
+            OptimizationStepCategory::OPTIMIZER_CALL,
+            sprintf('Enviando a VROOM: %d vehiculos, %d jobs', \count($vehicles), \count($jobs)),
+            ['vroomUrl' => $this->vroomUrl],
+        );
 
         try {
             $data = $this->callVroom($vroomVehicles, $vroomJobs);
@@ -46,9 +82,48 @@ final class VroomRouteOptimizer implements RouteOptimizerInterface
                 'error' => $e->getMessage(),
             ]);
 
+            $this->optimizationLogger->logStep(
+                OptimizationStepCategory::OPTIMIZER_CALL,
+                sprintf('VROOM fallo: %s', $e->getMessage()),
+                ['error' => $e->getMessage()],
+            );
+
             return new OptimizationResult(
                 routes: [],
                 unassignedJobIds: array_map(static fn(OptimizableJob $j) => $j->id, $jobs),
+            );
+        }
+
+        $routeCount = \count($data['routes'] ?? []);
+        $unassignedCount = \count($data['unassigned'] ?? []);
+        $summaryDistance = $data['summary']['distance'] ?? 0;
+        $summaryDuration = $data['summary']['duration'] ?? 0;
+
+        $this->optimizationLogger->logStep(
+            OptimizationStepCategory::OPTIMIZER_CALL,
+            sprintf('VROOM respondio: %d rutas, %d sin asignar, distancia=%dm, duracion=%ds',
+                $routeCount, $unassignedCount, $summaryDistance, $summaryDuration),
+            ['routeCount' => $routeCount, 'unassignedCount' => $unassignedCount, 'summaryDistance' => $summaryDistance, 'summaryDuration' => $summaryDuration],
+        );
+
+        if ($unassignedCount > 0) {
+            $unassignedIds = array_map(static fn(array $u) => $u['id'] ?? 0, $data['unassigned'] ?? []);
+            $this->optimizationLogger->logStep(
+                OptimizationStepCategory::UNASSIGNED_JOBS,
+                sprintf('%d jobs no asignados por VROOM', $unassignedCount),
+                ['unassignedJobIndices' => $unassignedIds],
+            );
+        }
+
+        // Log step ordering per route
+        foreach ($data['routes'] ?? [] as $ri => $vroomRoute) {
+            $jobSteps = array_filter($vroomRoute['steps'] ?? [], static fn(array $s) => ($s['type'] ?? '') === 'job');
+            $stepIds = array_map(static fn(array $s) => $s['id'] ?? 0, $jobSteps);
+            $this->optimizationLogger->logStep(
+                OptimizationStepCategory::STOP_ORDERING,
+                sprintf('Ruta %d: %d paradas en orden optimizado', $ri, \count($stepIds)),
+                ['vehicleIndex' => $vroomRoute['vehicle'] ?? 0, 'stepOrder' => array_values($stepIds),
+                 'distanceM' => $vroomRoute['distance'] ?? 0, 'durationS' => $vroomRoute['duration'] ?? 0],
             );
         }
 

@@ -10,6 +10,7 @@ use App\Entity\Route;
 use App\Entity\RouteStop;
 use App\Entity\Shipment;
 use App\Entity\Vehicle;
+use App\Enum\OptimizationStepCategory;
 use App\Enum\VehicleSkill;
 use App\RouteOptimization\OptimizableJob;
 use App\RouteOptimization\OptimizableVehicle;
@@ -30,6 +31,7 @@ final class RouteBuilder
         private readonly EntityManagerInterface $em,
         private readonly RouteOptimizerInterface $optimizer,
         private readonly RouteCapacityValidator $capacityValidator,
+        private readonly OptimizationLogger $optimizationLogger,
     ) {
     }
 
@@ -51,17 +53,54 @@ final class RouteBuilder
 
         // Convert domain entities to optimizer-neutral value objects
         $optimizableVehicles = $this->mapVehiclesToOptimizable($vehicles, $origin, $maxStopsPerRoute);
+
+        $this->optimizationLogger->logStep(
+            OptimizationStepCategory::VEHICLE_MAPPING,
+            sprintf('Mapeados %d vehiculos a formato optimizable', \count($optimizableVehicles)),
+            ['vehicleCount' => \count($optimizableVehicles), 'originSet' => $origin !== null],
+        );
+
+        $totalShipments = \count($shipments);
         $optimizableJobs = $this->mapShipmentsToOptimizable($shipments);
+        $skipped = $totalShipments - \count($optimizableJobs);
+
+        $this->optimizationLogger->logStep(
+            OptimizationStepCategory::JOB_MAPPING,
+            sprintf('Mapeados %d shipments a jobs (%d descartados sin coordenadas)', \count($optimizableJobs), $skipped),
+            ['jobCount' => \count($optimizableJobs), 'skippedNoCoords' => $skipped],
+        );
 
         if ($optimizableJobs === []) {
             return [];
         }
 
         // Call optimizer
+        $this->optimizationLogger->logStep(
+            OptimizationStepCategory::OPTIMIZER_CALL,
+            sprintf('Llamando al optimizador con %d vehiculos y %d jobs', \count($optimizableVehicles), \count($optimizableJobs)),
+        );
+
         $result = $this->optimizer->optimize($optimizableVehicles, $optimizableJobs);
 
+        $this->optimizationLogger->logStep(
+            OptimizationStepCategory::RESULT_SUMMARY,
+            sprintf('Optimizador genero %d rutas, %d sin asignar', \count($result->routes), \count($result->unassignedJobIds)),
+            ['routeCount' => \count($result->routes), 'unassignedCount' => \count($result->unassignedJobIds)],
+        );
+
         // Materialize as domain entities
-        return $this->materializeRoutes($result, $vehicles, $shipments, $customer, $origin);
+        $materializedRoutes = $this->materializeRoutes($result, $vehicles, $shipments, $customer, $origin);
+
+        foreach ($materializedRoutes as $mr) {
+            $route = $mr['route'];
+            $this->optimizationLogger->logStep(
+                OptimizationStepCategory::CAPACITY_CHECK,
+                sprintf('Ruta "%s": %d paradas, dist=%.1fkm', $route->getName(), \count($mr['stops']), $route->getTotalDistanceKm() ?? 0),
+                ['routeName' => $route->getName(), 'stopsCount' => \count($mr['stops']), 'validation' => $mr['validation']],
+            );
+        }
+
+        return $materializedRoutes;
     }
 
     /**

@@ -1,0 +1,187 @@
+{#
+  Optimization Log Panel — Collapsible sidebar (devtools style)
+
+  Usage:
+    {% include 'components/_optimization_log_panel.html.twig' with { optimizationLog: logData } %}
+
+  Where logData = { operation, operationLabel, optimizerUsed, durationMs, steps: [...] }
+
+  For Alpine.js contexts (route-planner), pass as JSON string in x-data binding.
+#}
+
+<style>
+  .opt-log-panel {
+    position: fixed; top: 0; right: 0; bottom: 0; width: 400px; max-width: 100vw;
+    background: #fff; z-index: 9999; box-shadow: -4px 0 20px rgba(0,0,0,.12);
+    transform: translateX(100%); transition: transform .25s ease;
+    display: flex; flex-direction: column;
+  }
+  .opt-log-panel.open { transform: translateX(0); }
+  .opt-log-toggle-btn {
+    position: fixed; right: 16px; bottom: 24px; z-index: 9998;
+    width: 48px; height: 48px; border-radius: 50%;
+    background: #4f46e5; color: #fff; border: none; cursor: pointer;
+    box-shadow: 0 4px 12px rgba(79,70,229,.4);
+    display: flex; align-items: center; justify-content: center;
+    transition: background .15s;
+  }
+  .opt-log-toggle-btn:hover { background: #4338ca; }
+  .opt-log-toggle-btn .badge {
+    position: absolute; top: -4px; right: -4px;
+    background: #ef4444; color: #fff; font-size: 10px; font-weight: 700;
+    width: 20px; height: 20px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .opt-log-header {
+    padding: 16px; border-bottom: 1px solid #e5e7eb;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .opt-log-body { flex: 1; overflow-y: auto; padding: 12px 16px; }
+  .opt-log-step {
+    position: relative; padding-left: 32px; padding-bottom: 16px;
+    border-left: 2px solid #e5e7eb; margin-left: 8px;
+  }
+  .opt-log-step:last-child { border-left-color: transparent; }
+  .opt-log-step-dot {
+    position: absolute; left: -7px; top: 2px;
+    width: 12px; height: 12px; border-radius: 50%;
+    border: 2px solid #fff; box-shadow: 0 0 0 1px #d1d5db;
+  }
+  .opt-log-step-time {
+    font-size: 10px; color: #9ca3af; font-family: monospace;
+  }
+  .opt-log-step-cat {
+    font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px;
+  }
+  .opt-log-step-msg { font-size: 13px; color: #1f2937; margin-top: 2px; }
+  .opt-log-step-data {
+    margin-top: 4px; font-size: 11px; color: #6b7280;
+    background: #f9fafb; border-radius: 4px; padding: 6px 8px;
+    font-family: monospace; white-space: pre-wrap; word-break: break-all;
+    display: none; max-height: 200px; overflow-y: auto;
+  }
+  .opt-log-step-data.show { display: block; }
+  .opt-log-step-toggle {
+    font-size: 10px; color: #6366f1; cursor: pointer; border: none;
+    background: none; padding: 0; margin-top: 2px;
+  }
+  .opt-log-step-toggle:hover { text-decoration: underline; }
+  .opt-log-footer {
+    padding: 12px 16px; border-top: 1px solid #e5e7eb;
+    background: #f9fafb; flex-shrink: 0; font-size: 12px; color: #6b7280;
+  }
+
+  /* Color classes for step dots */
+  .dot-blue { background: #3b82f6; }
+  .dot-indigo { background: #6366f1; }
+  .dot-purple { background: #8b5cf6; }
+  .dot-yellow { background: #eab308; }
+  .dot-orange { background: #f97316; }
+  .dot-cyan { background: #06b6d4; }
+  .dot-green { background: #22c55e; }
+  .dot-red { background: #ef4444; }
+  .dot-teal { background: #14b8a6; }
+  .dot-emerald { background: #10b981; }
+  .dot-gray { background: #6b7280; }
+  .dot-violet { background: #8b5cf6; }
+
+  .cat-blue { color: #2563eb; }
+  .cat-indigo { color: #4f46e5; }
+  .cat-purple { color: #7c3aed; }
+  .cat-yellow { color: #ca8a04; }
+  .cat-orange { color: #ea580c; }
+  .cat-cyan { color: #0891b2; }
+  .cat-green { color: #16a34a; }
+  .cat-red { color: #dc2626; }
+  .cat-teal { color: #0d9488; }
+  .cat-emerald { color: #059669; }
+  .cat-gray { color: #4b5563; }
+  .cat-violet { color: #7c3aed; }
+</style>
+
+{# Toggle button #}
+<button class="opt-log-toggle-btn" onclick="document.getElementById('opt-log-panel').classList.toggle('open')" title="Log de optimizacion">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+  </svg>
+  <span class="badge" id="opt-log-count">0</span>
+</button>
+
+{# Panel #}
+<div id="opt-log-panel" class="opt-log-panel">
+  <div class="opt-log-header">
+    <div>
+      <h3 class="text-sm font-bold text-gray-900" id="opt-log-title">Log de optimizacion</h3>
+      <p class="text-xs text-gray-500" id="opt-log-subtitle"></p>
+    </div>
+    <button onclick="document.getElementById('opt-log-panel').classList.remove('open')" class="text-gray-400 hover:text-gray-600">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="opt-log-body" id="opt-log-body">
+    <p class="text-sm text-gray-400 italic">Sin datos de log</p>
+  </div>
+
+  <div class="opt-log-footer" id="opt-log-footer"></div>
+</div>
+
+<script>
+(function() {
+  window.OptLogPanel = {
+    render: function(logData) {
+      if (!logData || !logData.steps) return;
+
+      var steps = logData.steps;
+      var count = document.getElementById('opt-log-count');
+      var title = document.getElementById('opt-log-title');
+      var subtitle = document.getElementById('opt-log-subtitle');
+      var body = document.getElementById('opt-log-body');
+      var footer = document.getElementById('opt-log-footer');
+
+      count.textContent = steps.length;
+      title.textContent = logData.operationLabel || 'Log de optimizacion';
+      subtitle.textContent = (logData.optimizerUsed || '') + ' — ' + (logData.durationMs || 0) + ' ms';
+
+      var html = '';
+      steps.forEach(function(step, i) {
+        var hasData = step.data && Object.keys(step.data).length > 0;
+        html += '<div class="opt-log-step">';
+        html += '<div class="opt-log-step-dot dot-' + (step.color || 'gray') + '"></div>';
+        html += '<div class="opt-log-step-time">+' + (step.elapsed_ms || 0) + 'ms</div>';
+        html += '<div class="opt-log-step-cat cat-' + (step.color || 'gray') + '">' + (step.categoryLabel || step.category) + '</div>';
+        html += '<div class="opt-log-step-msg">' + escapeHtml(step.message) + '</div>';
+        if (hasData) {
+          html += '<button class="opt-log-step-toggle" onclick="this.nextElementSibling.classList.toggle(\'show\')">ver datos</button>';
+          html += '<div class="opt-log-step-data">' + JSON.stringify(step.data, null, 2) + '</div>';
+        }
+        html += '</div>';
+      });
+
+      body.innerHTML = html;
+
+      // Footer summary
+      var lastStep = steps[steps.length - 1];
+      if (lastStep && lastStep.data) {
+        var d = lastStep.data;
+        var parts = [];
+        if (d.distanceBeforeKm !== undefined) parts.push('Dist: ' + d.distanceBeforeKm + 'km → ' + d.distanceAfterKm + 'km');
+        if (d.savedPercent !== undefined) parts.push('Ahorro: ' + d.savedPercent + '%');
+        if (d.routesCreated !== undefined) parts.push('Rutas: ' + d.routesCreated);
+        footer.textContent = parts.join(' | ') || (logData.durationMs + ' ms total');
+      } else {
+        footer.textContent = (logData.durationMs || 0) + ' ms total';
+      }
+    }
+  };
+
+  function escapeHtml(str) {
+    var div = document.createElement('div');
+    div.appendChild(document.createTextNode(str));
+    return div.innerHTML;
+  }
+})();
+</script>

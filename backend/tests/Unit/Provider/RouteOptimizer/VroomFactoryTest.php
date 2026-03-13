@@ -8,6 +8,8 @@ use App\Provider\RouteOptimizer\RouteOptimizerProvider;
 use App\Provider\RouteOptimizer\VroomFactory;
 use App\Provider\ServiceType;
 use App\RouteOptimization\VroomRouteOptimizer;
+use App\Service\OptimizationLogger;
+use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -17,14 +19,23 @@ use Symfony\Component\HttpClient\MockHttpClient;
 #[CoversClass(VroomFactory::class)]
 final class VroomFactoryTest extends TestCase
 {
+    private function createFactory(string $url = 'http://default-vroom:3000'): VroomFactory
+    {
+        $em = $this->createMock(EntityManagerInterface::class);
+        $logger = new OptimizationLogger($em);
+
+        return new VroomFactory(
+            new MockHttpClient(),
+            new NullLogger(),
+            $logger,
+            $url,
+        );
+    }
+
     #[Test]
     public function createReturnsVroomRouteOptimizerWithCustomUrl(): void
     {
-        $factory = new VroomFactory(
-            new MockHttpClient(),
-            new NullLogger(),
-            'http://default-vroom:3000',
-        );
+        $factory = $this->createFactory();
 
         $result = $factory->create(['url' => 'http://custom-vroom:5100']);
 
@@ -34,11 +45,7 @@ final class VroomFactoryTest extends TestCase
     #[Test]
     public function createUsesDefaultUrlWhenConfigEmpty(): void
     {
-        $factory = new VroomFactory(
-            new MockHttpClient(),
-            new NullLogger(),
-            'http://default-vroom:3000',
-        );
+        $factory = $this->createFactory();
 
         $result = $factory->create([]);
 
@@ -48,11 +55,7 @@ final class VroomFactoryTest extends TestCase
     #[Test]
     public function getProviderTypeReturnsVroom(): void
     {
-        $factory = new VroomFactory(
-            new MockHttpClient(),
-            new NullLogger(),
-            'http://default-vroom:3000',
-        );
+        $factory = $this->createFactory();
 
         self::assertSame(RouteOptimizerProvider::Vroom->value, $factory->getProviderType());
     }
@@ -60,11 +63,7 @@ final class VroomFactoryTest extends TestCase
     #[Test]
     public function getServiceTypeReturnsRouteOptimizer(): void
     {
-        $factory = new VroomFactory(
-            new MockHttpClient(),
-            new NullLogger(),
-            'http://default-vroom:3000',
-        );
+        $factory = $this->createFactory();
 
         self::assertSame(ServiceType::RouteOptimizer, $factory->getServiceType());
     }

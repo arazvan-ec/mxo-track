@@ -500,6 +500,9 @@
   </div>
 
 </div>
+
+{# Optimization Log Panel #}
+{% include 'components/_optimization_log_panel.html.twig' %}
 {% endblock %}
 
 {% block scripts %}
@@ -540,6 +543,7 @@ function routePlanner() {
     confirming: false,
     previewMap: null,
     previewMapLayers: [],
+    optimizationLog: null,
 
     // ── Step 1 methods ──
 
@@ -674,8 +678,14 @@ function routePlanner() {
           this.routes = data.routes || [];
           this.driverAssignments = {};
           this.driverSuggestions = {};
+          this.optimizationLog = data.optimizationLog || null;
           this.step = 3;
-          this.$nextTick(() => this.renderPreviewMap());
+          this.$nextTick(() => {
+            this.renderPreviewMap();
+            if (this.optimizationLog && window.OptLogPanel) {
+              window.OptLogPanel.render(this.optimizationLog);
+            }
+          });
           this.loadDriverSuggestions();
         } else {
           const err = await resp.json();
