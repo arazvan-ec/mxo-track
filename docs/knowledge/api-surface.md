@@ -64,6 +64,31 @@ API keys almacenadas como SHA-256 hash en `ApiKey` entity.
 
 Área `/admin/*` con session auth. Cubre: customers, users, drivers, vehicles, routes, shipments, integrations, API keys, reports, billing, AI assistant, fleet map, route planner, templates, zones, SLA.
 
+### Rutas Admin (RouteAdminController)
+
+| Ruta | Method | Nombre | Propósito |
+|------|--------|--------|-----------|
+| `/admin/routes` | GET | `admin_routes_index` | Listado con filtros (estado, fecha, conductor, cliente) |
+| `/admin/routes/new` | GET/POST | `admin_routes_new` | Crear ruta |
+| `/admin/routes/{publicId}/show` | GET | `admin_routes_show` | Detalle de ruta con mapa en vivo (Mercure), lista de paradas reactiva, métricas de optimización |
+| `/admin/routes/{publicId}/edit` | GET/POST | `admin_routes_edit` | Editar ruta y paradas |
+| `/admin/routes/{publicId}/delete` | POST | `admin_routes_delete` | Cancelar ruta |
+| `/admin/routes/{publicId}/analysis` | GET | `admin_routes_analysis` | Análisis post-ejecución (planificada vs ejecutada) |
+
+### Rutas Customer (CustomerRouteController)
+
+| Ruta | Method | Nombre | Propósito |
+|------|--------|--------|-----------|
+| `/customer/routes` | GET | `customer_routes_index` | Listado de rutas del cliente con paginación y filtro por estado |
+| `/customer/routes/{publicId}` | GET | `customer_routes_show` | Detalle de ruta con mapa en vivo (Mercure) y lista de paradas reactiva |
+
+### Rutas Driver (DriverWebController)
+
+| Ruta | Method | Nombre | Propósito |
+|------|--------|--------|-----------|
+| `/driver/routes` | GET | `driver_routes_index` | Listado de rutas del conductor con contadores de paradas |
+| `/driver/routes/{publicId}` | GET | `driver_routes_show` | Detalle de ruta con mapa en vivo (Mercure), ETAs, acciones de entrega/excepción |
+
 ## Patrones
 
 - **Error responses**: `ApiErrorResponder` (formato consistente JSON)
@@ -74,3 +99,4 @@ API keys almacenadas como SHA-256 hash en `ApiKey` entity.
 ## Historial
 
 - 2026-03-11: Creación inicial
+- 2026-03-13: Añadir rutas web de Admin, Customer y Driver con detalle de endpoints
