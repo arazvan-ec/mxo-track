@@ -20,6 +20,7 @@ final class RouteCapacityValidator
      * Validates that all shipments in the route fit within the vehicle's capacity.
      * Must be called BEFORE starting the route.
      *
+     * @param list<RouteStop>|null $preloadedStops Optional pre-loaded stops (use when Route is not yet flushed)
      * @return array{
      *     valid: bool,
      *     errors: list<string>,
@@ -31,10 +32,12 @@ final class RouteCapacityValidator
      *     parcelUtilization: float|null,
      * }
      */
-    public function validate(Route $route): array
+    public function validate(Route $route, ?array $preloadedStops = null): array
     {
         $vehicle = $route->getVehicle();
-        $stops = $this->getDeliveryStops($route);
+        $stops = $preloadedStops !== null
+            ? array_values(array_filter($preloadedStops, static fn(RouteStop $s) => !$s->isOrigin()))
+            : $this->getDeliveryStops($route);
 
         $totalWeight = 0.0;
         $totalVolume = 0.0;
