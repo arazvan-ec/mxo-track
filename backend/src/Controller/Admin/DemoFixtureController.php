@@ -6,6 +6,7 @@ namespace App\Controller\Admin;
 
 use App\Service\DemoScenarioBuilder;
 use Doctrine\DBAL\Exception\TableNotFoundException;
+use Doctrine\DBAL\Exception\ForeignKeyConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -70,14 +71,51 @@ class DemoFixtureController extends AbstractController
     private function purgeExistingDemoData(): void
     {
         $conn = $this->em->getConnection();
+        $demoCustomerFilter = "(SELECT id FROM customer WHERE name = 'Logística Express Madrid')";
+        $demoUserFilter = "(SELECT id FROM \"user\" WHERE email LIKE '%@demo.local')";
+        $demoShipmentFilter = "(SELECT id FROM shipment WHERE customer_id IN $demoCustomerFilter)";
+        $demoRouteFilter = "(SELECT id FROM route r JOIN customer c ON r.customer_id = c.id WHERE c.name = 'Logística Express Madrid')";
+        $demoVehicleFilter = "(SELECT id FROM vehicle WHERE name LIKE 'Furgoneta Madrid%' OR name LIKE 'Camión Refrigerado%' OR name LIKE 'Moto Express%')";
 
+        // Order: deepest dependents first, then parents
         $statements = [
-            "DELETE FROM shipment WHERE customer_id IN (SELECT id FROM customer WHERE name = 'Logística Express Madrid')",
-            "DELETE FROM route_stop WHERE route_id IN (SELECT r.id FROM route r JOIN customer c ON r.customer_id = c.id WHERE c.name = 'Logística Express Madrid')",
-            "DELETE FROM route WHERE customer_id IN (SELECT id FROM customer WHERE name = 'Logística Express Madrid')",
+            // Shipment children (not all have ON DELETE CASCADE)
+            "DELETE FROM notification_log WHERE shipment_id IN $demoShipmentFilter",
+            "DELETE FROM recipient_action WHERE shipment_id IN $demoShipmentFilter",
+            "DELETE FROM recipient_notification WHERE shipment_id IN $demoShipmentFilter",
+            "DELETE FROM delivery_rating WHERE shipment_id IN $demoShipmentFilter",
+            "DELETE FROM delivery_slot WHERE shipment_id IN $demoShipmentFilter",
+            "DELETE FROM shipment_event WHERE shipment_id IN $demoShipmentFilter",
+            "DELETE FROM parcel WHERE shipment_id IN $demoShipmentFilter",
+            "DELETE FROM pod WHERE shipment_id IN $demoShipmentFilter",
+            // Route children
+            "DELETE FROM route_stop WHERE route_id IN $demoRouteFilter",
+            "DELETE FROM route_snapshot WHERE route_id IN $demoRouteFilter",
+            "DELETE FROM route_optimization_log WHERE route_id IN $demoRouteFilter",
+            // User children
+            "DELETE FROM driver_action WHERE driver_id IN $demoUserFilter",
+            "DELETE FROM driver_feedback WHERE driver_id IN $demoUserFilter",
+            "DELETE FROM driver_availability WHERE user_id IN $demoUserFilter",
+            "DELETE FROM push_subscription WHERE user_id IN $demoUserFilter",
+            "DELETE FROM notification WHERE user_id IN $demoUserFilter",
+            "DELETE FROM vehicle_inspection WHERE driver_id IN $demoUserFilter",
+            "DELETE FROM audit_log WHERE user_id IN $demoUserFilter",
+            // Vehicle children
+            "DELETE FROM vehicle_position WHERE vehicle_id IN $demoVehicleFilter",
+            "DELETE FROM vehicle_last_position WHERE vehicle_id IN $demoVehicleFilter",
+            "DELETE FROM vehicle_checkpoint WHERE vehicle_id IN $demoVehicleFilter",
+            "DELETE FROM customer_vehicle WHERE vehicle_id IN $demoVehicleFilter",
+            // Customer children (non-cascading or important)
+            "DELETE FROM notification_log WHERE customer_id IN $demoCustomerFilter",
+            "DELETE FROM realtime_event WHERE customer_id IN $demoCustomerFilter",
+            "DELETE FROM notification_preference WHERE customer_id IN $demoCustomerFilter",
+            "DELETE FROM csv_import_run WHERE customer_id IN $demoCustomerFilter",
+            // Main entities
+            "DELETE FROM shipment WHERE customer_id IN $demoCustomerFilter",
+            "DELETE FROM route WHERE customer_id IN $demoCustomerFilter",
             "DELETE FROM vehicle WHERE name LIKE 'Furgoneta Madrid%' OR name LIKE 'Camión Refrigerado%' OR name LIKE 'Moto Express%'",
             "DELETE FROM \"user\" WHERE email LIKE '%@demo.local'",
-            "DELETE FROM customer_location WHERE customer_id IN (SELECT id FROM customer WHERE name = 'Logística Express Madrid')",
+            "DELETE FROM customer_location WHERE customer_id IN $demoCustomerFilter",
             "DELETE FROM customer WHERE name = 'Logística Express Madrid'",
         ];
 
@@ -86,6 +124,8 @@ class DemoFixtureController extends AbstractController
                 $conn->executeStatement($sql);
             } catch (TableNotFoundException) {
                 // Table may not exist yet if migrations are pending — safe to skip
+            } catch (ForeignKeyConstraintViolationException) {
+                // FK dependency we missed — safe to skip, parent delete will handle or next load will retry
             }
         }
     }
