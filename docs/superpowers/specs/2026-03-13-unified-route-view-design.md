@@ -1,8 +1,55 @@
 # Unified Route View Layer
 
 **Fecha:** 2026-03-13
-**Estado:** Propuesta v2
+**Estado:** Propuesta v3
 **Alcance:** Vistas de ruta (test-routing, planner step 3, customer route show, driver route show, route analysis)
+
+## Principio fundamental: Plan inmutable + Progreso aditivo
+
+```
+Route + RouteStop = PLAN INMUTABLE (qué se planificó)
+RouteSnapshot.stopStates = PROGRESO ADITIVO (qué ha ocurrido)
+```
+
+Una ruta se crea con envíos ya optimizados. Después tiene un progreso sobre cada envío.
+Los datos de progreso **no modifican la ruta original** — solo crean datos nuevos para
+actualizar la capa de negocio y la información en tiempo real.
+
+### Fuentes de verdad por propósito
+
+| Propósito | Fuente | Ejemplo |
+|-----------|--------|---------|
+| **Plan original** | Route + RouteStop (entidades Doctrine) | Orden optimizado, direcciones, destinatarios |
+| **Progreso visual** | RouteSnapshot.stopStates (JSON aditivo) | Status actual, hora de entrega, excepciones |
+| **Queries/reportes** | RouteStop.status (campo individual) | "Dame todas las paradas entregadas hoy" |
+| **Visualización completa** | RouteViewService (combina plan + progreso) | Mapa con paradas coloreadas por status |
+
+### Flujo de un evento de progreso
+
+```
+Driver entrega parada
+    → StopDelivered event
+    → RouteStop.markDelivered()          ← actualiza status para queries SQL
+    → RouteSnapshotListener              ← actualiza stopStates para view layer
+    → Mercure publish                    ← re-render en tiempo real
+```
+
+`RouteStop.status` se mantiene sincronizado con `RouteSnapshot.stopStates` porque ambos
+se actualizan en el mismo flujo de evento. Pero la **vista nunca consulta RouteStop.status
+directamente** — siempre usa RouteSnapshot vía RouteViewService.
+
+### Por qué mantener RouteStop.status
+
+- Doctrine SQL filters y DQL queries necesitan campos indexados (no JSON)
+- Reportes y exports consultan por status directamente
+- La mutación es idempotente y no afecta el plan (sequence, address, recipient no cambian)
+
+### Por qué RouteSnapshot.stopStates es la fuente del view layer
+
+- Contiene el estado completo de TODAS las paradas en un solo JSON (1 query)
+- Se serializa directamente a MapViewData sin joins adicionales
+- Se publica completo via Mercure (el frontend recibe todo lo que necesita)
+- Desacopla el view layer de la estructura de entidades Doctrine
 
 ## Problema
 
