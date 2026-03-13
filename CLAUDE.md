@@ -67,6 +67,17 @@ ROLE_ADMIN > ROLE_OPERATOR > ROLE_CUSTOMER
 ROLE_ADMIN > ROLE_DRIVER
 ```
 
+### Constructor Signature Changes (mandatory)
+
+When modifying a class constructor (adding/removing/changing parameters):
+
+1. **Search ALL call sites** — `grep -r "new ClassName("` across `src/` AND `tests/`
+2. **Check Factory classes** — This project uses the Provider/Factory pattern (`*Factory.php`). Factories instantiate services with `new` — they are NOT auto-wired by Symfony and WILL break silently if not updated.
+3. **Check DI config** — If the class is manually wired in `services.yaml` or similar, update there too.
+4. **Run tests** — Verify no `ArgumentCountError` or `TypeError` at runtime.
+
+**Why:** Symfony auto-wires most services, but Factories use `new` directly. Changing a constructor without updating its Factory causes runtime errors that tests may not catch if the Factory path isn't covered.
+
 ## Knowledge Modules (consultar bajo demanda)
 
 Antes de trabajar en un subsistema, **LEE el módulo relevante** en `docs/knowledge/`:
