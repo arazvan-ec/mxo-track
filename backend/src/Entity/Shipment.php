@@ -115,7 +115,9 @@ class Shipment implements CustomerScopedEntityInterface, SoftDeletableInterface
     }
 
     public function getReference(): string { return $this->reference; }
+    public function setReference(string $reference): void { $this->reference = $reference; }
     public function getCustomer(): Customer { return $this->customer; }
+    public function setCustomer(Customer $customer): void { $this->customer = $customer; }
     public function getCreatedAt(): DateTimeImmutable { return $this->createdAt; }
 
     public function getRecipientName(): ?string { return $this->recipientName; }
