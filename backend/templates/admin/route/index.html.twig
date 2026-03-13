@@ -170,6 +170,8 @@
                 {% endif %}
               </td>
               <td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
+                <a href="{{ path('admin_routes_show', {publicId: route.publicIdString}) }}"
+                   class="text-emerald-600 hover:text-emerald-900 mr-3">Ver</a>
                 <a href="{{ path('admin_routes_edit', {publicId: route.publicIdString}) }}"
                    class="text-blue-600 hover:text-blue-900 mr-3">Editar</a>
                 {% if route.status.value == 'DONE' %}

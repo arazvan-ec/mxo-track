@@ -296,6 +296,7 @@
 {% include 'components/route/_map_js.html.twig' %}
 <script>
 (function() {
+  var COLORS = MxoRouteMap.COLORS;
   var decodePolyline = MxoRouteMap.decodePolyline;
 
   var origin = {{ origin|json_encode|raw }};
@@ -303,18 +304,33 @@
   var polylineBefore = {{ polylineBefore|json_encode|raw }};
   var routesData = {{ routesData|json_encode|raw }};
 
-  var routeColors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6'];
+  // ── Transform data for MxoRouteMap ──
+  var mapRoutes = routesData.map(function(rd) {
+    var stopsAfter = rd.stopsAfter || [];
+    return {
+      name: rd.name,
+      polyline: rd.polylineAfter || null,
+      stops: stopsAfter.map(function(s) {
+        return {
+          lat: s.lat,
+          lng: s.lng,
+          sequence: s.seq,
+          isOrigin: false,
+          status: 'PENDING',
+          recipientName: s.recipient || '',
+          address: s.address || ''
+        };
+      })
+    };
+  });
 
-  var map = L.map('routing-map');
+  // ── Initialize MxoRouteMap for optimized routes + origin ──
+  var mxoMap = new MxoRouteMap('routing-map', {
+    routes: mapRoutes,
+    origin: { lat: origin.lat, lng: origin.lng, address: origin.address }
+  });
 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    maxZoom: 19
-  }).addTo(map);
-
-  var allPoints = [];
-
-  // ── Original route layer (red dashed, all stops in one route) ──
+  // ── Original route overlay (red dashed, unique to comparison view) ──
   var layerOriginal = L.layerGroup();
 
   function buildFallbackPoints(stopsList) {
@@ -328,7 +344,7 @@
     ? decodePolyline(polylineBefore)
     : buildFallbackPoints(allStopsBefore);
   var polyOriginal = L.polyline(pointsBefore, {
-    color: '#ef4444',
+    color: COLORS.originalRoute,
     weight: 4,
     opacity: 0.6,
     dashArray: '10, 8'
@@ -336,17 +352,16 @@
   L.polylineDecorator(polyOriginal, {
     patterns: [
       { offset: 25, repeat: 80, symbol: L.Symbol.arrowHead({
-          pixelSize: 10, polygon: false, pathOptions: { color: '#ef4444', weight: 2, opacity: 0.7 }
+          pixelSize: 10, polygon: false, pathOptions: { color: COLORS.originalRoute, weight: 2, opacity: 0.7 }
         })
       }
     ]
   }).addTo(layerOriginal);
-  pointsBefore.forEach(function(p) { allPoints.push(p); });
 
   // Original stop markers (red, smaller, behind)
   allStopsBefore.forEach(function(stop) {
     var icon = L.divIcon({
-      html: '<div style="background:#ef4444;color:#fff;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3);opacity:0.7;">' + stop.seq + '</div>',
+      html: '<div style="background:' + COLORS.originalRoute + ';color:#fff;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3);opacity:0.7;">' + stop.seq + '</div>',
       className: '',
       iconSize: [22, 22],
       iconAnchor: [11, 11]
@@ -356,104 +371,19 @@
       .addTo(layerOriginal);
   });
 
-  layerOriginal.addTo(map);
+  layerOriginal.addTo(mxoMap.map);
 
-  // ── Per-route optimized layers ──
-  var routeLayers = [];
-
-  routesData.forEach(function(rd, routeIdx) {
-    var color = routeColors[routeIdx % routeColors.length];
-    var layer = L.layerGroup();
-
-    // Polyline
-    var stopsAfter = rd.stopsAfter || [];
-    var pointsAfter = rd.polylineAfter
-      ? decodePolyline(rd.polylineAfter)
-      : buildFallbackPoints(stopsAfter);
-
-    var poly = L.polyline(pointsAfter, {
-      color: color,
-      weight: 5,
-      opacity: 0.85
-    }).addTo(layer);
-    L.polylineDecorator(poly, {
-      patterns: [
-        { offset: 25, repeat: 80, symbol: L.Symbol.arrowHead({
-            pixelSize: 12, polygon: false, pathOptions: { color: color, weight: 2, opacity: 0.9 }
-          })
-        }
-      ]
-    }).addTo(layer);
-    pointsAfter.forEach(function(p) { allPoints.push(p); });
-
-    // Stop markers
-    stopsAfter.forEach(function(stop) {
-      var icon = L.divIcon({
-        html: '<div style="background:' + color + ';color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,.3);">' + stop.seq + '</div>',
-        className: '',
-        iconSize: [28, 28],
-        iconAnchor: [14, 14]
-      });
-      L.marker([stop.lat, stop.lng], { icon: icon, zIndexOffset: 100 + routeIdx * 10 })
-        .bindPopup('<strong>' + rd.name + ' #' + stop.seq + '</strong><br>' + stop.recipient + '<br><small>' + stop.address + '</small>')
-        .addTo(layer);
-    });
-
-    layer.addTo(map);
-    routeLayers.push(layer);
-  });
-
-  // Origin marker (green) - always visible
-  var originIcon = L.divIcon({
-    html: '<div style="background:#059669;color:#fff;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3);">O</div>',
-    className: '',
-    iconSize: [32, 32],
-    iconAnchor: [16, 16]
-  });
-  L.marker([origin.lat, origin.lng], { icon: originIcon })
-    .bindPopup('<strong>Almacen (Origen)</strong><br>' + origin.address)
-    .addTo(map);
-  allPoints.push([origin.lat, origin.lng]);
-
-  // Toggle visibility
+  // ── Toggle visibility ──
   document.getElementById('toggle-original').addEventListener('change', function() {
-    this.checked ? layerOriginal.addTo(map) : map.removeLayer(layerOriginal);
+    this.checked ? layerOriginal.addTo(mxoMap.map) : mxoMap.map.removeLayer(layerOriginal);
   });
 
   document.querySelectorAll('.toggle-route').forEach(function(cb) {
     cb.addEventListener('change', function() {
       var idx = parseInt(this.dataset.routeIdx, 10);
-      if (routeLayers[idx]) {
-        this.checked ? routeLayers[idx].addTo(map) : map.removeLayer(routeLayers[idx]);
-      }
+      mxoMap.toggleRoute(idx, this.checked);
     });
   });
-
-  // Fit bounds
-  if (allPoints.length > 0) {
-    map.fitBounds(allPoints, { padding: [40, 40] });
-  } else {
-    map.setView([40.4168, -3.7038], 12);
-  }
-
-  // Center/reset map button
-  var ResetControl = L.Control.extend({
-    options: { position: 'topright' },
-    onAdd: function() {
-      var btn = L.DomUtil.create('div', 'leaflet-control-reset leaflet-bar');
-      btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>';
-      btn.title = 'Centrar mapa';
-      L.DomEvent.disableClickPropagation(btn);
-      btn.addEventListener('click', function() {
-        map.fitBounds(allPoints, { padding: [40, 40] });
-      });
-      return btn;
-    }
-  });
-  map.addControl(new ResetControl());
-
-  // Force re-render after layout settles
-  setTimeout(function() { map.invalidateSize(); }, 100);
 })();
 
 // Initialize optimization log panel

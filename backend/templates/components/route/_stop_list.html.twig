@@ -1,74 +1,126 @@
 {#
-  Stop List Component
+  Reactive Stop List Component
+  Renders stop list from initial Twig data, then auto-updates via mxo:route-updated Mercure events.
   Params:
-    - stops: array (list of StopViewData arrays)
+    - stops: array (list of StopViewData arrays from the route)
     - showStatus: bool (default true)
-    - mapId: string (optional, to listen for mxo:route-updated events)
+    - mapId: string (required — links to MxoRouteMap instance for live updates)
+    - height: string (max height CSS, default '600px')
+    - title: string (default 'Paradas')
 #}
 {% set showStatus = showStatus|default(true) %}
+{% set height = height|default('600px') %}
+{% set title = title|default('Paradas') %}
 
-<div class="rounded-lg border border-gray-200 bg-white"
-     {% if mapId is defined %}
-     x-data="{ stops: {{ stops|json_encode|e('html_attr') }} }"
-     x-init="document.addEventListener('mxo:route-updated', function(e) {
-       if (e.detail.mapId === '{{ mapId }}' && e.detail.data.routes && e.detail.data.routes[0]) {
-         stops = e.detail.data.routes[0].stops || [];
-       }
-     })"
-     {% endif %}
+<div class="rounded-xl shadow-sm border border-gray-100 bg-white overflow-hidden"
+     x-data="stopListLive({{ stops|json_encode|e('html_attr') }}, '{{ mapId }}')"
 >
-  <div class="border-b border-gray-200 px-4 py-3">
-    <h3 class="text-sm font-semibold text-gray-900">Paradas</h3>
+  <div class="border-b border-gray-100 px-5 py-4 flex items-center justify-between">
+    <h2 class="text-sm font-semibold text-gray-900" x-text="title + ' (' + totalStops + ')'">{{ title }} ({{ stops|filter(s => not s.isOrigin|default(false))|length }})</h2>
+    <span class="text-xs text-gray-500" x-text="deliveredCount + '/' + totalStops + ' completadas'"></span>
   </div>
-  <div class="max-h-[600px] overflow-y-auto divide-y divide-gray-100">
-    {% for stop in stops %}
-      {% if not stop.isOrigin|default(false) %}
-      <div class="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors">
-        {# Sequence number with status color #}
-        {% set statusColor = 'bg-blue-500' %}
-        {% if stop.status|default('PENDING') == 'DELIVERED' %}
-          {% set statusColor = 'bg-green-500' %}
-        {% elseif stop.status|default('PENDING') == 'EXCEPTION' %}
-          {% set statusColor = 'bg-red-500' %}
-        {% elseif stop.status|default('PENDING') == 'SKIPPED' %}
-          {% set statusColor = 'bg-gray-400' %}
-        {% endif %}
 
-        <div class="flex-shrink-0 {{ statusColor }} text-white w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold">
-          {{ stop.sequence }}
-        </div>
+  <ul class="divide-y divide-gray-100 overflow-y-auto" style="max-height: {{ height }};">
+    <template x-for="stop in visibleStops" :key="stop.sequence">
+      <li class="px-5 py-4 transition-colors"
+          :class="stop._justUpdated ? 'bg-yellow-50' : ''">
+        <div class="flex items-start gap-3">
+          {# Sequence circle with status color #}
+          <div class="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white"
+               :class="{
+                 'bg-green-500': stop.status === 'DELIVERED',
+                 'bg-red-500': stop.status === 'EXCEPTION',
+                 'bg-gray-400': stop.status === 'SKIPPED',
+                 'bg-blue-500': stop.status !== 'DELIVERED' && stop.status !== 'EXCEPTION' && stop.status !== 'SKIPPED'
+               }"
+               x-text="stop.sequence">
+          </div>
 
-        <div class="flex-1 min-w-0">
-          <p class="text-sm font-medium text-gray-900 truncate">
-            {{ stop.recipientName|default('Sin destinatario') }}
-          </p>
-          <p class="text-xs text-gray-500 truncate">{{ stop.address }}</p>
-        </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between gap-2">
+              <p class="text-sm font-medium text-gray-900 truncate" x-text="stop.address"></p>
+              {% if showStatus %}
+              <div class="shrink-0">
+                <span x-show="stop.status === 'DELIVERED'"
+                      class="inline-flex rounded-full bg-green-100 px-2 text-xs font-semibold leading-5 text-green-800">Entregado</span>
+                <span x-show="stop.status === 'EXCEPTION'"
+                      class="inline-flex rounded-full bg-red-100 px-2 text-xs font-semibold leading-5 text-red-800">Excepcion</span>
+                <span x-show="stop.status === 'SKIPPED'"
+                      class="inline-flex rounded-full bg-gray-100 px-2 text-xs font-semibold leading-5 text-gray-600">Omitido</span>
+                <span x-show="stop.status !== 'DELIVERED' && stop.status !== 'EXCEPTION' && stop.status !== 'SKIPPED'"
+                      class="inline-flex rounded-full bg-blue-100 px-2 text-xs font-semibold leading-5 text-blue-800">Pendiente</span>
+              </div>
+              {% endif %}
+            </div>
 
-        {% if showStatus %}
-        <div class="flex-shrink-0">
-          {% if stop.status|default('PENDING') == 'DELIVERED' %}
-            <span class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-              <svg class="mr-0.5 h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-              Entregado
-            </span>
-          {% elseif stop.status|default('PENDING') == 'EXCEPTION' %}
-            <span class="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
-              Excepcion
-            </span>
-          {% elseif stop.status|default('PENDING') == 'SKIPPED' %}
-            <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
-              Omitida
-            </span>
-          {% else %}
-            <span class="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
-              Pendiente
-            </span>
-          {% endif %}
+            <template x-if="stop.recipientName">
+              <p class="text-xs text-gray-500 mt-0.5">
+                <span x-text="stop.recipientName"></span>
+                <template x-if="stop.recipientPhone">
+                  <span> &middot; <span x-text="stop.recipientPhone"></span></span>
+                </template>
+              </p>
+            </template>
+
+            <template x-if="stop.status === 'DELIVERED' && stop.deliveredAt">
+              <p class="text-xs text-green-600 mt-0.5 flex items-center gap-1">
+                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg>
+                <span x-text="'Entregado: ' + new Date(stop.deliveredAt).toLocaleString('es-ES', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})"></span>
+              </p>
+            </template>
+
+            <template x-if="stop.status === 'EXCEPTION'">
+              <p class="text-xs text-red-600 mt-0.5 flex items-center gap-1">
+                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg>
+                <span x-text="(stop.exceptionCode || 'Desconocido') + (stop.exceptionNotes ? ' - ' + stop.exceptionNotes : '')"></span>
+              </p>
+            </template>
+          </div>
         </div>
-        {% endif %}
-      </div>
-      {% endif %}
-    {% endfor %}
-  </div>
+      </li>
+    </template>
+  </ul>
 </div>
+
+<script>
+function stopListLive(initialStops, mapId) {
+  return {
+    stops: initialStops || [],
+    title: '{{ title|e('js') }}',
+
+    get visibleStops() {
+      return this.stops.filter(function(s) { return !s.isOrigin; });
+    },
+    get totalStops() {
+      return this.visibleStops.length;
+    },
+    get deliveredCount() {
+      return this.visibleStops.filter(function(s) { return s.status === 'DELIVERED'; }).length;
+    },
+
+    init() {
+      var self = this;
+      document.addEventListener('mxo:route-updated', function(e) {
+        if (e.detail.mapId !== mapId) return;
+        var routes = e.detail.data.routes;
+        if (!routes || !routes[0] || !routes[0].stops) return;
+
+        var newStops = routes[0].stops;
+        // Merge: update existing stops status, highlight changed ones
+        var oldBySeq = {};
+        self.stops.forEach(function(s) { oldBySeq[s.sequence] = s; });
+
+        newStops.forEach(function(ns) {
+          var old = oldBySeq[ns.sequence];
+          if (old && old.status !== ns.status) {
+            ns._justUpdated = true;
+            setTimeout(function() { ns._justUpdated = false; }, 3000);
+          }
+        });
+
+        self.stops = newStops;
+      });
+    }
+  };
+}
+</script>

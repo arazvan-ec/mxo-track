@@ -159,6 +159,8 @@ class CustomerRouteController extends AbstractController
                 $vehiclePosition = [
                     'lat' => $lastPosition->getLat(),
                     'lng' => $lastPosition->getLng(),
+                    'speed' => $lastPosition->getSpeed(),
+                    'course' => $lastPosition->getCourse(),
                 ];
             }
         }
@@ -174,9 +176,13 @@ class CustomerRouteController extends AbstractController
         $mapView = $this->routeViewService->buildSingleRouteView($route, 'ROLE_CUSTOMER', $mapOptions);
         $mapView = $mapView->withMercureUrl($this->mercurePublicUrl);
 
+        // Extract stops from MapViewData for the reactive stop list component
+        $mapArray = $mapView->toArray();
+        $viewStops = $mapArray['routes'][0]['stops'] ?? [];
+
         return $this->render('customer/route/show.html.twig', [
             'route' => $route,
-            'stops' => $stops,
+            'viewStops' => $viewStops,
             'mapViewJson' => $mapView->toJson(),
         ]);
     }
