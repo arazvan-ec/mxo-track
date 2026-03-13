@@ -1,0 +1,41 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Cargar datos demo - Admin{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-lg">
+    <div class="mb-6">
+      <h1 class="text-2xl font-bold text-gray-900">Cargar datos demo</h1>
+      <p class="mt-2 text-sm text-gray-500">Crea datos de prueba para el sistema: cliente, envios, vehiculos y conductores.</p>
+    </div>
+
+    <div class="bg-white shadow rounded-lg p-6">
+      <div class="mb-4 rounded-md bg-amber-50 p-4">
+        <div class="flex">
+          <svg class="h-5 w-5 text-amber-400 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+          </svg>
+          <div class="text-sm text-amber-700">
+            <p class="font-medium">Esto creara datos nuevos (no borra los existentes):</p>
+            <ul class="mt-2 list-disc list-inside space-y-1">
+              <li>1 cliente: "Logistica Express Madrid"</li>
+              <li>200 envios sin asignar (listos para el planificador)</li>
+              <li>3 vehiculos (furgoneta, camion, moto)</li>
+              <li>2 conductores</li>
+              <li>1 almacen (Villaverde)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <form method="post" action="{{ path('admin_fixtures_load') }}"
+            onsubmit="return confirm('Cargar datos demo?');">
+        <input type="hidden" name="_token" value="{{ csrf_token('load-fixtures') }}">
+        <button type="submit"
+                class="w-full inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
+          Cargar datos demo
+        </button>
+      </form>
+    </div>
+</div>
+{% endblock %}
