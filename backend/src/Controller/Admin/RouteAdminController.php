@@ -240,6 +240,7 @@ class RouteAdminController extends AbstractController
                 'total' => (int) ($stopCounts['total'] ?? 0),
                 'delivered' => (int) ($stopCounts['delivered'] ?? 0),
             ],
+            'mercurePublicUrl' => $this->mercurePublicUrl,
         ]);
     }
 
