@@ -92,6 +92,9 @@ final class RouteBuilder
         // Materialize as domain entities
         $materializedRoutes = $this->materializeRoutes($result, $vehicles, $shipments, $customer, $origin);
 
+        // Flush to assign IDs before creating snapshots (snapshots query by route)
+        $this->em->flush();
+
         foreach ($materializedRoutes as $mr) {
             $route = $mr['route'];
             $this->optimizationLogger->logStep(
