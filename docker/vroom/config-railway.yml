@@ -14,5 +14,5 @@ cliArgs:
 routingServers:
   osrm:
     car:
-      host: "osrm-mxo.railway.internal"
+      host: "osrm-mx.railway.internal"
       port: "5000"

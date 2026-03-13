@@ -119,7 +119,7 @@ final class DebugRoutingCommand extends Command
 
         // Cross-service: VROOM -> OSRM connectivity
         $io->section('4. VROOM -> OSRM Internal Connectivity');
-        $io->text('VROOM config-railway.yml points OSRM to: osrm-mxo.railway.internal:5000');
+        $io->text('VROOM config-railway.yml points OSRM to: osrm-mx.railway.internal:5000');
         $io->text('If VROOM HTTP responds but optimization fails with routing errors,');
         $io->text('it means VROOM cannot reach OSRM on the internal network.');
         $io->text('');

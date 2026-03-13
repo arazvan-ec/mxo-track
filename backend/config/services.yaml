@@ -43,6 +43,11 @@ services:
       $osrmUrl: '%env(string:default::OSRM_URL)%'
       $vroomUrl: '%env(string:default::VROOM_URL)%'
 
+  App\Controller\Admin\DebugRoutingController:
+    arguments:
+      $osrmUrl: '%env(string:default::OSRM_URL)%'
+      $vroomUrl: '%env(string:default::VROOM_URL)%'
+
   App\Service\SystemHealthService:
     arguments:
       $mercureInternalUrl: '%env(string:default::MERCURE_URL)%'
