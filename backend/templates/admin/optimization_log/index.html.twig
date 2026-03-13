@@ -1,0 +1,93 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Logs de optimizacion - Admin{% endblock %}
+
+{% block breadcrumbs %}
+  <li>
+    <div class="flex items-center">
+      <svg class="h-5 w-5 shrink-0 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd"/>
+      </svg>
+      <span class="ml-2 text-sm font-medium text-gray-900">Logs de optimizacion</span>
+    </div>
+  </li>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold tracking-tight text-gray-900">Logs de optimizacion</h1>
+      <p class="mt-1 text-sm text-gray-500">Historial de decisiones tomadas en cada planificacion y optimizacion de rutas.</p>
+    </div>
+  </div>
+
+  {# Filters #}
+  <div class="flex items-center gap-3">
+    <a href="{{ path('admin_optimization_logs_index') }}"
+       class="inline-flex items-center rounded-md px-3 py-1.5 text-sm font-medium {{ currentOperation == '' ? 'bg-indigo-100 text-indigo-700' : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50' }}">
+      Todos
+    </a>
+    {% for op in operations %}
+      <a href="{{ path('admin_optimization_logs_index', { operation: op.value }) }}"
+         class="inline-flex items-center rounded-md px-3 py-1.5 text-sm font-medium {{ currentOperation == op.value ? 'bg-indigo-100 text-indigo-700' : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50' }}">
+        {{ op.label }}
+      </a>
+    {% endfor %}
+  </div>
+
+  {# Table #}
+  <div class="bg-white shadow rounded-lg overflow-hidden">
+    <table class="min-w-full divide-y divide-gray-200">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Operacion</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Optimizador</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pasos</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Duracion</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Mejora</th>
+          <th class="px-4 py-3"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        {% for log in logs %}
+        <tr class="hover:bg-gray-50">
+          <td class="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
+            {{ log.createdAt|date('d/m/Y H:i') }}
+          </td>
+          <td class="px-4 py-3 text-sm">
+            <span class="inline-flex rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-semibold text-indigo-700">
+              {{ log.operation.label }}
+            </span>
+          </td>
+          <td class="px-4 py-3 text-sm text-gray-900">{{ log.optimizerUsed }}</td>
+          <td class="px-4 py-3 text-sm text-gray-500">{{ log.steps|length }}</td>
+          <td class="px-4 py-3 text-sm text-gray-500">{{ log.durationMs }} ms</td>
+          <td class="px-4 py-3 text-sm">
+            {% set result = log.resultSummary %}
+            {% if result.improvementPercent is defined and result.improvementPercent %}
+              <span class="font-medium text-green-600">{{ result.improvementPercent }}%</span>
+            {% elseif result.routesCreated is defined %}
+              <span class="text-gray-500">{{ result.routesCreated }} rutas</span>
+            {% else %}
+              <span class="text-gray-400">-</span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-3 text-right">
+            <a href="{{ path('admin_optimization_logs_show', { publicId: log.publicIdString }) }}"
+               class="text-indigo-600 hover:text-indigo-500 text-sm font-medium">Ver</a>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="7" class="px-4 py-8 text-center text-sm text-gray-500">
+            No hay logs de optimizacion registrados.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

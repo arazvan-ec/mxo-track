@@ -9,6 +9,8 @@ use App\RouteOptimization\OptimizableJob;
 use App\RouteOptimization\OptimizableVehicle;
 use App\RouteOptimization\OptimizationResult;
 use App\RouteOptimization\RouteOptimizerInterface;
+use App\Service\OptimizationLogger;
+use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -16,10 +18,18 @@ use PHPUnit\Framework\TestCase;
 #[CoversClass(GreedyOptimizer::class)]
 final class GreedyOptimizerTest extends TestCase
 {
+    private function createOptimizer(): GreedyOptimizer
+    {
+        $em = $this->createMock(EntityManagerInterface::class);
+        $logger = new OptimizationLogger($em);
+
+        return new GreedyOptimizer($logger);
+    }
+
     #[Test]
     public function it_implements_interface(): void
     {
-        self::assertInstanceOf(RouteOptimizerInterface::class, new GreedyOptimizer());
+        self::assertInstanceOf(RouteOptimizerInterface::class, $this->createOptimizer());
     }
 
     #[Test]
@@ -32,7 +42,7 @@ final class GreedyOptimizerTest extends TestCase
             new OptimizableJob(id: 'j3', latitude: 40.4155, longitude: -3.7074), // Puerta del Sol area
         ];
 
-        $result = (new GreedyOptimizer())->optimize([$vehicle], $jobs);
+        $result = ($this->createOptimizer())->optimize([$vehicle], $jobs);
 
         self::assertInstanceOf(OptimizationResult::class, $result);
         self::assertCount(1, $result->routes);
@@ -54,7 +64,7 @@ final class GreedyOptimizerTest extends TestCase
             new OptimizableJob(id: 'j3', latitude: 40.42, longitude: -3.72, weightKg: 5.0), // exceeds
         ];
 
-        $result = (new GreedyOptimizer())->optimize([$vehicle], $jobs);
+        $result = ($this->createOptimizer())->optimize([$vehicle], $jobs);
 
         // 2 jobs should fit (10kg total), 1 should be unassigned
         $jobSteps = array_filter($result->routes[0]->steps, fn($s) => $s->type === 'job');
@@ -71,7 +81,7 @@ final class GreedyOptimizerTest extends TestCase
             new OptimizableJob(id: 'j2', latitude: 40.41, longitude: -3.71, volumeM3: 0.6), // exceeds
         ];
 
-        $result = (new GreedyOptimizer())->optimize([$vehicle], $jobs);
+        $result = ($this->createOptimizer())->optimize([$vehicle], $jobs);
 
         $jobSteps = array_filter($result->routes[0]->steps, fn($s) => $s->type === 'job');
         self::assertCount(1, $jobSteps);
@@ -92,7 +102,7 @@ final class GreedyOptimizerTest extends TestCase
             new OptimizableJob(id: 'j4', latitude: 40.43, longitude: -3.73, weightKg: 3.0),
         ];
 
-        $result = (new GreedyOptimizer())->optimize($vehicles, $jobs);
+        $result = ($this->createOptimizer())->optimize($vehicles, $jobs);
 
         // Total weight 12kg, each vehicle 5kg -> at most 1 job each (3kg) leaves 2kg remaining.
         // Can't fit a second (3kg > 2kg). So 2 jobs assigned, 2 unassigned.
@@ -107,7 +117,7 @@ final class GreedyOptimizerTest extends TestCase
     public function no_jobs_returns_empty(): void
     {
         $vehicle = new OptimizableVehicle(id: 'v1');
-        $result = (new GreedyOptimizer())->optimize([$vehicle], []);
+        $result = ($this->createOptimizer())->optimize([$vehicle], []);
 
         self::assertSame([], $result->routes);
         self::assertSame([], $result->unassignedJobIds);
@@ -120,7 +130,7 @@ final class GreedyOptimizerTest extends TestCase
             new OptimizableJob(id: 'j1', latitude: 40.40, longitude: -3.70),
         ];
 
-        $result = (new GreedyOptimizer())->optimize([], $jobs);
+        $result = ($this->createOptimizer())->optimize([], $jobs);
 
         self::assertSame([], $result->routes);
         self::assertSame(['j1'], $result->unassignedJobIds);

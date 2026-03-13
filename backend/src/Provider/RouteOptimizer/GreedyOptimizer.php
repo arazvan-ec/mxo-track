@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Provider\RouteOptimizer;
 
+use App\Enum\OptimizationStepCategory;
 use App\RouteOptimization\OptimizableJob;
 use App\RouteOptimization\OptimizableVehicle;
 use App\RouteOptimization\OptimizationResult;
 use App\RouteOptimization\OptimizedRoute;
 use App\RouteOptimization\OptimizedStep;
 use App\RouteOptimization\RouteOptimizerInterface;
+use App\Service\OptimizationLogger;
 
 /**
  * Greedy nearest-neighbor route optimizer. Pure PHP, zero external dependencies.
@@ -20,8 +22,18 @@ final class GreedyOptimizer implements RouteOptimizerInterface
 {
     private const EARTH_RADIUS_KM = 6371.0;
 
+    public function __construct(
+        private readonly OptimizationLogger $optimizationLogger,
+    ) {
+    }
+
     public function optimize(array $vehicles, array $jobs): OptimizationResult
     {
+        $this->optimizationLogger->setOptimizerUsed('greedy');
+        $this->optimizationLogger->logStep(
+            OptimizationStepCategory::OPTIMIZER_SELECTION,
+            'Usando optimizador Greedy (nearest-neighbor, sin dependencias externas)',
+        );
         if ($jobs === []) {
             return new OptimizationResult(routes: [], unassignedJobIds: []);
         }
@@ -90,8 +102,22 @@ final class GreedyOptimizer implements RouteOptimizerInterface
                 $vehicleCapacity[$bestVehicle->id]['weight'] -= $job->weightKg;
                 $vehicleCapacity[$bestVehicle->id]['volume'] -= $job->volumeM3;
                 $vehicleCapacity[$bestVehicle->id]['parcels'] -= $job->parcels;
+
+                $this->optimizationLogger->logStep(
+                    OptimizationStepCategory::STOP_ORDERING,
+                    sprintf('Job %d → Vehiculo %d (distancia=%.2fkm, capacidad restante: peso=%.1fkg)',
+                        $job->id, $bestVehicle->id, $bestDistance, $vehicleCapacity[$bestVehicle->id]['weight']),
+                    ['jobId' => $job->id, 'vehicleId' => $bestVehicle->id, 'distance' => round($bestDistance, 2),
+                     'remainingCapacity' => $vehicleCapacity[$bestVehicle->id]],
+                );
             } else {
                 $unassigned[] = $job->id;
+
+                $this->optimizationLogger->logStep(
+                    OptimizationStepCategory::UNASSIGNED_JOBS,
+                    sprintf('Job %d sin vehiculo disponible con capacidad suficiente', $job->id),
+                    ['jobId' => $job->id, 'weightKg' => $job->weightKg, 'volumeM3' => $job->volumeM3, 'parcels' => $job->parcels],
+                );
             }
         }
 
@@ -124,6 +150,12 @@ final class GreedyOptimizer implements RouteOptimizerInterface
                 steps: $steps,
             );
         }
+
+        $this->optimizationLogger->logStep(
+            OptimizationStepCategory::RESULT_SUMMARY,
+            sprintf('Greedy: %d rutas creadas, %d sin asignar', \count($routes), \count($unassigned)),
+            ['routeCount' => \count($routes), 'unassignedCount' => \count($unassigned)],
+        );
 
         return new OptimizationResult(routes: $routes, unassignedJobIds: $unassigned);
     }

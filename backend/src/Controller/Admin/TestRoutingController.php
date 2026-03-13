@@ -10,9 +10,12 @@ use App\Entity\Route;
 use App\Entity\RouteStop;
 use App\Entity\Shipment;
 use App\Entity\Vehicle;
+use App\Enum\OptimizationOperation;
+use App\Enum\OptimizationStepCategory;
 use App\Provider\ProviderUnavailableException;
 use App\Routing\Coordinate;
 use App\Routing\OsrmRoutingEngine;
+use App\Service\OptimizationLogger;
 use App\Service\RouteOptimizationService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -45,6 +48,7 @@ class TestRoutingController extends AbstractController
         private readonly EntityManagerInterface $em,
         private readonly RouteOptimizationService $optimizationService,
         private readonly OsrmRoutingEngine $routingEngine,
+        private readonly OptimizationLogger $optimizationLogger,
     ) {
     }
 
@@ -171,11 +175,25 @@ class TestRoutingController extends AbstractController
     public function map(): Response
     {
         try {
+            $this->optimizationLogger->startOperation(OptimizationOperation::TEST_ROUTING, [
+                'deliveryCount' => \count(self::DELIVERIES),
+                'warehouseLat' => self::WAREHOUSE_LAT,
+                'warehouseLng' => self::WAREHOUSE_LNG,
+            ]);
+
             // Step 1: Create test data
+            $this->optimizationLogger->logStep(
+                OptimizationStepCategory::JOB_MAPPING,
+                sprintf('Creando datos de test: %d envios, 1 vehiculo, 1 ruta', \count(self::DELIVERIES)),
+            );
             [$route, $shipments] = $this->createTestData();
             $this->em->flush();
 
             // Step 2: Get OSRM polyline for ORIGINAL stop order
+            $this->optimizationLogger->logStep(
+                OptimizationStepCategory::DISTANCE_CALCULATION,
+                'Calculando ruta original via OSRM (sin optimizar)',
+            );
             $waypointsBefore = [new Coordinate(self::WAREHOUSE_LAT, self::WAREHOUSE_LNG)];
             $stopsBefore = [];
             foreach ($shipments as $i => $shipment) {
@@ -193,10 +211,18 @@ class TestRoutingController extends AbstractController
             $routeBefore = $this->routingEngine->routeWithWaypoints($waypointsBefore);
 
             // Step 3: Optimize with VROOM
+            $this->optimizationLogger->logStep(
+                OptimizationStepCategory::OPTIMIZER_CALL,
+                'Iniciando optimizacion de orden de paradas',
+            );
             $result = $this->optimizationService->optimizeStopOrder($route);
             $this->optimizationService->applyOptimizedOrder($result['optimized']);
 
             // Step 4: Get OSRM polyline for OPTIMIZED stop order
+            $this->optimizationLogger->logStep(
+                OptimizationStepCategory::DISTANCE_CALCULATION,
+                'Calculando ruta optimizada via OSRM',
+            );
             $waypointsAfter = [new Coordinate(self::WAREHOUSE_LAT, self::WAREHOUSE_LNG)];
             $stopsAfter = [];
             foreach ($result['optimized'] as $item) {
@@ -218,6 +244,10 @@ class TestRoutingController extends AbstractController
             $routeAfter = $this->routingEngine->routeWithWaypoints($waypointsAfter);
 
             // Step 5: Compute metrics
+            $this->optimizationLogger->logStep(
+                OptimizationStepCategory::TIMING_ESTIMATION,
+                'Calculando metricas y tiempos estimados',
+            );
             $saved = $result['distanceBefore'] > 0
                 ? round(($result['distanceBefore'] - $result['distanceAfter']) / $result['distanceBefore'] * 100, 1)
                 : 0;
@@ -233,6 +263,17 @@ class TestRoutingController extends AbstractController
                 ? round($routeAfter->totalDistanceKm, 2)
                 : round($result['distanceAfter'], 2);
 
+            $savedPercent = $distanceBeforeKm > 0
+                ? round(($distanceBeforeKm - $distanceAfterKm) / $distanceBeforeKm * 100, 1)
+                : $saved;
+
+            $this->optimizationLogger->logStep(
+                OptimizationStepCategory::RESULT_SUMMARY,
+                sprintf('Test routing completado: %.1fkm → %.1fkm (ahorro %.1f%%)', $distanceBeforeKm, $distanceAfterKm, $savedPercent),
+                ['distanceBeforeKm' => $distanceBeforeKm, 'distanceAfterKm' => $distanceAfterKm, 'savedPercent' => $savedPercent,
+                 'timing' => $timing, 'osrmAvailable' => $osrmAvailable],
+            );
+
             $templateData = [
                 'origin' => [
                     'lat' => self::WAREHOUSE_LAT,
@@ -247,13 +288,12 @@ class TestRoutingController extends AbstractController
                 'metrics' => [
                     'distanceBeforeKm' => $distanceBeforeKm,
                     'distanceAfterKm' => $distanceAfterKm,
-                    'savedPercent' => $distanceBeforeKm > 0
-                        ? round(($distanceBeforeKm - $distanceAfterKm) / $distanceBeforeKm * 100, 1)
-                        : $saved,
+                    'savedPercent' => $savedPercent,
                     'durationMinutes' => $result['durationMinutes'],
                     'timing' => $timing,
                     'stopCount' => \count($stopsAfter),
                 ],
+                'optimizationLog' => $this->optimizationLogger->getLogData(),
             ];
         } catch (\Throwable $e) {
             $this->cleanup();

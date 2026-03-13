@@ -6,6 +6,7 @@ namespace App\Service;
 
 use App\Entity\Route;
 use App\Entity\RouteStop;
+use App\Enum\OptimizationStepCategory;
 use App\Enum\RouteStopStatus;
 use App\RouteOptimization\OptimizableJob;
 use App\RouteOptimization\OptimizableVehicle;
@@ -25,6 +26,7 @@ final class RouteOptimizationService
         private readonly EntityManagerInterface $em,
         private readonly RouteOptimizerInterface $routeOptimizer,
         private readonly RoutingEngineInterface $routingEngine,
+        private readonly OptimizationLogger $optimizationLogger,
     ) {
     }
 
@@ -55,9 +57,25 @@ final class RouteOptimizationService
 
         $distanceBefore = $this->calculateTotalRoadDistance($stops);
 
+        $this->optimizationLogger->logStep(
+            OptimizationStepCategory::DISTANCE_CALCULATION,
+            sprintf('Distancia original: %.2fkm (%d paradas)', $distanceBefore, \count($deliveryStops)),
+            ['distanceBeforeKm' => round($distanceBefore, 2), 'deliveryStopCount' => \count($deliveryStops)],
+        );
+
         if (\count($deliveryStops) < 2) {
+            $this->optimizationLogger->logStep(
+                OptimizationStepCategory::OPTIMIZER_CALL,
+                'Menos de 2 paradas, no se requiere optimizacion',
+            );
+
             return $this->buildResult($originStop, $deliveryStops, $distanceBefore, $distanceBefore);
         }
+
+        $this->optimizationLogger->logStep(
+            OptimizationStepCategory::OPTIMIZER_CALL,
+            sprintf('Optimizando orden de %d paradas', \count($deliveryStops)),
+        );
 
         // Build optimizer-neutral vehicle and jobs
         $optimizableVehicle = new OptimizableVehicle(
@@ -108,6 +126,27 @@ final class RouteOptimizationService
         $durationMinutes = isset($result->routes[0])
             ? (int) round($result->routes[0]->durationSeconds / 60.0)
             : 0;
+
+        $improvement = $distanceBefore > 0
+            ? round(($distanceBefore - $distanceAfter) / $distanceBefore * 100, 1)
+            : 0;
+
+        $this->optimizationLogger->logStep(
+            OptimizationStepCategory::DISTANCE_CALCULATION,
+            sprintf('Distancia optimizada: %.2fkm (ahorro: %.1f%%)', $distanceAfter, $improvement),
+            ['distanceAfterKm' => round($distanceAfter, 2), 'improvementPercent' => $improvement, 'durationMinutes' => $durationMinutes],
+        );
+
+        // Log new stop order
+        $orderNames = [];
+        foreach ($optimizedDeliveries as $stop) {
+            $orderNames[] = $stop->getRecipientName() ?? $stop->getAddress();
+        }
+        $this->optimizationLogger->logStep(
+            OptimizationStepCategory::STOP_ORDERING,
+            sprintf('Nuevo orden de %d paradas establecido', \count($optimizedDeliveries)),
+            ['optimizedOrder' => $orderNames],
+        );
 
         return $this->buildResult($originStop, $optimizedDeliveries, $distanceBefore, $distanceAfter, $durationMinutes);
     }
@@ -161,6 +200,13 @@ final class RouteOptimizationService
             }
         }
 
+        $nonPendingCount = \count($allStops) - \count($pendingStops) - ($originStop !== null ? 1 : 0);
+        $this->optimizationLogger->logStep(
+            OptimizationStepCategory::STOP_ORDERING,
+            sprintf('Paradas completadas/excluidas: %d, pendientes: %d', $nonPendingCount, \count($pendingStops)),
+            ['nonPendingCount' => $nonPendingCount, 'pendingCount' => \count($pendingStops)],
+        );
+
         if (\count($pendingStops) < 2) {
             $distanceBefore = $this->calculatePendingDistance($pendingStops, $currentLat, $currentLng, $originStop);
 
@@ -170,6 +216,14 @@ final class RouteOptimizationService
         // Determine start position: use current driver position, or fall back to origin
         $startLat = $currentLat ?? $originStop?->getLatitude();
         $startLng = $currentLng ?? $originStop?->getLongitude();
+
+        $this->optimizationLogger->logStep(
+            OptimizationStepCategory::OPTIMIZER_CALL,
+            sprintf('Re-optimizando %d paradas pendientes desde [%.4f, %.4f]',
+                \count($pendingStops), $startLat ?? 0, $startLng ?? 0),
+            ['pendingCount' => \count($pendingStops), 'startLat' => $startLat, 'startLng' => $startLng,
+             'usingDriverPosition' => $currentLat !== null],
+        );
 
         $distanceBefore = $this->calculatePendingDistance($pendingStops, $startLat, $startLng, null);
 
