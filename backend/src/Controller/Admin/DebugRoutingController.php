@@ -70,8 +70,44 @@ class DebugRoutingController extends AbstractController
             }
         }
 
-        // VROOM: test optimization
+        // OSRM: test /table endpoint (this is what VROOM actually uses)
+        if ($this->osrmUrl !== '' && ($results['osrm']['route_works'] ?? false)) {
+            $tableUrl = rtrim($this->osrmUrl, '/') . '/table/v1/driving/-3.7038,40.4168;-3.6883,40.4530';
+            try {
+                $start = microtime(true);
+                $response = $this->httpClient->request('GET', $tableUrl, ['timeout' => 10]);
+                $status = $response->getStatusCode();
+                $latency = (int) round((microtime(true) - $start) * 1000);
+                $data = $response->toArray(false);
+
+                $results['osrm_table'] = [
+                    'http_status' => $status,
+                    'latency_ms' => $latency,
+                    'works' => ($data['code'] ?? '') === 'Ok',
+                    'osrm_code' => $data['code'] ?? null,
+                ];
+            } catch (\Throwable $e) {
+                $results['osrm_table'] = ['works' => false, 'error' => $e->getMessage()];
+            }
+        }
+
+        // VROOM: test health (GET) and optimization (POST) separately
         if ($this->vroomUrl !== '') {
+            // First: simple GET to check if VROOM is reachable
+            try {
+                $start = microtime(true);
+                $response = $this->httpClient->request('GET', $this->vroomUrl . '/health', ['timeout' => 5]);
+                $healthStatus = $response->getStatusCode();
+                $healthLatency = (int) round((microtime(true) - $start) * 1000);
+                $results['vroom_health'] = [
+                    'http_status' => $healthStatus,
+                    'latency_ms' => $healthLatency,
+                ];
+            } catch (\Throwable $e) {
+                $results['vroom_health'] = ['error' => $e->getMessage()];
+            }
+
+            // Then: POST optimization
             try {
                 $start = microtime(true);
                 $response = $this->httpClient->request('POST', $this->vroomUrl, [
@@ -79,11 +115,14 @@ class DebugRoutingController extends AbstractController
                         'vehicles' => [['id' => 0, 'start' => [-3.7038, 40.4168]]],
                         'jobs' => [['id' => 0, 'location' => [-3.6883, 40.4530]]],
                     ],
-                    'timeout' => 10,
+                    'timeout' => 15,
                 ]);
                 $status = $response->getStatusCode();
                 $latency = (int) round((microtime(true) - $start) * 1000);
-                $data = $response->toArray(false);
+
+                // Get raw body for debugging
+                $rawBody = $response->getContent(false);
+                $data = json_decode($rawBody, true) ?? [];
 
                 $vroomCode = $data['code'] ?? -1;
                 $results['vroom'] = [
@@ -93,10 +132,11 @@ class DebugRoutingController extends AbstractController
                     'optimization_works' => $vroomCode === 0,
                     'vroom_code' => $vroomCode,
                     'vroom_error' => $data['error'] ?? null,
+                    'raw_response' => mb_substr($rawBody, 0, 500),
                 ];
 
                 if ($vroomCode !== 0) {
-                    $results['vroom']['hint'] = 'VROOM responded but optimization failed. This usually means VROOM cannot reach OSRM internally. Check config-railway.yml host.';
+                    $results['vroom']['hint'] = 'VROOM cannot reach OSRM. Check VROOM logs and OSRM_HOST env var on vroom-mxo service.';
                 }
             } catch (\Throwable $e) {
                 $results['vroom']['error'] = $e->getMessage();
