@@ -119,6 +119,8 @@ final class DriverWebController extends AbstractController
                 $vehiclePosition = [
                     'lat' => $lastPosition->getLat(),
                     'lng' => $lastPosition->getLng(),
+                    'speed' => $lastPosition->getSpeed(),
+                    'course' => $lastPosition->getCourse(),
                 ];
             }
         }

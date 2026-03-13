@@ -219,7 +219,7 @@
 
     <div class="space-y-3 pb-6">
       {% for stop in stops %}
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden" id="stop-card-{{ stop.publicIdString }}">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden" id="stop-card-{{ stop.publicIdString }}" data-sequence="{{ stop.sequence }}" data-stop-status="{{ stop.status.value }}">
           <div class="px-4 py-3">
             <div class="flex items-start gap-3">
               {# Sequence circle #}
@@ -749,5 +749,70 @@
         // Map is now handled by shared MxoRouteMap component
       };
     }
+
+    // ── Live stop card updates via Mercure ────────────────────────
+    document.addEventListener('mxo:route-updated', function(e) {
+      var routes = e.detail.data && e.detail.data.routes;
+      if (!routes || !routes[0] || !routes[0].stops) return;
+
+      var STATUS_CONFIG = {
+        DELIVERED: { circleClass: 'bg-green-500', badgeHtml: '<span class="inline-flex rounded-full bg-green-100 px-2 text-xs font-semibold leading-5 text-green-800">Entregado</span>' },
+        EXCEPTION: { circleClass: 'bg-red-500', badgeHtml: '<span class="inline-flex rounded-full bg-red-100 px-2 text-xs font-semibold leading-5 text-red-800">Excepcion</span>' },
+        SKIPPED:   { circleClass: 'bg-gray-400', badgeHtml: '<span class="inline-flex rounded-full bg-gray-100 px-2 text-xs font-semibold leading-5 text-gray-600">Omitido</span>' },
+        PENDING:   { circleClass: 'bg-blue-500', badgeHtml: '<span class="inline-flex rounded-full bg-blue-100 px-2 text-xs font-semibold leading-5 text-blue-800">Pendiente</span>' }
+      };
+
+      var newStopsBySeq = {};
+      routes[0].stops.forEach(function(s) {
+        if (!s.isOrigin) newStopsBySeq[s.sequence] = s;
+      });
+
+      // Update progress counter
+      var totalVisible = Object.keys(newStopsBySeq).length;
+      var deliveredCount = Object.values(newStopsBySeq).filter(function(s) { return s.status === 'DELIVERED'; }).length;
+      var counterEl = document.querySelector('.text-xs.text-gray-500');
+      if (counterEl && counterEl.textContent.indexOf('completadas') !== -1) {
+        counterEl.textContent = deliveredCount + '/' + totalVisible + ' completadas';
+      }
+
+      // Update each stop card
+      document.querySelectorAll('[data-sequence][data-stop-status]').forEach(function(card) {
+        var seq = parseInt(card.dataset.sequence, 10);
+        var newStop = newStopsBySeq[seq];
+        if (!newStop || card.dataset.stopStatus === newStop.status) return;
+
+        var oldStatus = card.dataset.stopStatus;
+        card.dataset.stopStatus = newStop.status;
+
+        // Update circle color
+        var circle = card.querySelector('.rounded-full.flex.items-center.justify-content');
+        if (!circle) circle = card.querySelector('.shrink-0.rounded-full');
+        if (circle) {
+          circle.classList.remove('bg-blue-500', 'bg-green-500', 'bg-red-500', 'bg-gray-400');
+          var cfg = STATUS_CONFIG[newStop.status] || STATUS_CONFIG.PENDING;
+          circle.classList.add(cfg.circleClass);
+        }
+
+        // Update status badge
+        var badgeContainer = card.querySelector('.shrink-0 > span') || card.querySelector('[class*="rounded-full"][class*="leading-5"]');
+        if (badgeContainer && badgeContainer.parentElement) {
+          var cfg = STATUS_CONFIG[newStop.status] || STATUS_CONFIG.PENDING;
+          badgeContainer.parentElement.innerHTML = cfg.badgeHtml;
+        }
+
+        // Hide action buttons if no longer PENDING
+        if (newStop.status !== 'PENDING' && oldStatus === 'PENDING') {
+          var buttons = card.querySelectorAll('button[\\@click*="openDeliverModal"], button[\\@click*="openExceptionModal"]');
+          buttons.forEach(function(btn) {
+            if (btn.closest('.mt-3')) btn.closest('.mt-3').style.display = 'none';
+          });
+        }
+
+        // Flash highlight
+        card.style.transition = 'background-color 0.5s ease';
+        card.style.backgroundColor = '#fefce8';
+        setTimeout(function() { card.style.backgroundColor = ''; }, 3000);
+      });
+    });
   </script>
 {% endblock %}

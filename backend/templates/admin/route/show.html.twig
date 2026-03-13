@@ -1,0 +1,130 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ route.name }} - Ruta - Admin{% endblock %}
+
+{% block styles %}
+  {{ parent() }}
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <style>
+    #admin-route-map img { max-width: none !important; max-height: none !important; }
+    #admin-route-map .leaflet-tile { max-width: none !important; max-height: none !important; }
+  </style>
+{% endblock %}
+
+{% block content %}
+  {# ── Header ──────────────────────────────────────────────────────── #}
+  <div class="mb-6 flex items-center justify-between">
+    <div class="flex items-center gap-4">
+      <a href="{{ path('admin_routes_index') }}"
+         class="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+        <svg class="mr-1.5 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/>
+        </svg>
+        Volver
+      </a>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">{{ route.name }}</h1>
+        <div class="mt-1 flex items-center gap-3 text-sm text-gray-500">
+          {% if route.vehicle %}
+            <span class="flex items-center gap-1">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"/>
+              </svg>
+              {{ route.vehicle.name }}
+            </span>
+          {% endif %}
+          {% if route.driver %}
+            <span class="flex items-center gap-1">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/>
+              </svg>
+              {{ route.driver.email }}
+            </span>
+          {% endif %}
+          {% if route.customer %}
+            <span class="flex items-center gap-1">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z"/>
+              </svg>
+              {{ route.customer.name }}
+            </span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      {% if route.status.value == 'PLANNED' %}
+        <span class="inline-flex rounded-full bg-blue-100 px-3 py-1 text-sm font-semibold text-blue-800">Planificada</span>
+      {% elseif route.status.value == 'ACTIVE' %}
+        <span class="inline-flex rounded-full bg-amber-100 px-3 py-1 text-sm font-semibold text-amber-800">Activa</span>
+      {% elseif route.status.value == 'DONE' %}
+        <span class="inline-flex rounded-full bg-green-100 px-3 py-1 text-sm font-semibold text-green-800">Completada</span>
+      {% elseif route.status.value == 'CANCELLED' %}
+        <span class="inline-flex rounded-full bg-red-100 px-3 py-1 text-sm font-semibold text-red-800">Cancelada</span>
+      {% endif %}
+      <a href="{{ path('admin_routes_edit', {publicId: route.publicIdString}) }}"
+         class="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500">
+        Editar
+      </a>
+    </div>
+  </div>
+
+  {# ── Metrics cards ──────────────────────────────────────────────── #}
+  {% if metrics %}
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white shadow rounded-lg p-5">
+      <p class="text-xs text-gray-500">Distancia original</p>
+      <p class="text-lg font-bold text-gray-900">{{ metrics.distanceBeforeKm|default(0)|number_format(1) }} km</p>
+    </div>
+    <div class="bg-white shadow rounded-lg p-5">
+      <p class="text-xs text-gray-500">Distancia optimizada</p>
+      <p class="text-lg font-bold text-gray-900">{{ metrics.distanceAfterKm|default(0)|number_format(1) }} km</p>
+    </div>
+    <div class="bg-white shadow rounded-lg p-5">
+      <p class="text-xs text-gray-500">Ahorro</p>
+      <p class="text-lg font-bold text-green-600">{{ metrics.savingsPercent|default(0)|number_format(1) }}%</p>
+    </div>
+    {% if timing %}
+    <div class="bg-white shadow rounded-lg p-5">
+      <p class="text-xs text-gray-500">Tiempo estimado</p>
+      <p class="text-lg font-bold text-gray-900">{{ timing.totalTimeMinutes|default(0) }} min</p>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {# ── Split Layout: stops + map ───────────────────────────────────── #}
+  <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+
+    {# ── Left: Stop List (reactive via Mercure) ──────────────────── #}
+    <div class="lg:col-span-2">
+      {% include 'components/route/_stop_list.html.twig' with {
+        stops: viewStops,
+        mapId: 'admin-route-map',
+        height: '600px',
+        title: 'Paradas'
+      } only %}
+    </div>
+
+    {# ── Right: Map (shared component) ───────────────────────────── #}
+    <div class="lg:col-span-3">
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-100">
+          <h2 class="text-sm font-semibold text-gray-900">Mapa de ruta</h2>
+        </div>
+        {% include 'components/route/_map.html.twig' with {
+          mapId: 'admin-route-map',
+          mapData: mapViewJson,
+          height: '600px'
+        } only %}
+      </div>
+    </div>
+
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  {{ parent() }}
+  {% include 'components/route/_map_js.html.twig' %}
+{% endblock %}
