@@ -52,6 +52,7 @@ API keys almacenadas como SHA-256 hash en `ApiKey` entity.
 | `/api/fleet/summary` | GET | Resumen de flota |
 | `/api/search` | GET | Búsqueda full-text |
 | `/api/routes/{publicId}/events` | GET | Historial de eventos de ruta |
+| `/api/routes/{publicId}/etas` | GET | ETAs de paradas (snapshot-first, fallback OSRM) |
 
 ## Public (Sin Auth)
 
@@ -101,3 +102,4 @@ API keys almacenadas como SHA-256 hash en `ApiKey` entity.
 
 - 2026-03-11: Creación inicial
 - 2026-03-13: Añadir rutas web de Admin, Customer y Driver con detalle de endpoints
+- 2026-03-14: Añadir endpoint GET /api/routes/{publicId}/etas (snapshot-first)

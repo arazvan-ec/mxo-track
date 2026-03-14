@@ -57,7 +57,7 @@
 | **ExceptionCode** | ABSENT, WRONG_ADDRESS, REFUSED, DAMAGED, OTHER | Razón de excepción |
 | **ShipmentEventType** | CREATED, PICKED_UP, IN_HUB, IN_TRANSIT, OUT_FOR_DELIVERY, DELIVERED, EXCEPTION, RESCHEDULE_REQUESTED | Ciclo de vida |
 | **ShipmentPriority** | LOW(0), NORMAL(25), HIGH(50), URGENT(75), CRITICAL(100) | Prioridad int-backed |
-| **RouteEventType** | CREATED, OPTIMIZED, ASSIGNED, STARTED, COMPLETED, CANCELLED, STOP_DELIVERED, STOP_EXCEPTION, STOP_SKIPPED, REOPTIMIZED, STOPS_REORDERED, DEVIATION_DETECTED, ETA_CHANGED, NOTE_ADDED | Tipo de evento de ruta |
+| **RouteEventType** | CREATED, OPTIMIZED, ASSIGNED, STARTED, COMPLETED, CANCELLED, STOP_DELIVERED, STOP_EXCEPTION, STOP_SKIPPED, REOPTIMIZED, STOPS_REORDERED, DEVIATION_DETECTED, DEVIATION_ENDED, ETA_CHANGED, NOTE_ADDED | Tipo de evento de ruta |
 | **ServiceType** | ROUTING, ROUTE_OPTIMIZER, GPS, REALTIME | Tipos de provider |
 | **VehicleSkill** | REFRIGERATED, HEAVY_LOAD, FRAGILE, etc. | Skills de vehículo (int-backed, JSON array) |
 | **ParcelStatus** | REGISTERED → IN_WAREHOUSE → LOADED → IN_TRANSIT → DELIVERED | Estado de bulto |
@@ -105,7 +105,7 @@ Vehicle (global, no scoped)
 
 | Evento | Disparado por | Listeners |
 |--------|--------------|-----------|
-| `VehiclePositionReceived` | TraccarIngestionService | MercurePositionListener, ApproachingNotificationSubscriber, FleetAnomalyCheckListener |
+| `VehiclePositionReceived` | TraccarIngestionService | MercurePositionListener, EtaRecalculationListener, ApproachingNotificationSubscriber, FleetAnomalyCheckListener |
 | `RoutesBuilt` | RoutePlanningService | RouteEventLogListener |
 | `RouteOptimized` | RoutePlanningService | RouteEventLogListener |
 | `RouteStarted` | RouteLifecycleService | MercureRouteProgressListener, AiEnrichmentListener, RouteSnapshotListener, RouteEventLogListener |
@@ -114,9 +114,13 @@ Vehicle (global, no scoped)
 | `StopExceptionReported` | DeliveryService | NotifyDeliveryListener, AuditDeliveryListener, RouteSnapshotListener, RouteEventLogListener |
 | `RouteCancelled` | RouteAdminController | RouteEventLogListener |
 | `RouteAssigned` | RouteAdminController | RouteEventLogListener |
+| `EtaChanged` | EtaRecalculationListener | RouteEventLogListener |
+| `DeviationDetected` | EtaRecalculationListener | RouteEventLogListener, DeviationAlertListener |
+| `DeviationEnded` | EtaRecalculationListener | RouteEventLogListener |
 | `ShipmentCreated` | ShipmentService | ShipmentEmbeddingListener |
 
 ## Historial
 
 - 2026-03-11: Creación inicial
 - 2026-03-13: Añadir RouteEvent, RouteSnapshot, RouteEventType, RouteCancelled, RouteAssigned, RouteEventLogListener
+- 2026-03-14: Añadir DeviationDetected, DeviationEnded, DEVIATION_ENDED, EtaChanged domain events; EtaRecalculationListener con throttle 30s y detección de desvío
