@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\EventListener\Domain;
 
+use App\Domain\Event\DeviationDetected;
+use App\Domain\Event\DeviationEnded;
 use App\Domain\Event\EtaChanged;
 use App\Domain\Event\VehiclePositionReceived;
 use App\Entity\Route;
@@ -11,6 +13,7 @@ use App\Entity\Vehicle;
 use App\Enum\RouteStatus;
 use App\Repository\VehicleRepository;
 use App\Service\EtaService;
+use App\Service\RouteDeviationService;
 use App\Service\RouteSnapshotManager;
 use App\View\MapViewData;
 use App\View\MapViewOptions;
@@ -29,10 +32,14 @@ final class EtaRecalculationListener
     /** @var array<string, float> route ID => last calculation microtime */
     private array $lastCalculatedAt = [];
 
+    /** @var array<string, bool> route ID => currently deviated */
+    private array $deviationState = [];
+
     public function __construct(
         private readonly VehicleRepository $vehicleRepo,
         private readonly EntityManagerInterface $em,
         private readonly EtaService $etaService,
+        private readonly RouteDeviationService $deviationService,
         private readonly RouteSnapshotManager $snapshotManager,
         private readonly RouteViewService $viewService,
         private readonly HubInterface $hub,
@@ -95,6 +102,9 @@ final class EtaRecalculationListener
             }
         }
 
+        // Check for route deviation
+        $this->checkDeviation($activeRoute, $event);
+
         // Publish updated MapViewData via Mercure
         $this->publishRouteViewUpdate($activeRoute);
     }
@@ -117,6 +127,66 @@ final class EtaRecalculationListener
         }
 
         return $maxDelta;
+    }
+
+    private function checkDeviation(Route $activeRoute, VehiclePositionReceived $event): void
+    {
+        $result = $this->deviationService->checkDeviation(
+            $activeRoute,
+            $event->latitude,
+            $event->longitude,
+        );
+
+        if ($result === null) {
+            return;
+        }
+
+        $routeKey = $activeRoute->getId() ?? $activeRoute->getPublicIdString();
+        $wasDeviated = $this->deviationState[$routeKey] ?? false;
+
+        if ($result->isDeviated && !$wasDeviated) {
+            // Transition: on-route → off-route
+            $this->deviationState[$routeKey] = true;
+
+            $this->dispatcher->dispatch(new DeviationDetected(
+                routePublicId: $activeRoute->getPublicIdString(),
+                vehiclePublicId: $event->vehiclePublicId,
+                latitude: $event->latitude,
+                longitude: $event->longitude,
+                distanceMeters: $result->distanceMeters,
+                thresholdMeters: $result->thresholdMeters,
+            ));
+
+            $this->publishDeviationAlert($activeRoute, $event, $result->distanceMeters);
+        } elseif (!$result->isDeviated && $wasDeviated) {
+            // Transition: off-route → on-route
+            $this->deviationState[$routeKey] = false;
+
+            $this->dispatcher->dispatch(new DeviationEnded(
+                routePublicId: $activeRoute->getPublicIdString(),
+                vehiclePublicId: $event->vehiclePublicId,
+            ));
+        }
+    }
+
+    private function publishDeviationAlert(Route $route, VehiclePositionReceived $event, float $distanceMeters): void
+    {
+        try {
+            $this->hub->publish(new Update(
+                sprintf('/routes/%s/deviation', $route->getPublicIdString()),
+                json_encode([
+                    'type' => 'DEVIATION_DETECTED',
+                    'route_public_id' => $route->getPublicIdString(),
+                    'vehicle_public_id' => $event->vehiclePublicId,
+                    'latitude' => $event->latitude,
+                    'longitude' => $event->longitude,
+                    'distance_meters' => round($distanceMeters, 1),
+                    'occurred_at' => $event->occurredAt->format(\DATE_ATOM),
+                ], JSON_THROW_ON_ERROR),
+            ));
+        } catch (\Throwable) {
+            // Don't break on Mercure failure
+        }
     }
 
     private function publishRouteViewUpdate(Route $route): void

@@ -4,14 +4,17 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\EventListener\Domain;
 
+use App\Domain\Event\DeviationDetected;
 use App\Domain\Event\EtaChanged;
 use App\Domain\Event\VehiclePositionReceived;
+use App\Dto\DeviationCheckResult;
 use App\Entity\Route;
 use App\Entity\Vehicle;
 use App\Enum\RouteStatus;
 use App\EventListener\Domain\EtaRecalculationListener;
 use App\Repository\VehicleRepository;
 use App\Service\EtaService;
+use App\Service\RouteDeviationService;
 use App\Service\RouteSnapshotManager;
 use App\View\RouteViewService;
 use DateTimeImmutable;
@@ -30,6 +33,7 @@ final class EtaRecalculationListenerTest extends TestCase
     private VehicleRepository $vehicleRepo;
     private EntityManagerInterface $em;
     private EtaService $etaService;
+    private RouteDeviationService $deviationService;
     private RouteSnapshotManager $snapshotManager;
     private RouteViewService $viewService;
     private HubInterface $hub;
@@ -40,6 +44,7 @@ final class EtaRecalculationListenerTest extends TestCase
         $this->vehicleRepo = $this->createMock(VehicleRepository::class);
         $this->em = $this->createMock(EntityManagerInterface::class);
         $this->etaService = $this->createMock(EtaService::class);
+        $this->deviationService = $this->createMock(RouteDeviationService::class);
         $this->snapshotManager = $this->createMock(RouteSnapshotManager::class);
         $this->viewService = $this->createMock(RouteViewService::class);
         $this->hub = $this->createMock(HubInterface::class);
@@ -49,6 +54,7 @@ final class EtaRecalculationListenerTest extends TestCase
             $this->vehicleRepo,
             $this->em,
             $this->etaService,
+            $this->deviationService,
             $this->snapshotManager,
             $this->viewService,
             $this->hub,
@@ -262,6 +268,88 @@ final class EtaRecalculationListenerTest extends TestCase
         $this->listener->onVehiclePositionReceived($event);
 
         // Second call within 30s: should be throttled (calculateEtas already called once above)
+        $this->listener->onVehiclePositionReceived($event);
+    }
+
+    #[Test]
+    public function dispatchesDeviationDetectedWhenVehicleGoesOffRoute(): void
+    {
+        $vehicle = $this->createVehicle();
+        $route = $this->createActiveRoute($vehicle);
+
+        $this->vehicleRepo->method('findOneByPublicId')->willReturn($vehicle);
+
+        $routeRepo = $this->createMock(EntityRepository::class);
+        $routeRepo->method('findOneBy')->willReturn($route);
+        $this->em->method('getRepository')->with(Route::class)->willReturn($routeRepo);
+
+        $etas = [
+            'stop1' => ['eta' => new DateTimeImmutable('+15 min'), 'remainingMinutes' => 15, 'distanceKm' => 3.2],
+        ];
+        $this->etaService->method('calculateEtas')->willReturn($etas);
+        $this->snapshotManager->method('updateEtas')->willReturn(null);
+
+        // Vehicle is 800m off route
+        $this->deviationService->method('checkDeviation')->willReturn(
+            new DeviationCheckResult(isDeviated: true, distanceMeters: 800.0, thresholdMeters: 500.0),
+        );
+
+        $this->dispatcher->expects(self::once())
+            ->method('dispatch')
+            ->with(self::callback(fn ($e) => $e instanceof DeviationDetected
+                && $e->routePublicId === $route->getPublicIdString()
+                && $e->distanceMeters === 800.0));
+
+        $event = new VehiclePositionReceived(
+            vehiclePublicId: $vehicle->getPublicIdString(),
+            latitude: 40.416,
+            longitude: -3.715,
+            speed: 30.0,
+            course: 180.0,
+            deviceTime: new DateTimeImmutable(),
+        );
+
+        $this->listener->onVehiclePositionReceived($event);
+    }
+
+    #[Test]
+    public function doesNotDispatchDeviationWhenAlreadyDeviated(): void
+    {
+        $vehicle = $this->createVehicle();
+        $route = $this->createActiveRoute($vehicle);
+
+        $this->vehicleRepo->method('findOneByPublicId')->willReturn($vehicle);
+
+        $routeRepo = $this->createMock(EntityRepository::class);
+        $routeRepo->method('findOneBy')->willReturn($route);
+        $this->em->method('getRepository')->with(Route::class)->willReturn($routeRepo);
+
+        $etas = [
+            'stop1' => ['eta' => new DateTimeImmutable('+15 min'), 'remainingMinutes' => 15, 'distanceKm' => 3.2],
+        ];
+        $this->etaService->method('calculateEtas')->willReturn($etas);
+        $this->snapshotManager->method('updateEtas')->willReturn(null);
+
+        // Vehicle is 800m off route both times
+        $this->deviationService->method('checkDeviation')->willReturn(
+            new DeviationCheckResult(isDeviated: true, distanceMeters: 800.0, thresholdMeters: 500.0),
+        );
+
+        // DeviationDetected should only fire once (first transition)
+        $this->dispatcher->expects(self::once())->method('dispatch');
+
+        $event = new VehiclePositionReceived(
+            vehiclePublicId: $vehicle->getPublicIdString(),
+            latitude: 40.416,
+            longitude: -3.715,
+            speed: 30.0,
+            course: 180.0,
+            deviceTime: new DateTimeImmutable(),
+        );
+
+        // Note: throttle will prevent second call for routes with ID.
+        // Routes without ID (null) bypass throttle, so both calls go through.
+        $this->listener->onVehiclePositionReceived($event);
         $this->listener->onVehiclePositionReceived($event);
     }
 }

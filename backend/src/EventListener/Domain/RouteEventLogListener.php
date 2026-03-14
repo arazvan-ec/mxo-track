@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\EventListener\Domain;
 
+use App\Domain\Event\DeviationDetected;
+use App\Domain\Event\DeviationEnded;
 use App\Domain\Event\EtaChanged;
 use App\Domain\Event\RouteAssigned;
 use App\Domain\Event\RouteCancelled;
@@ -232,6 +234,50 @@ final readonly class RouteEventLogListener
                 'max_delta_minutes' => $event->maxDeltaMinutes,
                 'previous_etas' => $event->previousEtas,
                 'current_etas' => $event->currentEtas,
+            ],
+            snapshotMetrics: $this->buildSnapshotMetrics($route),
+            occurredAt: $event->occurredAt,
+        ), $event->routePublicId);
+    }
+
+    #[AsEventListener]
+    public function onDeviationDetected(DeviationDetected $event): void
+    {
+        $route = $this->routeRepo->findOneByPublicId($event->routePublicId);
+        if (!$route) {
+            return;
+        }
+
+        $this->persistAndPublish(new RouteEvent(
+            route: $route,
+            eventType: RouteEventType::DEVIATION_DETECTED,
+            actorType: 'system',
+            payload: [
+                'vehicle_public_id' => $event->vehiclePublicId,
+                'latitude' => $event->latitude,
+                'longitude' => $event->longitude,
+                'distance_meters' => round($event->distanceMeters, 1),
+                'threshold_meters' => $event->thresholdMeters,
+            ],
+            snapshotMetrics: $this->buildSnapshotMetrics($route),
+            occurredAt: $event->occurredAt,
+        ), $event->routePublicId);
+    }
+
+    #[AsEventListener]
+    public function onDeviationEnded(DeviationEnded $event): void
+    {
+        $route = $this->routeRepo->findOneByPublicId($event->routePublicId);
+        if (!$route) {
+            return;
+        }
+
+        $this->persistAndPublish(new RouteEvent(
+            route: $route,
+            eventType: RouteEventType::DEVIATION_ENDED,
+            actorType: 'system',
+            payload: [
+                'vehicle_public_id' => $event->vehiclePublicId,
             ],
             snapshotMetrics: $this->buildSnapshotMetrics($route),
             occurredAt: $event->occurredAt,

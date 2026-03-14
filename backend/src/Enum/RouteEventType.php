@@ -23,8 +23,9 @@ enum RouteEventType: string
     case REOPTIMIZED = 'REOPTIMIZED';
     case STOPS_REORDERED = 'STOPS_REORDERED';
 
-    // Deviations (prepared for Phase 3)
+    // Deviations
     case DEVIATION_DETECTED = 'DEVIATION_DETECTED';
+    case DEVIATION_ENDED = 'DEVIATION_ENDED';
     case ETA_CHANGED = 'ETA_CHANGED';
 
     // External
