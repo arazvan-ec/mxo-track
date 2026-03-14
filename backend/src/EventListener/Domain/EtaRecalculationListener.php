@@ -21,18 +21,22 @@ use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\Update;
 
-final readonly class EtaRecalculationListener
+final class EtaRecalculationListener
 {
     private const int ETA_CHANGE_THRESHOLD_MINUTES = 5;
+    private const int THROTTLE_SECONDS = 30;
+
+    /** @var array<string, float> route ID => last calculation microtime */
+    private array $lastCalculatedAt = [];
 
     public function __construct(
-        private VehicleRepository $vehicleRepo,
-        private EntityManagerInterface $em,
-        private EtaService $etaService,
-        private RouteSnapshotManager $snapshotManager,
-        private RouteViewService $viewService,
-        private HubInterface $hub,
-        private EventDispatcherInterface $dispatcher,
+        private readonly VehicleRepository $vehicleRepo,
+        private readonly EntityManagerInterface $em,
+        private readonly EtaService $etaService,
+        private readonly RouteSnapshotManager $snapshotManager,
+        private readonly RouteViewService $viewService,
+        private readonly HubInterface $hub,
+        private readonly EventDispatcherInterface $dispatcher,
     ) {}
 
     #[AsEventListener]
@@ -52,9 +56,21 @@ final readonly class EtaRecalculationListener
             return;
         }
 
+        // Throttle: skip if last calculation was < 30s ago
+        $routeId = $activeRoute->getId();
+        if ($routeId !== null && isset($this->lastCalculatedAt[$routeId])) {
+            if ((microtime(true) - $this->lastCalculatedAt[$routeId]) < self::THROTTLE_SECONDS) {
+                return;
+            }
+        }
+
         $etas = $this->etaService->calculateEtas($activeRoute);
         if ($etas === []) {
             return;
+        }
+
+        if ($routeId !== null) {
+            $this->lastCalculatedAt[$routeId] = microtime(true);
         }
 
         $previousMinutes = $this->snapshotManager->updateEtas($activeRoute, $etas);

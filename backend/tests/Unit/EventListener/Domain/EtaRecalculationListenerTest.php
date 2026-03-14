@@ -64,12 +64,17 @@ final class EtaRecalculationListenerTest extends TestCase
         return $vehicle;
     }
 
-    private function createActiveRoute(Vehicle $vehicle): Route
+    private function createActiveRoute(Vehicle $vehicle, ?string $id = null): Route
     {
         $route = new Route('Test Route');
         $route->initializePublicId();
         $route->setVehicle($vehicle);
         $route->setStatus(RouteStatus::ACTIVE);
+
+        if ($id !== null) {
+            $ref = new \ReflectionProperty($route, 'id');
+            $ref->setValue($route, $id);
+        }
 
         return $route;
     }
@@ -221,6 +226,42 @@ final class EtaRecalculationListenerTest extends TestCase
             deviceTime: new DateTimeImmutable(),
         );
 
+        $this->listener->onVehiclePositionReceived($event);
+    }
+
+    #[Test]
+    public function throttlesConsecutiveRecalculations(): void
+    {
+        $vehicle = $this->createVehicle();
+        $route = $this->createActiveRoute($vehicle, '42');
+
+        $this->vehicleRepo->method('findOneByPublicId')->willReturn($vehicle);
+
+        $routeRepo = $this->createMock(EntityRepository::class);
+        $routeRepo->method('findOneBy')->willReturn($route);
+        $this->em->method('getRepository')->with(Route::class)->willReturn($routeRepo);
+
+        $etas = [
+            'stop1' => ['eta' => new DateTimeImmutable('+15 min'), 'remainingMinutes' => 15, 'distanceKm' => 3.2],
+        ];
+        $this->etaService->method('calculateEtas')->willReturn($etas);
+        $this->snapshotManager->method('updateEtas')->willReturn(null);
+
+        $event = new VehiclePositionReceived(
+            vehiclePublicId: $vehicle->getPublicIdString(),
+            latitude: 40.416,
+            longitude: -3.703,
+            speed: 30.0,
+            course: 180.0,
+            deviceTime: new DateTimeImmutable(),
+        );
+
+        // First call: should calculate
+        $this->etaService->expects(self::once())->method('calculateEtas');
+
+        $this->listener->onVehiclePositionReceived($event);
+
+        // Second call within 30s: should be throttled (calculateEtas already called once above)
         $this->listener->onVehiclePositionReceived($event);
     }
 }
