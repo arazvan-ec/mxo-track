@@ -19,5 +19,8 @@ final readonly class TrackingInfo
         public ?ShipmentEvent $latestEvent,
         public ?array $approximatePosition,
         public bool $routeActive,
+        public ?int $etaMinutes = null,
+        public ?string $etaTime = null,
+        public ?float $etaDistanceKm = null,
     ) {}
 }

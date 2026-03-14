@@ -65,6 +65,29 @@
       </div>
     </div>
 
+    {# ── ETA Card (shown when route is active and ETA available) ──── #}
+    {% if routeActive and etaMinutes is defined and etaMinutes is not null %}
+      <div class="bg-blue-50 rounded-xl shadow-sm border border-blue-200 p-5 mb-6">
+        <div class="flex items-center gap-3">
+          <div class="shrink-0 flex h-10 w-10 items-center justify-center rounded-full bg-blue-500">
+            <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-blue-900">Llegada estimada</p>
+            <p class="text-lg font-bold text-blue-800">
+              {% if etaTime is not null %}{{ etaTime }}{% endif %}
+              <span class="text-sm font-medium text-blue-600">(~{{ etaMinutes }} min)</span>
+            </p>
+            {% if etaDistanceKm is not null %}
+              <p class="text-xs text-blue-600">{{ etaDistanceKm|number_format(1) }} km de distancia</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
     {# ── Status Timeline ──────────────────────────────────────────── #}
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
       <h2 class="text-sm font-semibold text-gray-900 mb-4">Historial del envio</h2>
