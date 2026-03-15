@@ -56,6 +56,9 @@ class PublicTrackingController extends AbstractController
             'latestEvent' => $info->latestEvent,
             'approximatePosition' => $info->approximatePosition,
             'routeActive' => $info->routeActive,
+            'etaMinutes' => $info->etaMinutes,
+            'etaTime' => $info->etaTime,
+            'etaDistanceKm' => $info->etaDistanceKm,
         ]);
     }
 

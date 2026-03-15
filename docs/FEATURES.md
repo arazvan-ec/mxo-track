@@ -68,6 +68,7 @@
 | Característica | Descripción | Ruta |
 |---|---|---|
 | Listado de rutas | Paginación, filtros por estado/fecha/conductor/cliente | `/admin/routes` |
+| Detalle de ruta (en vivo) | Mapa con paradas + lista reactiva via Mercure, métricas de optimización, tracking de vehículo | `/admin/routes/{publicId}/show` |
 | Crear ruta | Formulario con asignación de conductor, vehículo, cliente y origen | `/admin/routes/new` |
 | Editar ruta | Modificar detalles, gestionar paradas, calcular distancias | `/admin/routes/{publicId}/edit` |
 | Cancelar ruta | Cambia estado a CANCELLED | `/admin/routes/{publicId}/delete` |
@@ -216,15 +217,32 @@ php bin/console app:dev:simulate-gps --points=120 --interval=1 --ingest
 - Soporte para rutas personalizadas via `--route-file` (JSON)
 - Crea dispositivos en Traccar automáticamente
 
-### Mercure Topics para Posiciones
+### Mercure Topics
 
-| Topic | Contenido |
-|---|---|
-| `/vehicles/{publicId}/position` | Lat, lng, speed, course, accuracy |
-| `/operator/fleet` | Resumen de flota |
-| `/routes/{publicId}/updates` | Progreso de ruta |
-| `/customers/{customerId}/routes` | Cambios de estado de ruta |
-| `/customers/{customerId}/shipments` | Eventos de envío |
+| Topic | Contenido | Publisher |
+|---|---|---|
+| `/vehicles/{publicId}/position` | Lat, lng, speed, course, accuracy | MercurePositionListener |
+| `/operator/fleet` | Resumen de flota | MercurePositionListener |
+| `/customers/{customerId}/routes` | Eventos ligeros: `stop_delivered`, `stop_exception`, `route_started`, `route_completed` | MercureRouteProgressListener |
+| `/customers/{customerId}/shipments` | Eventos de envío | MercureRouteProgressListener |
+| `/routes/{publicId}/view/admin` | MapViewData completa (con métricas de optimización) | RouteSnapshotListener |
+| `/routes/{publicId}/view/customer` | MapViewData completa (sin métricas admin) | RouteSnapshotListener |
+| `/routes/{publicId}/view/driver` | MapViewData completa (sin métricas admin) | RouteSnapshotListener |
+
+### Actualización en tiempo real de vistas de ruta
+
+Cuando un conductor marca una entrega o reporta una excepción, `RouteSnapshotListener` publica la vista completa (`MapViewData`) a los 3 topics por rol. En el frontend:
+
+1. **`MxoRouteMap`** (componente compartido) recibe el update via EventSource y re-renderiza el mapa (marcadores cambian color según status)
+2. **`mxo:route-updated`** evento DOM se emite con los datos actualizados
+3. **Lista de paradas reactiva** (`_stop_list.html.twig` o listener inline) escucha el evento y actualiza badges de estado, contadores, y info de entrega/excepción
+
+| Vista | Mapa en tiempo real | Lista de paradas reactiva |
+|---|---|---|
+| Admin route show | Sí (Mercure) | Sí (Alpine.js `_stop_list.html.twig`) |
+| Customer route show | Sí (Mercure) | Sí (Alpine.js `_stop_list.html.twig`) |
+| Driver route show | Sí (Mercure) | Sí (listener DOM inline) |
+| Operator dashboard | Sí (posiciones vehiculos) | N/A (refresca KPIs) |
 
 ---
 
@@ -876,6 +894,7 @@ Cuando un tenant no tiene `CustomerIntegration` configurada, se usan estos defau
 | 2026-03-11 | 1.2.0 | Providers configurables por tenant: framework de proxy transparente + factory, 4 providers nuevos (Greedy, Google Directions, Webhook GPS, HTTP Polling), entidad CustomerIntegration, API de polling, admin CRUD, fallback chains, caché Redis. 255 tests (122 nuevos). |
 | 2026-03-11 | 1.3.0 | Fase 2 — IA Activa: 55 tests nuevos para servicios AI/ML (304 total). Tests para ExceptionClassifier, PostRouteAnalyzer, DeliveryRisk, AddressRisk, EmbeddingService, SearchService, AiAssistant, DeliveryNoteAiEnricher. Fix bug DeliveryRiskService (array vs entity). Fix bug AiAssistantService (customerId int→string). UI: clasificación AI en excepciones (badge + insight + acción sugerida). UI: badge de riesgo en planificador de rutas. |
 | 2026-03-12 | 1.3.1 | Refactor: OperatorKpiService migrado de DBAL (SQL crudo) a DQL QueryBuilder (Doctrine ORM). Consultas ahora tipadas con entidades y enums. `getTopDrivers()` mantiene DBAL nativo por funciones PostgreSQL-específicas. Tests actualizados con mocks de EntityManager/QueryBuilder. |
+| 2026-03-13 | 1.4.0 | Mapas unificados: planificador y test-routing usan `MxoRouteMap` compartido (colores, estilos, decoradores consistentes). Actualización en tiempo real via Mercure en las 3 vistas de ruta (admin, customer, driver): mapa se re-renderiza y lista de paradas reactiva actualiza estados, badges y contadores al instante. Nueva vista admin route show con mapa en vivo, métricas de optimización y lista de paradas reactiva. Documentación actualizada: realtime.md, api-surface.md, FEATURES.md. |
 
 ---
 

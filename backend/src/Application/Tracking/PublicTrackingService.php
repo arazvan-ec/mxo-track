@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Application\Tracking;
 
+use App\Entity\RouteSnapshot;
 use App\Entity\RouteStop;
 use App\Entity\ShipmentEvent;
 use App\Entity\VehicleLastPosition;
@@ -84,12 +85,46 @@ final readonly class PublicTrackingService
             }
         }
 
+        // Get ETA for this stop from route snapshot
+        $etaMinutes = null;
+        $etaTime = null;
+        $etaDistanceKm = null;
+
+        if ($routeStop !== null && $routeActive) {
+            $route = $routeStop->getRoute();
+            $snapshot = $this->em->getRepository(RouteSnapshot::class)->findOneBy(['route' => $route]);
+
+            if ($snapshot !== null && $snapshot->getEtas() !== null) {
+                try {
+                    $stopPublicId = $routeStop->getPublicId()->toRfc4122();
+                } catch (\Error) {
+                    $stopPublicId = null;
+                }
+
+                if ($stopPublicId !== null && isset($snapshot->getEtas()[$stopPublicId])) {
+                    $etaData = $snapshot->getEtas()[$stopPublicId];
+                    $etaMinutes = $etaData['minutes'] ?? null;
+                    $etaDistanceKm = isset($etaData['distance_km']) ? (float) $etaData['distance_km'] : null;
+                    if (isset($etaData['eta'])) {
+                        try {
+                            $etaTime = (new \DateTimeImmutable($etaData['eta']))->format('H:i');
+                        } catch (\Exception) {
+                            // ignore invalid date
+                        }
+                    }
+                }
+            }
+        }
+
         return new TrackingInfo(
             shipment: $shipment,
             events: $events,
             latestEvent: $latestEvent,
             approximatePosition: $approximatePosition,
             routeActive: $routeActive,
+            etaMinutes: $etaMinutes,
+            etaTime: $etaTime,
+            etaDistanceKm: $etaDistanceKm,
         );
     }
 }

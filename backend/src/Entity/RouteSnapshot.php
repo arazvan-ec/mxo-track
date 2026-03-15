@@ -63,6 +63,11 @@ class RouteSnapshot
     #[ORM\Column(type: 'json', nullable: true)]
     private ?array $stopStates = null;
 
+    // ── ETAs ──
+
+    #[ORM\Column(type: 'json', nullable: true)]
+    private ?array $etas = null;
+
     // ── Capacity ──
 
     #[ORM\Column(type: 'json', nullable: true)]
@@ -122,6 +127,11 @@ class RouteSnapshot
     public function getStopStates(): ?array { return $this->stopStates; }
     /** @param array<int, array<string, mixed>>|null $v */
     public function setStopStates(?array $v): void { $this->stopStates = $v; $this->updatedAt = new DateTimeImmutable(); }
+
+    /** @return array<string, array{eta: string, minutes: int, distance_km: float}>|null */
+    public function getEtas(): ?array { return $this->etas; }
+    /** @param array<string, array{eta: string, minutes: int, distance_km: float}>|null $v */
+    public function setEtas(?array $v): void { $this->etas = $v; $this->updatedAt = new DateTimeImmutable(); }
 
     /** @return array<string, mixed>|null */
     public function getCapacityValidation(): ?array { return $this->capacityValidation; }

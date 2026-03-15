@@ -20,6 +20,7 @@ use App\View\MapViewOptions;
 use App\View\RouteViewService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -41,6 +42,7 @@ class RouteAdminController extends AbstractController
         private readonly RoutePlanningService $routePlanningService,
         private readonly RouteViewService $routeViewService,
         #[Autowire('%env(MERCURE_PUBLIC_URL)%')] private readonly string $mercurePublicUrl,
+        private readonly EventDispatcherInterface $dispatcher,
     ) {}
 
     #[SymfonyRoute('', name: 'admin_routes_index', methods: ['GET'])]
@@ -238,6 +240,7 @@ class RouteAdminController extends AbstractController
                 'total' => (int) ($stopCounts['total'] ?? 0),
                 'delivered' => (int) ($stopCounts['delivered'] ?? 0),
             ],
+            'mercurePublicUrl' => $this->mercurePublicUrl,
         ]);
     }
 
@@ -279,7 +282,24 @@ class RouteAdminController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            $uow = $this->em->getUnitOfWork();
+            $uow->computeChangeSets();
+            $changeset = $uow->getEntityChangeSet($route);
+
+            $vehicleChanged = isset($changeset['vehicle']);
+            $driverChanged = isset($changeset['driver']);
+
             $this->routePlanningService->syncOriginStop($route);
+
+            if ($vehicleChanged || $driverChanged) {
+                $this->dispatcher->dispatch(new \App\Domain\Event\RouteAssigned(
+                    routePublicId: $route->getPublicIdString(),
+                    vehiclePublicId: $route->getVehicle()?->getPublicIdString(),
+                    driverUserId: $route->getDriver()?->getId(),
+                    assignedByUserId: $this->getUser()->getId(),
+                ));
+            }
+
             $this->em->flush();
 
             $this->addFlash('success', 'Ruta actualizada correctamente.');
@@ -343,6 +363,12 @@ class RouteAdminController extends AbstractController
         }
 
         $route->setStatus(RouteStatus::CANCELLED);
+
+        $this->dispatcher->dispatch(new \App\Domain\Event\RouteCancelled(
+            routePublicId: $route->getPublicIdString(),
+            cancelledByUserId: $this->getUser()->getId(),
+        ));
+
         $this->em->flush();
 
         $this->addFlash('success', 'Ruta cancelada correctamente.');

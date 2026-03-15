@@ -62,6 +62,16 @@
               </p>
             </template>
 
+            <template x-if="stop.status !== 'DELIVERED' && stop.status !== 'EXCEPTION' && stop.status !== 'SKIPPED' && stop.etaMinutes">
+              <p class="text-xs text-blue-600 mt-0.5 flex items-center gap-1">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span x-text="'ETA: ' + stop.etaTime + ' (~' + stop.etaMinutes + ' min)'"></span>
+                <template x-if="stop.etaDistanceKm">
+                  <span class="text-gray-400" x-text="'&middot; ' + stop.etaDistanceKm.toFixed(1) + ' km'"></span>
+                </template>
+              </p>
+            </template>
+
             <template x-if="stop.status === 'DELIVERED' && stop.deliveredAt">
               <p class="text-xs text-green-600 mt-0.5 flex items-center gap-1">
                 <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg>
