@@ -151,45 +151,44 @@ src/Infrastructure/{Context}/Symfony/    # Controllers, commands, listeners
 
 ## Design Patterns (mandatory)
 
-Los patrones de diseño son las herramientas para implementar SOLID y DDD. **Usar el patrón correcto para cada problema.**
+Los patrones de diseño son herramientas, no recetas. **Empieza por el problema, no por el patrón.**
 
-### Cuándo usar cada patrón
+### Proceso de decisión
 
-| Situación | Patrón | Ejemplo en codebase |
-|-----------|--------|-------------------|
-| Múltiples implementaciones del mismo contrato | **Strategy** | RouteOptimizerInterface → Vroom, Greedy, Null |
-| Crear objetos según configuración o tipo | **Factory** | ProviderFactoryInterface + Registry con AutoconfigureTag |
-| Construcción compleja en fases | **Builder** | RouteBuilder: mapear → optimizar → materializar |
-| Envolver API externa con interface del dominio | **Adapter** | VroomRouteOptimizer adapta API VROOM a RouteOptimizerInterface |
-| Añadir comportamiento sin modificar la clase | **Decorator** | CachedProviderResolver envuelve ProviderResolver |
-| Interceptar y delegar según contexto (tenant) | **Proxy** | TenantAwareGpsProvider resuelve provider per-tenant |
-| Operaciones async o desacopladas del request | **Command** (Messenger) | PostRouteAnalysisMessage + Handler |
-| Reaccionar a cambios de estado del dominio | **Domain Event + Observer** | StopDelivered → NotifyDeliveryListener |
-| Orquestar múltiples servicios como workflow | **Facade** | RoutePlanningService coordina builder + optimizer + validator |
-| Fallback cuando un provider falla | **Chain of Responsibility** | FallbackChain intenta providers en orden |
-| Lógica base con hooks para subclases | **Template Method** | BaseVoter con abstract isGrantedForUser() |
-| Provider no disponible, evitar null checks | **Null Object** | NullRouteOptimizer, NullGpsProvider, etc. |
+Antes de aplicar cualquier patrón:
 
-### Reglas
+1. **¿Es necesario?** Si el código directo (sin patrón) resuelve el problema igual de bien, no uses un patrón. Tres líneas claras > una abstracción prematura.
+2. **¿Cuántas implementaciones reales hay?** Si solo una, no extraigas interface "por si acaso". Hazlo cuando exista la segunda.
+3. **¿Qué trade-offs tiene?** Cada indirección (interface, factory, proxy) añade complejidad. ¿El beneficio supera el costo?
+4. **¿Hay alternativas?** La mayoría de problemas se resuelven con 2-3 patrones diferentes. Evalúa antes de decidir.
+5. **¿Mejora SOLID?** Si el patrón viola un principio SOLID, probablemente es el patrón equivocado.
 
-- **Nuevo provider/implementación** → Factory + Strategy + Adapter. Nunca if/switch para seleccionar.
-- **Nuevo servicio externo** → Adapter que implemente port interface del dominio.
-- **Comportamiento cross-cutting** (cache, logging, tenant) → Decorator o Proxy. No modificar la clase original.
-- **Operación costosa o no-crítica** → Command via Messenger (async).
-- **Cambio de estado con side-effects** → Domain Event. Los listeners reaccionan, no el servicio que cambia estado.
-- **Provider opcional** → Null Object. Nunca retornar null donde se espera un servicio.
-- **Queries complejas combinables** → Specification (candidato a implementar).
-- **Reglas de negocio configurables** → Policy objects (candidato a implementar).
+### Señales de que elegiste mal
 
-### Anti-Patterns de diseño
+- Añadiste 3+ clases y solo hay 1 implementación real → over-engineering
+- Necesitas mirar 5 archivos para entender un flujo simple → demasiada indirección
+- El Facade crece sin parar (10+ dependencias) → se convierte en God Class
+- Implementas Strategy con 1 sola implementación "por si acaso" → YAGNI
+- Los eventos hacen imposible trazar qué pasa después de un cambio → exceso de desacoplamiento
 
-- `if ($type === 'x') return new X()` → Factory + Strategy
-- Servicio que hace todo (God Class) → Facade que orquesta servicios pequeños
-- Null checks por provider no disponible → Null Object
-- Side-effects directos en servicio que cambia estado → Domain Event + Listener
-- Lógica duplicada en múltiples servicios → Template Method o Strategy
+### Consistencia con patrones existentes
 
-**Referencia completa con ejemplos de código:** `docs/knowledge/design-patterns.md`
+El codebase ya usa patrones establecidos. Cuando el problema es del mismo tipo, seguirlos reduce carga cognitiva — pero no los copies sin evaluar si encajan:
+
+- **Providers:** Factory + Strategy + Adapter + TenantAware Proxy (12 factories, 4 proxies)
+- **Side-effects de dominio:** Domain Event + Listener (13 events, 13 listeners)
+- **Operaciones async:** Command via Messenger (4 messages + handlers)
+- **Graceful degradation:** Null Object (12 Null* classes)
+- **Workflows complejos:** Facade en Application layer (RoutePlanningService, DeliveryService)
+
+### Lo que NO hacer
+
+- `if ($type === 'x') return new X()` → el Provider Framework ya resuelve esto con Factory + Registry
+- Retornar null donde se espera un servicio → Null Object
+- Side-effects directos en el servicio que cambia estado → Domain Event + Listener separado
+- Modificar una clase para añadir comportamiento cross-cutting → Decorator o Proxy
+
+**Guía completa de decisión con trade-offs:** `docs/knowledge/design-patterns.md`
 
 ## Conventions
 
