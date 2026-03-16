@@ -1,26 +1,25 @@
-# Plan: User Identity Interface + Rename User → UserAccount
+# Plan: Domain UserIdentity + Rename User → UserAccount
 
 **Spec:** `docs/superpowers/specs/2026-03-16-user-identity-interface-and-rename-design.md`
-**Goal:** Eliminar el acoplamiento directo a `User` entity, unificar `User` y `ApiKeyUser` bajo `AppUserInterface`, renombrar `User` → `UserAccount` para que Doctrine genere `user_account` automáticamente.
-**Archivos afectados:** 79 (62 src + 17 tests)
+**Goal:** Introducir capa de dominio `UserIdentity`, desacoplar servicios de infraestructura, renombrar `User` → `UserAccount`.
+**Archivos afectados:** ~80 (62 src + 17 tests + 1 nuevo dominio + 1 nueva interfaz)
 
 ---
 
-## Fase 1: Crear AppUserInterface y adaptar clases existentes
+## Fase 1: Crear interfaces (dominio + security bridge)
 
-### Task 1: Crear AppUserInterface
-**Archivo:** `backend/src/Security/AppUserInterface.php` (nuevo)
+### Task 1: Crear UserIdentity (interfaz de dominio pura)
+**Archivo nuevo:** `backend/src/Domain/Model/UserIdentity.php`
 
-- [ ] Crear la interfaz:
 ```php
 <?php
 declare(strict_types=1);
-namespace App\Security;
+
+namespace App\Domain\Model;
 
 use App\Entity\Customer;
-use Symfony\Component\Security\Core\User\UserInterface;
 
-interface AppUserInterface extends UserInterface
+interface UserIdentity
 {
     public function getId(): ?string;
     public function getPublicIdString(): string;
@@ -30,22 +29,47 @@ interface AppUserInterface extends UserInterface
     public function getName(): ?string;
 }
 ```
-- [ ] Commit: "feat: create AppUserInterface extending UserInterface"
 
-### Task 2: User implements AppUserInterface
+- [ ] Crear directorio `backend/src/Domain/Model/`
+- [ ] Crear archivo
+- [ ] Commit: "feat: create UserIdentity domain interface"
+
+### Task 2: Crear AppUserInterface (bridge dominio ↔ Symfony)
+**Archivo nuevo:** `backend/src/Security/AppUserInterface.php`
+
+```php
+<?php
+declare(strict_types=1);
+
+namespace App\Security;
+
+use App\Domain\Model\UserIdentity;
+use Symfony\Component\Security\Core\User\UserInterface;
+
+interface AppUserInterface extends UserIdentity, UserInterface
+{
+}
+```
+
+- [ ] Crear archivo
+- [ ] Commit: "feat: create AppUserInterface bridging domain and Symfony security"
+
+### Task 3: User implements AppUserInterface
 **Archivo:** `backend/src/Entity/User.php`
 
 - [ ] Añadir `use App\Security\AppUserInterface;`
 - [ ] Cambiar `class User implements UserInterface, PasswordAuthenticatedUserInterface, SoftDeletableInterface` → `class User implements AppUserInterface, PasswordAuthenticatedUserInterface, SoftDeletableInterface`
-- [ ] (AppUserInterface ya extiende UserInterface, así que no se pierde nada)
-- [ ] Verificar que User ya tiene todos los métodos de la interfaz: `getId()`, `getPublicIdString()`, `hasRole()`, `getCustomer()`, `isActive()`, `getName()` — todos existen
+- [ ] Eliminar `use Symfony\Component\Security\Core\User\UserInterface;` (ya viene via AppUserInterface)
+- [ ] Verificar que todos los métodos de UserIdentity ya existen en User
 - [ ] Commit: "feat: User implements AppUserInterface"
 
-### Task 3: ApiKeyUser implements AppUserInterface
+### Task 4: ApiKeyUser implements AppUserInterface
 **Archivo:** `backend/src/Security/ApiKeyUser.php`
 
 - [ ] Cambiar `implements UserInterface` → `implements AppUserInterface`
+- [ ] Eliminar `use Symfony\Component\Security\Core\User\UserInterface;`
 - [ ] Añadir métodos faltantes:
+
 ```php
 public function getId(): ?string
 {
@@ -72,42 +96,50 @@ public function getName(): ?string
     return $this->apiKey->getName();
 }
 ```
-- [ ] `getCustomer()` ya existe y retorna `Customer` (compatible con `?Customer` de la interfaz)
-- [ ] Correr tests: `php vendor/bin/phpunit`
-- [ ] Commit: "feat: ApiKeyUser implements AppUserInterface"
+
+- [ ] Correr tests: `cd backend && php vendor/bin/phpunit`
+- [ ] Commit: "feat: ApiKeyUser implements AppUserInterface with domain methods"
 
 ---
 
 ## Fase 2: Migrar security layer a AppUserInterface
 
-### Task 4: Migrar BaseVoter
+### Task 5: Migrar BaseVoter
 **Archivo:** `backend/src/Security/Voter/BaseVoter.php`
 
-- [ ] Cambiar `use App\Entity\User;` → `use App\Security\AppUserInterface;`
+Cambios:
+- [ ] `use App\Entity\User;` → `use App\Security\AppUserInterface;`
 - [ ] Línea 18: `!$user instanceof User` → `!$user instanceof AppUserInterface`
+- [ ] Línea 22: no cambia (`hasRole` está en AppUserInterface)
 - [ ] Línea 29: `abstract protected function isGrantedForUser(string $attribute, mixed $subject, User $user): bool;` → `..., AppUserInterface $user): bool;`
 - [ ] Commit: "refactor: BaseVoter uses AppUserInterface"
 
-### Task 5: Migrar UserVoter
+### Task 6: Migrar UserVoter
 **Archivo:** `backend/src/Security/Voter/UserVoter.php`
 
-- [ ] Cambiar `use App\Entity\User;` → `use App\Security\AppUserInterface;`
+Cambios:
+- [ ] `use App\Entity\User;` → `use App\Security\AppUserInterface;`
+- [ ] `supports()`: `$subject instanceof User` → `$subject instanceof AppUserInterface`
 - [ ] `isGrantedForUser(... User $user)` → `... AppUserInterface $user`
-- [ ] `$subject instanceof User` → `$subject instanceof AppUserInterface`
+- [ ] Dentro del método: `!$subject instanceof User` → `!$subject instanceof AppUserInterface`
 - [ ] Commit: "refactor: UserVoter uses AppUserInterface"
 
-### Task 6: Migrar UserChecker
+### Task 7: Migrar UserChecker
 **Archivo:** `backend/src/Security/UserChecker.php`
 
-- [ ] Cambiar `use App\Entity\User;` → `use App\Security\AppUserInterface;`
+Cambios:
+- [ ] `use App\Entity\User;` → `use App\Security\AppUserInterface;`
 - [ ] `!$user instanceof User` → `!$user instanceof AppUserInterface`
 - [ ] Commit: "refactor: UserChecker uses AppUserInterface"
 
-### Task 7: Migrar DoctrineCustomerFilterSubscriber
+### Task 8: Migrar DoctrineCustomerFilterSubscriber
 **Archivo:** `backend/src/EventSubscriber/DoctrineCustomerFilterSubscriber.php`
 
-- [ ] Reemplazar imports: `use App\Entity\User;` y `use App\Security\ApiKeyUser;` → `use App\Security\AppUserInterface;`
-- [ ] Unificar las dos ramas (ApiKeyUser y User) en una sola:
+Rewrite completo del método `onKernelRequest` para unificar ramas:
+- [ ] Eliminar `use App\Entity\User;` y `use App\Security\ApiKeyUser;`
+- [ ] Añadir `use App\Security\AppUserInterface;`
+- [ ] Nuevo cuerpo:
+
 ```php
 public function onKernelRequest(RequestEvent $event): void
 {
@@ -146,262 +178,261 @@ public function onKernelRequest(RequestEvent $event): void
     $filters->getFilter('customer_tenant')->setParameter('customer_id', (string) $customer->getId());
 }
 ```
-- [ ] Commit: "refactor: DoctrineCustomerFilterSubscriber uses AppUserInterface, eliminates instanceof branching"
 
-### Task 8: Migrar TenantContext
+- [ ] Commit: "refactor: unify DoctrineCustomerFilterSubscriber via AppUserInterface"
+
+### Task 9: Migrar TenantContext
 **Archivo:** `backend/src/Provider/TenantContext.php`
 
-- [ ] Cambiar `use App\Entity\User;` → `use App\Security\AppUserInterface;`
+Cambios:
+- [ ] `use App\Entity\User;` → `use App\Security\AppUserInterface;`
 - [ ] `$user instanceof User` → `$user instanceof AppUserInterface`
 - [ ] Commit: "refactor: TenantContext uses AppUserInterface"
 
-### Task 9: Migrar TopicResolver
+### Task 10: Migrar TopicResolver a UserIdentity (dominio)
 **Archivo:** `backend/src/Security/TopicResolver.php`
 
-- [ ] Cambiar `use App\Entity\User;` → `use App\Security\AppUserInterface;`
-- [ ] `resolveForUser(User $user, ...)` → `resolveForUser(AppUserInterface $user, ...)`
-- [ ] Commit: "refactor: TopicResolver uses AppUserInterface"
+TopicResolver no necesita Symfony UserInterface — solo usa métodos de dominio.
+- [ ] `use App\Entity\User;` → `use App\Domain\Model\UserIdentity;`
+- [ ] `resolveForUser(User $user, ...)` → `resolveForUser(UserIdentity $user, ...)`
+- [ ] Commit: "refactor: TopicResolver depends on domain UserIdentity"
 
-### Task 10: Migrar AuditSubscriber
+### Task 11: Migrar AuditSubscriber
 **Archivo:** `backend/src/EventSubscriber/AuditSubscriber.php`
 
-- [ ] Cambiar `use App\Entity\User;` → `use App\Security\AppUserInterface;` (mantener también `use App\Entity\User;` porque se usa en AUDITED_ENTITIES y `em->getReference()`)
-- [ ] Nota: `AUDITED_ENTITIES` contiene `User::class` para auditar cambios a la entidad User — esto sigue necesitando la clase concreta. Cambiar a `UserAccount::class` en la Fase 3.
+- [ ] Añadir `use App\Security\AppUserInterface;`
 - [ ] Línea 134: `$securityUser instanceof User` → `$securityUser instanceof AppUserInterface`
-- [ ] Línea 135: `$em->getReference(User::class, ...)` — mantener como User::class por ahora, cambiar en Fase 3
+- [ ] Mantener `use App\Entity\User;` porque `AUDITED_ENTITIES` y `em->getReference(User::class)` necesitan la clase concreta (se renombrará en Fase 3)
 - [ ] Commit: "refactor: AuditSubscriber uses AppUserInterface for actor resolution"
 
-### Task 11: Migrar AuditLogger
-**Archivo:** `backend/src/Service/AuditLogger.php`
-
-- [ ] Cambiar `use App\Entity\User;` → `use App\Security\AppUserInterface;`
-- [ ] `log(?User $actor, ...)` → `log(?AppUserInterface $actor, ...)`
-- [ ] Nota: `AuditLog` entity tiene `ManyToOne(targetEntity: User::class)` en `$actor` — el constructor de AuditLog espera `?User`. Necesitamos evaluar si AuditLogger puede recibir la interfaz pero pasar solo User al entity. **Decisión:** AuditLog sigue recibiendo `?User` en su constructor (es una FK directa a user_account). AuditLogger recibirá `?AppUserInterface` pero necesitará resolver a User para persistir. Alternativa más simple: mantener `?User` en AuditLogger y cambiar a `?UserAccount` en Fase 3.
-- [ ] **Revisión:** Mantener `?User` en AuditLogger por ahora. Se cambiará a `?UserAccount` en Fase 3.
-- [ ] Commit: (no se necesita commit separado, se hace en Fase 3)
-
-### Task 12: Migrar servicios que solo usan métodos de la interfaz
-**Archivos que pueden cambiar `User` → `AppUserInterface` en type hints:**
-
-Los siguientes servicios solo usan métodos de AppUserInterface (`getId()`, `getRoles()`, `getCustomer()`, `hasRole()`, `getPublicIdString()`, `getName()`, `isActive()`):
-
-- [ ] `Service/MercureJwtFactory.php` — `User $user` → `AppUserInterface $user`
-- [ ] `Service/VisibilityScopeService.php` — `User $user` → `AppUserInterface $user`
-- [ ] `Service/NotificationService.php` — Verificar si usa métodos más allá de la interfaz. `notify(User $user, ...)` — necesita FK a user_account para persistir Notification. **Mantener User** (cambiar a UserAccount en Fase 3).
-- [ ] `Service/SearchService.php` — `User $user` → `AppUserInterface $user`
-- [ ] `Service/AiAssistantService.php` — `User $user` → `AppUserInterface $user`
-- [ ] `Service/ReportingService.php` — Verificar uso. Si solo filtra por user ID → `AppUserInterface`
-- [ ] `Application/Fleet/FleetOverviewService.php` — `User $user` → `AppUserInterface $user`
-- [ ] `Application/Route/RouteLifecycleService.php` — Usa `$driver->getId()` para comparar. **Pero** también hace `$route->setDriver($driver)` que necesita `?User`. **Mantener User** (cambiar en Fase 3).
-- [ ] `Application/Delivery/DeliveryService.php` — Crea Pod con `$driver`. **Mantener User** (cambiar en Fase 3).
-- [ ] `Service/DriverScoringService.php` — Accede a relaciones de User. **Mantener User** (cambiar en Fase 3).
-- [ ] `Service/DriverAvailabilityService.php` — Persiste DriverAvailability con FK a User. **Mantener User**.
-- [ ] `Service/DriverActionService.php` — Persiste DriverAction con FK a User. **Mantener User**.
-- [ ] `Service/WebPushService.php` — Queries PushSubscription por User. **Mantener User**.
-- [ ] `Service/EmailNotificationService.php` — Queries User. **Mantener User**.
-
-**Servicios que SÍ pueden migrar a AppUserInterface (no persisten relaciones con User):**
-1. `Service/MercureJwtFactory.php`
-2. `Service/VisibilityScopeService.php`
-3. `Service/SearchService.php`
-4. `Service/AiAssistantService.php`
-5. `Service/ReportingService.php`
-6. `Application/Fleet/FleetOverviewService.php`
-
-- [ ] Actualizar estos 6 servicios
-- [ ] Commit: "refactor: migrate read-only services to AppUserInterface"
-
-### Task 13: Migrar controllers que solo leen User
-**Controllers que hacen `$this->getUser()` y pasan a servicios:**
-
-Para controllers: `$this->getUser()` retorna `?UserInterface`. Necesitamos cast a `AppUserInterface`. El patrón será:
-```php
-$user = $this->getUser();
-assert($user instanceof AppUserInterface);
-```
-
-O usar un helper method. **Decisión:** Esto se resuelve mejor en Fase 3 cuando el rename está hecho. Los controllers que pasan User a servicios que ya usan AppUserInterface necesitarán el cast, pero los que pasan a servicios que siguen usando User concreto no.
-
-- [ ] Actualizar controllers que pasan a servicios ya migrados (MercureJwtFactory, VisibilityScopeService, SearchService, etc.)
-- [ ] Commit: "refactor: controllers use AppUserInterface for read-only operations"
-
-### Task 14: Correr tests completos
+### Task 12: Correr tests
 - [ ] `cd backend && php vendor/bin/phpunit`
 - [ ] Verificar 0 failures
-- [ ] Commit tag: "checkpoint: all tests pass after AppUserInterface migration"
+- [ ] Commit solo si hay fixes
 
 ---
 
-## Fase 3: Rename User → UserAccount
+## Fase 3: Migrar servicios read-only a UserIdentity (dominio)
 
-### Task 15: Rename Entity + Repository
-**Archivos:**
-- `backend/src/Entity/User.php` → `backend/src/Entity/UserAccount.php`
-- `backend/src/Repository/UserRepository.php` → `backend/src/Repository/UserAccountRepository.php`
+### Task 13: Migrar servicios a UserIdentity
 
-- [ ] Renombrar archivos
-- [ ] En `UserAccount.php`:
-  - Cambiar `class User` → `class UserAccount`
-  - Eliminar `#[ORM\Table(name: 'user_account')]` (Doctrine lo generará automáticamente)
-  - Actualizar `repositoryClass: UserRepository::class` → `UserAccountRepository::class`
-  - Actualizar `use App\Repository\UserRepository;` → `UserAccountRepository`
-- [ ] En `UserAccountRepository.php`:
-  - Cambiar `class UserRepository` → `class UserAccountRepository`
-  - Actualizar todas las referencias internas a `User::class` → `UserAccount::class`
-- [ ] Commit: "refactor: rename User entity to UserAccount"
+Estos servicios solo leen datos del usuario (no persisten relaciones FK):
 
-### Task 16: Actualizar 10 entidades con relaciones
-**Archivos:**
-1. `Entity/AuditLog.php` — `targetEntity: User::class` → `UserAccount::class`, import
-2. `Entity/DriverAction.php` — ídem
-3. `Entity/DriverAvailability.php` — ídem
-4. `Entity/DriverFeedback.php` — ídem
-5. `Entity/Notification.php` — ídem
-6. `Entity/Pod.php` — ídem
-7. `Entity/PushSubscription.php` — ídem
-8. `Entity/Route.php` — ídem
-9. `Entity/RouteEvent.php` — ídem
-10. `Entity/VehicleInspection.php` — ídem
+1. **`Service/MercureJwtFactory.php`**
+   - [ ] `use App\Entity\User;` → `use App\Domain\Model\UserIdentity;`
+   - [ ] Type hints `User $user` → `UserIdentity $user`
 
-Para cada uno:
-- [ ] `use App\Entity\User;` → `use App\Entity\UserAccount;`
-- [ ] `targetEntity: User::class` → `targetEntity: UserAccount::class`
-- [ ] Type hints `?User` → `?UserAccount` en properties y setters/getters
-- [ ] Commit: "refactor: update entity relations from User to UserAccount"
+2. **`Service/VisibilityScopeService.php`**
+   - [ ] Ídem
 
-### Task 17: Actualizar servicios que persisten con User
-**Archivos que mantuvieron User en Fase 2 (necesitan la clase concreta para FKs):**
-1. `Service/NotificationService.php`
-2. `Service/AuditLogger.php`
-3. `Service/DriverScoringService.php`
-4. `Service/DriverAvailabilityService.php`
-5. `Service/DriverActionService.php`
-6. `Service/WebPushService.php`
-7. `Service/EmailNotificationService.php`
-8. `Service/DemoScenarioBuilder.php`
-9. `Service/DemoScenarioResult.php`
-10. `Service/OperatorKpiService.php`
-11. `Application/Route/RouteLifecycleService.php`
-12. `Application/Delivery/DeliveryService.php`
-13. `Application/Delivery/DeliveryContext.php`
+3. **`Service/SearchService.php`**
+   - [ ] Ídem
 
-Para cada uno:
-- [ ] `use App\Entity\User;` → `use App\Entity\UserAccount;`
-- [ ] Type hints `User` → `UserAccount` en parámetros y variables
-- [ ] Commit: "refactor: update services from User to UserAccount"
+4. **`Service/AiAssistantService.php`**
+   - [ ] Ídem
 
-### Task 18: Actualizar controllers
-**20 controllers:**
-1-20. (lista completa del inventario)
+5. **`Service/ReportingService.php`**
+   - [ ] Verificar que solo usa métodos de UserIdentity, luego migrar
 
-Para cada uno:
-- [ ] `use App\Entity\User;` → `use App\Entity\UserAccount;`
-- [ ] Type hints y docblocks `User` → `UserAccount`
-- [ ] `/** @var User $user */` → `/** @var UserAccount $user */`
+6. **`Application/Fleet/FleetOverviewService.php`**
+   - [ ] Ídem
+
+- [ ] Commit: "refactor: migrate read-only services to domain UserIdentity"
+
+### Task 14: Actualizar controllers que pasan a servicios migrados
+
+Controllers que llaman a servicios ya migrados necesitan pasar `UserIdentity`. Como `$this->getUser()` retorna `?UserInterface`, y `AppUserInterface extends UserIdentity`, el cast funciona:
+
+```php
+$user = $this->getUser();
+if (!$user instanceof UserIdentity) {
+    throw $this->createAccessDeniedException();
+}
+```
+
+Controllers afectados:
+- [ ] `Controller/MercureTokenController.php`
+- [ ] `Controller/FleetMapController.php`
+- [ ] `Controller/SearchController.php`
+- [ ] `Controller/Admin/ReportController.php`
+- [ ] `Controller/Admin/AiAssistantController.php`
+- [ ] Otros controllers que usan servicios migrados
+
+**Nota:** Si el controller también usa servicios que aún esperan `User` concreto, mantener el import de User por ahora.
+
+- [ ] Commit: "refactor: controllers cast to UserIdentity for domain services"
+
+### Task 15: Correr tests
+- [ ] `cd backend && php vendor/bin/phpunit`
+- [ ] Verificar 0 failures
+- [ ] Commit tag: "checkpoint: domain layer migration complete, all tests pass"
+
+---
+
+## Fase 4: Rename User → UserAccount
+
+### Task 16: Rename Entity + Repository
+
+**Pasos de filesystem:**
+- [ ] `git mv backend/src/Entity/User.php backend/src/Entity/UserAccount.php`
+- [ ] `git mv backend/src/Repository/UserRepository.php backend/src/Repository/UserAccountRepository.php`
+
+**En `UserAccount.php`:**
+- [ ] `class User` → `class UserAccount`
+- [ ] Eliminar `#[ORM\Table(name: 'user_account')]`
+- [ ] `repositoryClass: UserRepository::class` → `UserAccountRepository::class`
+- [ ] `use App\Repository\UserRepository;` → `use App\Repository\UserAccountRepository;`
+
+**En `UserAccountRepository.php`:**
+- [ ] `class UserRepository` → `class UserAccountRepository`
+- [ ] `User::class` → `UserAccount::class` internamente
+
+- [ ] Commit: "refactor: rename User to UserAccount, remove explicit table name"
+
+### Task 17: Actualizar 10 entidades con relaciones FK
+
+Cada una: `use App\Entity\User;` → `use App\Entity\UserAccount;`, `targetEntity: User::class` → `UserAccount::class`, type hints `?User` → `?UserAccount`.
+
+1. - [ ] `Entity/AuditLog.php`
+2. - [ ] `Entity/DriverAction.php`
+3. - [ ] `Entity/DriverAvailability.php`
+4. - [ ] `Entity/DriverFeedback.php`
+5. - [ ] `Entity/Notification.php`
+6. - [ ] `Entity/Pod.php`
+7. - [ ] `Entity/PushSubscription.php`
+8. - [ ] `Entity/Route.php`
+9. - [ ] `Entity/RouteEvent.php`
+10. - [ ] `Entity/VehicleInspection.php`
+
+- [ ] Commit: "refactor: update entity FK relations from User to UserAccount"
+
+### Task 18: Actualizar servicios que usan clase concreta
+
+Servicios que persisten relaciones FK (necesitan `UserAccount`):
+
+1. - [ ] `Service/NotificationService.php`
+2. - [ ] `Service/AuditLogger.php`
+3. - [ ] `Service/DriverScoringService.php`
+4. - [ ] `Service/DriverAvailabilityService.php`
+5. - [ ] `Service/DriverActionService.php`
+6. - [ ] `Service/WebPushService.php`
+7. - [ ] `Service/EmailNotificationService.php`
+8. - [ ] `Service/DemoScenarioBuilder.php`
+9. - [ ] `Service/DemoScenarioResult.php`
+10. - [ ] `Service/OperatorKpiService.php`
+11. - [ ] `Application/Route/RouteLifecycleService.php`
+12. - [ ] `Application/Delivery/DeliveryService.php`
+13. - [ ] `Application/Delivery/DeliveryContext.php`
+
+Cada uno: `use App\Entity\User;` → `use App\Entity\UserAccount;`, type hints `User` → `UserAccount`.
+
+- [ ] Commit: "refactor: update services with FK dependencies from User to UserAccount"
+
+### Task 19: Actualizar controllers
+
+20 controllers. Cada uno: import + type hints + docblocks.
+
+- [ ] `Controller/RouteEtaApiController.php`
+- [ ] `Controller/DriverApiController.php`
+- [ ] `Controller/DriverPushSubscriptionController.php`
+- [ ] `Controller/DriverWebController.php`
+- [ ] `Controller/FleetMapController.php`
+- [ ] `Controller/MercureTokenController.php`
+- [ ] `Controller/NotificationController.php`
+- [ ] `Controller/SearchController.php`
+- [ ] `Controller/VehicleApiController.php`
+- [ ] `Controller/Admin/AccountingExportController.php`
+- [ ] `Controller/Admin/CustomerAdminController.php`
+- [ ] `Controller/Admin/DriverAdminController.php`
+- [ ] `Controller/Admin/DriverAvailabilityController.php`
+- [ ] `Controller/Admin/ReportController.php`
+- [ ] `Controller/Admin/RouteAdminController.php`
+- [ ] `Controller/Admin/RoutePlannerController.php`
+- [ ] `Controller/Admin/RouteTemplateController.php`
+- [ ] `Controller/Admin/UserAdminController.php`
+- [ ] `Controller/Operator/OperatorDashboardController.php`
+- [ ] `Controller/Customer/CustomerReportController.php`
+
+**Nota:** Controllers que ya migraron a `UserIdentity` en Task 14 pueden no necesitar import de UserAccount si no lo usan directamente. Verificar caso por caso.
+
 - [ ] Commit: "refactor: update controllers from User to UserAccount"
 
-### Task 19: Actualizar forms
-**3 archivos:**
-1. `Form/CustomerUserType.php`
-2. `Form/DriverType.php`
-3. `Form/RouteType.php`
-
-- [ ] Imports y `User::class` → `UserAccount::class`
+### Task 20: Actualizar forms
+- [ ] `Form/CustomerUserType.php`
+- [ ] `Form/DriverType.php`
+- [ ] `Form/RouteType.php`
 - [ ] Commit: "refactor: update forms from User to UserAccount"
 
-### Task 20: Actualizar EventSubscribers
-**2 archivos:**
-1. `EventSubscriber/AuditSubscriber.php` — `User::class` en AUDITED_ENTITIES, `em->getReference(User::class)`
-2. `EventSubscriber/LoginAuditSubscriber.php` — entityType string 'User' (cosmético, no rompe)
-
-- [ ] Actualizar imports y references
+### Task 21: Actualizar EventSubscribers
+- [ ] `EventSubscriber/AuditSubscriber.php` — `User::class` en AUDITED_ENTITIES + `em->getReference`
+- [ ] `EventSubscriber/LoginAuditSubscriber.php` — entityType string (cosmético)
 - [ ] Commit: "refactor: update event subscribers from User to UserAccount"
 
-### Task 21: Actualizar Security layer con la clase concreta
-**Archivos que necesitan UserAccount por `instanceof` de la entidad específica (UserVoter):**
-- `UserVoter.php` — `$subject instanceof User` en `supports()`. Este voter verifica permisos sobre una entidad User específica pasada como subject. Mantener como `$subject instanceof UserAccount` ya que solo aplica a la entidad persistida.
+### Task 22: Actualizar fixtures, commands, event listeners
+- [ ] `DataFixtures/AdminUserFixture.php` — `new User(` → `new UserAccount(`
+- [ ] `Command/CreateAdminCommand.php` — ídem
+- [ ] `Command/TestRoutingCommand.php` — type hints
+- [ ] `EventListener/Domain/RouteEventLogListener.php` — `UserRepository` → `UserAccountRepository`
+- [ ] `Repository/NotificationRepository.php` — imports y type hints
+- [ ] Commit: "refactor: update fixtures, commands, listeners from User to UserAccount"
 
-- [ ] Commit: "refactor: UserVoter subject check uses UserAccount"
-
-### Task 22: Actualizar fixtures, commands
-**3 archivos:**
-1. `DataFixtures/AdminUserFixture.php` — `new User(...)` → `new UserAccount(...)`
-2. `Command/CreateAdminCommand.php` — `new User(...)` → `new UserAccount(...)`
-3. `Command/TestRoutingCommand.php` — type hints
-
-- [ ] Actualizar imports, `new User(` → `new UserAccount(`
-- [ ] Commit: "refactor: update fixtures and commands from User to UserAccount"
-
-### Task 23: Actualizar Enum (si referencia User)
-**Archivo:** `backend/src/Enum/UserRole.php`
-
-- [ ] Verificar si referencia la clase User — probablemente solo define roles, no necesita cambios
-- [ ] Commit: solo si necesario
-
-### Task 24: Actualizar EventListener
-**Archivo:** `backend/src/EventListener/Domain/RouteEventLogListener.php`
-
-- [ ] Tiene `UserRepository` import — cambiar a `UserAccountRepository`
-- [ ] Commit: "refactor: update RouteEventLogListener from User to UserAccount"
-
-### Task 25: Actualizar Repository NotificationRepository
-**Archivo:** `backend/src/Repository/NotificationRepository.php`
-
-- [ ] Imports y type hints de User → UserAccount
-- [ ] Commit: "refactor: update NotificationRepository from User to UserAccount"
-
-### Task 26: Actualizar tests (17 archivos)
-**Archivos:**
-1. `tests/Factory/TestEntityFactory.php` — `new User(` → `new UserAccount(`
-2. `tests/Functional/CustomerTenantFilterTest.php`
-3. `tests/Functional/DriverApiTest.php`
-4. `tests/Functional/Smoke/AdminPageSmokeTest.php`
-5. `tests/Functional/Smoke/PageSmokeTest.php`
-6. `tests/Unit/AiAssistantControllerTest.php`
-7. `tests/Unit/AiAssistantServiceTest.php`
-8. `tests/Unit/Command/DemoSetupCommandTest.php`
-9. `tests/Unit/DeliveryServiceTest.php`
-10. `tests/Unit/DriverActionServiceTest.php`
-11. `tests/Unit/EventListener/Domain/RouteEventLogListenerTest.php`
-12. `tests/Unit/MercureJwtFactoryTest.php`
-13. `tests/Unit/Provider/TenantContextTest.php`
-14. `tests/Unit/RouteLifecycleServiceTest.php`
-15. `tests/Unit/SearchServiceTest.php`
-16. `tests/Unit/SecurityTest.php`
-17. `tests/Unit/Service/DemoScenarioBuilderTest.php`
-18. `tests/Unit/TopicResolverTest.php`
-
-Para cada uno:
-- [ ] `use App\Entity\User;` → `use App\Entity\UserAccount;`
-- [ ] `new User(` → `new UserAccount(`
-- [ ] `User::class` → `UserAccount::class`
-- [ ] Type hints
-- [ ] Commit: "refactor: update tests from User to UserAccount"
+### Task 23: Actualizar Geocoding (si referencia User)
+- [ ] Verificar `Geocoding/NominatimGeocoder.php` — aparece en grep con 2 matches
+- [ ] Actualizar si necesario
+- [ ] Commit solo si cambia
 
 ---
 
-## Fase 4: Verificación
+## Fase 5: Actualizar tests
 
-### Task 27: Schema validation
+### Task 24: Actualizar todos los tests (17 archivos)
+
+Cada uno: `use App\Entity\User;` → `use App\Entity\UserAccount;`, `new User(` → `new UserAccount(`, `User::class` → `UserAccount::class`.
+
+1. - [ ] `tests/Factory/TestEntityFactory.php`
+2. - [ ] `tests/Functional/CustomerTenantFilterTest.php`
+3. - [ ] `tests/Functional/DriverApiTest.php`
+4. - [ ] `tests/Functional/Smoke/AdminPageSmokeTest.php`
+5. - [ ] `tests/Functional/Smoke/PageSmokeTest.php`
+6. - [ ] `tests/Unit/AiAssistantControllerTest.php`
+7. - [ ] `tests/Unit/AiAssistantServiceTest.php`
+8. - [ ] `tests/Unit/Command/DemoSetupCommandTest.php`
+9. - [ ] `tests/Unit/DeliveryServiceTest.php`
+10. - [ ] `tests/Unit/DriverActionServiceTest.php`
+11. - [ ] `tests/Unit/EventListener/Domain/RouteEventLogListenerTest.php`
+12. - [ ] `tests/Unit/MercureJwtFactoryTest.php`
+13. - [ ] `tests/Unit/Provider/TenantContextTest.php`
+14. - [ ] `tests/Unit/RouteLifecycleServiceTest.php`
+15. - [ ] `tests/Unit/SearchServiceTest.php`
+16. - [ ] `tests/Unit/SecurityTest.php`
+17. - [ ] `tests/Unit/Service/DemoScenarioBuilderTest.php`
+18. - [ ] `tests/Unit/TopicResolverTest.php`
+
+- [ ] Commit: "refactor: update all tests from User to UserAccount"
+
+---
+
+## Fase 6: Verificación final
+
+### Task 25: Schema validation
 - [ ] `cd backend && php bin/console doctrine:schema:validate`
-- [ ] Verificar que el mapping es correcto y la tabla sigue siendo `user_account`
-- [ ] Commit: solo si hay ajustes
+- [ ] Verificar mapping correcto, tabla sigue siendo `user_account`
 
-### Task 28: Correr test suite completo
+### Task 26: Test suite completo
 - [ ] `cd backend && php vendor/bin/phpunit`
-- [ ] Verificar 0 failures, 0 errors
-- [ ] Si hay fallos, corregir y commitear
+- [ ] 0 failures, 0 errors
 
-### Task 29: Lint
-- [ ] `cd backend && make lint` (o `find src -name "*.php" -exec php -l {} \;`)
-- [ ] Verificar 0 syntax errors
+### Task 27: Lint
+- [ ] `cd backend && make lint`
+- [ ] 0 syntax errors
 
-### Task 30: Verificar que no queden referencias a `App\Entity\User`
-- [ ] `grep -r "App\\\\Entity\\\\User[^A]" backend/src/ backend/tests/` — no debería haber resultados
-- [ ] `grep -r "new User(" backend/src/ backend/tests/` — no debería haber resultados
-- [ ] `grep -r "instanceof User[^A]" backend/src/ backend/tests/` — solo en UserVoter para subject check
+### Task 28: Grep final — no quedan referencias a `App\Entity\User`
+- [ ] `grep -r "App\\Entity\\User[^A]" backend/src/ backend/tests/` — 0 resultados
+- [ ] `grep -r "new User(" backend/src/ backend/tests/` — 0 resultados
+- [ ] `grep -r "instanceof User[^AIi]" backend/src/ backend/tests/` — 0 resultados (UserIdentity y AppUserInterface son OK)
 
-### Task 31: Actualizar docs/knowledge si necesario
+### Task 29: Actualizar docs/knowledge
 - [ ] Verificar `docs/knowledge/domain-model.md` y `docs/knowledge/security.md`
-- [ ] Actualizar referencias a User → UserAccount
-- [ ] Commit: "docs: update knowledge modules for UserAccount rename"
+- [ ] Actualizar referencias User → UserAccount
+- [ ] Documentar nueva capa de dominio `App\Domain\Model\UserIdentity`
+- [ ] Commit: "docs: update knowledge modules for UserAccount rename and domain layer"

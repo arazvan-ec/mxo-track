@@ -1,39 +1,68 @@
-# Design: User Identity Interface + Rename User → UserAccount
+# Design: Domain UserIdentity + Rename User → UserAccount
 
 **Fecha:** 2026-03-16
-**Estado:** Borrador para revisión
+**Estado:** Borrador para revisión (v2 — con capa de dominio)
 
 ## Problema
 
-La entidad `User` mapea a la tabla `user_account` vía `#[ORM\Table(name: 'user_account')]`. Cuando se generan migraciones (manual o `doctrine:migrations:diff`), Doctrine usa el nombre de la clase como referencia, produciendo `REFERENCES "user"` en vez de `REFERENCES "user_account"`. Esto ha causado fallos de deploy en producción al menos 2 veces.
+La entidad `User` mapea a la tabla `user_account` vía `#[ORM\Table(name: 'user_account')]`. Cuando se generan migraciones, Doctrine produce `REFERENCES "user"` en vez de `REFERENCES "user_account"`. Esto ha causado fallos de deploy en producción al menos 2 veces.
 
-Además, `User` está acoplada directamente a 69 archivos de src y 18 de tests, sin capa de abstracción.
+Además, `User` está acoplada directamente a 69 archivos de src y 18 de tests, sin capa de abstracción. Los servicios de aplicación dependen de la entidad Doctrine (infraestructura) directamente.
 
 ## Decisiones del usuario
 
 1. **Reducir acoplamiento primero**, luego renombrar
-2. **Interfaz de identidad + seguridad** (no mínima)
+2. **Interfaz de identidad + seguridad**
 3. **Todo junto** en un mismo PR
 4. **Unificar ApiKeyUser** bajo la misma interfaz
+5. **Capa de dominio pura** — servicios dependen de dominio, no de Symfony/Doctrine
+6. **Namespace:** `App\Domain\Model`
 
-## Diseño
+## Arquitectura de 3 capas
 
-### Fase 1: Crear `AppUserInterface`
+```
+┌─────────────────────────────────────────────────┐
+│  Domain Layer (puro PHP, sin framework)          │
+│  App\Domain\Model\UserIdentity                   │
+│  - getId(), getPublicIdString(), hasRole()        │
+│  - getCustomer(), isActive(), getName()           │
+│  NO extiende UserInterface de Symfony             │
+└──────────────────────┬──────────────────────────┘
+                       │ extends
+┌──────────────────────▼──────────────────────────┐
+│  Security Layer (Symfony)                         │
+│  App\Security\AppUserInterface                    │
+│  extends UserIdentity + Symfony\UserInterface     │
+│                                                   │
+│  Implementaciones:                                │
+│  - App\Entity\UserAccount (Doctrine entity)       │
+│  - App\Security\ApiKeyUser (lightweight)          │
+└─────────────────────────────────────────────────┘
 
-Nueva interfaz en `src/Security/AppUserInterface.php` que extiende `UserInterface` de Symfony:
+Dependencias:
+  - Services/Application → UserIdentity (dominio puro)
+  - Controllers          → cast UserInterface → UserIdentity
+  - Security layer       → AppUserInterface
+  - Entities con FK      → UserAccount (clase concreta)
+```
+
+## Diseño detallado
+
+### Capa 1: `UserIdentity` (Dominio)
+
+**Archivo:** `src/Domain/Model/UserIdentity.php`
 
 ```php
 <?php
 declare(strict_types=1);
 
-namespace App\Security;
+namespace App\Domain\Model;
 
 use App\Entity\Customer;
-use Symfony\Component\Security\Core\User\UserInterface;
 
-interface AppUserInterface extends UserInterface
+interface UserIdentity
 {
-    public function getId(): ?int;
+    public function getId(): ?string;
     public function getPublicIdString(): string;
     public function hasRole(string $role): bool;
     public function getCustomer(): ?Customer;
@@ -42,101 +71,122 @@ interface AppUserInterface extends UserInterface
 }
 ```
 
+**Nota sobre `Customer`:** La interfaz de dominio referencia `Customer` entity. En un DDD estricto, esto también sería una interfaz de dominio. Pero para este proyecto, `Customer` es estable y no tiene el mismo problema de acoplamiento. Si en el futuro se necesita, se puede extraer `CustomerIdentity` siguiendo el mismo patrón.
+
 **Justificación de cada método:**
 
-| Método | Usado en | Justificación |
-|--------|----------|---------------|
-| `getId()` | TopicResolver, Mercure topics | Identidad interna (no exponer en API) |
-| `getPublicIdString()` | UserVoter, APIs | Identidad pública |
-| `hasRole(string)` | BaseVoter, DoctrineCustomerFilterSubscriber | Autorización |
-| `getCustomer()` | TopicResolver, TenantContext, DoctrineCustomerFilterSubscriber | Multi-tenancy |
-| `isActive()` | UserChecker, BaseVoter | Verificación de estado |
-| `getName()` | Servicios, templates | Display |
+| Método | Consumidores principales | Capa |
+|--------|--------------------------|------|
+| `getId()` | TopicResolver, Mercure topics | Security/Infra |
+| `getPublicIdString()` | UserVoter, APIs | Security/Application |
+| `hasRole(string)` | BaseVoter, DoctrineCustomerFilterSubscriber, servicios | Todas |
+| `getCustomer()` | TenantContext, TopicResolver, servicios | Todas |
+| `isActive()` | UserChecker, BaseVoter | Security |
+| `getName()` | Servicios, templates | Application |
 
-### Fase 2: Implementar en ambas clases
+### Capa 2: `AppUserInterface` (Security/Symfony)
 
-**User (futuro UserAccount)** ya tiene todos estos métodos. Solo necesita `implements AppUserInterface`.
+**Archivo:** `src/Security/AppUserInterface.php`
 
-**ApiKeyUser** necesita implementar los métodos que le faltan:
+```php
+<?php
+declare(strict_types=1);
 
-| Método | Implementación en ApiKeyUser |
-|--------|------------------------------|
-| `getId()` | `return null;` (no tiene PK propia) |
+namespace App\Security;
+
+use App\Domain\Model\UserIdentity;
+use Symfony\Component\Security\Core\User\UserInterface;
+
+interface AppUserInterface extends UserIdentity, UserInterface
+{
+}
+```
+
+No añade métodos propios — es un "puente" que une dominio con framework. Permite que el security layer trabaje con un tipo que es a la vez `UserIdentity` (dominio) y `UserInterface` (Symfony).
+
+### Capa 3: Implementaciones
+
+**`UserAccount` (antes `User`):**
+```php
+class UserAccount implements AppUserInterface, PasswordAuthenticatedUserInterface, SoftDeletableInterface
+```
+Ya tiene todos los métodos. Solo cambia la declaración de interfaces.
+
+**`ApiKeyUser`:**
+```php
+final class ApiKeyUser implements AppUserInterface
+```
+Métodos a añadir:
+
+| Método | Implementación |
+|--------|----------------|
+| `getId()` | `return null;` |
 | `getPublicIdString()` | `return 'api-key:' . $this->apiKey->getPublicIdString();` |
 | `hasRole(string $role)` | `return in_array($role, $this->getRoles(), true);` |
-| `getCustomer()` | Ya existe (siempre non-null) |
-| `isActive()` | `return $this->apiKey->isActive();` (delegado a ApiKey) |
-| `getName()` | `return $this->apiKey->getName();` (o null) |
+| `isActive()` | `return $this->apiKey->isActive();` |
+| `getName()` | `return $this->apiKey->getName();` |
 
-### Fase 3: Migrar consumidores a la interfaz
+### Quién depende de qué
 
-Reemplazar `User` por `AppUserInterface` en:
+| Archivo | Depende de | Razón |
+|---------|-----------|-------|
+| **Servicios read-only** (6) | `UserIdentity` | Solo leen datos del usuario |
+| MercureJwtFactory | `UserIdentity` | Genera token con datos del user |
+| VisibilityScopeService | `UserIdentity` | Filtra vehículos por rol/customer |
+| SearchService | `UserIdentity` | Scoped search |
+| AiAssistantService | `UserIdentity` | Contexto de usuario |
+| ReportingService | `UserIdentity` | Filtra reportes |
+| FleetOverviewService | `UserIdentity` | Scoped fleet data |
+| **Security layer** (5) | `AppUserInterface` | Necesitan UserInterface de Symfony |
+| BaseVoter | `AppUserInterface` | |
+| UserChecker | `AppUserInterface` | |
+| DoctrineCustomerFilterSubscriber | `AppUserInterface` | |
+| TenantContext | `AppUserInterface` | |
+| TopicResolver | `UserIdentity` | No necesita Symfony UserInterface |
+| **Servicios con FK** (8+) | `UserAccount` | Persisten relaciones Doctrine |
+| RouteLifecycleService | `UserAccount` | `$route->setDriver($driver)` |
+| DeliveryService | `UserAccount` | Crea Pod con driver FK |
+| NotificationService | `UserAccount` | Persiste Notification con user FK |
+| DriverAvailabilityService | `UserAccount` | FK |
+| DriverActionService | `UserAccount` | FK |
+| DriverScoringService | `UserAccount` | Queries relaciones |
+| AuditLogger | `UserAccount` | FK a actor en AuditLog |
+| AuditSubscriber | `UserAccount` | `em->getReference(UserAccount::class)` |
+| **Controllers** | cast `→ UserIdentity` | `$this->getUser()` retorna `UserInterface` |
+| **Entidades con relaciones** | `UserAccount` | FK Doctrine |
+| **Forms, Fixtures, Commands** | `UserAccount` | `new UserAccount()`, form binding |
 
-**Security (elimina instanceof branching):**
-- `BaseVoter` — type hint `AppUserInterface` en vez de `User`
-- `UserChecker` — `$user instanceof AppUserInterface` en vez de `instanceof User`
-- `DoctrineCustomerFilterSubscriber` — unificar las 2 ramas (ApiKeyUser y User) en una sola vía interfaz
-- `TenantContext` — `$user instanceof AppUserInterface`
-- `TopicResolver` — parámetro `AppUserInterface` en vez de `User`
+### Rename User → UserAccount
 
-**Servicios (14 servicios):**
-- Cambiar type hints de `User` a `AppUserInterface` donde el servicio solo usa métodos de la interfaz
-- Servicios que necesitan métodos específicos de User (ej: `getEmail()`, `getPasswordHash()`) mantienen `User`/`UserAccount`
-
-**Controllers:**
-- `$this->getUser()` retorna `UserInterface` de Symfony. Cast a `AppUserInterface` donde se necesiten métodos extendidos.
-
-### Fase 4: Rename User → UserAccount
-
-Con la interfaz en su lugar, el rename afecta menos archivos:
-
-1. `src/Entity/User.php` → `src/Entity/UserAccount.php` (clase `UserAccount`)
+1. `src/Entity/User.php` → `src/Entity/UserAccount.php`
 2. `src/Repository/UserRepository.php` → `src/Repository/UserAccountRepository.php`
-3. Eliminar `#[ORM\Table(name: 'user_account')]` — Doctrine lo genera automáticamente
-4. Actualizar relaciones en las 10 entidades: `targetEntity: User::class` → `targetEntity: UserAccount::class`
-5. Actualizar `use App\Entity\User` → `use App\Entity\UserAccount` en archivos que aún referencien la clase concreta
-6. Actualizar fixtures, commands, forms, templates
-7. **No se necesita migración de DB** — la tabla ya se llama `user_account`
-
-### Archivos que siguen usando la clase concreta (no la interfaz)
-
-Estos archivos necesitan `UserAccount` directamente (no pueden usar solo la interfaz):
-
-- `UserAccountRepository` — el propio repository
-- `AdminUserFixture` — crea instancias con `new UserAccount()`
-- `CreateAdminCommand` — crea instancias
-- `DemoScenarioBuilder` — crea instancias
-- `CustomerUserType` / `DriverType` — forms vinculados a la entidad
-- `UserAdminController` / `DriverAdminController` — CRUD de la entidad
-- `LoginAuditSubscriber` — necesita `getEmail()` (no está en la interfaz)
-- Entidades con relaciones — `targetEntity: UserAccount::class`
+3. Eliminar `#[ORM\Table(name: 'user_account')]` — automático por naming strategy
+4. Actualizar relaciones, imports, type hints en archivos que usan clase concreta
+5. **No se necesita migración de DB**
 
 ## Impacto en migraciones existentes
 
-**Las migraciones NO se tocan.** Ya están ejecutadas en producción. Solo la migración `Version20260313200000` (ya corregida en este branch) tenía el bug.
-
-Migraciones futuras generadas por Doctrine usarán `user_account` automáticamente porque el naming strategy `underscore_number_aware` convertirá `UserAccount` → `user_account`.
+**Las migraciones NO se tocan.** Ya ejecutadas en producción. Solo `Version20260313200000` (ya corregida) tenía el bug.
 
 ## Riesgos
 
 | Riesgo | Mitigación |
 |--------|------------|
-| Romper autowiring | Symfony autowire por interfaz funciona si hay una sola implementación concreta. `User`/`UserAccount` es la principal; `ApiKeyUser` se crea manualmente en el authenticator, no por DI |
-| Tests que instancian `User` | Buscar `new User(` y actualizar a `new UserAccount(` |
-| Templates con `app.user` | Twig no referencia la clase, usa propiedades. Sin impacto |
-| Voters con `instanceof User` en `supports()` | `UserVoter` verifica `$subject instanceof User` — cambiar a `UserAccount` |
+| Autowiring con 2 implementaciones de AppUserInterface | `ApiKeyUser` se crea manualmente en authenticator, no por DI |
+| Customer en interfaz de dominio | Aceptable — Customer es estable. Extraer si crece |
+| Tests que instancian `User` | Buscar `new User(` → `new UserAccount(` |
+| Templates con `app.user` | Twig usa propiedades, no clase. Sin impacto |
 
 ## Orden de ejecución
 
-1. Crear `AppUserInterface`
-2. `User implements AppUserInterface` (además de las que ya tiene)
-3. `ApiKeyUser implements AppUserInterface` (añadir métodos faltantes)
-4. Migrar security layer a interfaz (voters, checker, subscriber, tenant)
-5. Migrar servicios a interfaz
-6. Tests: verificar que todo pasa
-7. Rename `User` → `UserAccount` (clase + archivo + repository)
-8. Actualizar imports y relaciones en entidades
-9. Actualizar fixtures, commands, forms, controllers que usan clase concreta
-10. Eliminar `#[ORM\Table(name: 'user_account')]`
-11. Verificar que `doctrine:schema:validate` pasa
-12. Tests finales
+1. Crear `UserIdentity` (dominio puro)
+2. Crear `AppUserInterface` (extends UserIdentity + UserInterface)
+3. `User implements AppUserInterface`
+4. `ApiKeyUser implements AppUserInterface`
+5. Migrar security layer a `AppUserInterface`
+6. Migrar servicios read-only a `UserIdentity`
+7. Tests: verificar
+8. Rename `User` → `UserAccount`
+9. Actualizar entidades, servicios con FK, controllers, forms, fixtures, tests
+10. Eliminar `#[ORM\Table]`
+11. Schema validate + tests finales
