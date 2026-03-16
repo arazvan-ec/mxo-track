@@ -79,7 +79,7 @@ class DriverApiController extends AbstractController
             ], 422);
         }
 
-        return $this->json(['ok' => true, 'status' => $route->getStatus()->value]);
+        return $this->json(['ok' => true, 'status' => $route->status()->value]);
     }
 
     #[Route('/routes/{routePublicId}/finish', methods: ['POST'])]
@@ -97,7 +97,7 @@ class DriverApiController extends AbstractController
             return $errorResponder->notFound('route_not_found', 'Ruta no encontrada.');
         }
 
-        return $this->json(['ok' => true, 'status' => $route->getStatus()->value]);
+        return $this->json(['ok' => true, 'status' => $route->status()->value]);
     }
 
     #[Route('/routes/{routePublicId}/stops', methods: ['GET'])]
