@@ -216,6 +216,15 @@ Después de cada implementación que involucre una decisión de diseño signific
 - DTOs in `src/Dto/` with `fromArray()` factory + Symfony Validator constraints
 - Symfony 7.4 lock enforced: `extra.symfony.require=7.4.*`, `conflict >=8.0`
 
+## Principio de No-Redundancia (mandatory)
+
+**Antes de ejecutar cualquier acción, pregúntate: ¿es necesaria? ¿Ya se hizo? ¿El resultado será diferente al estado actual?**
+
+- Si la acción no cambia el estado del sistema → no la ejecutes
+- Si puedes verificar con un tool de lectura (Read, Glob, Grep) antes de un tool de escritura/ejecución → verifica primero
+- Si el tool destino ya maneja el caso (ej: `Write` crea directorios padre) → no hagas pasos previos innecesarios
+- Preferir la ruta más corta: menos herramientas, menos comandos, mismo resultado
+
 ## Critical Patterns
 
 ### Entity Identity (mandatory)
