@@ -175,3 +175,16 @@ services:
   App\Notification\Message\SendRecipientNotificationHandler:
     arguments:
       $appBaseUrl: '%env(string:default::APP_BASE_URL)%'
+
+  # ── Domain Repository Interfaces (Route Planning) ──────────────
+  App\Domain\Route\Repository\RouteRepositoryInterface:
+    alias: App\Infrastructure\Route\Doctrine\DoctrineRouteRepository
+
+  App\Domain\Route\Repository\RouteStopRepositoryInterface:
+    alias: App\Infrastructure\Route\Doctrine\DoctrineRouteStopRepository
+
+  App\Domain\Route\Repository\RouteSnapshotRepositoryInterface:
+    alias: App\Infrastructure\Route\Doctrine\DoctrineRouteSnapshotRepository
+
+  App\Domain\Route\Repository\RouteEventRepositoryInterface:
+    alias: App\Infrastructure\Route\Doctrine\DoctrineRouteEventRepository
