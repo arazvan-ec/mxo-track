@@ -93,6 +93,8 @@ Requieren base de datos y servicios. Verifican:
 - **Parcialmente cubierto**: Servicios core (RouteBuilder, DeliveryService), Controllers
 - **Poco cubierto**: Analytics services (AdminMetrics, SlaMetrics, DriverScoring), Domain event listeners
 
+**Ratio de cobertura:** 53 test files / ~383 src files = ~14% de cobertura por archivo. Limitación conocida documentada en `docs/analysis/2026-03-11-full-codebase-analysis.md`.
+
 ## Convenciones
 
 - Todos los test files usan `declare(strict_types=1)`
@@ -104,4 +106,5 @@ Requieren base de datos y servicios. Verifican:
 
 - 2026-03-11: Creación inicial
 - 2026-03-11: Phase 2 — +55 tests AI/ML (249→304 tests, 701→886 assertions, 44→53 test files)
+- 2026-03-16: Añadido ratio de cobertura (~14%) desde full-codebase-analysis
 - 2026-03-12: OperatorKpiServiceTest migrado de mocks DBAL (Connection/Result) a mocks ORM (EntityManager/QueryBuilder/Query)

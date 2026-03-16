@@ -18,6 +18,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 The system tracks vehicles via Traccar integration, manages delivery routes with driver proof-of-delivery (POD), and provides real-time position updates via Mercure. Multi-tenant via `customer_id` Doctrine SQL filter.
 
+**Core business value:** Route optimization — the business sells saved kilometers and saved time. Everything else (fleet management, multi-tenancy, portals, tracking) is infrastructure serving that goal.
+
 ## Tech Stack
 
 - PHP 8.4 (Docker image: `php:8.4-cli-bookworm`), Symfony 7.4 LTS (Flex + recipes)
@@ -36,6 +38,173 @@ php bin/console doctrine:fixtures:load -n       # Load fixtures (admin user)
 make lint                               # PHP syntax lint (all src files)
 php vendor/bin/phpunit                  # Run tests
 ```
+
+## SOLID Principles (mandatory)
+
+Todo código nuevo **debe cumplir los 5 principios**. En code review, verificar cada uno.
+
+### S — Single Responsibility
+
+**Una clase debe tener una sola razón para cambiar.**
+
+- Entidades: solo estado de dominio + transiciones de estado (`start()`, `finish()`, `markDelivered()`)
+- Persistencia: en Infrastructure (mapping externo, repositories)
+- Validación: en Value Objects (auto-validación en constructor) o Application layer (DTOs con Validator)
+- Seguridad: en Security layer (voters, authenticators), no en la entidad
+
+**Violación conocida:** `User.php` mezcla 5 responsabilidades (identidad, auth, roles, multi-tenancy, persistence lifecycle).
+**Buen ejemplo:** `src/Domain/Event/StopDelivered.php` — POPO inmutable con un solo trabajo.
+
+### O — Open/Closed
+
+**Abierto para extensión, cerrado para modificación.**
+
+- Múltiples implementaciones posibles → interface + registry o tagged services
+- Nunca if/switch sobre tipos para seleccionar implementación → usar polimorfismo
+- Nuevas funcionalidades se añaden con nuevas clases, no modificando las existentes
+
+**Buen ejemplo:** Provider Framework — `ProviderFactoryInterface` + `#[AutoconfigureTag]` + `ProviderFactoryRegistry`. Añadir provider = nueva clase, cero cambios en código existente.
+
+### L — Liskov Substitution
+
+**Las implementaciones deben cumplir el contrato completo de su interface.**
+
+- Si una implementación necesita stubs o no-ops → la interface es demasiado amplia → dividirla
+- Nunca `throw new \RuntimeException('Not supported')` en un método de interface
+
+**Violación conocida:** `WebhookGpsProvider` tiene stubs para `login()`, `getSessionCookie()`, `getDevices()` (deuda técnica documentada en backlog).
+
+### I — Interface Segregation
+
+**Los clientes no deben depender de interfaces que no usan.**
+
+- Interfaces pequeñas y cohesivas (1-5 métodos relacionados)
+- Si una implementación tiene stubs → ISP + LSP violados juntos
+- Preferir composición de interfaces: `class X implements InterfaceA, InterfaceB`
+- Interfaces marker (sin métodos) son aceptables
+
+**Buen ejemplo:** `CustomerScopedEntityInterface` (1 método), `SoftDeletableInterface` (3 métodos cohesivos).
+
+### D — Dependency Inversion
+
+**Módulos de alto nivel dependen de abstracciones, no de módulos de bajo nivel.**
+
+- Servicios de dominio y aplicación → dependen de interfaces definidas en Domain layer
+- Infrastructure implementa las interfaces
+- `EntityManagerInterface` directo → prohibido en contextos críticos. Usar `RepositoryInterface::save()`
+- En contextos CRUD/pragmáticos → aceptable depender de repositorios concretos Symfony
+
+```
+Controller → Application Service → Domain Interface ← Infrastructure Implementation
+```
+
+**Violación conocida:** `DeliveryService` depende de `RouteStopRepository` y `ShipmentRepository` concretos.
+**Buen ejemplo:** `RouteOptimizationService` depende de `RouteOptimizerInterface` y `RoutingEngineInterface`.
+
+## DDD Architecture (mandatory)
+
+Pureza híbrida: **contextos críticos → DDD puro, contextos CRUD → pragmático Symfony.** Todo código nuevo en contextos críticos sigue DDD desde el inicio.
+
+### Bounded Contexts
+
+**Críticos (DDD puro):** Route Planning (Route, RouteStop, RouteSnapshot, RouteEvent), Shipment/Delivery (Shipment, Parcel, DeliveryEvidence, POD), Route Optimization (ya bien separado).
+
+**Pragmáticos (Symfony):** Identity/Auth (User), Tenant Management (Customer), Fleet (Vehicle, Driver), Notifications.
+
+### Reglas
+
+**Código nuevo en contexto crítico → siempre DDD:**
+```
+src/Domain/{Context}/Model/        # Entidades POPOs, Value Objects
+src/Domain/{Context}/Repository/   # Interfaces de repositorio
+src/Domain/{Context}/Service/      # Domain services
+src/Domain/{Context}/Event/        # Domain events (POPOs)
+
+src/Infrastructure/{Context}/Doctrine/   # Implementaciones repositorio
+src/Infrastructure/{Context}/Symfony/    # Controllers, commands, listeners
+```
+
+**Al tocar código acoplado en contexto crítico:**
+1. Extraer interface de repositorio al dominio
+2. Crear implementación Doctrine
+3. Cambiar servicio para depender de la interface
+4. Implementar tu feature contra la interface
+
+**Migración planificada:** Sprints dedicados por contexto. Prioridad: Route Planning → Shipment/Delivery.
+
+### Qué debe cumplir el código DDD
+
+- Entidades son POPOs — sin `#[ORM\...]`, sin `UserInterface`, sin Validator constraints
+- Domain events son POPOs — sin dependencias de Symfony/Doctrine
+- Servicios dependen de interfaces del dominio, no de Doctrine concreto
+- Lógica de dominio testeable con unit tests puros (sin base de datos)
+- La flecha de dependencia apunta al dominio: `Controller → App → Domain ← Infrastructure`
+
+### Anti-Patterns
+
+- `$em->persist()` en servicios de dominio → usar `RepositoryInterface::save()`
+- `$em->getRepository()->createQueryBuilder()` en servicios → método en RepositoryInterface
+- `EntityManagerInterface` en constructor de servicios de dominio → depender de RepositoryInterface
+- Lifecycle callbacks en entidades DDD → timestamps en constructor o domain service
+
+**Referencia completa con ejemplos de código:** `docs/knowledge/architecture-ddd.md`
+
+## Design Patterns (mandatory)
+
+Los patrones de diseño son herramientas, no recetas. **Empieza por el problema, no por el patrón.**
+
+### Proceso de decisión
+
+Antes de aplicar cualquier patrón:
+
+1. **¿Es necesario?** Si el código directo (sin patrón) resuelve el problema igual de bien, no uses un patrón. Tres líneas claras > una abstracción prematura.
+2. **¿Cuántas implementaciones reales hay?** Si solo una, no extraigas interface "por si acaso". Hazlo cuando exista la segunda.
+3. **¿Qué trade-offs tiene?** Cada indirección (interface, factory, proxy) añade complejidad. ¿El beneficio supera el costo?
+4. **¿Hay alternativas?** La mayoría de problemas se resuelven con 2-3 patrones diferentes. Evalúa antes de decidir.
+5. **¿Mejora SOLID?** Si el patrón viola un principio SOLID, probablemente es el patrón equivocado.
+
+### Señales de que elegiste mal
+
+- Añadiste 3+ clases y solo hay 1 implementación real → over-engineering
+- Necesitas mirar 5 archivos para entender un flujo simple → demasiada indirección
+- El Facade crece sin parar (10+ dependencias) → se convierte en God Class
+- Implementas Strategy con 1 sola implementación "por si acaso" → YAGNI
+- Los eventos hacen imposible trazar qué pasa después de un cambio → exceso de desacoplamiento
+
+### Consistencia con patrones existentes
+
+El codebase ya usa patrones establecidos. Cuando el problema es del mismo tipo, seguirlos reduce carga cognitiva — pero no los copies sin evaluar si encajan:
+
+- **Providers:** Factory + Strategy + Adapter + TenantAware Proxy (12 factories, 4 proxies)
+- **Side-effects de dominio:** Domain Event + Listener (13 events, 13 listeners)
+- **Operaciones async:** Command via Messenger (4 messages + handlers)
+- **Graceful degradation:** Null Object (12 Null* classes)
+- **Workflows complejos:** Facade en Application layer (RoutePlanningService, DeliveryService)
+
+### Lo que NO hacer
+
+- `if ($type === 'x') return new X()` → el Provider Framework ya resuelve esto con Factory + Registry
+- Retornar null donde se espera un servicio → Null Object
+- Side-effects directos en el servicio que cambia estado → Domain Event + Listener separado
+- Modificar una clase para añadir comportamiento cross-cutting → Decorator o Proxy
+
+### Feedback loop: Decision Log
+
+Después de cada implementación que involucre una decisión de diseño significativa (patrón, arquitectura, trade-off), añadir una entrada breve a `docs/decisions/log.md`:
+
+```markdown
+### [YYYY-MM-DD] Contexto breve
+- **Problema:** Qué se necesitaba resolver
+- **Decisión:** Qué patrón/enfoque se eligió y por qué
+- **Alternativas descartadas:** Qué otras opciones se evaluaron
+- **Resultado:** (rellenar post-implementación) ¿Funcionó bien? ¿Qué se aprendió?
+```
+
+**Cuándo registrar:** Solo decisiones no triviales — nueva abstracción, nuevo patrón, refactor de arquitectura, trade-off con implicaciones. No registrar decisiones obvias.
+
+**Cuándo actualizar knowledge:** Si el log muestra un patrón recurrente (mismo error, misma lección 3+ veces), actualizar `docs/knowledge/design-patterns.md` o la sección relevante de CLAUDE.md.
+
+**Guía completa de decisión con trade-offs:** `docs/knowledge/design-patterns.md`
 
 ## Conventions
 
@@ -94,9 +263,12 @@ Antes de trabajar en un subsistema, **LEE el módulo relevante** en `docs/knowle
 | SMS, WhatsApp, push, webhooks | `docs/knowledge/notifications.md` |
 | Claude AI, embeddings, ML | `docs/knowledge/ai-ml.md` |
 | VROOM, OSRM, capacidad, rutas | `docs/knowledge/route-optimization.md` |
+| DDD, SOLID, desacoplamiento, bounded contexts | `docs/knowledge/architecture-ddd.md` |
+| Patrones de diseño GoF + DDD, catálogo completo | `docs/knowledge/design-patterns.md` |
 | Roles, multi-tenancy, CSRF, seguridad | `docs/knowledge/security.md` |
 | Skills de Superpowers (completo) | `docs/knowledge/superpowers-skills.md` |
 | Índice completo de módulos | `docs/knowledge/index.md` |
+| Requisitos de negocio, gaps, decisiones | `docs/analysis/2026-03-15-business-requirements-audit.md` |
 | Análisis previos del codebase | `docs/analysis/` |
 
 **Regla:** No duplicar info entre CLAUDE.md y los módulos. Al modificar un subsistema, actualizar el módulo correspondiente.
@@ -145,6 +317,27 @@ Antes de trabajar en un subsistema, **LEE el módulo relevante** en `docs/knowle
 
 **Estado:** Pendiente
 **Trigger:** Antes de producción con customers configurando API keys de terceros.
+
+### [2026-03-15] Selección de estrategia de optimización
+
+**Estado:** Pendiente
+**Contexto:** Actualmente la estrategia se selecciona por provider configuration (CustomerIntegration). Sin visibilidad para admin ni comparación.
+**Ref:** `docs/analysis/2026-03-15-business-requirements-audit.md > Decisión 1`
+**Trigger:** Cuando se diseñe el flujo UI de creación de rutas (GAP-3.1).
+
+### [2026-03-15] Política de re-optimización automática vs manual
+
+**Estado:** Pendiente
+**Contexto:** RouteOptimizationService puede re-optimizar paradas PENDING, pero no hay política definida de cuándo hacerlo automáticamente.
+**Ref:** `docs/analysis/2026-03-15-business-requirements-audit.md > Decisión 2`
+**Trigger:** Cuando se defina la política de negocio de re-optimización.
+
+### [2026-03-15] Datos históricos para alimentar planificación futura
+
+**Estado:** Pendiente
+**Contexto:** Existen AddressRisk, DriverFeedback, RouteComparison, PostRouteAnalyzer — potencialmente útiles para mejorar planificación.
+**Ref:** `docs/analysis/2026-03-15-business-requirements-audit.md > Decisión 3`
+**Trigger:** Cuando se diseñe el módulo de aprendizaje/mejora continua.
 
 ---
 
@@ -804,7 +997,13 @@ description: Use when implementation is complete and you need to decide how to i
 - Option 3: Keep as-is, report location
 - Option 4: Confirm with user before deleting (require typed "discard")
 
-**Step 5: Cleanup Worktree** (for Options 1, 2, 4 only)
+**Step 5: Design Retrospective** (before cleanup)
+- Revisar decisiones de diseño tomadas en la rama (consultar `docs/decisions/log.md` si se usó)
+- ¿Algún patrón se siente forzado o sobre-engineered? → Simplificar antes de merge
+- ¿Se descubrió algo que debería actualizar la documentación? → Actualizar knowledge modules
+- ¿Hay lecciones que mejoren las guías de CLAUDE.md? → Proponer al usuario
+
+**Step 6: Cleanup Worktree** (for Options 1, 2, 4 only)
 
 #### Red Flags
 
