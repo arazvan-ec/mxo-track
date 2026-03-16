@@ -92,6 +92,12 @@
     Generado: {{ generated_at|date('d/m/Y H:i') }}
   </p>
 
+  {% if error is defined and error %}
+    <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px; margin-bottom: 20px; color: #991b1b; font-size: 13px;">
+      <strong>Error:</strong> {{ error }}
+    </div>
+  {% endif %}
+
   {% if commits|length > 0 %}
     <h2>Resumen</h2>
     <div class="kpi-grid">

@@ -104,6 +104,26 @@ final class GitLogReader
         ];
     }
 
+    /**
+     * @return list<string>
+     */
+    public function listBranches(): array
+    {
+        $process = $this->run(['git', 'branch', '-a', '--format=%(refname:short)']);
+        $output = trim($process->getOutput());
+        if ($output === '') {
+            return [];
+        }
+
+        $branches = array_map('trim', explode("\n", $output));
+
+        // Deduplicate and sort: local branches first, then remote
+        $branches = array_values(array_unique($branches));
+        sort($branches);
+
+        return $branches;
+    }
+
     private function detectMergeBase(string $branch): string
     {
         // Try main first, fallback to master
