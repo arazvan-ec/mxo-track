@@ -9,6 +9,7 @@
 
 | Módulo | Archivo | Descripción | Cuándo consultarlo |
 |--------|---------|-------------|-------------------|
+| Arquitectura DDD | `domain-driven-architecture.md` | Interfaces de dominio puro, capas, bridges, reglas de dependencias | Brainstorming de features que tocan lógica de negocio |
 | Modelo de Dominio | `domain-model.md` | Entidades, relaciones, enums, patrones de identidad | Trabajar con entidades, migraciones, relaciones |
 | Provider Framework | `provider-framework.md` | Providers configurables, factories, proxies, resolución per-tenant | Añadir/modificar providers, CustomerIntegration |
 | API Surface | `api-surface.md` | Endpoints, DTOs, autenticación, error handling | Trabajar con controllers, APIs, DTOs |
@@ -38,3 +39,4 @@
 
 - 2026-03-11: Creación inicial — 11 módulos extraídos del CLAUDE.md y análisis del codebase
 - 2026-03-11: Añadido módulo `superpowers-skills.md` — restaura contenido completo de skills recortado en modularización
+- 2026-03-16: Añadido módulo `domain-driven-architecture.md` — patrón de interfaces de dominio puro extraído de refactoring UserIdentity/UserAccount

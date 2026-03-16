@@ -78,12 +78,30 @@ When modifying a class constructor (adding/removing/changing parameters):
 
 **Why:** Symfony auto-wires most services, but Factories use `new` directly. Changing a constructor without updating its Factory causes runtime errors that tests may not catch if the Factory path isn't covered.
 
+### Domain-Driven Architecture (mandatory during brainstorming)
+
+Durante la fase de brainstorming, **ANTES de proponer un diseño**, evaluar:
+
+1. **¿El feature toca lógica de negocio?** (no solo UI/infra)
+2. **¿3+ servicios dependerán del concepto?**
+3. **¿Hay o habrá múltiples implementaciones?**
+
+Si la respuesta a cualquiera es **sí** → proponer **interfaz de dominio pura** (`App\Domain\Model\`) antes de la implementación concreta. Consultar `docs/knowledge/domain-driven-architecture.md` para el patrón completo.
+
+**Regla de capas:**
+- `App\Domain\Model\` — interfaces puras PHP (sin Symfony, sin Doctrine)
+- `App\Security\` / bridges — unen dominio con framework
+- `App\Entity\` — implementación Doctrine de las interfaces de dominio
+- Servicios read-only → dependen de interfaz de dominio
+- Servicios con FK → dependen de la entidad concreta
+
 ## Knowledge Modules (consultar bajo demanda)
 
 Antes de trabajar en un subsistema, **LEE el módulo relevante** en `docs/knowledge/`:
 
 | Si vas a trabajar en... | Lee primero |
 |------------------------|-------------|
+| Arquitectura DDD, interfaces de dominio, capas | `docs/knowledge/domain-driven-architecture.md` |
 | Entidades, relaciones, migraciones, enums | `docs/knowledge/domain-model.md` |
 | Providers, factories, resolución per-tenant | `docs/knowledge/provider-framework.md` |
 | Controllers, DTOs, APIs, endpoints | `docs/knowledge/api-surface.md` |
