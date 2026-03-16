@@ -38,7 +38,7 @@ final class Version20260313200000 extends AbstractMigration
         $this->addSql('CREATE INDEX idx_route_event_type_occurred ON route_event (event_type, occurred_at)');
 
         $this->addSql('ALTER TABLE route_event ADD CONSTRAINT fk_route_event_route FOREIGN KEY (route_id) REFERENCES route_plan (id) ON DELETE CASCADE NOT DEFERRABLE INITIALLY IMMEDIATE');
-        $this->addSql('ALTER TABLE route_event ADD CONSTRAINT fk_route_event_actor_user FOREIGN KEY (actor_user_id) REFERENCES "user" (id) ON DELETE SET NULL NOT DEFERRABLE INITIALLY IMMEDIATE');
+        $this->addSql('ALTER TABLE route_event ADD CONSTRAINT fk_route_event_actor_user FOREIGN KEY (actor_user_id) REFERENCES "user_account" (id) ON DELETE SET NULL NOT DEFERRABLE INITIALLY IMMEDIATE');
     }
 
     public function down(Schema $schema): void
