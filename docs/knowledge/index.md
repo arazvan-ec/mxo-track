@@ -1,6 +1,6 @@
 # Knowledge Modules Index
 
-**Última actualización:** 2026-03-11
+**Última actualización:** 2026-03-16
 **Estado:** Vigente
 
 Índice de módulos de conocimiento del proyecto mxo-track. Cada módulo cubre un subsistema específico y se consulta bajo demanda.
@@ -18,7 +18,7 @@
 | GPS Tracking | `gps-tracking.md` | Traccar, ingesta, simulación, posiciones | GPS, tracking de vehículos |
 | Notifications | `notifications.md` | SMS, WhatsApp, push, webhooks, in-app | Sistema de notificaciones |
 | AI/ML | `ai-ml.md` | Claude API, embeddings, clasificación, clustering | Funcionalidades de IA |
-| Route Optimization | `route-optimization.md` | VROOM, OSRM, capacidad, constraints, planning | Optimización y planificación de rutas |
+| Route Optimization | `route-optimization.md` | VROOM, OSRM, capacidad, constraints, arquitectura 4 capas, dos ejes, gaps | Optimización y planificación de rutas |
 | Security | `security.md` | Roles, multi-tenancy, CSRF, rate limiting, audit | Seguridad, autenticación, autorización |
 | Superpowers Skills | `superpowers-skills.md` | Skills completas: TDD, brainstorming, debugging, verification, etc. | Aplicar cualquier skill de desarrollo |
 
@@ -32,9 +32,11 @@
 ## Análisis Complementarios
 
 - `docs/analysis/2026-03-11-full-codebase-analysis.md` — Análisis exhaustivo del codebase completo
+- `docs/analysis/2026-03-15-business-requirements-audit.md` — Auditoría de requisitos de negocio, arquitectura 4 capas, gaps UI, decisiones pendientes
 - `docs/analysis/2026-03-11-dynamic-knowledge-strategy.md` — Estrategia de modularización
 
 ## Historial
 
 - 2026-03-11: Creación inicial — 11 módulos extraídos del CLAUDE.md y análisis del codebase
 - 2026-03-11: Añadido módulo `superpowers-skills.md` — restaura contenido completo de skills recortado en modularización
+- 2026-03-16: Añadido business-requirements-audit a análisis complementarios; actualizada descripción de Route Optimization

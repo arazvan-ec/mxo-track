@@ -18,6 +18,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 The system tracks vehicles via Traccar integration, manages delivery routes with driver proof-of-delivery (POD), and provides real-time position updates via Mercure. Multi-tenant via `customer_id` Doctrine SQL filter.
 
+**Core business value:** Route optimization — the business sells saved kilometers and saved time. Everything else (fleet management, multi-tenancy, portals, tracking) is infrastructure serving that goal.
+
 ## Tech Stack
 
 - PHP 8.4 (Docker image: `php:8.4-cli-bookworm`), Symfony 7.4 LTS (Flex + recipes)
@@ -97,6 +99,7 @@ Antes de trabajar en un subsistema, **LEE el módulo relevante** en `docs/knowle
 | Roles, multi-tenancy, CSRF, seguridad | `docs/knowledge/security.md` |
 | Skills de Superpowers (completo) | `docs/knowledge/superpowers-skills.md` |
 | Índice completo de módulos | `docs/knowledge/index.md` |
+| Requisitos de negocio, gaps, decisiones | `docs/analysis/2026-03-15-business-requirements-audit.md` |
 | Análisis previos del codebase | `docs/analysis/` |
 
 **Regla:** No duplicar info entre CLAUDE.md y los módulos. Al modificar un subsistema, actualizar el módulo correspondiente.
@@ -145,6 +148,27 @@ Antes de trabajar en un subsistema, **LEE el módulo relevante** en `docs/knowle
 
 **Estado:** Pendiente
 **Trigger:** Antes de producción con customers configurando API keys de terceros.
+
+### [2026-03-15] Selección de estrategia de optimización
+
+**Estado:** Pendiente
+**Contexto:** Actualmente la estrategia se selecciona por provider configuration (CustomerIntegration). Sin visibilidad para admin ni comparación.
+**Ref:** `docs/analysis/2026-03-15-business-requirements-audit.md > Decisión 1`
+**Trigger:** Cuando se diseñe el flujo UI de creación de rutas (GAP-3.1).
+
+### [2026-03-15] Política de re-optimización automática vs manual
+
+**Estado:** Pendiente
+**Contexto:** RouteOptimizationService puede re-optimizar paradas PENDING, pero no hay política definida de cuándo hacerlo automáticamente.
+**Ref:** `docs/analysis/2026-03-15-business-requirements-audit.md > Decisión 2`
+**Trigger:** Cuando se defina la política de negocio de re-optimización.
+
+### [2026-03-15] Datos históricos para alimentar planificación futura
+
+**Estado:** Pendiente
+**Contexto:** Existen AddressRisk, DriverFeedback, RouteComparison, PostRouteAnalyzer — potencialmente útiles para mejorar planificación.
+**Ref:** `docs/analysis/2026-03-15-business-requirements-audit.md > Decisión 3`
+**Trigger:** Cuando se diseñe el módulo de aprendizaje/mejora continua.
 
 ---
 

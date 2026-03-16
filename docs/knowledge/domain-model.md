@@ -1,6 +1,6 @@
 # Modelo de Dominio
 
-**Última actualización:** 2026-03-11
+**Última actualización:** 2026-03-16
 **Estado:** Vigente
 
 ## Entidades Core
@@ -101,6 +101,17 @@ Vehicle (global, no scoped)
 └── CustomerVehicle (bridge a Customer)
 ```
 
+## Arquitectura de Capas de Rutas
+
+El dominio de rutas usa un modelo de 4 capas que preserva la inmutabilidad del plan original mientras permite que el estado operativo cambie:
+
+1. **RouteSnapshot (inmutable)** — Captura el plan original: orden de paradas, polyline, métricas de ahorro, validación de capacidad
+2. **Route + RouteStop (mutable)** — Estado operativo: status de ruta/paradas, vehículo y driver asignados
+3. **RouteEvent (append-only)** — Historial inmutable de 15 tipos de evento (entregas, excepciones, desviaciones, re-optimizaciones)
+4. **Estado en tiempo real** — stopStates, ETAs, actualPolyline actualizados via Mercure SSE
+
+Para diagrama completo, flujo end-to-end, constraints y gaps: ver `docs/knowledge/route-optimization.md` > "Arquitectura del Dominio de Rutas".
+
 ## Domain Events
 
 | Evento | Disparado por | Listeners |
@@ -123,4 +134,5 @@ Vehicle (global, no scoped)
 
 - 2026-03-11: Creación inicial
 - 2026-03-13: Añadir RouteEvent, RouteSnapshot, RouteEventType, RouteCancelled, RouteAssigned, RouteEventLogListener
+- 2026-03-16: Añadir sección "Arquitectura de Capas de Rutas" con cross-reference a route-optimization.md
 - 2026-03-14: Añadir DeviationDetected, DeviationEnded, DEVIATION_ENDED, EtaChanged domain events; EtaRecalculationListener con throttle 30s y detección de desvío
