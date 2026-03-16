@@ -188,6 +188,22 @@ El codebase ya usa patrones establecidos. Cuando el problema es del mismo tipo, 
 - Side-effects directos en el servicio que cambia estado → Domain Event + Listener separado
 - Modificar una clase para añadir comportamiento cross-cutting → Decorator o Proxy
 
+### Feedback loop: Decision Log
+
+Después de cada implementación que involucre una decisión de diseño significativa (patrón, arquitectura, trade-off), añadir una entrada breve a `docs/decisions/log.md`:
+
+```markdown
+### [YYYY-MM-DD] Contexto breve
+- **Problema:** Qué se necesitaba resolver
+- **Decisión:** Qué patrón/enfoque se eligió y por qué
+- **Alternativas descartadas:** Qué otras opciones se evaluaron
+- **Resultado:** (rellenar post-implementación) ¿Funcionó bien? ¿Qué se aprendió?
+```
+
+**Cuándo registrar:** Solo decisiones no triviales — nueva abstracción, nuevo patrón, refactor de arquitectura, trade-off con implicaciones. No registrar decisiones obvias.
+
+**Cuándo actualizar knowledge:** Si el log muestra un patrón recurrente (mismo error, misma lección 3+ veces), actualizar `docs/knowledge/design-patterns.md` o la sección relevante de CLAUDE.md.
+
 **Guía completa de decisión con trade-offs:** `docs/knowledge/design-patterns.md`
 
 ## Conventions
@@ -981,7 +997,13 @@ description: Use when implementation is complete and you need to decide how to i
 - Option 3: Keep as-is, report location
 - Option 4: Confirm with user before deleting (require typed "discard")
 
-**Step 5: Cleanup Worktree** (for Options 1, 2, 4 only)
+**Step 5: Design Retrospective** (before cleanup)
+- Revisar decisiones de diseño tomadas en la rama (consultar `docs/decisions/log.md` si se usó)
+- ¿Algún patrón se siente forzado o sobre-engineered? → Simplificar antes de merge
+- ¿Se descubrió algo que debería actualizar la documentación? → Actualizar knowledge modules
+- ¿Hay lecciones que mejoren las guías de CLAUDE.md? → Proponer al usuario
+
+**Step 6: Cleanup Worktree** (for Options 1, 2, 4 only)
 
 #### Red Flags
 

@@ -130,7 +130,28 @@ Para mantener consistencia, estos patrones ya están en uso. No los cambies sin 
 
 ---
 
+## Mejora Continua
+
+Esta guía se enriquece con cada implementación via el **Decision Log** (`docs/decisions/log.md`):
+
+```
+Implementar → Registrar decisión → Evaluar resultado → Actualizar guía
+```
+
+- **Después de implementar:** Registrar decisiones de diseño significativas en el log
+- **Al cerrar rama:** Retrospectiva (paso 5 de finishing-a-development-branch) evalúa si las decisiones fueron acertadas
+- **Cuando un patrón aparezca 3+ veces en el log:** Actualizar esta guía con el aprendizaje
+
+**Qué actualizar:**
+- Nuevas señales de "elegiste mal" descubiertas en la práctica
+- Trade-offs que no estaban documentados
+- Patrones nuevos que se establezcan en el codebase (añadir a inventario)
+- Patrones que se hayan abandonado (documentar por qué)
+
+---
+
 ## Historial
 
 - 2026-03-16: Creación inicial como catálogo de patrones
 - 2026-03-16: Reescrito como guía de decisión — foco en evaluar trade-offs, no copiar patrones
+- 2026-03-16: Añadida sección de mejora continua — feedback loop con Decision Log y retrospectiva
