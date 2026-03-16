@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\EventListener\Domain;
 
-use App\Domain\Event\DeviationDetected;
-use App\Domain\Event\DeviationEnded;
-use App\Domain\Event\EtaChanged;
+use App\Domain\Route\Event\DeviationDetected;
+use App\Domain\Route\Event\DeviationEnded;
+use App\Domain\Route\Event\EtaChanged;
 use App\Domain\Event\VehiclePositionReceived;
 use App\Entity\Route;
 use App\Entity\Vehicle;

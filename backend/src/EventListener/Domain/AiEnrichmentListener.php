@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventListener\Domain;
 
-use App\Domain\Event\RouteStarted;
+use App\Domain\Route\Event\RouteStarted;
 use App\Entity\Route;
 use App\Message\EnrichRouteNotesMessage;
 use App\Repository\RouteRepository;

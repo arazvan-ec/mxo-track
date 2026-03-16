@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Domain\Event;
+namespace App\Domain\Route\Event;
 
-final readonly class RouteOptimized
+final readonly class RouteAssigned
 {
     public function __construct(
         public string $routePublicId,
-        public float $improvementPercent,
-        public ?float $distanceKm,
-        public ?int $durationMinutes,
+        public ?string $vehiclePublicId,
+        public ?int $driverUserId,
+        public int $assignedByUserId,
         public \DateTimeImmutable $occurredAt = new \DateTimeImmutable(),
     ) {}
 }

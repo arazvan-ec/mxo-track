@@ -2,15 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Domain\Event;
+namespace App\Domain\Route\Event;
 
-final readonly class RouteAssigned
+final readonly class RouteStarted
 {
     public function __construct(
         public string $routePublicId,
-        public ?string $vehiclePublicId,
-        public ?int $driverUserId,
-        public int $assignedByUserId,
+        public int $driverUserId,
         public \DateTimeImmutable $occurredAt = new \DateTimeImmutable(),
     ) {}
 }

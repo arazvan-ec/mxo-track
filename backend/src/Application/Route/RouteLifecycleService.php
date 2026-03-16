@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Application\Route;
 
-use App\Domain\Event\RouteCompleted;
-use App\Domain\Event\RouteStarted;
+use App\Domain\Route\Event\RouteCompleted;
+use App\Domain\Route\Event\RouteStarted;
 use App\Domain\Route\Model\Route;
 use App\Domain\Route\Repository\RouteRepositoryInterface;
 use App\Domain\Route\ValueObject\RouteId;

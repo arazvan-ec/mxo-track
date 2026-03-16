@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventListener\Domain;
 
-use App\Domain\Event\RouteCompleted;
+use App\Domain\Route\Event\RouteCompleted;
 use App\Message\PostRouteAnalysisMessage;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;

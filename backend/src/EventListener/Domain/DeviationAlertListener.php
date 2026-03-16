@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventListener\Domain;
 
-use App\Domain\Event\DeviationDetected;
+use App\Domain\Route\Event\DeviationDetected;
 use App\Entity\RealtimeEvent;
 use App\Repository\RouteRepository;
 use Doctrine\ORM\EntityManagerInterface;

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\EventListener\Domain;
 
-use App\Domain\Event\DeviationDetected;
-use App\Domain\Event\EtaChanged;
+use App\Domain\Route\Event\DeviationDetected;
+use App\Domain\Route\Event\EtaChanged;
 use App\Domain\Event\VehiclePositionReceived;
 use App\Dto\DeviationCheckResult;
 use App\Entity\Route;
