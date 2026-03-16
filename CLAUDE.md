@@ -149,6 +149,48 @@ src/Infrastructure/{Context}/Symfony/    # Controllers, commands, listeners
 
 **Referencia completa con ejemplos de código:** `docs/knowledge/architecture-ddd.md`
 
+## Design Patterns (mandatory)
+
+Los patrones de diseño son las herramientas para implementar SOLID y DDD. **Usar el patrón correcto para cada problema.**
+
+### Cuándo usar cada patrón
+
+| Situación | Patrón | Ejemplo en codebase |
+|-----------|--------|-------------------|
+| Múltiples implementaciones del mismo contrato | **Strategy** | RouteOptimizerInterface → Vroom, Greedy, Null |
+| Crear objetos según configuración o tipo | **Factory** | ProviderFactoryInterface + Registry con AutoconfigureTag |
+| Construcción compleja en fases | **Builder** | RouteBuilder: mapear → optimizar → materializar |
+| Envolver API externa con interface del dominio | **Adapter** | VroomRouteOptimizer adapta API VROOM a RouteOptimizerInterface |
+| Añadir comportamiento sin modificar la clase | **Decorator** | CachedProviderResolver envuelve ProviderResolver |
+| Interceptar y delegar según contexto (tenant) | **Proxy** | TenantAwareGpsProvider resuelve provider per-tenant |
+| Operaciones async o desacopladas del request | **Command** (Messenger) | PostRouteAnalysisMessage + Handler |
+| Reaccionar a cambios de estado del dominio | **Domain Event + Observer** | StopDelivered → NotifyDeliveryListener |
+| Orquestar múltiples servicios como workflow | **Facade** | RoutePlanningService coordina builder + optimizer + validator |
+| Fallback cuando un provider falla | **Chain of Responsibility** | FallbackChain intenta providers en orden |
+| Lógica base con hooks para subclases | **Template Method** | BaseVoter con abstract isGrantedForUser() |
+| Provider no disponible, evitar null checks | **Null Object** | NullRouteOptimizer, NullGpsProvider, etc. |
+
+### Reglas
+
+- **Nuevo provider/implementación** → Factory + Strategy + Adapter. Nunca if/switch para seleccionar.
+- **Nuevo servicio externo** → Adapter que implemente port interface del dominio.
+- **Comportamiento cross-cutting** (cache, logging, tenant) → Decorator o Proxy. No modificar la clase original.
+- **Operación costosa o no-crítica** → Command via Messenger (async).
+- **Cambio de estado con side-effects** → Domain Event. Los listeners reaccionan, no el servicio que cambia estado.
+- **Provider opcional** → Null Object. Nunca retornar null donde se espera un servicio.
+- **Queries complejas combinables** → Specification (candidato a implementar).
+- **Reglas de negocio configurables** → Policy objects (candidato a implementar).
+
+### Anti-Patterns de diseño
+
+- `if ($type === 'x') return new X()` → Factory + Strategy
+- Servicio que hace todo (God Class) → Facade que orquesta servicios pequeños
+- Null checks por provider no disponible → Null Object
+- Side-effects directos en servicio que cambia estado → Domain Event + Listener
+- Lógica duplicada en múltiples servicios → Template Method o Strategy
+
+**Referencia completa con ejemplos de código:** `docs/knowledge/design-patterns.md`
+
 ## Conventions
 
 - All PHP files use `declare(strict_types=1)`
@@ -207,6 +249,7 @@ Antes de trabajar en un subsistema, **LEE el módulo relevante** en `docs/knowle
 | Claude AI, embeddings, ML | `docs/knowledge/ai-ml.md` |
 | VROOM, OSRM, capacidad, rutas | `docs/knowledge/route-optimization.md` |
 | DDD, SOLID, desacoplamiento, bounded contexts | `docs/knowledge/architecture-ddd.md` |
+| Patrones de diseño GoF + DDD, catálogo completo | `docs/knowledge/design-patterns.md` |
 | Roles, multi-tenancy, CSRF, seguridad | `docs/knowledge/security.md` |
 | Skills de Superpowers (completo) | `docs/knowledge/superpowers-skills.md` |
 | Índice completo de módulos | `docs/knowledge/index.md` |
