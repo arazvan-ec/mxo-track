@@ -216,6 +216,56 @@ Después de cada implementación que involucre una decisión de diseño signific
 - DTOs in `src/Dto/` with `fromArray()` factory + Symfony Validator constraints
 - Symfony 7.4 lock enforced: `extra.symfony.require=7.4.*`, `conflict >=8.0`
 
+## Atomic Commits & Push (mandatory)
+
+**Cada paso de progreso debe committearse y pushearse inmediatamente.** No acumular cambios.
+
+### Cuándo commitear
+
+- Después de crear/modificar cada archivo que funciona (compila, no rompe tests)
+- Después de cada tarea completada en un plan
+- Después de cada refactor que deja el código en estado verde
+- Después de escribir un test (aunque falle — commit del test solo)
+- Después de hacer pasar un test (commit de la implementación)
+- Después de crear/actualizar documentación (specs, plans, knowledge modules)
+
+### Cuándo hacer push
+
+- Después de cada commit (o máximo cada 2-3 commits si son parte del mismo paso lógico)
+- **Siempre** antes de lanzar subagentes (para que el progreso esté seguro)
+- **Siempre** al terminar una tarea del TodoWrite
+
+### Artefactos de trabajo van al repo, no a rutas efímeras
+
+- Los planes de implementación van a `docs/superpowers/plans/` — **nunca** solo en `/root/.claude/plans/` (que es efímero y se pierde al cerrar sesión)
+- Los specs de diseño van a `docs/superpowers/specs/`
+- El estado de progreso (qué tareas están hechas, cuáles faltan) debe quedar en commits, no solo en TodoWrite (que también es efímero)
+- **Regla:** Si generas un documento de trabajo (plan, spec, análisis), debe committearse al repo inmediatamente
+
+### Formato del commit message
+
+- Prefijos: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`
+- Mensaje corto y descriptivo del **qué** y **por qué**
+- Un commit = un cambio lógico atómico (no mezclar feat + refactor + docs en uno)
+
+### Ejemplos
+
+```
+docs: add route optimization spec
+test: add failing test for RouteStop reordering
+feat: implement RouteStop reorder method
+refactor: extract distance calculation to value object
+fix: correct ETA calculation when stop is skipped
+```
+
+### Anti-patterns
+
+- Commitear todo al final de la sesión en un solo commit gigante
+- Acumular 5+ archivos modificados sin commit
+- Push solo al hacer PR — pushear durante el desarrollo
+- Commit messages genéricos: "WIP", "updates", "changes"
+- Mezclar cambios no relacionados en un commit
+
 ## Principio de No-Redundancia (mandatory)
 
 **Antes de ejecutar cualquier acción, pregúntate: ¿es necesaria? ¿Ya se hizo? ¿El resultado será diferente al estado actual?**
