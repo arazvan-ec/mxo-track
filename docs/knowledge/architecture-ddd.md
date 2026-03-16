@@ -7,6 +7,157 @@
 
 El codebase migra progresivamente hacia DDD con pureza híbrida: **contextos críticos van DDD puro, contextos CRUD se quedan pragmáticos Symfony.** Todo código nuevo sigue DDD desde el inicio.
 
+## Principios SOLID en Este Codebase
+
+Cada principio tiene ejemplos concretos de violaciones actuales y buenas prácticas ya existentes. **Todo código nuevo debe cumplir los 5 principios.**
+
+### S — Single Responsibility (Responsabilidad Única)
+
+**Una clase debe tener una sola razón para cambiar.**
+
+**Violación actual:** `src/Entity/User.php` maneja 5 responsabilidades:
+1. Identidad (email, nombre)
+2. Credenciales de autenticación (password)
+3. Roles de seguridad (getRoles(), assignRole())
+4. Scoping multi-tenant (relación con Customer)
+5. Lifecycle de persistencia (#[ORM\PrePersist])
+
+Cada una es una "razón para cambiar" diferente. Si cambia la política de roles, hay que tocar la misma clase que si cambia el esquema de persistencia.
+
+**Buen ejemplo:** `src/Domain/Event/StopDelivered.php` — un POPO inmutable con un solo trabajo: transportar datos del evento. Sin lógica de negocio, sin persistencia, sin validación.
+
+**Regla para código nuevo:**
+- Entidades: solo estado de dominio + transiciones de estado (start(), finish(), markDelivered())
+- Persistencia: en Infrastructure (mapping externo, repositories)
+- Validación: en Value Objects (auto-validación en constructor) o Application layer (DTOs con Validator)
+- Seguridad: en Security layer (voters, authenticators), no en la entidad
+
+### O — Open/Closed (Abierto/Cerrado)
+
+**Abierto para extensión, cerrado para modificación.**
+
+**Buen ejemplo (ya en el codebase):** El Provider Framework es ejemplar:
+- `ProviderFactoryInterface` define el contrato
+- `ProviderFactoryRegistry` auto-registra factories via `#[AutoconfigureTag('app.provider_factory')]`
+- Para añadir un nuevo optimizer: crear una clase que implemente `ProviderFactoryInterface` → Symfony la registra automáticamente → **cero cambios en código existente**
+
+**Violación a evitar:**
+```php
+// MAL: Cerrado para extensión, requiere modificación
+if ($type === 'vroom') {
+    return new VroomFactory(...);
+} elseif ($type === 'greedy') {
+    return new GreedyFactory(...);
+}
+// Añadir un tercer optimizer requiere modificar este if/else
+```
+
+**Regla para código nuevo:**
+- Cuando haya múltiples implementaciones posibles → interface + registry o tagged services
+- Nunca if/switch sobre tipos para seleccionar implementación → usar polimorfismo
+- Nuevas funcionalidades se añaden con nuevas clases, no modificando las existentes
+
+### L — Liskov Substitution (Sustitución de Liskov)
+
+**Las subclases deben poder sustituir a sus clases base sin romper el comportamiento.**
+
+**Violación actual:** `src/Provider/Gps/WebhookGpsProvider.php` implementa `GpsDeviceProviderInterface` pero:
+- `login()` → no-op (no hace nada)
+- `getSessionCookie()` → siempre retorna null
+- `getDevices()` → siempre retorna array vacío
+
+Código que depende de `GpsDeviceProviderInterface` no puede sustituir `WebhookGpsProvider` sin comprobar qué implementación es. **Esto rompe LSP.**
+
+**Buen ejemplo:** `src/Tracking/TraccarGpsProvider.php` cumple el contrato completo: login() autentica, getSessionCookie() retorna cookie real, getDevices() lista dispositivos reales.
+
+**Cómo se arregla (deuda técnica documentada):** Separar la interface en dos:
+```php
+// Interface para providers push-based (webhook)
+interface GpsPositionReceiverInterface {
+    public function receivePosition(PositionPayload $payload): void;
+    public function isAvailable(): bool;
+}
+
+// Interface para providers pull-based (Traccar)
+interface GpsDeviceManagerInterface extends GpsPositionReceiverInterface {
+    public function login(string $server, string $user, string $pass): void;
+    public function getSessionCookie(): ?string;
+    public function getDevices(): array;
+}
+```
+
+**Regla para código nuevo:**
+- Si una implementación necesita stubs o no-ops para métodos de la interface → la interface es demasiado amplia → dividirla
+- Todas las implementaciones deben cumplir el contrato **completo** de la interface
+- Nunca `throw new \RuntimeException('Not supported')` en un método de interface
+
+### I — Interface Segregation (Segregación de Interfaces)
+
+**Los clientes no deben depender de interfaces que no usan.**
+
+**Buen ejemplo (ya en el codebase):**
+- `CustomerScopedEntityInterface` → 1 solo método: `getCustomer(): Customer`
+- `SoftDeletableInterface` → 3 métodos cohesivos: `getDeletedAt()`, `isDeleted()`, `softDelete()`
+
+Cada interface es estrecha y enfocada. Un cliente que solo necesita filtrar por tenant depende solo de `CustomerScopedEntityInterface`, no de una interface gorda con 20 métodos.
+
+**Violación a evitar:**
+```php
+// MAL: Interface gorda que obliga a implementar métodos irrelevantes
+interface VehicleServiceInterface {
+    public function getPosition(): Position;
+    public function getMaintenanceHistory(): array;
+    public function calculateFuelCost(): Money;
+    public function sendNotification(): void;  // ¿Por qué el vehículo envía notificaciones?
+}
+```
+
+**Regla para código nuevo:**
+- Interfaces pequeñas y cohesivas (1-5 métodos relacionados)
+- Si una implementación tiene stubs → la interface es demasiado amplia → ISP + LSP violados juntos
+- Preferir composición de interfaces: `class TraccarProvider implements GpsPositionReceiver, GpsDeviceManager`
+- Interfaces marker (sin métodos) son aceptables para patterns como multi-tenancy scoping
+
+### D — Dependency Inversion (Inversión de Dependencias)
+
+**Los módulos de alto nivel no deben depender de módulos de bajo nivel. Ambos deben depender de abstracciones.**
+
+**Violación actual:** `src/Application/Delivery/DeliveryService.php` depende de concretos:
+```php
+public function __construct(
+    private EntityManagerInterface $em,           // ← Doctrine directo
+    private RouteStopRepository $stopRepo,        // ← Repositorio concreto
+    private ShipmentRepository $shipmentRepo,     // ← Repositorio concreto
+) {}
+```
+
+El servicio de alto nivel (lógica de delivery) depende directamente de módulos de bajo nivel (Doctrine repositories). Imposible testear sin Doctrine, imposible cambiar persistence.
+
+**Buen ejemplo (ya en el codebase):** `src/Service/RouteOptimizationService.php`:
+```php
+public function __construct(
+    private readonly RouteOptimizerInterface $routeOptimizer,   // ← Abstracción
+    private readonly RoutingEngineInterface $routingEngine,     // ← Abstracción
+) {}
+```
+
+Depende de port interfaces. Funciona con VroomOptimizer, GreedyOptimizer, NullOptimizer o cualquier implementación futura.
+
+**Regla para código nuevo:**
+- Servicios de dominio y aplicación → dependen de interfaces definidas en Domain layer
+- Infrastructure implementa las interfaces → Doctrine repositories, API clients, etc.
+- La flecha de dependencia siempre apunta hacia el dominio:
+
+```
+Controller → Application Service → Domain Interface ← Infrastructure Implementation
+              (alto nivel)           (abstracción)       (bajo nivel)
+```
+
+- `EntityManagerInterface` en servicios → prohibido en contextos críticos. Usar `RepositoryInterface::save()`
+- En contextos CRUD/pragmáticos → aceptable depender de repositorios concretos Symfony
+
+---
+
 ## Estado Actual del Acoplamiento
 
 ### Lo que ya está bien separado
@@ -222,12 +373,21 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
 Al revisar código nuevo o refactorizado, verificar:
 
-- [ ] **¿En qué contexto está?** Crítico → DDD. CRUD → Pragmático.
-- [ ] **¿Los servicios dependen de interfaces?** No de clases concretas de Doctrine.
-- [ ] **¿Las entidades DDD tienen atributos de framework?** No deben tenerlos.
+### SOLID
+- [ ] **SRP:** ¿Cada clase tiene una sola razón para cambiar? Entidades no mezclan persistencia + validación + seguridad.
+- [ ] **OCP:** ¿Se puede extender sin modificar? Nuevas implementaciones no requieren cambios en código existente.
+- [ ] **LSP:** ¿Todas las implementaciones cumplen el contrato completo de su interface? Sin stubs ni no-ops.
+- [ ] **ISP:** ¿Las interfaces son estrechas y cohesivas? Ningún implementador tiene métodos que no necesita.
+- [ ] **DIP:** ¿Los servicios dependen de abstracciones? No de `EntityManagerInterface`, no de repositorios concretos.
+
+### DDD
+- [ ] **¿En qué contexto está?** Crítico → DDD puro. CRUD → Pragmático Symfony.
+- [ ] **¿Las entidades DDD son POPOs?** Sin `#[ORM\...]`, sin `UserInterface`, sin Validator constraints.
 - [ ] **¿El domain event es un POPO?** Sin dependencias de Symfony/Doctrine.
 - [ ] **¿Se puede testear sin base de datos?** La lógica de dominio debe ser testeable con unit tests puros.
+- [ ] **¿La flecha de dependencia apunta al dominio?** Controller → App → Domain ← Infrastructure.
 
 ## Historial
 
 - 2026-03-16: Creación inicial — análisis de acoplamiento, clasificación de contextos, patrones de migración
+- 2026-03-16: Añadida sección completa de principios SOLID con ejemplos concretos del codebase (violaciones actuales + buenas prácticas), reglas para código nuevo, y checklist SOLID para code review
