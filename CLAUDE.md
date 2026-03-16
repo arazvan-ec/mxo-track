@@ -101,6 +101,54 @@ Controller → Application Service → Domain Interface ← Infrastructure Imple
 **Violación conocida:** `DeliveryService` depende de `RouteStopRepository` y `ShipmentRepository` concretos.
 **Buen ejemplo:** `RouteOptimizationService` depende de `RouteOptimizerInterface` y `RoutingEngineInterface`.
 
+## DDD Architecture (mandatory)
+
+Pureza híbrida: **contextos críticos → DDD puro, contextos CRUD → pragmático Symfony.** Todo código nuevo en contextos críticos sigue DDD desde el inicio.
+
+### Bounded Contexts
+
+**Críticos (DDD puro):** Route Planning (Route, RouteStop, RouteSnapshot, RouteEvent), Shipment/Delivery (Shipment, Parcel, DeliveryEvidence, POD), Route Optimization (ya bien separado).
+
+**Pragmáticos (Symfony):** Identity/Auth (User), Tenant Management (Customer), Fleet (Vehicle, Driver), Notifications.
+
+### Reglas
+
+**Código nuevo en contexto crítico → siempre DDD:**
+```
+src/Domain/{Context}/Model/        # Entidades POPOs, Value Objects
+src/Domain/{Context}/Repository/   # Interfaces de repositorio
+src/Domain/{Context}/Service/      # Domain services
+src/Domain/{Context}/Event/        # Domain events (POPOs)
+
+src/Infrastructure/{Context}/Doctrine/   # Implementaciones repositorio
+src/Infrastructure/{Context}/Symfony/    # Controllers, commands, listeners
+```
+
+**Al tocar código acoplado en contexto crítico:**
+1. Extraer interface de repositorio al dominio
+2. Crear implementación Doctrine
+3. Cambiar servicio para depender de la interface
+4. Implementar tu feature contra la interface
+
+**Migración planificada:** Sprints dedicados por contexto. Prioridad: Route Planning → Shipment/Delivery.
+
+### Qué debe cumplir el código DDD
+
+- Entidades son POPOs — sin `#[ORM\...]`, sin `UserInterface`, sin Validator constraints
+- Domain events son POPOs — sin dependencias de Symfony/Doctrine
+- Servicios dependen de interfaces del dominio, no de Doctrine concreto
+- Lógica de dominio testeable con unit tests puros (sin base de datos)
+- La flecha de dependencia apunta al dominio: `Controller → App → Domain ← Infrastructure`
+
+### Anti-Patterns
+
+- `$em->persist()` en servicios de dominio → usar `RepositoryInterface::save()`
+- `$em->getRepository()->createQueryBuilder()` en servicios → método en RepositoryInterface
+- `EntityManagerInterface` en constructor de servicios de dominio → depender de RepositoryInterface
+- Lifecycle callbacks en entidades DDD → timestamps en constructor o domain service
+
+**Referencia completa con ejemplos de código:** `docs/knowledge/architecture-ddd.md`
+
 ## Conventions
 
 - All PHP files use `declare(strict_types=1)`

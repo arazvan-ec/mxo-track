@@ -5,13 +5,7 @@
 
 ## Principio
 
-El codebase migra progresivamente hacia DDD con pureza híbrida: **contextos críticos van DDD puro, contextos CRUD se quedan pragmáticos Symfony.** Todo código nuevo sigue DDD desde el inicio.
-
-## Principios SOLID
-
-Los principios SOLID son instrucciones de comportamiento que aplican a **todo** el codebase, no solo a contextos DDD. Están definidos inline en **CLAUDE.md > "SOLID Principles (mandatory)"** para que se apliquen en cada interacción.
-
-Este módulo se enfoca en los patrones DDD específicos para la migración y estructura de bounded contexts.
+Las reglas obligatorias de SOLID y DDD están en **CLAUDE.md** (secciones "SOLID Principles" y "DDD Architecture"). Este módulo es referencia complementaria: análisis de acoplamiento, ejemplos de código, y patrones detallados.
 
 ---
 
@@ -36,75 +30,35 @@ Este módulo se enfoca en los patrones DDD específicos para la migración y est
 | Servicios de aplicación | Dependen de `EntityManagerInterface` directamente, `$em->persist()`, `$em->flush()` | DIP |
 | Traits (PublicIdTrait, SoftDeleteTrait) | Contienen `#[ORM\...]` attributes | SRP |
 
-## Clasificación de Bounded Contexts
+## Detalle de Bounded Contexts
 
-### Contextos Críticos → DDD Puro
+### Contextos Críticos — razón para DDD puro
 
-Estos contextos contienen la lógica de negocio que genera valor (km y tiempo ahorrados). Deben estar completamente desacoplados de infraestructura.
+| Bounded Context | Entidades Core | Razón |
+|----------------|---------------|-------|
+| **Route Planning** | Route, RouteStop, RouteSnapshot, RouteEvent | Corazón del negocio — km y tiempo ahorrados |
+| **Shipment/Delivery** | Shipment, Parcel, DeliveryEvidence, POD | Flujo operativo principal |
+| **Route Optimization** | (ya bien separado via port interfaces) | Solo falta repository interfaces |
 
-| Bounded Context | Entidades Core | Prioridad de migración |
-|----------------|---------------|----------------------|
-| **Route Planning** | Route, RouteStop, RouteSnapshot, RouteEvent | Alta — corazón del negocio |
-| **Shipment/Delivery** | Shipment, Parcel, DeliveryEvidence, POD | Alta — flujo operativo principal |
-| **Route Optimization** | (ya bien separado via port interfaces) | Baja — solo falta repository interfaces |
+### Contextos CRUD — razón para quedarse pragmático
 
-### Contextos CRUD → Pragmático Symfony
-
-Estos contextos son infraestructura de soporte. El costo de DDD puro no justifica el beneficio.
-
-| Bounded Context | Entidades | Razón para quedarse pragmático |
-|----------------|-----------|-------------------------------|
-| **Identity/Auth** | User | Acoplado a Symfony Security por diseño; la abstracción añadiría complejidad sin beneficio real |
-| **Tenant Management** | Customer, CustomerIntegration | CRUD simple con poco comportamiento de dominio |
+| Bounded Context | Entidades | Razón |
+|----------------|-----------|-------|
+| **Identity/Auth** | User | Acoplado a Symfony Security por diseño |
+| **Tenant Management** | Customer, CustomerIntegration | CRUD simple, poco comportamiento de dominio |
 | **Fleet** | Vehicle, Driver, GpsDevice | Mayormente datos de configuración |
 | **Notifications** | Notification, RealtimeEvent | Infraestructura de comunicación |
 
-## Cuándo Aplicar DDD
+## Checklist de Migración por Sprint
 
-### Regla 1: Código nuevo → siempre DDD
-
-Todo código nuevo en contextos críticos DEBE seguir la estructura DDD:
-
-```
-src/Domain/{BoundedContext}/
-├── Model/           # Entidades puras (POPOs), Value Objects
-├── Repository/      # Interfaces de repositorio
-├── Service/         # Domain services (lógica que no pertenece a una entidad)
-└── Event/           # Domain events (ya existe src/Domain/Event/)
-
-src/Infrastructure/{BoundedContext}/
-├── Doctrine/        # Implementaciones de repositorio, mapping XML/PHP
-├── Symfony/         # Controllers, commands, listeners específicos de framework
-└── External/        # Adapters a servicios externos
-```
-
-### Regla 2: Migración planificada por sprints
-
-Los contextos críticos se migran en sprints dedicados, ordenados por prioridad:
-
-1. **Route Planning** — Extraer Route, RouteStop, RouteSnapshot, RouteEvent a modelos puros
-2. **Shipment/Delivery** — Extraer Shipment, Parcel, DeliveryEvidence a modelos puros
-3. **Revisar** — Evaluar si más contextos necesitan migración
-
-Cada sprint de migración incluye:
+Cada sprint de migración de un contexto crítico incluye:
 - [ ] Extraer repository interfaces al dominio
 - [ ] Crear implementaciones Doctrine que implementen las interfaces
 - [ ] Migrar servicios para depender de interfaces, no de concretos
-- [ ] Si el contexto es DDD puro: extraer entidad a POPO + mapping externo
+- [ ] Extraer entidad a POPO + mapping externo
 - [ ] Tests unitarios sin Doctrine para la lógica de dominio
 
-### Regla 3: Al tocar código acoplado en contexto crítico
-
-Si una feature nueva requiere modificar código acoplado en un contexto crítico, **primero refactorizar la parte que necesitas**:
-
-1. Extraer la interface de repositorio que vas a necesitar
-2. Crear la implementación Doctrine
-3. Cambiar el servicio para depender de la interface
-4. Implementar tu feature contra la interface
-
-No intentar migrar todo el contexto — solo lo que necesitas para tu feature.
-
-## Patrones a Seguir
+## Patrones de Código
 
 ### Repository Interface (Domain Layer)
 
@@ -216,29 +170,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 }
 ```
 
-## Anti-Patterns a Evitar
-
-| Anti-Pattern | Por qué es malo | Qué hacer en su lugar |
-|-------------|-----------------|----------------------|
-| `$em->persist()` en servicios de dominio | Acopla lógica de negocio a persistencia | Usar `RepositoryInterface::save()` |
-| `$em->getRepository()->createQueryBuilder()` en servicios | Queries SQL en capa de aplicación | Método en RepositoryInterface con nombre de dominio |
-| Validator constraints en entidades DDD puras | Mezcla validación de framework con dominio | Validación en Value Objects o Domain Services |
-| `EntityManagerInterface` en constructor de servicios | Dependencia directa a Doctrine | Depender solo de RepositoryInterface |
-| Lifecycle callbacks (`#[ORM\PrePersist]`) en entidades DDD | El ORM controla el ciclo de vida del dominio | Timestamps en constructor o domain service |
-
-## Checklist DDD para Code Review
-
-Al revisar código nuevo o refactorizado en contextos DDD, verificar:
-
-- [ ] **¿En qué contexto está?** Crítico → DDD puro. CRUD → Pragmático Symfony.
-- [ ] **¿Las entidades DDD son POPOs?** Sin `#[ORM\...]`, sin `UserInterface`, sin Validator constraints.
-- [ ] **¿El domain event es un POPO?** Sin dependencias de Symfony/Doctrine.
-- [ ] **¿Se puede testear sin base de datos?** La lógica de dominio debe ser testeable con unit tests puros.
-- [ ] **¿La flecha de dependencia apunta al dominio?** Controller → App → Domain ← Infrastructure.
-
-**Nota:** El checklist SOLID (SRP, OCP, LSP, ISP, DIP) aplica a **todo** el codebase y está en CLAUDE.md.
 
 ## Historial
 
 - 2026-03-16: Creación inicial — análisis de acoplamiento, clasificación de contextos, patrones de migración
-- 2026-03-16: SOLID movido a CLAUDE.md (instrucción de comportamiento universal); aquí queda cross-reference
+- 2026-03-16: SOLID y reglas DDD movidos a CLAUDE.md (instrucciones de comportamiento); módulo reducido a referencia (ejemplos, tablas, patrones de código)
