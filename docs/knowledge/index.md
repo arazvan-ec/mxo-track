@@ -19,6 +19,7 @@
 | Notifications | `notifications.md` | SMS, WhatsApp, push, webhooks, in-app | Sistema de notificaciones |
 | AI/ML | `ai-ml.md` | Claude API, embeddings, clasificación, clustering | Funcionalidades de IA |
 | Route Optimization | `route-optimization.md` | VROOM, OSRM, capacidad, constraints, arquitectura 4 capas, dos ejes, gaps | Optimización y planificación de rutas |
+| Architecture DDD/SOLID | `architecture-ddd.md` | Bounded contexts, desacoplamiento, patrones de migración, anti-patterns | Crear código nuevo, refactorizar entidades/servicios, code review |
 | Security | `security.md` | Roles, multi-tenancy, CSRF, rate limiting, audit | Seguridad, autenticación, autorización |
 | Superpowers Skills | `superpowers-skills.md` | Skills completas: TDD, brainstorming, debugging, verification, etc. | Aplicar cualquier skill de desarrollo |
 
@@ -40,3 +41,4 @@
 - 2026-03-11: Creación inicial — 11 módulos extraídos del CLAUDE.md y análisis del codebase
 - 2026-03-11: Añadido módulo `superpowers-skills.md` — restaura contenido completo de skills recortado en modularización
 - 2026-03-16: Añadido business-requirements-audit a análisis complementarios; actualizada descripción de Route Optimization
+- 2026-03-16: Añadido módulo `architecture-ddd.md` — guía de desacoplamiento DDD/SOLID con bounded contexts y patrones de migración

@@ -96,6 +96,7 @@ Antes de trabajar en un subsistema, **LEE el módulo relevante** en `docs/knowle
 | SMS, WhatsApp, push, webhooks | `docs/knowledge/notifications.md` |
 | Claude AI, embeddings, ML | `docs/knowledge/ai-ml.md` |
 | VROOM, OSRM, capacidad, rutas | `docs/knowledge/route-optimization.md` |
+| DDD, SOLID, desacoplamiento, bounded contexts | `docs/knowledge/architecture-ddd.md` |
 | Roles, multi-tenancy, CSRF, seguridad | `docs/knowledge/security.md` |
 | Skills de Superpowers (completo) | `docs/knowledge/superpowers-skills.md` |
 | Índice completo de módulos | `docs/knowledge/index.md` |
