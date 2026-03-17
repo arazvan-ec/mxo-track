@@ -275,6 +275,27 @@ fix: correct ETA calculation when stop is skipped
 - Si el tool destino ya maneja el caso (ej: `Write` crea directorios padre) → no hagas pasos previos innecesarios
 - Preferir la ruta más corta: menos herramientas, menos comandos, mismo resultado
 
+## Principio de Escalabilidad en Decisiones (mandatory)
+
+**La mejor solución es siempre la que más escala, independientemente de la cantidad de cambios que requiera.**
+
+### Reglas
+
+1. **Escala sobre comodidad** — Al evaluar approaches, elegir el que mejor escale a futuro, no el que requiera menos cambios hoy. Una solución que toca 20 archivos pero escala correctamente es superior a un parche de 3 líneas que no escala.
+
+2. **Cambios grandes ≠ riesgo alto** — La cantidad de archivos o líneas modificadas no determina el riesgo. El riesgo lo determina la ausencia de plan. Con un buen plan (brainstorming → spec → plan → TDD → review), cambios masivos son seguros y controlados.
+
+3. **El flujo es la red de seguridad** — Los principios documentados en este archivo (SOLID, DDD, Design Patterns, TDD, Atomic Commits, Verification) existen para habilitar cambios ambiciosos. Usarlos todos en la toma de decisiones, no solo en la implementación.
+
+4. **Nunca descartar la mejor solución por volumen de trabajo** — Si la solución correcta requiere refactorizar un subsistema completo, esa es la solución correcta. El plan se adapta al alcance, no el alcance al miedo de cambiar.
+
+### Anti-patterns
+
+- Elegir un parche rápido cuando existe una solución estructural mejor "porque toca menos código"
+- Rechazar un refactor necesario argumentando "es mucho cambio"
+- Proponer soluciones intermedias que no escalan "para ir paso a paso" cuando el paso completo está claro
+- Optimizar para minimizar diff en lugar de maximizar calidad arquitectónica
+
 ## Critical Patterns
 
 ### Entity Identity (mandatory)
