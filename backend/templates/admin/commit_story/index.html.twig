@@ -19,6 +19,19 @@
   <p class="mt-1 text-sm text-gray-500">Visualiza el proceso de desarrollo paso a paso de cada rama.</p>
 </div>
 
+{% if unavailable|default(false) %}
+<div class="rounded-xl bg-amber-50 p-6 shadow-sm ring-1 ring-amber-200">
+  <div class="flex items-center gap-3">
+    <svg class="h-6 w-6 text-amber-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/>
+    </svg>
+    <div>
+      <p class="text-sm font-medium text-amber-800">Historial Git no disponible</p>
+      <p class="mt-1 text-sm text-amber-600">Este entorno no tiene repositorio Git. El Commit Story solo funciona en entornos de desarrollo local.</p>
+    </div>
+  </div>
+</div>
+{% else %}
 <div class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-900/5">
   <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
     {% for branch in branches %}
@@ -41,4 +54,5 @@
     {% endfor %}
   </div>
 </div>
+{% endif %}
 {% endblock %}
