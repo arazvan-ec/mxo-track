@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\EventListener\Domain;
 
-use App\Domain\Event\RouteAssigned;
-use App\Domain\Event\RouteCancelled;
-use App\Domain\Event\RouteCompleted;
-use App\Domain\Event\RouteOptimized;
-use App\Domain\Event\RouteStarted;
-use App\Domain\Event\RoutesBuilt;
+use App\Domain\Route\Event\RouteAssigned;
+use App\Domain\Route\Event\RouteCancelled;
+use App\Domain\Route\Event\RouteCompleted;
+use App\Domain\Route\Event\RouteOptimized;
+use App\Domain\Route\Event\RouteStarted;
+use App\Domain\Route\Event\RoutesBuilt;
 use App\Domain\Event\StopDelivered;
 use App\Domain\Event\StopExceptionReported;
 use App\Entity\Route;

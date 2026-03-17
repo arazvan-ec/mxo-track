@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventSubscriber;
 
-use App\Domain\Event\RouteOptimized;
+use App\Domain\Route\Event\RouteOptimized;
 use App\Entity\Route;
 use App\Repository\RouteRepository;
 use App\Service\WebPushService;

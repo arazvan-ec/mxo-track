@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventSubscriber;
 
-use App\Domain\Event\RouteStarted;
+use App\Domain\Route\Event\RouteStarted;
 use App\Entity\Route;
 use App\Notification\RecipientNotificationService;
 use App\Repository\RouteRepository;

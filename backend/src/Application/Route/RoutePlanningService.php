@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Application\Route;
 
-use App\Domain\Event\RouteOptimized;
-use App\Domain\Event\RoutesBuilt;
+use App\Domain\Route\Event\RouteOptimized;
+use App\Domain\Route\Event\RoutesBuilt;
 use App\Entity\CustomerLocation;
 use App\Entity\Route;
 use App\Entity\RouteStop;

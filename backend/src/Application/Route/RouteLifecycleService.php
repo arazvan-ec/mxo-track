@@ -4,21 +4,23 @@ declare(strict_types=1);
 
 namespace App\Application\Route;
 
-use App\Domain\Event\RouteCompleted;
-use App\Domain\Event\RouteStarted;
-use App\Entity\Route;
+use App\Domain\Route\Event\RouteCompleted;
+use App\Domain\Route\Event\RouteStarted;
+use App\Domain\Route\Model\Route;
+use App\Domain\Route\Repository\RouteRepositoryInterface;
+use App\Domain\Route\ValueObject\RouteId;
 use App\Entity\User;
 use App\Entity\VehicleInspection;
-use App\Repository\RouteRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Uid\Ulid;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 readonly class RouteLifecycleService
 {
     public function __construct(
-        private EntityManagerInterface $em,
-        private RouteRepository $routeRepo,
+        private RouteRepositoryInterface $routeRepo,
         private EventDispatcherInterface $eventDispatcher,
+        private EntityManagerInterface $em,
     ) {}
 
     /**
@@ -30,13 +32,13 @@ readonly class RouteLifecycleService
     {
         $route = $this->resolveRouteForDriver($routePublicId, $driver);
 
-        $inspection = $this->em->getRepository(VehicleInspection::class)->findOneBy(['route' => $route]);
+        $inspection = $this->findInspectionForRoute($routePublicId);
         if (!$inspection instanceof VehicleInspection || !$inspection->allItemsChecked()) {
             throw new InspectionNotCompletedException();
         }
 
         $route->start();
-        $this->em->flush();
+        $this->routeRepo->save($route);
 
         $this->eventDispatcher->dispatch(new RouteStarted(
             routePublicId: $routePublicId,
@@ -55,7 +57,7 @@ readonly class RouteLifecycleService
         $route = $this->resolveRouteForDriver($routePublicId, $driver);
 
         $route->finish();
-        $this->em->flush();
+        $this->routeRepo->save($route);
 
         $this->eventDispatcher->dispatch(new RouteCompleted(
             routePublicId: $routePublicId,
@@ -71,15 +73,31 @@ readonly class RouteLifecycleService
      */
     private function resolveRouteForDriver(string $routePublicId, User $driver): Route
     {
-        $route = $this->routeRepo->findOneByPublicId($routePublicId);
-        if (!$route instanceof Route) {
+        $route = $this->routeRepo->findById(new RouteId($routePublicId));
+        if ($route === null) {
             throw new RouteNotFoundException($routePublicId);
         }
 
-        if ($route->getDriver()?->getId() !== $driver->getId()) {
+        if ($route->driverId() !== (int) $driver->getId()) {
             throw new RouteNotOwnedException();
         }
 
         return $route;
+    }
+
+    /**
+     * Cross-context query: VehicleInspection is pragmatic context.
+     * Uses EM with join to avoid depending on the Doctrine Route entity.
+     */
+    private function findInspectionForRoute(string $routePublicId): ?VehicleInspection
+    {
+        return $this->em->createQueryBuilder()
+            ->select('vi')
+            ->from(VehicleInspection::class, 'vi')
+            ->join('vi.route', 'r')
+            ->where('r.publicId = :pid')
+            ->setParameter('pid', Ulid::fromString($routePublicId))
+            ->getQuery()
+            ->getOneOrNullResult();
     }
 }
