@@ -58,17 +58,23 @@ class CommitStoryController extends AbstractController
     #[Route('/branches', name: 'admin_commit_story_branches', methods: ['GET'])]
     public function branches(): Response
     {
-        $branchList = $this->gitLogReader->listBranches();
-
-        return $this->json($branchList);
+        return $this->json($this->gitLogReader->listBranches());
     }
 
     private function renderBranchSelector(): Response
     {
+        if (!$this->gitLogReader->isAvailable()) {
+            return $this->render('admin/commit_story/index.html.twig', [
+                'branches' => [],
+                'unavailable' => true,
+            ]);
+        }
+
         $branchList = $this->gitLogReader->listBranches();
 
         return $this->render('admin/commit_story/index.html.twig', [
             'branches' => $branchList,
+            'unavailable' => false,
         ]);
     }
 

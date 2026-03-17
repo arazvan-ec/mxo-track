@@ -18,6 +18,11 @@ final class GitLogReader
     ) {
     }
 
+    public function isAvailable(): bool
+    {
+        return is_dir($this->projectDir . '/.git');
+    }
+
     /**
      * @return list<array{
      *     hash: string,
@@ -35,6 +40,10 @@ final class GitLogReader
      */
     public function getCommits(string $branch, ?string $base = null): array
     {
+        if (!$this->isAvailable()) {
+            return [];
+        }
+
         if ($base === null) {
             $base = $this->detectMergeBase($branch);
         }
@@ -109,6 +118,10 @@ final class GitLogReader
      */
     public function listBranches(): array
     {
+        if (!$this->isAvailable()) {
+            return [];
+        }
+
         $process = $this->run(['git', 'branch', '-a', '--format=%(refname:short)']);
         $output = trim($process->getOutput());
         if ($output === '') {
