@@ -94,6 +94,23 @@ The `/map/routes/{publicId}/updates` topic carries a `MapUpdate` message with a 
 }
 ```
 
+**MapUpdate `data` schemas per type:**
+
+| MapUpdateType | `data` keys |
+|---------------|-------------|
+| `stop_delivered` | `stopPublicId`, `shipmentPublicId`, `podPublicId` |
+| `stop_exception` | `stopPublicId`, `reason` |
+| `route_started` | (empty) |
+| `route_completed` | (empty) |
+| `route_cancelled` | (empty) |
+| `route_optimized` | `metrics` (distance, duration, etc.) |
+| `route_assigned` | `vehiclePublicId`, `driverPublicId` |
+| `routes_built` | `routeCount`, `stopCount` |
+| `eta_changed` | `stops` (array of {stopPublicId, etaMinutes, etaTime}) |
+| `deviation_detected` | `lat`, `lng`, `distanceMeters`, `thresholdMeters` |
+| `deviation_ended` | `lat`, `lng` |
+| `route_snapshot` | Full `MapViewData.toArray()` (complete route view refresh) |
+
 **Transition:** Twig inline JS is adapted to subscribe to the new topic patterns. No dual publishing.
 
 ### 4.5 Map Library: MapLibre GL JS + PMTiles Self-Hosted
@@ -157,11 +174,19 @@ final readonly class VehiclePosition
     ) {}
 }
 
+// src/Domain/MapView/Projection/MapProjectableEventInterface.php
+// Marker interface for domain events that affect map views
+interface MapProjectableEventInterface
+{
+    public function getRoutePublicId(): string;
+    public function getOccurredAt(): \DateTimeImmutable;
+}
+
 // src/Domain/MapView/Projection/MapProjectorInterface.php
 interface MapProjectorInterface
 {
     /** @return list<MapUpdate> */
-    public function projectRouteEvent(object $event): array;
+    public function projectRouteEvent(MapProjectableEventInterface $event): array;
 
     public function projectVehiclePosition(VehiclePositionReceived $event): VehiclePosition;
 }
@@ -179,12 +204,12 @@ interface MapPublisherInterface
 ```php
 // MapEventProjector listens to all domain events and delegates to MapPublisherInterface
 // It replaces the Mercure-publishing parts of:
-// - MercurePositionListener (vehicle positions)
-// - MercureRouteProgressListener (stop_delivered, stop_exception, route_started, route_completed)
-// - RouteSnapshotListener (route_snapshot for role-based views)
-// - EtaRecalculationListener (eta_changed, deviation_detected/ended)
-// - RouteEventLogListener (all events as log entries)
-// - DeviationAlertListener (deviation_detected persistence — stays separate)
+// - MercurePositionListener → publishes to /vehicles/{id}/position
+// - MercureRouteProgressListener → publishes to /customers/{customerId}/routes (customer-scoped progress)
+// - RouteSnapshotListener → publishes to /routes/{id}/view/{role} (role-based MapViewData)
+// - EtaRecalculationListener → publishes to /routes/{id}/view/{role} AND /routes/{id}/deviation
+// - RouteEventLogListener → publishes to /routes/{id}/events (event history)
+// Note: DeviationAlertListener only persists RealtimeEvent, no direct Mercure — stays separate
 
 // MercureMapPublisher implements MapPublisherInterface
 // Uses RealtimePublisherInterface (already exists, currently unused)
@@ -195,6 +220,8 @@ interface MapPublisherInterface
 ```
 
 ### 5.3 New API Endpoints
+
+All endpoints use `ApiErrorResponder` for error responses (project convention).
 
 ```
 GET /api/me
@@ -209,20 +236,50 @@ GET /api/routes/{publicId}/map
   (Reuses RouteViewService::buildSingleRouteView())
 ```
 
+**CSRF strategy:** Phase 1 only has GET endpoints (no CSRF needed). When future mutation endpoints are added for the SPA (e.g., stop delivery, route actions), CSRF protection will use `SameSite=Lax` cookies (already the default in Symfony) combined with checking the `Origin` header. This avoids the complexity of a CSRF token endpoint while maintaining security for same-origin requests.
+
 ### 5.4 TopicResolver Update
 
 ```php
-// Current:
-'/vehicles/%s/position'
-'/customers/%s/routes'
-'/customers/%s/shipments'
-'/users/%s/notifications'
+// ROLE_ADMIN: wildcard (all topics)
+return ['*'];
 
-// New:
-'/map/vehicles/%s/position'
-'/map/routes/*'  // Admin gets wildcard; customer/driver get specific route topics
-'/map/users/%s/notifications'
+// ROLE_OPERATOR: same as admin (inherits via role hierarchy)
+// Falls through to ROLE_CUSTOMER case currently — needs explicit handling
+
+// ROLE_CUSTOMER:
+$topics = [
+    sprintf('/map/users/%s/notifications', $user->getId()),
+];
+// Vehicle position topics for allowed vehicles
+foreach ($allowedVehiclePublicIds as $publicId) {
+    $topics[] = sprintf('/map/vehicles/%s/position', $publicId);
+}
+// Route update topics: customer needs route-specific topics
+// Resolved by querying active routes for the customer
+foreach ($customerRoutePublicIds as $routePublicId) {
+    $topics[] = sprintf('/map/routes/%s/updates', $routePublicId);
+}
+return $topics;
+
+// ROLE_DRIVER:
+$topics = [
+    sprintf('/map/users/%s/notifications', $user->getId()),
+];
+// Vehicle position for assigned vehicle(s)
+foreach ($allowedVehiclePublicIds as $publicId) {
+    $topics[] = sprintf('/map/vehicles/%s/position', $publicId);
+}
+// Route updates for assigned routes
+foreach ($assignedRoutePublicIds as $routePublicId) {
+    $topics[] = sprintf('/map/routes/%s/updates', $routePublicId);
+}
+return $topics;
 ```
+
+**Note:** TopicResolver needs a new dependency to resolve active route public IDs per customer/driver. This can be a lightweight query method on `RouteRepository`.
+
+**Note:** `/api/mercure-token` already exists (`MercureTokenController.php`) and does NOT need creation — only the topic patterns in the JWT payload need updating to match the new `/map/*` patterns.
 
 ## 6. Frontend Design
 
@@ -379,7 +436,10 @@ function useMercure<T>(topics: string[], onMessage: (data: T) => void) {
   // 2. Build EventSource URL with topics
   // 3. Parse JSON messages, call onMessage
   // 4. Cleanup on unmount
-  // 5. Reconnect on error with exponential backoff
+  // 5. Reconnect on error: exponential backoff (1s, 2s, 4s, 8s, max 30s ceiling)
+  //    Max retries: 10, then show "connection lost" UI toast
+  // 6. JWT expiration: TanStack Query auto-refetches when staleTime expires;
+  //    on 401 from EventSource, invalidate token query and reconnect with new JWT
 }
 ```
 
@@ -459,7 +519,7 @@ During coexistence, the Twig sidebar shows both old and new links:
 - `src/Domain/MapView/Model/MapUpdate.php`
 - `src/Domain/MapView/Model/MapUpdateType.php`
 - `src/Domain/MapView/Model/VehiclePosition.php`
-- `src/Domain/MapView/Model/RouteMapProjection.php`
+- `src/Domain/MapView/Projection/MapProjectableEventInterface.php`
 - `src/Domain/MapView/Projection/MapProjectorInterface.php`
 - `src/Domain/MapView/Publisher/MapPublisherInterface.php`
 - `src/Infrastructure/MapView/Projection/MapEventProjector.php`
