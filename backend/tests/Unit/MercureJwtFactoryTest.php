@@ -83,9 +83,9 @@ final class MercureJwtFactoryTest extends TestCase
 
         $topics = $decoded->mercure->subscribe;
         self::assertCount(3, $topics);
-        self::assertContains(sprintf('/users/%s/notifications', $user->getId()), $topics);
-        self::assertContains('/vehicles/01HX1234ABCDEF5678900000/position', $topics);
-        self::assertContains('/vehicles/01HX5678ABCDEF1234560000/position', $topics);
+        self::assertContains(sprintf('/map/users/%s/notifications', $user->getId()), $topics);
+        self::assertContains('/map/vehicles/01HX1234ABCDEF5678900000/position', $topics);
+        self::assertContains('/map/vehicles/01HX5678ABCDEF1234560000/position', $topics);
     }
 
     #[Test]
@@ -164,7 +164,7 @@ final class MercureJwtFactoryTest extends TestCase
 
         $topics = $decoded->mercure->subscribe;
         self::assertCount(1, $topics);
-        self::assertContains(sprintf('/users/%s/notifications', $user->getId()), $topics);
+        self::assertContains(sprintf('/map/users/%s/notifications', $user->getId()), $topics);
     }
 
     #[Test]
