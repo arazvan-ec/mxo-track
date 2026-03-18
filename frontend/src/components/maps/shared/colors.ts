@@ -22,3 +22,20 @@ export const STOP_STATUS_COLORS: Record<string, string> = {
 
 export const VEHICLE_COLOR = '#1D4ED8'; // blue-700
 export const ORIGIN_COLOR = '#10B981';  // green
+
+export const SKILL_COLORS: Record<string, string> = {
+  REFRIGERATED: '#0ea5e9',
+  HEAVY_LOAD: '#f97316',
+  PEDESTRIAN_ACCESS: '#22c55e',
+  HAZMAT: '#ef4444',
+  FRAGILE: '#ec4899',
+};
+
+export const DEFAULT_MARKER_COLOR = '#6366f1'; // indigo
+
+/** Get vehicle color from marker_color, first skill, or default */
+export function getVehicleColor(vehicle: { marker_color?: string; skills?: string[] }): string {
+  if (vehicle.marker_color) return vehicle.marker_color;
+  if (vehicle.skills?.[0]) return SKILL_COLORS[vehicle.skills[0]] ?? DEFAULT_MARKER_COLOR;
+  return DEFAULT_MARKER_COLOR;
+}
