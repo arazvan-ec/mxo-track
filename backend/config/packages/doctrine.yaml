@@ -27,3 +27,8 @@ doctrine:
         dir: '%kernel.project_dir%/src/Entity'
         prefix: 'App\Entity'
         alias: App
+      RouteModel:
+        type: xml
+        is_bundle: false
+        dir: '%kernel.project_dir%/config/doctrine/mapping'
+        prefix: 'App\Domain\Route\Model'

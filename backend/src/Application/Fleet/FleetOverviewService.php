@@ -6,7 +6,7 @@ namespace App\Application\Fleet;
 
 use App\Entity\Customer;
 use App\Entity\Route;
-use App\Entity\RouteSnapshot;
+use App\Domain\Route\Model\RouteSnapshot;
 use App\Entity\RouteStop;
 use App\Entity\Shipment;
 use App\Entity\User;

@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Unit\View;
 
 use App\Entity\Route;
-use App\Entity\RouteSnapshot;
+use App\Domain\Route\Model\RouteSnapshot;
 use App\Enum\RouteStatus;
-use App\Repository\RouteSnapshotRepository;
+use App\Domain\Route\Repository\RouteSnapshotRepositoryInterface;
 use App\View\MapViewData;
 use App\View\MapViewOptions;
 use App\View\RouteViewService;

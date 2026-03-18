@@ -6,7 +6,7 @@ namespace App\Service;
 
 use App\Dto\DeviationCheckResult;
 use App\Entity\Route;
-use App\Repository\RouteSnapshotRepository;
+use App\Domain\Route\Repository\RouteSnapshotRepositoryInterface;
 use App\Routing\PolylineDecoder;
 
 final class RouteDeviationService
@@ -15,7 +15,7 @@ final class RouteDeviationService
     private const float EARTH_RADIUS_METERS = 6_371_000.0;
 
     public function __construct(
-        private readonly RouteSnapshotRepository $snapshotRepo,
+        private readonly RouteSnapshotRepositoryInterface $snapshotRepo,
     ) {}
 
     public function checkDeviation(Route $route, float $lat, float $lng): ?DeviationCheckResult

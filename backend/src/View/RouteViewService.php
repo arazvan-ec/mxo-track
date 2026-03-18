@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\View;
 
 use App\Entity\Route;
-use App\Entity\RouteSnapshot;
-use App\Repository\RouteSnapshotRepository;
+use App\Domain\Route\Model\RouteSnapshot;
+use App\Domain\Route\Repository\RouteSnapshotRepositoryInterface;
 
 /**
  * Reads from RouteSnapshot (persisted) and produces MapViewData DTOs.
@@ -17,7 +17,7 @@ final class RouteViewService
     private const ROUTE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6'];
 
     public function __construct(
-        private readonly RouteSnapshotRepository $snapshotRepo,
+        private readonly RouteSnapshotRepositoryInterface $snapshotRepo,
     ) {}
 
     public function buildSingleRouteView(Route $route, string $role, ?MapViewOptions $options = null): MapViewData

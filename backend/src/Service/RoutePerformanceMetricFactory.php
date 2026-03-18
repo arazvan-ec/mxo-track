@@ -7,7 +7,7 @@ namespace App\Service;
 use App\Entity\Route;
 use App\Entity\RouteOptimizationLog;
 use App\Entity\RoutePerformanceMetric;
-use App\Entity\RouteSnapshot;
+use App\Domain\Route\Model\RouteSnapshot;
 use App\Entity\RouteStop;
 use App\Enum\RouteStopStatus;
 use Doctrine\ORM\EntityManagerInterface;

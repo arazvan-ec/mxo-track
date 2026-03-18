@@ -12,6 +12,9 @@ services:
   App\:
     resource: '../src/'
 
+  App\Domain\Route\Repository\RouteSnapshotRepositoryInterface:
+    alias: App\Infrastructure\Route\Doctrine\DoctrineRouteSnapshotRepository
+
   Predis\Client:
     arguments:
       - '%env(REDIS_URL)%'

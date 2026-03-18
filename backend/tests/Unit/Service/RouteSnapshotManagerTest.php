@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Service;
 
 use App\Entity\Route;
-use App\Entity\RouteSnapshot;
+use App\Domain\Route\Model\RouteSnapshot;
 use App\Entity\RouteStop;
-use App\Repository\RouteSnapshotRepository;
+use App\Domain\Route\Repository\RouteSnapshotRepositoryInterface;
 use App\Routing\Coordinate;
 use App\Routing\MultiWaypointRouteResult;
 use App\Routing\RoutingEngineInterface;

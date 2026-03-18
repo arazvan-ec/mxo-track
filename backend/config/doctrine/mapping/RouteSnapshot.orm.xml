@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://doctrine-project.org/schemas/orm/doctrine-mapping
+                  https://www.doctrine-project.org/schemas/orm/doctrine-mapping.xsd">
+
+    <entity name="App\Domain\Route\Model\RouteSnapshot" table="route_snapshot">
+        <indexes>
+            <index name="idx_route_snapshot_route" columns="route_id"/>
+        </indexes>
+
+        <id name="id" type="integer" column="id">
+            <generator strategy="IDENTITY"/>
+        </id>
+
+        <one-to-one field="route" target-entity="App\Entity\Route">
+            <join-column name="route_id" nullable="false" on-delete="CASCADE"/>
+        </one-to-one>
+
+        <!-- Polylines -->
+        <field name="polyline" type="text" nullable="true"/>
+        <field name="originalPolyline" type="text" column="original_polyline" nullable="true"/>
+        <field name="actualPolyline" type="text" column="actual_polyline" nullable="true"/>
+
+        <!-- Optimization metrics -->
+        <field name="distanceBeforeKm" type="decimal" column="distance_before_km" precision="10" scale="2" nullable="true"/>
+        <field name="distanceAfterKm" type="decimal" column="distance_after_km" precision="10" scale="2" nullable="true"/>
+        <field name="savingsPercent" type="decimal" column="savings_percent" precision="5" scale="1" nullable="true"/>
+
+        <!-- Timing -->
+        <field name="drivingTimeMinutes" type="integer" column="driving_time_minutes" nullable="true"/>
+        <field name="deliveryTimeMinutes" type="integer" column="delivery_time_minutes" nullable="true"/>
+        <field name="totalTimeMinutes" type="integer" column="total_time_minutes" nullable="true"/>
+
+        <!-- Stop snapshots -->
+        <field name="originalStopOrder" type="json" column="original_stop_order" nullable="true"/>
+        <field name="stopStates" type="json" column="stop_states" nullable="true"/>
+
+        <!-- ETAs -->
+        <field name="etas" type="json" nullable="true"/>
+
+        <!-- Capacity -->
+        <field name="capacityValidation" type="json" column="capacity_validation" nullable="true"/>
+
+        <!-- Timestamps -->
+        <field name="createdAt" type="datetime_immutable" column="created_at"/>
+        <field name="updatedAt" type="datetime_immutable" column="updated_at"/>
+    </entity>
+
+</doctrine-mapping>
