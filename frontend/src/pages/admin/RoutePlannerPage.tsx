@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { MapCanvas, type MapCanvasHandle } from '@/components/maps/MapCanvas';
-import { ShipmentMarkersLayer } from '@/components/maps/layers/ShipmentMarkersLayer';
+import { ShipmentClusterLayer } from '@/components/maps/layers/ShipmentClusterLayer';
 import { StopMarker } from '@/components/maps/shared/StopMarker';
 import { OriginMarker } from '@/components/maps/shared/OriginMarker';
 import { ROUTE_COLORS } from '@/components/maps/shared/colors';
@@ -372,7 +372,7 @@ export function RoutePlannerPage() {
         <MapCanvas ref={mapRef}>
           {/* Step 1 & 2: Show shipment markers */}
           {(step === 1 || step === 2) && shipments.length > 0 && (
-            <ShipmentMarkersLayer
+            <ShipmentClusterLayer
               shipments={shipments}
               clusters={clusters}
               selectedShipmentIds={selectedShipmentIds}
