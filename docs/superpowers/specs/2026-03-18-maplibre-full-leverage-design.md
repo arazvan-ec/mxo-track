@@ -19,12 +19,12 @@ MapLibre GL JS v5 y PMTiles están instalados pero infrautilizados:
 
 **Objetivo:** Reemplazar raster OSM por vector tiles servidos via PMTiles, con un estilo dark theme que combine con la UI.
 
-**Approach elegido:** Usar tiles de OpenFreeMap/Versatiles (gratuitos, sin API key) via PMTiles protocol ya registrado. Crear un `style.json` dark theme custom basado en el esquema OpenMapTiles.
+**Approach elegido:** Protomaps CDN con `@protomaps/basemaps` (gratuito, sin API key, vector tiles con dark theme nativo). El esquema OpenMapTiles permite migrar a self-hosted (archivo .pmtiles en S3) cambiando solo una URL.
 
 **Alternativas descartadas:**
 - (A) MapTiler/Stadia — requieren API key y tienen límites de uso
-- (B) Self-hosted tile generation con planetiler — complejidad de infra excesiva para el beneficio
-- (C) Protomaps CDN con PMTiles — buena opción pero menos control sobre el estilo
+- (B) Self-hosted tile generation con planetiler — complejidad de infra excesiva para MVP
+- (C) OpenFreeMap/Versatiles — viable pero Protomaps tiene mejor tooling (`@protomaps/basemaps` con dark theme listo)
 
 **Implementación:**
 1. Descargar archivo PMTiles de España/Europa desde Protomaps (o usar CDN Protomaps como fallback)
