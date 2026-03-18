@@ -623,13 +623,19 @@ Every project goes through this process. A todo list, a single-function utility,
 #### Checklist (MUST complete in order)
 
 0. **Consult past decisions (Learning Loop)** — Read `docs/decisions/log.md`, scan recent `docs/superpowers/execution-logs/` and `docs/superpowers/retrospectives/`. State explicitly: "Consulté decisiones pasadas: [found X relevant / nothing relevant]"
-1. **Explore project context** — check files, docs, recent commits
-2. **Offer visual companion** (if topic will involve visual questions)
-3. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria
-4. **Propose 2-3 approaches** — with trade-offs and your recommendation
-5. **Present design** — in sections scaled to their complexity, get user approval after each section
-6. **Write design doc** — save to `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md` and commit
-7. **Transition to implementation** — invoke writing-plans skill to create implementation plan
+1. **Classify bounded context (Architecture Gate)** — Identify which bounded context(s) the work touches. Declare explicitly:
+   - "Bounded context: [nombre] — **crítico** (DDD puro)" o "**pragmático** (Symfony)"
+   - Si es **crítico**: toda entidad nueva va en `src/Domain/{Context}/Model/` como POPO, interfaces de repositorio en `src/Domain/{Context}/Repository/`, implementaciones Doctrine en `src/Infrastructure/{Context}/Doctrine/`. Sin `#[ORM\...]` en modelos de dominio. Ver sección "DDD Architecture" y `docs/knowledge/architecture-ddd.md`.
+   - Si es **pragmático**: entidades en `src/Entity/` con ORM attributes es aceptable.
+   - Si toca **ambos**: separar claramente qué partes van a cada layer. El contexto crítico no se relaja por conveniencia.
+   - **Anti-racionalización:** "Sigo el patrón existente en src/Entity/" NO es razón para poner código nuevo de contexto crítico ahí. El patrón existente es deuda técnica documentada, no un ejemplo a seguir.
+2. **Explore project context** — check files, docs, recent commits
+3. **Offer visual companion** (if topic will involve visual questions)
+4. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria
+5. **Propose 2-3 approaches** — with trade-offs and your recommendation. If bounded context is critical, every approach MUST respect DDD placement rules from step 1.
+6. **Present design** — in sections scaled to their complexity, get user approval after each section
+7. **Write design doc** — save to `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md` and commit
+8. **Transition to implementation** — invoke writing-plans skill to create implementation plan
 
 #### Key Principles
 
@@ -647,8 +653,9 @@ Every project goes through this process. A todo list, a single-function utility,
 
 #### Working in Existing Codebases
 
-- Explore the current structure before proposing changes. Follow existing patterns.
-- Where existing code has problems that affect the work, include targeted improvements as part of the design
+- Explore the current structure before proposing changes. Follow existing patterns **only in pragmatic contexts**.
+- **In critical contexts:** follow the DDD rules from CLAUDE.md, NOT the existing patterns in `src/Entity/`. Existing entities with ORM in critical contexts are documented technical debt, not examples to replicate.
+- Where existing code has problems that affect the work, include targeted improvements as part of the design.
 - Don't propose unrelated refactoring. Stay focused on what serves the current goal.
 
 #### After the Design
