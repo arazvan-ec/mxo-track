@@ -140,10 +140,10 @@ function getActiveStops(
   routes: FleetRoute[],
   selectedVehicleId: string | null,
   selectedRouteId: string | null,
-): { routeId: string; stops: FleetStop[] } | null {
+): { routeId: string; stops: FleetStop[]; polyline?: string; color?: string } | null {
   if (selectedRouteId) {
     const route = routes.find((r) => r.public_id === selectedRouteId);
-    if (route) return { routeId: route.public_id, stops: route.stops };
+    if (route) return { routeId: route.public_id, stops: route.stops, polyline: route.polyline, color: route.color };
   }
 
   if (selectedVehicleId) {
@@ -151,7 +151,7 @@ function getActiveStops(
     if (vehicle) {
       const vehicleRoute = routes.find((r) => r.vehicle_name === vehicle.name);
       if (vehicleRoute) {
-        return { routeId: vehicleRoute.public_id, stops: vehicleRoute.stops };
+        return { routeId: vehicleRoute.public_id, stops: vehicleRoute.stops, polyline: vehicleRoute.polyline, color: vehicleRoute.color };
       }
     }
   }

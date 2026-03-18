@@ -99,6 +99,11 @@ final class RouteSnapshotManager
         return $snapshot;
     }
 
+    public function findByRoute(Route $route): ?RouteSnapshot
+    {
+        return $this->snapshotRepo->findByRoute($route);
+    }
+
     /**
      * Updates only the stopStates from current RouteStop entities.
      * Fast path — no OSRM calls.

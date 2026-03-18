@@ -6,6 +6,7 @@ namespace App\Application\Fleet;
 
 use App\Entity\Customer;
 use App\Entity\Route;
+use App\Entity\RouteSnapshot;
 use App\Entity\RouteStop;
 use App\Entity\Shipment;
 use App\Entity\User;
@@ -89,6 +90,21 @@ final readonly class FleetOverviewService
             ];
         }
 
+        // Preload snapshots for all active routes (single query)
+        $snapshotMap = [];
+        if (\count($activeRoutes) > 0) {
+            $snapshots = $this->em->createQueryBuilder()
+                ->select('s')
+                ->from(RouteSnapshot::class, 's')
+                ->where('s.route IN (:routes)')
+                ->setParameter('routes', $activeRoutes)
+                ->getQuery()
+                ->getResult();
+            foreach ($snapshots as $snap) {
+                $snapshotMap[$snap->getRoute()->getId()] = $snap;
+            }
+        }
+
         // Build route data with stops
         $routesData = [];
         foreach ($activeRoutes as $route) {
@@ -113,13 +129,17 @@ final readonly class FleetOverviewService
             $total = count($stops);
             $delivered = count(array_filter($stops, static fn (RouteStop $s) => $s->getStatus() === RouteStopStatus::DELIVERED));
 
+            $snapshot = $snapshotMap[$route->getId()] ?? null;
+
             $routesData[] = [
                 'public_id' => $route->getPublicIdString(),
                 'name' => $route->getName(),
+                'color' => '#3B82F6',
                 'status' => $route->getStatus()->value,
                 'vehicle_public_id' => $route->getVehicle()?->getPublicIdString(),
                 'vehicle_name' => $route->getVehicle()?->getName(),
                 'driver_email' => $route->getDriver()?->getEmail(),
+                'polyline' => $snapshot?->getPolyline(),
                 'stops' => $stopsData,
                 'total_stops' => $total,
                 'delivered_stops' => $delivered,

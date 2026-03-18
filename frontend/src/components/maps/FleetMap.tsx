@@ -2,7 +2,7 @@ import { useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
 import { MapCanvas, type MapCanvasHandle } from './MapCanvas';
 import { VehicleMarker } from './shared/VehicleMarker';
 import { StopMarker } from './shared/StopMarker';
-import { RouteSegmentsLayer } from './layers/RouteSegmentsLayer';
+import { RoutePolylineLayer } from './layers/RoutePolylineLayer';
 import { VehicleTrailLayer } from './layers/VehicleTrailLayer';
 import { VehiclePopup } from '@/components/fleet/VehiclePopup';
 import { getVehicleColor } from './shared/colors';
@@ -13,7 +13,7 @@ export type FleetMapHandle = MapCanvasHandle;
 interface Props {
   vehicles: FleetVehicle[];
   routes: FleetRoute[];
-  activeStops?: { routeId: string; stops: FleetStop[] } | null;
+  activeStops?: { routeId: string; stops: FleetStop[]; polyline?: string; color?: string } | null;
   trailCoordinates?: [number, number][];
   onVehicleClick?: (vehicleId: string) => void;
 }
@@ -65,8 +65,12 @@ export const FleetMap = forwardRef<FleetMapHandle, Props>(function FleetMap(
         <VehicleTrailLayer coordinates={trailCoordinates} />
       )}
 
-      {activeStops && (
-        <RouteSegmentsLayer routeId={activeStops.routeId} stops={activeStops.stops} />
+      {activeStops?.polyline && (
+        <RoutePolylineLayer
+          id={activeStops.routeId}
+          polyline={activeStops.polyline}
+          color={activeStops.color ?? '#3B82F6'}
+        />
       )}
 
       {activeStops?.stops.map((stop) =>

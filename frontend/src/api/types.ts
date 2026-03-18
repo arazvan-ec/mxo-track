@@ -122,6 +122,7 @@ export interface FleetRoute {
   status: string;
   total_stops: number;
   delivered_stops: number;
+  polyline?: string;
   stops: FleetStop[];
 }
 
@@ -186,6 +187,7 @@ export interface PlannerPreviewRoute {
     sequence: number;
     isOrigin?: boolean;
   }>;
+  polyline?: string;
   stopsCount: number;
   validation?: {
     valid: boolean;

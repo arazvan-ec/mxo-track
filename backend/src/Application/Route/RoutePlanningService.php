@@ -153,6 +153,9 @@ final readonly class RoutePlanningService
                 ];
             }
 
+            // Fetch snapshot polyline (created by RouteBuilder)
+            $snapshot = $this->snapshotManager->findByRoute($route);
+
             $response[] = [
                 'route' => [
                     'publicId' => $route->getPublicIdString(),
@@ -163,6 +166,7 @@ final readonly class RoutePlanningService
                 ],
                 'stopsCount' => \count($result['stops']),
                 'stops' => $stopsData,
+                'polyline' => $snapshot?->getPolyline(),
                 'validation' => $result['validation'],
             ];
         }
