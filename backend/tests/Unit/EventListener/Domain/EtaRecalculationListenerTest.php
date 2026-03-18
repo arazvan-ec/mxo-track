@@ -16,7 +16,6 @@ use App\Repository\VehicleRepository;
 use App\Service\EtaService;
 use App\Service\RouteDeviationService;
 use App\Service\RouteSnapshotManager;
-use App\View\RouteViewService;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\EntityRepository;
@@ -24,7 +23,6 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\EventDispatcher\EventDispatcherInterface;
-use Symfony\Component\Mercure\HubInterface;
 
 #[CoversClass(EtaRecalculationListener::class)]
 final class EtaRecalculationListenerTest extends TestCase
@@ -35,8 +33,6 @@ final class EtaRecalculationListenerTest extends TestCase
     private EtaService $etaService;
     private RouteDeviationService $deviationService;
     private RouteSnapshotManager $snapshotManager;
-    private RouteViewService $viewService;
-    private HubInterface $hub;
     private EventDispatcherInterface $dispatcher;
 
     protected function setUp(): void
@@ -46,8 +42,6 @@ final class EtaRecalculationListenerTest extends TestCase
         $this->etaService = $this->createMock(EtaService::class);
         $this->deviationService = $this->createMock(RouteDeviationService::class);
         $this->snapshotManager = $this->createMock(RouteSnapshotManager::class);
-        $this->viewService = $this->createMock(RouteViewService::class);
-        $this->hub = $this->createMock(HubInterface::class);
         $this->dispatcher = $this->createMock(EventDispatcherInterface::class);
 
         $this->listener = new EtaRecalculationListener(
@@ -56,8 +50,6 @@ final class EtaRecalculationListenerTest extends TestCase
             $this->etaService,
             $this->deviationService,
             $this->snapshotManager,
-            $this->viewService,
-            $this->hub,
             $this->dispatcher,
         );
     }

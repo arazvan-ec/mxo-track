@@ -11,22 +11,16 @@ use App\Domain\Event\StopExceptionReported;
 use App\Entity\Route;
 use App\Repository\RouteRepository;
 use App\Service\RouteSnapshotManager;
-use App\View\RouteViewService;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
-use Symfony\Component\Mercure\HubInterface;
-use Symfony\Component\Mercure\Update;
-use Throwable;
 
 /**
- * Updates RouteSnapshot and publishes MapViewData via Mercure
- * when route progress events occur (delivery, exception, start, complete).
+ * Updates RouteSnapshot when route progress events occur.
+ * Mercure publishing is handled by MapEventProjector.
  */
 final readonly class RouteSnapshotListener
 {
     public function __construct(
         private RouteSnapshotManager $snapshotManager,
-        private RouteViewService $viewService,
-        private HubInterface $hub,
         private RouteRepository $routeRepo,
     ) {}
 
@@ -62,23 +56,5 @@ final readonly class RouteSnapshotListener
         }
 
         $this->snapshotManager->updateStopStates($route);
-        $this->publishRouteViewUpdate($route);
-    }
-
-    private function publishRouteViewUpdate(Route $route): void
-    {
-        $roles = ['ROLE_ADMIN', 'ROLE_CUSTOMER', 'ROLE_DRIVER'];
-
-        foreach ($roles as $role) {
-            try {
-                $mapData = $this->viewService->buildSingleRouteView($route, $role);
-                $this->hub->publish(new Update(
-                    sprintf('/routes/%s/view/%s', $route->getPublicIdString(), strtolower(str_replace('ROLE_', '', $role))),
-                    $mapData->toJson(),
-                ));
-            } catch (Throwable) {
-                // Don't break the flow on Mercure failure
-            }
-        }
     }
 }
