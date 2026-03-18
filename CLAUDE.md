@@ -470,6 +470,7 @@ Antes de trabajar en un subsistema, **LEE el módulo relevante** en `docs/knowle
 | Patrones de diseño GoF + DDD, catálogo completo | `docs/knowledge/design-patterns.md` |
 | Roles, multi-tenancy, CSRF, seguridad | `docs/knowledge/security.md` |
 | Skills de Superpowers (completo) | `docs/knowledge/superpowers-skills.md` |
+| Feedback, execution logs, learning loop, retrospectives | `docs/knowledge/feedback-learning.md` |
 | Índice completo de módulos | `docs/knowledge/index.md` |
 | Requisitos de negocio, gaps, decisiones | `docs/analysis/2026-03-15-business-requirements-audit.md` |
 | Análisis previos del codebase | `docs/analysis/` |

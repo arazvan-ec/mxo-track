@@ -23,6 +23,7 @@
 | Design Patterns | `design-patterns.md` | Catálogo GoF + DDD: 15 en uso, 4 candidatos, con ejemplos del codebase | Elegir patrón para nuevo código, entender patrones existentes |
 | Security | `security.md` | Roles, multi-tenancy, CSRF, rate limiting, audit | Seguridad, autenticación, autorización |
 | Superpowers Skills | `superpowers-skills.md` | Skills completas: TDD, brainstorming, debugging, verification, etc. | Aplicar cualquier skill de desarrollo |
+| Feedback & Learning | `feedback-learning.md` | Sistema de captura de datos, execution logs, retrospectives, learning loop, métricas de negocio | Feedback, execution logs, learning loop, retrospectives |
 
 ## Cómo Usar
 
