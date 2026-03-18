@@ -55,6 +55,23 @@ final class SecurityTest extends TestCase
     }
 
     #[Test]
+    public function securityHeadersCspAllowsMapTilesInConnectSrc(): void
+    {
+        $subscriber = new SecurityHeadersSubscriber('http://localhost:3000/.well-known/mercure');
+
+        $kernel = $this->createMock(HttpKernelInterface::class);
+        $request = Request::create('/');
+        $response = new Response();
+        $event = new ResponseEvent($kernel, $request, HttpKernelInterface::MAIN_REQUEST, $response);
+
+        $subscriber->onKernelResponse($event);
+
+        $csp = $response->headers->get('Content-Security-Policy');
+        self::assertStringContainsString('https://tile.openstreetmap.org', $csp);
+        self::assertStringContainsString("worker-src 'self' blob:", $csp);
+    }
+
+    #[Test]
     public function securityHeadersSkipsSubRequests(): void
     {
         $subscriber = new SecurityHeadersSubscriber('http://localhost:3000');

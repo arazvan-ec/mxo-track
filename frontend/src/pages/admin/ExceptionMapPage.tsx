@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { MapCanvas, type MapCanvasHandle } from '@/components/maps/MapCanvas';
-import { ExceptionLayer } from '@/components/maps/layers/ExceptionLayer';
+import { ExceptionHeatmapLayer } from '@/components/maps/layers/ExceptionHeatmapLayer';
 import {
   useExceptionMapData,
   type ExceptionPoint,
@@ -30,6 +30,7 @@ export function ExceptionMapPage() {
 
   const [from, setFrom] = useState(thirtyDaysAgo);
   const [to, setTo] = useState(today);
+  const [viewMode, setViewMode] = useState<'heatmap' | 'points'>('heatmap');
 
   const { exceptions, isLoading, error } = useExceptionMapData(from, to);
 
@@ -127,6 +128,30 @@ export function ExceptionMapPage() {
             />
           </div>
 
+          {/* View mode toggle */}
+          <div className="flex gap-2 mb-4">
+            <button
+              onClick={() => setViewMode('heatmap')}
+              className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                viewMode === 'heatmap'
+                  ? 'bg-red-500/20 text-red-400 border border-red-500/50'
+                  : 'bg-slate-800/50 text-slate-400 border border-slate-700/30 hover:text-slate-200'
+              }`}
+            >
+              Heatmap
+            </button>
+            <button
+              onClick={() => setViewMode('points')}
+              className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                viewMode === 'points'
+                  ? 'bg-red-500/20 text-red-400 border border-red-500/50'
+                  : 'bg-slate-800/50 text-slate-400 border border-slate-700/30 hover:text-slate-200'
+              }`}
+            >
+              Puntos
+            </button>
+          </div>
+
           {/* Summary */}
           <div className="bg-slate-800/60 rounded-lg p-3 border border-slate-700/40 mb-4">
             <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">
@@ -188,7 +213,7 @@ export function ExceptionMapPage() {
       {/* Map */}
       <div className="absolute inset-0">
         <MapCanvas ref={mapRef}>
-          <ExceptionLayer exceptions={exceptions} />
+          <ExceptionHeatmapLayer exceptions={exceptions} mode={viewMode} />
         </MapCanvas>
       </div>
     </div>

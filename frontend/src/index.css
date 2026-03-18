@@ -55,6 +55,3 @@ body {
   border-top-color: rgba(51, 65, 85, 0.6) !important;
 }
 
-.maplibregl-ctrl-group .maplibregl-ctrl-icon {
-  filter: invert(1);
-}

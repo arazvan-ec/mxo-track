@@ -16,3 +16,17 @@ Registro de decisiones de diseño significativas. Cada entrada captura el contex
 - **Resultado:** Backend: MapView domain layer + MapEventProjector + MercureMapPublisher + TopicResolver actualizado + 6 listeners refactorizados + 3 API endpoints. Frontend: React SPA funcional con Fleet Map en `/app/admin/fleet-map`. Twig adaptado a nuevos topics. Tests pasan (9 fallos pre-existentes, 0 nuevos).
 
 <!-- Añadir nuevas entradas al final del archivo -->
+
+### [2026-03-18] Protomaps CDN como proveedor de vector tiles
+
+- **Problema:** MapLibre usaba raster tiles de OSM — sin dark theme, sin personalización de estilo, sin clustering nativo. PMTiles estaba registrado como dead code.
+- **Decisión:** Protomaps CDN con `@protomaps/basemaps` para vector tiles. Dark flavor customizado con paleta slate-900. Esquema OpenMapTiles permite migrar a self-hosted (archivo .pmtiles en S3/R2) cambiando una sola URL.
+- **Alternativas descartadas:** (A) MapTiler/Stadia — requieren API key. (B) Self-hosted Planetiler — complejidad excesiva para MVP. (C) OpenFreeMap — tooling menos maduro.
+- **Resultado:** Mapa dark theme nativo, labels en español, road emphasis para logística, clustering WebGL para shipments, heatmap para excepciones. Build OK, 0 errores TypeScript.
+
+### [2026-03-18] Markers DOM vs WebGL — decisión por tipo de dato
+
+- **Problema:** Todos los markers eran DOM elements. Para 500+ shipments es lento.
+- **Decisión:** Mantener VehicleMarker/StopMarker como DOM (necesitan SVG custom, son <50 por vista). Migrar ShipmentMarkers a clustering WebGL nativo y ExceptionMarkers a heatmap WebGL.
+- **Alternativas descartadas:** Migrar todo a WebGL — perdemos SVG custom y números en markers de stops.
+- **Resultado:** ShipmentClusterLayer y ExceptionHeatmapLayer implementados como Source+Layer nativos. DOM markers conservados donde aportan valor visual.
