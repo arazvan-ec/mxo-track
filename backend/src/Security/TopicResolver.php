@@ -22,7 +22,8 @@ class TopicResolver
     {
         $roles = $user->getRoles();
 
-        if (in_array('ROLE_ADMIN', $roles, true)) {
+        // ROLE_ADMIN and ROLE_OPERATOR get full access (role hierarchy: ADMIN > OPERATOR > CUSTOMER)
+        if (in_array('ROLE_ADMIN', $roles, true) || in_array('ROLE_OPERATOR', $roles, true)) {
             return ['*'];
         }
 

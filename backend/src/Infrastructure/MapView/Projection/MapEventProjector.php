@@ -22,6 +22,8 @@ use App\Domain\MapView\Model\VehiclePosition;
 use App\Domain\MapView\Projection\MapProjectableEventInterface;
 use App\Domain\MapView\Projection\MapProjectorInterface;
 use App\Domain\MapView\Publisher\MapPublisherInterface;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 
 /**
@@ -38,13 +40,21 @@ final class MapEventProjector implements MapProjectorInterface
 {
     public function __construct(
         private readonly MapPublisherInterface $publisher,
+        private readonly LoggerInterface $logger = new NullLogger(),
     ) {}
 
     #[AsEventListener]
     public function onVehiclePositionReceived(VehiclePositionReceived $event): void
     {
-        $position = $this->projectVehiclePosition($event);
-        $this->publisher->publishVehiclePosition($position);
+        try {
+            $position = $this->projectVehiclePosition($event);
+            $this->publisher->publishVehiclePosition($position);
+        } catch (\Throwable $e) {
+            $this->logger->error('MapEventProjector: failed to publish vehicle position', [
+                'vehiclePublicId' => $event->vehiclePublicId,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     #[AsEventListener]
@@ -118,7 +128,15 @@ final class MapEventProjector implements MapProjectorInterface
                 ],
                 occurredAt: $event->occurredAt,
             );
-            $this->publisher->publishRouteUpdate($update);
+
+            try {
+                $this->publisher->publishRouteUpdate($update);
+            } catch (\Throwable $e) {
+                $this->logger->error('MapEventProjector: failed to publish routes_built', [
+                    'routePublicId' => $routePublicId,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
     }
 
@@ -213,6 +231,15 @@ final class MapEventProjector implements MapProjectorInterface
             data: $data,
             occurredAt: $event->getOccurredAt(),
         );
-        $this->publisher->publishRouteUpdate($update);
+
+        try {
+            $this->publisher->publishRouteUpdate($update);
+        } catch (\Throwable $e) {
+            $this->logger->error('MapEventProjector: failed to publish route update', [
+                'type' => $type->value,
+                'routePublicId' => $event->getRoutePublicId(),
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }

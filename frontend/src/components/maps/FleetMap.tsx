@@ -5,7 +5,6 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { Protocol } from 'pmtiles';
 import { VehicleMarker } from './shared/VehicleMarker';
 import { StopMarker } from './shared/StopMarker';
-import { RouteLayer } from './shared/RouteLayer';
 import type { FleetVehicle, FleetRoute } from '@/api/types';
 
 // Register PMTiles protocol once
@@ -86,18 +85,6 @@ export function FleetMap({ vehicles, routes, onVehicleClick, onRouteClick }: Pro
       }}
       style={{ width: '100%', height: '100%' }}
     >
-      {/* Route polylines */}
-      {routes.map((route) =>
-        route.stops.length > 1 ? (
-          <RouteLayer
-            key={route.public_id}
-            id={route.public_id}
-            polyline="" // TODO: fleet map routes don't have encoded polylines yet
-            color={route.color}
-          />
-        ) : null,
-      )}
-
       {/* Stop markers */}
       {routes.flatMap((route) =>
         route.stops.map((stop) =>

@@ -9,10 +9,15 @@ export const ROUTE_COLORS = [
 ] as const;
 
 export const STOP_STATUS_COLORS: Record<string, string> = {
-  pending: '#3B82F6',    // blue
-  delivered: '#10B981',  // green
-  exception: '#EF4444',  // red
-  skipped: '#9CA3AF',    // gray
+  PENDING: '#3B82F6',    // blue
+  DELIVERED: '#10B981',  // green
+  EXCEPTION: '#EF4444',  // red
+  SKIPPED: '#9CA3AF',    // gray
+  // Lowercase aliases for safety
+  pending: '#3B82F6',
+  delivered: '#10B981',
+  exception: '#EF4444',
+  skipped: '#9CA3AF',
 };
 
 export const VEHICLE_COLOR = '#1D4ED8'; // blue-700

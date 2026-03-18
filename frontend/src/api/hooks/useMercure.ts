@@ -1,10 +1,27 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../client';
 
 interface MercureTokenResponse {
   ok: boolean;
   token: string;
+}
+
+/**
+ * Mercure URL is fetched from /api/me or injected as a meta tag.
+ * For now, try multiple sources.
+ */
+function getMercureUrl(): string | null {
+  // Check meta tag first
+  const meta = document.querySelector('meta[name="mercure-url"]');
+  if (meta) return meta.getAttribute('content');
+
+  // Check global (set by Twig base template or env)
+  const global = (window as unknown as Record<string, unknown>).__MERCURE_URL;
+  if (typeof global === 'string' && global) return global;
+
+  // Fallback: relative to current origin
+  return null;
 }
 
 export function useMercure<T>(
@@ -14,6 +31,9 @@ export function useMercure<T>(
 ) {
   const onMessageRef = useRef(onMessage);
   onMessageRef.current = onMessage;
+
+  // Stabilize topics to avoid re-creating EventSource on every render
+  const topicsKey = useMemo(() => topics.sort().join('\n'), [topics]);
 
   const tokenQuery = useQuery({
     queryKey: ['mercure-token'],
@@ -25,24 +45,16 @@ export function useMercure<T>(
   useEffect(() => {
     if (!tokenQuery.data?.token || topics.length === 0 || !enabled) return;
 
-    const mercureUrl = (window as unknown as Record<string, unknown>).__MERCURE_URL as string;
+    const mercureUrl = getMercureUrl();
     if (!mercureUrl) return;
 
     const url = new URL(mercureUrl);
     topics.forEach((t) => url.searchParams.append('topic', t));
-
-    const es = new EventSource(url.toString(), {
-      withCredentials: false,
-    });
-
-    // Authorization via Last-Event-ID workaround or query param
-    // Mercure 0.14+ supports authorization via cookie or URL
-    // For now, append token as query parameter
     url.searchParams.set('authorization', tokenQuery.data.token);
 
-    const esWithAuth = new EventSource(url.toString());
+    const es = new EventSource(url.toString());
 
-    esWithAuth.onmessage = (event) => {
+    es.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data) as T;
         onMessageRef.current(data);
@@ -51,10 +63,8 @@ export function useMercure<T>(
       }
     };
 
-    es.close(); // Close the first one without auth
-
     return () => {
-      esWithAuth.close();
+      es.close();
     };
-  }, [tokenQuery.data?.token, topics.join(','), enabled]);
+  }, [tokenQuery.data?.token, topicsKey, enabled]);
 }

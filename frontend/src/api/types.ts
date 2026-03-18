@@ -1,7 +1,7 @@
 // Match backend DTOs
 
 export interface MeResponse {
-  id: number;
+  publicId: string;
   email: string;
   role: string;
   customerId?: string;

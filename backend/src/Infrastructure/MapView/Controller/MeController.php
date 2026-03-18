@@ -18,7 +18,7 @@ class MeController extends AbstractController
         $user = $this->getUser();
 
         return $this->json([
-            'id' => $user->getId(),
+            'publicId' => $user->getPublicIdString(),
             'email' => $user->getEmail(),
             'role' => $user->getRoles()[0] ?? 'ROLE_USER',
             'customerId' => $user->getCustomer()?->getPublicIdString(),
