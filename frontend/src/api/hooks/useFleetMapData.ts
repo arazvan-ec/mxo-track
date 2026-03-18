@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../client';
-import { useMercurePositions } from './useMercurePositions';
-import { useMercureRouteUpdates } from './useMercureRouteUpdates';
+import { useMapSubscription } from './useMapSubscription';
 import type { FleetMapData, FleetVehicle, FleetRoute } from '../types';
 
 export function useFleetMapData() {
@@ -18,12 +17,14 @@ export function useFleetMapData() {
 
   const routeIds = query.data?.routes.map((r) => r.public_id) ?? [];
 
-  const livePositions = useMercurePositions(vehicleIds);
-  const routeUpdates = useMercureRouteUpdates(routeIds);
+  const { positions, connected } = useMapSubscription({
+    vehicleIds,
+    routeIds,
+  });
 
   // Merge live vehicle positions
   const vehicles: FleetVehicle[] = (query.data?.vehicles ?? []).map((v) => {
-    const live = livePositions.get(v.public_id);
+    const live = positions.get(v.public_id);
     if (!live) return v;
     return {
       ...v,
@@ -37,17 +38,13 @@ export function useFleetMapData() {
     };
   });
 
-  // Merge live route updates (stop statuses, delivery counts)
-  const routes: FleetRoute[] = (query.data?.routes ?? []).map((r) => {
-    const update = routeUpdates.get(r.public_id);
-    if (!update) return r;
-    return { ...r, ...update };
-  });
+  const routes: FleetRoute[] = query.data?.routes ?? [];
 
   return {
     vehicles,
     routes,
     isLoading: query.isLoading,
     error: query.error,
+    sseConnected: connected,
   };
 }

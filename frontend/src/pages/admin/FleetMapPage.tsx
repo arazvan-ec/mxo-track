@@ -8,7 +8,7 @@ import { HeaderBar } from '@/components/fleet/HeaderBar';
 import type { FleetVehicle, FleetRoute, FleetStop } from '@/api/types';
 
 export function FleetMapPage() {
-  const { vehicles, routes, isLoading, error } = useFleetMapData();
+  const { vehicles, routes, isLoading, error, sseConnected } = useFleetMapData();
   const { data: kpi } = useFleetKpi();
   const mapRef = useRef<FleetMapHandle>(null);
 
@@ -89,9 +89,6 @@ export function FleetMapPage() {
     },
     [vehicles, handleSelectVehicle],
   );
-
-  // SSE connection status (simple heuristic: if we have live data, we're connected)
-  const sseConnected = vehicles.some((v) => v.last_position != null);
 
   if (isLoading) {
     return (
