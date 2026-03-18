@@ -241,6 +241,7 @@ Después de cada implementación que involucre una decisión de diseño signific
 - Los specs de diseño van a `docs/superpowers/specs/`
 - El estado de progreso (qué tareas están hechas, cuáles faltan) debe quedar en commits, no solo en TodoWrite (que también es efímero)
 - **Regla:** Si generas un documento de trabajo (plan, spec, análisis), debe committearse al repo inmediatamente
+- **Outputs de subagentes de investigación:** Cuando un subagente (Explore, Plan, reviewer) produce hallazgos significativos (análisis de arquitectura, auditorías, investigaciones de codebase), el agente principal debe guardar un resumen en `docs/superpowers/agent-outputs/YYYY-MM-DD-<topic>.md` usando el template de `docs/superpowers/templates/subagent-output-template.md` y committearlo. No aplica a subagentes de implementación (su output es código committeado).
 
 ### Formato del commit message
 
