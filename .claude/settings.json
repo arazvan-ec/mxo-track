@@ -1,4 +1,12 @@
 {
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "command": "bash -c 'FILE=\"$CLAUDE_TOOL_INPUT_FILE_PATH\"; if [[ \"$FILE\" == /root/.claude/plans/* ]]; then BASENAME=$(basename \"$FILE\"); DEST=\"/home/user/mxo-track/docs/superpowers/plans/$BASENAME\"; cp \"$FILE\" \"$DEST\" && cd /home/user/mxo-track && git add \"$DEST\" && git commit -m \"docs: persist plan $BASENAME\" && git push; fi'"
+      }
+    ]
+  },
   "plugins": [
     {
       "name": "multi-agent-workflow",
