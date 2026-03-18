@@ -634,13 +634,12 @@ function fleetMap() {
 
       // Subscribe to all vehicle position topics
       this.vehicles.forEach(v => {
-        hub.searchParams.append('topic', `/vehicles/${v.public_id}/position`);
+        hub.searchParams.append('topic', `/map/vehicles/${v.public_id}/position`);
       });
-      hub.searchParams.append('topic', '/operator/fleet');
 
       // Subscribe to route update topics (real-time stop status changes)
       this.routes.forEach(r => {
-        hub.searchParams.append('topic', `/routes/${r.public_id}/view/admin`);
+        hub.searchParams.append('topic', `/map/routes/${r.public_id}/updates`);
       });
 
       if (this._mercureToken) {
@@ -662,7 +661,18 @@ function fleetMap() {
         try {
           const payload = JSON.parse(event.data);
 
-          // Route update (MapViewData with routes[].stops[])
+          // Unified route update envelope: {type, routePublicId, data, occurredAt}
+          if (payload.type && payload.routePublicId && payload.data) {
+            if (payload.type === 'route_snapshot') {
+              // data contains full MapViewData
+              this.handleRouteUpdate(payload.data);
+            }
+            // Other event types (stop_delivered, etc.) can trigger KPI refresh
+            this.loadKpi();
+            return;
+          }
+
+          // Legacy route update (MapViewData with routes[].stops[])
           if (payload.routes && Array.isArray(payload.routes) && payload.routes.length > 0) {
             this.handleRouteUpdate(payload);
             return;

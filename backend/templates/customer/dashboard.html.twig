@@ -253,7 +253,7 @@ function customerDashboard() {
 
         const hub = new URL('{{ mercure_public_url }}');
         vehicles.forEach(v => {
-          hub.searchParams.append('topic', '/vehicles/' + v.public_id + '/position');
+          hub.searchParams.append('topic', '/map/vehicles/' + v.public_id + '/position');
         });
 
         if (mercureToken) {

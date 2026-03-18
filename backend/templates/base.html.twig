@@ -367,7 +367,7 @@ function notificationBell() {
         const { token } = await tokenRes.json();
 
         const hub = new URL(mercureBase);
-        hub.searchParams.append('topic', '/users/' + userId + '/notifications');
+        hub.searchParams.append('topic', '/map/users/' + userId + '/notifications');
         if (token) hub.searchParams.set('authorization', token);
 
         this._eventSource = new EventSource(hub);
