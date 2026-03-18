@@ -1,6 +1,8 @@
 import { createBrowserRouter, Navigate } from 'react-router';
 import { AppShell } from './components/layout/AppShell';
 import { FleetMapPage } from './pages/admin/FleetMapPage';
+import { CustomerRouteDetailPage } from './pages/customer/CustomerRouteDetailPage';
+import { DriverRoutePage } from './pages/driver/DriverRoutePage';
 
 export const router = createBrowserRouter([
   {
@@ -8,6 +10,10 @@ export const router = createBrowserRouter([
     children: [
       // Fleet map is full-screen with its own sidebar — no AppShell
       { path: 'admin/fleet-map', element: <FleetMapPage /> },
+      // Customer route detail — full-screen with sidebar + map
+      { path: 'customer/routes/:publicId', element: <CustomerRouteDetailPage /> },
+      // Driver route — full-screen with sidebar + map, delivery execution focus
+      { path: 'driver/routes/:publicId', element: <DriverRoutePage /> },
       {
         element: <AppShell />,
         children: [
