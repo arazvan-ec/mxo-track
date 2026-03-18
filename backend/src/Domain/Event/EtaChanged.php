@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domain\Event;
 
-final readonly class EtaChanged
+use App\Domain\MapView\Projection\MapProjectableEventInterface;
+
+final readonly class EtaChanged implements MapProjectableEventInterface
 {
     /**
      * @param array<string, int> $previousEtas stop_public_id => minutes
@@ -17,4 +19,14 @@ final readonly class EtaChanged
         public int $maxDeltaMinutes,
         public \DateTimeImmutable $occurredAt = new \DateTimeImmutable(),
     ) {}
+
+    public function getRoutePublicId(): string
+    {
+        return $this->routePublicId;
+    }
+
+    public function getOccurredAt(): \DateTimeImmutable
+    {
+        return $this->occurredAt;
+    }
 }

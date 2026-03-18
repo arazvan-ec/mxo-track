@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace App\Domain\Event;
 
+use App\Domain\MapView\Projection\MapProjectableEventInterface;
 use App\Enum\ExceptionCode;
 
-final readonly class StopExceptionReported
+final readonly class StopExceptionReported implements MapProjectableEventInterface
 {
     public function __construct(
         public string $stopPublicId,
@@ -17,4 +18,14 @@ final readonly class StopExceptionReported
         public ?string $notes,
         public \DateTimeImmutable $occurredAt = new \DateTimeImmutable(),
     ) {}
+
+    public function getRoutePublicId(): string
+    {
+        return $this->routePublicId;
+    }
+
+    public function getOccurredAt(): \DateTimeImmutable
+    {
+        return $this->occurredAt;
+    }
 }
