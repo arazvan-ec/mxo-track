@@ -1,3 +1,13 @@
+# ── Stage 1: Build React SPA ──────────────────────────────────────────
+FROM node:20-slim AS frontend-builder
+WORKDIR /frontend
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
+# vite outputs to ../backend/public/app → /backend/public/app in container
+
+# ── Stage 2: PHP + nginx ─────────────────────────────────────────────
 FROM php:8.4-fpm-bookworm
 
 # System dependencies + nginx
@@ -23,18 +33,6 @@ log_errors=On' > /usr/local/etc/php/conf.d/production.ini
 RUN sed -i 's|^listen = .*|listen = 127.0.0.1:9000|' /usr/local/etc/php-fpm.d/www.conf \
     && sed -i 's|^;catch_workers_output.*|catch_workers_output = yes|' /usr/local/etc/php-fpm.d/www.conf \
     && sed -i 's|^;decorate_workers_output.*|decorate_workers_output = no|' /usr/local/etc/php-fpm.d/www.conf
-
-# ── Stage 1: Build React SPA ──────────────────────────────────────────
-FROM node:20-slim AS frontend-builder
-WORKDIR /frontend
-COPY frontend/package.json frontend/package-lock.json ./
-RUN npm ci
-COPY frontend/ ./
-RUN npm run build
-# vite outputs to ../backend/public/app → /backend/public/app in container
-
-# ── Stage 2: PHP + nginx ─────────────────────────────────────────────
-FROM php:8.4-fpm-bookworm
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
