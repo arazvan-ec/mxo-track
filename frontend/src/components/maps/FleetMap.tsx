@@ -2,8 +2,8 @@ import { useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
 import { MapCanvas, type MapCanvasHandle } from './MapCanvas';
 import { VehicleMarker } from './shared/VehicleMarker';
 import { StopMarker } from './shared/StopMarker';
-import { RouteSegments } from './shared/RouteSegments';
-import { VehicleTrailLayer } from './shared/VehicleTrailLayer';
+import { RouteSegmentsLayer } from './layers/RouteSegmentsLayer';
+import { VehicleTrailLayer } from './layers/VehicleTrailLayer';
 import { VehiclePopup } from '@/components/fleet/VehiclePopup';
 import { getVehicleColor } from './shared/colors';
 import type { FleetVehicle, FleetRoute, FleetStop } from '@/api/types';
@@ -66,7 +66,7 @@ export const FleetMap = forwardRef<FleetMapHandle, Props>(function FleetMap(
       )}
 
       {activeStops && (
-        <RouteSegments routeId={activeStops.routeId} stops={activeStops.stops} />
+        <RouteSegmentsLayer routeId={activeStops.routeId} stops={activeStops.stops} />
       )}
 
       {activeStops?.stops.map((stop) =>

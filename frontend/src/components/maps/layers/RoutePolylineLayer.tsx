@@ -1,5 +1,5 @@
 import { Source, Layer } from 'react-map-gl/maplibre';
-import { polylineToGeoJSON } from './polyline';
+import { polylineToGeoJSON } from '../shared/polyline';
 
 interface Props {
   id: string;
@@ -7,7 +7,7 @@ interface Props {
   color: string;
 }
 
-export function RouteLayer({ id, polyline, color }: Props) {
+export function RoutePolylineLayer({ id, polyline, color }: Props) {
   const geojson = polylineToGeoJSON(polyline);
 
   return (

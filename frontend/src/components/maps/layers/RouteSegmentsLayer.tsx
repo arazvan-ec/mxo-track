@@ -1,5 +1,5 @@
 import { Source, Layer } from 'react-map-gl/maplibre';
-import { STOP_STATUS_COLORS } from './colors';
+import { STOP_STATUS_COLORS } from '../shared/colors';
 import type { FleetStop } from '@/api/types';
 
 interface Props {
@@ -11,7 +11,7 @@ interface Props {
  * Renders stop-to-stop line segments colored by the destination stop's status.
  * This matches the Twig fleet map behavior (no encoded polylines, straight lines).
  */
-export function RouteSegments({ routeId, stops }: Props) {
+export function RouteSegmentsLayer({ routeId, stops }: Props) {
   const validStops = stops.filter((s) => s.lat && s.lng);
   if (validStops.length < 2) return null;
 
