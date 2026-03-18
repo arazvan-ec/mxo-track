@@ -7,15 +7,10 @@ namespace App\Controller\Customer;
 use App\Entity\Customer;
 use App\Entity\Route;
 use App\Entity\RouteStop;
-use App\Entity\VehicleLastPosition;
 use App\Enum\RouteStatus;
 use App\Enum\RouteStopStatus;
-use App\Repository\RouteRepository;
-use App\View\MapViewOptions;
-use App\View\RouteViewService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route as SymfonyRoute;
@@ -29,9 +24,6 @@ class CustomerRouteController extends AbstractController
 
     public function __construct(
         private readonly EntityManagerInterface $em,
-        private readonly RouteRepository $routeRepository,
-        private readonly RouteViewService $routeViewService,
-        #[Autowire('%env(MERCURE_PUBLIC_URL)%')] private readonly string $mercurePublicUrl,
     ) {}
 
     #[SymfonyRoute('', name: 'customer_routes_index', methods: ['GET'])]
@@ -117,73 +109,6 @@ class CustomerRouteController extends AbstractController
     #[SymfonyRoute('/{publicId}', name: 'customer_routes_show', methods: ['GET'])]
     public function show(string $publicId): Response
     {
-        $customer = $this->getUser()->getCustomer();
-
-        if (!$customer instanceof Customer) {
-            throw $this->createAccessDeniedException('No tiene un cliente asociado.');
-        }
-
-        $route = $this->routeRepository->findOneByPublicId($publicId);
-
-        if (!$route instanceof Route) {
-            throw $this->createNotFoundException('Ruta no encontrada.');
-        }
-
-        // Verify this route belongs to the customer
-        if ($route->getCustomer() === null || $route->getCustomer()->getId() !== $customer->getId()) {
-            throw $this->createAccessDeniedException('No tiene acceso a esta ruta.');
-        }
-
-        // Load stops from entity (always populated, even without snapshot)
-        $stops = $this->em->createQueryBuilder()
-            ->select('rs')
-            ->from(RouteStop::class, 'rs')
-            ->where('rs.route = :route')
-            ->setParameter('route', $route)
-            ->orderBy('rs.sequence', 'ASC')
-            ->getQuery()
-            ->getResult();
-
-        // Build vehicle tracking data
-        $vehiclePublicId = null;
-        $vehiclePosition = null;
-        $vehicle = $route->getVehicle();
-
-        if ($vehicle !== null) {
-            $vehiclePublicId = $vehicle->getPublicIdString();
-            $lastPosition = $this->em->getRepository(VehicleLastPosition::class)->findOneBy([
-                'vehicle' => $vehicle,
-            ]);
-
-            if ($lastPosition instanceof VehicleLastPosition) {
-                $vehiclePosition = [
-                    'lat' => $lastPosition->getLat(),
-                    'lng' => $lastPosition->getLng(),
-                    'speed' => $lastPosition->getSpeed(),
-                    'course' => $lastPosition->getCourse(),
-                ];
-            }
-        }
-
-        // Build map view data via RouteViewService
-        $mapOptions = new MapViewOptions(
-            showVehicleTracking: $vehicle !== null,
-            showStopStatus: true,
-            vehiclePublicId: $vehiclePublicId,
-            vehiclePosition: $vehiclePosition,
-        );
-
-        $mapView = $this->routeViewService->buildSingleRouteView($route, 'ROLE_CUSTOMER', $mapOptions);
-        $mapView = $mapView->withMercureUrl($this->mercurePublicUrl);
-
-        // Extract stops from MapViewData for the reactive stop list component
-        $mapArray = $mapView->toArray();
-        $viewStops = $mapArray['routes'][0]['stops'] ?? [];
-
-        return $this->render('customer/route/show.html.twig', [
-            'route' => $route,
-            'viewStops' => $viewStops,
-            'mapViewJson' => $mapView->toJson(),
-        ]);
+        return $this->redirect('/app/customer/routes/' . $publicId);
     }
 }

@@ -16,12 +16,9 @@ use App\Form\RouteType;
 use App\Repository\RouteRepository;
 use App\Repository\RouteStopRepository;
 use App\Service\RouteOptimizationService;
-use App\View\MapViewOptions;
-use App\View\RouteViewService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Psr\EventDispatcher\EventDispatcherInterface;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -40,8 +37,6 @@ class RouteAdminController extends AbstractController
         private readonly RouteStopRepository $routeStopRepository,
         private readonly RouteOptimizationService $optimizationService,
         private readonly RoutePlanningService $routePlanningService,
-        private readonly RouteViewService $routeViewService,
-        #[Autowire('%env(MERCURE_PUBLIC_URL)%')] private readonly string $mercurePublicUrl,
         private readonly EventDispatcherInterface $dispatcher,
     ) {}
 
@@ -178,70 +173,7 @@ class RouteAdminController extends AbstractController
     #[SymfonyRoute('/{publicId}/show', name: 'admin_routes_show', methods: ['GET'])]
     public function show(string $publicId): Response
     {
-        $route = $this->routeRepository->findOneByPublicId($publicId);
-
-        if (!$route instanceof Route) {
-            throw $this->createNotFoundException('Ruta no encontrada.');
-        }
-
-        // Build vehicle tracking data
-        $vehiclePublicId = null;
-        $vehiclePosition = null;
-        $vehicle = $route->getVehicle();
-
-        if ($vehicle !== null) {
-            $vehiclePublicId = $vehicle->getPublicIdString();
-            $lastPosition = $this->em->getRepository(\App\Entity\VehicleLastPosition::class)->findOneBy([
-                'vehicle' => $vehicle,
-            ]);
-
-            if ($lastPosition instanceof \App\Entity\VehicleLastPosition) {
-                $vehiclePosition = [
-                    'lat' => $lastPosition->getLat(),
-                    'lng' => $lastPosition->getLng(),
-                    'speed' => $lastPosition->getSpeed(),
-                    'course' => $lastPosition->getCourse(),
-                ];
-            }
-        }
-
-        $mapOptions = new MapViewOptions(
-            showOptimizationMetrics: true,
-            showTimingBreakdown: true,
-            showVehicleTracking: $vehicle !== null,
-            showStopStatus: true,
-            vehiclePublicId: $vehiclePublicId,
-            vehiclePosition: $vehiclePosition,
-        );
-
-        $mapView = $this->routeViewService->buildSingleRouteView($route, 'ROLE_ADMIN', $mapOptions);
-        $mapView = $mapView->withMercureUrl($this->mercurePublicUrl);
-
-        $mapArray = $mapView->toArray();
-        $viewStops = $mapArray['routes'][0]['stops'] ?? [];
-
-        // Load stop count for progress display
-        $stopCounts = $this->em->createQueryBuilder()
-            ->select('COUNT(s.id) as total, SUM(CASE WHEN s.status = :delivered THEN 1 ELSE 0 END) as delivered')
-            ->from(RouteStop::class, 's')
-            ->where('s.route = :route')
-            ->setParameter('route', $route)
-            ->setParameter('delivered', RouteStopStatus::DELIVERED)
-            ->getQuery()
-            ->getSingleResult();
-
-        return $this->render('admin/route/show.html.twig', [
-            'route' => $route,
-            'viewStops' => $viewStops,
-            'mapViewJson' => $mapView->toJson(),
-            'metrics' => $mapArray['routes'][0]['metrics'] ?? null,
-            'timing' => $mapArray['routes'][0]['timing'] ?? null,
-            'stopCounts' => [
-                'total' => (int) ($stopCounts['total'] ?? 0),
-                'delivered' => (int) ($stopCounts['delivered'] ?? 0),
-            ],
-            'mercurePublicUrl' => $this->mercurePublicUrl,
-        ]);
+        return $this->redirect('/app/admin/routes/' . $publicId);
     }
 
     #[SymfonyRoute('/new', name: 'admin_routes_new', methods: ['GET', 'POST'])]
