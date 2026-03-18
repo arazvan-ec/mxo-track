@@ -1,5 +1,5 @@
 import { Source, Layer, useMap } from 'react-map-gl/maplibre';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { ROUTE_COLORS } from '../shared/colors';
 import type { PlannerShipment, PlannerCluster } from '@/api/types';
 
@@ -100,7 +100,7 @@ export function ShipmentClusterLayer({
   );
 
   // Register click via map event
-  useMemo(() => {
+  useEffect(() => {
     const mapInstance = map?.getMap();
     if (!mapInstance) return;
 

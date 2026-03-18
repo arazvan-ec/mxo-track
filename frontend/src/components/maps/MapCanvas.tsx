@@ -1,5 +1,7 @@
 import {
   useRef,
+  useState,
+  useCallback,
   useImperativeHandle,
   forwardRef,
   type ReactNode,
@@ -9,7 +11,7 @@ import maplibregl from 'maplibre-gl';
 import type { MapLayerMouseEvent } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { Protocol } from 'pmtiles';
-import { createDarkStyle } from './styles/dark-style';
+import { createDarkStyle, FALLBACK_RASTER_STYLE } from './styles/dark-style';
 
 // Register PMTiles protocol once
 let protocolRegistered = false;
@@ -55,6 +57,23 @@ export const MapCanvas = forwardRef<MapCanvasHandle, Props>(function MapCanvas(
   ref,
 ) {
   const mapRef = useRef<MapRef>(null);
+  const [useFallback, setUseFallback] = useState(false);
+  const tileErrorCount = useRef(0);
+
+  const onMapLoad = useCallback(() => {
+    const mapInstance = mapRef.current?.getMap();
+    if (!mapInstance) return;
+
+    mapInstance.on('error', (e: { sourceId?: string }) => {
+      if (e.sourceId === 'protomaps') {
+        tileErrorCount.current++;
+        if (tileErrorCount.current >= 3 && !useFallback) {
+          console.warn('[MapCanvas] Vector tiles unavailable, falling back to raster OSM');
+          setUseFallback(true);
+        }
+      }
+    });
+  }, [useFallback]);
 
   useImperativeHandle(ref, () => ({
     flyTo(lng, lat, zoom = 15) {
@@ -75,7 +94,8 @@ export const MapCanvas = forwardRef<MapCanvasHandle, Props>(function MapCanvas(
     <Map
       ref={mapRef}
       mapLib={maplibregl}
-      mapStyle={getDarkStyle()}
+      mapStyle={useFallback ? FALLBACK_RASTER_STYLE : getDarkStyle()}
+      onLoad={onMapLoad}
       initialViewState={{
         latitude: initialCenter.lat,
         longitude: initialCenter.lng,
