@@ -49,4 +49,36 @@
   1. Cuando un plan incluye código con imports de terceros, verificar los tipos reales del paquete ANTES de ejecutar
   2. Para layers de visualización pura (heatmap, clustering) la verificación visual es necesaria además del build — considerar agregar screenshots en verificación
 - **Business context tags:** fleet, map-visualization
-- **Decision log entry needed?** yes — Protomaps CDN como proveedor de vector tiles
+- **Decision log entry needed?** yes — Protomaps CDN como proveedor de vector tiles (DONE)
+
+### Phase: Design Retrospective (Skill 12 Step 5)
+
+**Decisiones de diseño revisadas:**
+
+1. **Protomaps CDN como tile provider** — Decisión sólida. Sin API key, flavor system extensible, path claro a self-hosted. No se siente forzado ni over-engineered.
+
+2. **DOM markers para Vehicle/Stop, WebGL para Shipment/Exception** — Pragmática y correcta. DOM para <50 elementos con SVG custom, WebGL para 500+ puntos. La separación escala bien.
+
+3. **Click handling en ShipmentClusterLayer via `useMemo` + map events** — Funciona pero es un patrón frágil: el cleanup del event listener depende de que `useMemo` se re-ejecute. Un `useEffect` sería más idiomático para side-effects. **Candidato a mejora futura.**
+
+4. **`FALLBACK_RASTER_STYLE` definido pero no conectado** — El fallback a raster OSM está exportado pero MapCanvas no lo usa automáticamente si vector tiles fallan. El fallback requiere detección de error en la carga de tiles, lo cual no es trivial con MapLibre. **Deuda técnica documentada — prioridad baja.**
+
+**¿Algún patrón se siente over-engineered?** No. Los componentes son directos, sin abstracciones innecesarias.
+
+**¿Documentación a actualizar?**
+- `docs/knowledge/` no necesita cambios — los módulos existentes no cubren frontend map layers
+- El spec y plan ya están actualizados con la decisión de Protomaps CDN
+
+### Phase: Verification Evidence (Skill 9)
+
+| Claim | Command | Exit Code | Evidence |
+|-------|---------|-----------|----------|
+| TypeScript 0 errores | `npx tsc --noEmit` | 0 | Sin output |
+| Build producción | `npm run build` | 0 | 172 modules, 5.54s |
+| dark-style.ts usa API correcta | grep | — | `import { layers, DARK } from '@protomaps/basemaps'` |
+| MapCanvas usa dark style | grep | — | `mapStyle={getDarkStyle()}` |
+| ShipmentClusterLayer conectado | grep | — | import + `<ShipmentClusterLayer>` en RoutePlannerPage |
+| ExceptionHeatmapLayer conectado | grep | — | import + `<ExceptionHeatmapLayer>` en ExceptionMapPage |
+| Toggle funcional | grep | — | `useState<'heatmap' \| 'points'>` |
+| Sin MAP_STYLE residual | grep | — | 0 matches en `src/` |
+| Sin imports muertos en pages | grep | — | 0 matches de layers viejos |
