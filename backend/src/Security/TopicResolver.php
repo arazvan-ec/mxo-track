@@ -5,9 +5,14 @@ declare(strict_types=1);
 namespace App\Security;
 
 use App\Entity\User;
+use App\Repository\RouteRepository;
 
 class TopicResolver
 {
+    public function __construct(
+        private readonly RouteRepository $routeRepo,
+    ) {}
+
     /**
      * @param list<string> $allowedVehiclePublicIds
      *
@@ -22,24 +27,34 @@ class TopicResolver
         }
 
         if (in_array('ROLE_CUSTOMER', $roles, true) && $user->getCustomer() !== null) {
-            $customerPublicId = $user->getCustomer()?->getPublicIdString();
-            $vehicleTopics = array_map(
-                static fn (string $publicId): string => sprintf('/vehicles/%s/position', $publicId),
-                array_values(array_unique($allowedVehiclePublicIds))
-            );
-
-            return [
-                ...$vehicleTopics,
-                sprintf('/customers/%s/routes', $customerPublicId),
-                sprintf('/customers/%s/shipments', $customerPublicId),
-                sprintf('/users/%s/notifications', $user->getId()),
+            $topics = [
+                sprintf('/map/users/%s/notifications', $user->getId()),
             ];
+
+            foreach (array_values(array_unique($allowedVehiclePublicIds)) as $publicId) {
+                $topics[] = sprintf('/map/vehicles/%s/position', $publicId);
+            }
+
+            $customerRoutePublicIds = $this->routeRepo->findActiveRoutePublicIdsForCustomer($user->getCustomer());
+            foreach ($customerRoutePublicIds as $routePublicId) {
+                $topics[] = sprintf('/map/routes/%s/updates', $routePublicId);
+            }
+
+            return $topics;
         }
 
         if (in_array('ROLE_DRIVER', $roles, true)) {
-            $topics = [sprintf('/users/%s/notifications', $user->getId())];
+            $topics = [
+                sprintf('/map/users/%s/notifications', $user->getId()),
+            ];
+
             foreach (array_unique($allowedVehiclePublicIds) as $publicId) {
-                $topics[] = sprintf('/vehicles/%s/position', $publicId);
+                $topics[] = sprintf('/map/vehicles/%s/position', $publicId);
+            }
+
+            $assignedRoutePublicIds = $this->routeRepo->findActiveRoutePublicIdsForDriver($user);
+            foreach ($assignedRoutePublicIds as $routePublicId) {
+                $topics[] = sprintf('/map/routes/%s/updates', $routePublicId);
             }
 
             return $topics;
