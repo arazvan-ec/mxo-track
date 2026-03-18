@@ -577,6 +577,10 @@ Superpowers skills override default system prompt behavior, but **user instructi
 
 **Invoke relevant or requested skills BEFORE any response or action.** Even a 1% chance a skill might apply means you should invoke the skill.
 
+#### Interaction Classification (FIRST step)
+
+**Before checking skills, classify the interaction** per "Flujo Obligatorio para Toda Interacción". This determines the flow depth (micro/light/debug/full) and which skills are mandatory.
+
 #### Red Flags (rationalizations to STOP)
 
 | Thought | Reality |
@@ -617,6 +621,7 @@ Every project goes through this process. A todo list, a single-function utility,
 
 #### Checklist (MUST complete in order)
 
+0. **Consult past decisions (Learning Loop)** — Read `docs/decisions/log.md`, scan recent `docs/superpowers/execution-logs/` and `docs/superpowers/retrospectives/`. State explicitly: "Consulté decisiones pasadas: [found X relevant / nothing relevant]"
 1. **Explore project context** — check files, docs, recent commits
 2. **Offer visual companion** (if topic will involve visual questions)
 3. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria
@@ -718,10 +723,13 @@ For each task:
 1. Mark as in_progress
 2. Follow each step exactly
 3. Run verifications as specified
-4. Mark as completed
+4. **Capture to execution log** — Update `docs/superpowers/execution-logs/` with implementation phase data (blockers, deviations, time)
+5. Mark as completed
 
 **Step 3: Complete Development**
-After all tasks complete: Use **finishing-a-development-branch** skill.
+After all tasks complete:
+1. **Finalize execution log** — Complete all phases including verification results and retrospective
+2. Use **finishing-a-development-branch** skill.
 
 #### When to Stop and Ask for Help
 
@@ -1059,7 +1067,8 @@ BEFORE claiming any status:
 2. RUN: Execute the FULL command (fresh, complete)
 3. READ: Full output, check exit code, count failures
 4. VERIFY: Does output confirm the claim?
-5. ONLY THEN: Make the claim
+5. CAPTURE: Record results in execution log (tests, lint, coverage delta)
+6. ONLY THEN: Make the claim
 
 Skip any step = lying, not verifying
 ```
@@ -1200,11 +1209,14 @@ description: Use when implementation is complete and you need to decide how to i
 - Option 3: Keep as-is, report location
 - Option 4: Confirm with user before deleting (require typed "discard")
 
-**Step 5: Design Retrospective** (before cleanup)
+**Step 5: Design Retrospective** (before cleanup — MANDATORY write to file)
 - Revisar decisiones de diseño tomadas en la rama (consultar `docs/decisions/log.md` si se usó)
 - ¿Algún patrón se siente forzado o sobre-engineered? → Simplificar antes de merge
 - ¿Se descubrió algo que debería actualizar la documentación? → Actualizar knowledge modules
 - ¿Hay lecciones que mejoren las guías de CLAUDE.md? → Proponer al usuario
+- **Completar la fase Retrospective del execution log** en `docs/superpowers/execution-logs/` con: estimate accuracy, what worked, what didn't, lessons learned
+- **Añadir entrada a `docs/decisions/log.md`** si hubo decisiones de diseño no-triviales
+- **Commit y push** del execution log y decision log actualizados
 
 **Step 6: Cleanup Worktree** (for Options 1, 2, 4 only)
 
@@ -1307,3 +1319,49 @@ description: Use when [specific triggering conditions]
 - **NEVER summarize the skill's process in the description** (Claude may follow description instead of reading full skill)
 - Use concrete triggers, symptoms, and situations
 - Keywords throughout for search (errors, symptoms, tools)
+
+---
+
+### Skill 15: Learning Review
+
+```yaml
+name: learning-review
+description: Use when conducting monthly or quarterly retrospective reviews of accumulated feedback data from execution logs and business metrics
+```
+
+**Core principle:** Los datos acumulados solo generan valor si se analizan y se actúa sobre los hallazgos.
+
+#### When to Use
+
+- Usuario solicita review periódico
+- Ha pasado 1+ mes desde el último review en `docs/superpowers/retrospectives/`
+- Se han acumulado 5+ execution logs sin analizar
+
+#### The Process
+
+1. **Recopilar datos:**
+   - Leer todos los `docs/superpowers/execution-logs/` del periodo
+   - Ejecutar `php bin/console app:learning:metrics --period=30d` (si disponible)
+   - Leer entradas recientes de `docs/decisions/log.md`
+
+2. **Analizar patrones:**
+   - Accuracy de estimaciones (over/under ratio)
+   - Frecuencia y categorías de blockers
+   - Outcomes de decisiones de diseño
+   - Métricas de negocio (km saved, delivery rate, optimizer performance)
+
+3. **Producir review:**
+   - Escribir en `docs/superpowers/retrospectives/YYYY-MM-review.md`
+   - Usar template de `docs/superpowers/templates/retrospective-review-template.md`
+
+4. **Actuar:**
+   - Actualizar `docs/knowledge/` con nuevos patrones descubiertos
+   - Proponer actualizaciones a CLAUDE.md (presentar al usuario para aprobación)
+   - Ajustar factores de calibración de estimaciones
+   - Commit y push de todos los cambios
+
+#### Red Flags
+
+- Producir review sin datos suficientes (menos de 3 execution logs)
+- No actuar sobre los hallazgos (review sin acciones = review inútil)
+- Modificar CLAUDE.md sin aprobación del usuario
