@@ -42,17 +42,7 @@ class RoutePlannerController extends AbstractController
     #[SymfonyRoute('', name: 'admin_route_planner_index', methods: ['GET'])]
     public function index(): Response
     {
-        $customers = $this->em->createQueryBuilder()
-            ->select('c')
-            ->from(Customer::class, 'c')
-            ->where('c.isActive = true')
-            ->orderBy('c.name', 'ASC')
-            ->getQuery()
-            ->getResult();
-
-        return $this->render('admin/route_planner/index.html.twig', [
-            'customers' => $customers,
-        ]);
+        return $this->redirect('/app/admin/route-planner');
     }
 
     /**

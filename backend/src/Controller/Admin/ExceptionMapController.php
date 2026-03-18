@@ -27,23 +27,7 @@ class ExceptionMapController extends AbstractController
     #[Route('', name: 'admin_reports_exception_map', methods: ['GET'])]
     public function index(): Response
     {
-        $exceptionCodes = array_map(
-            fn(ExceptionCode $code) => ['value' => $code->value, 'label' => $code->value],
-            ExceptionCode::cases(),
-        );
-
-        $customers = $this->em->createQueryBuilder()
-            ->select('c.id', 'c.name')
-            ->from(Customer::class, 'c')
-            ->where('c.isActive = true')
-            ->orderBy('c.name', 'ASC')
-            ->getQuery()
-            ->getResult();
-
-        return $this->render('admin/reports/exception_map.html.twig', [
-            'exception_codes' => $exceptionCodes,
-            'customers' => $customers,
-        ]);
+        return $this->redirect('/app/admin/exception-map');
     }
 
     #[Route('/data', name: 'admin_reports_exception_map_data', methods: ['GET'])]
