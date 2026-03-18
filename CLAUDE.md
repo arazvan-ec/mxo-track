@@ -351,6 +351,74 @@ fix: correct ETA calculation when stop is skipped
 | "Saltemos brainstorming, la solución es obvia" | Las soluciones "obvias" que saltan brainstorming son las que pierden edge cases. |
 | "Nadie va a leer la retrospectiva" | Las futuras instancias de Claude sí la leerán. Ese es el learning loop. |
 
+## Feedback Capture (mandatory)
+
+**Toda interacción no-trivial produce datos de feedback estructurados. Esto es lo que cierra el learning loop.**
+
+### Execution Logs
+
+Después de CADA code change o bug fix, crear/actualizar:
+`docs/superpowers/execution-logs/YYYY-MM-DD-<feature-name>.md`
+
+Template en: `docs/superpowers/templates/execution-log-template.md`
+
+**Datos a capturar por fase:**
+
+| Fase | Datos obligatorios |
+|------|-------------------|
+| **Brainstorming** | Alternativas evaluadas, approach elegido + razón, estimación complejidad (S/M/L/XL), confianza |
+| **Planning** | Task count, archivos afectados, estimación tiempo, risk assessment |
+| **Implementation** | Tiempo real, blockers, desviaciones del plan, episodios debugging |
+| **Verification** | Resultados tests, lint, coverage delta |
+| **Retrospective** | Accuracy estimaciones, qué funcionó, qué no, lecciones, tags de contexto |
+
+### Cuándo capturar
+
+| Tipo interacción | Execution Log | Retrospectiva | Decision Log |
+|-----------------|---------------|---------------|--------------|
+| Informational | No | No | Solo si se encuentra gap |
+| Documentation | No | No | Si decisión no-trivial |
+| Bug fix | Sí | Sí | Si root cause revela patrón |
+| Code change | Sí | Sí | Si decisión de diseño |
+
+## Learning Loop (mandatory)
+
+**Doble loop de aprendizaje: consulta inmediata por interacción + análisis periódico para actualizar guías permanentes.**
+
+### Loop inmediato (antes de cada brainstorming)
+
+Antes de proponer approaches, Claude **DEBE**:
+
+1. **Leer** `docs/decisions/log.md` — buscar keywords relacionados con la tarea actual
+2. **Escanear** `docs/superpowers/execution-logs/` recientes — buscar lecciones sobre temas similares
+3. **Escanear** `docs/superpowers/retrospectives/` — reviews recientes
+4. **Para features de route optimization:** ejecutar `php bin/console app:learning:metrics --period=30d`
+5. **Declarar** explícitamente qué se encontró: "Consulté decisiones pasadas: [encontré X relevante / nada relevante]"
+
+### Loop periódico (mensual)
+
+Cuando el usuario solicite un review periódico (o mensualmente si se acuerda):
+
+1. **Recopilar datos:**
+   - Leer todos los `docs/superpowers/execution-logs/YYYY-MM-*.md` del periodo
+   - Ejecutar `php bin/console app:learning:metrics --period=30d`
+   - Leer entradas de `docs/decisions/log.md` del periodo
+
+2. **Analizar patrones:**
+   - Accuracy de estimaciones: calcular ratio over/under en todos los execution logs
+   - Frecuencia de blockers: categorizar y contar
+   - Outcomes de decisiones: conectar decisiones con datos de RoutePerformanceMetric
+
+3. **Producir review:**
+   - Escribir en `docs/superpowers/retrospectives/YYYY-MM-review.md`
+   - Usar template de `docs/superpowers/templates/retrospective-review-template.md`
+
+4. **Actuar sobre hallazgos:**
+   - Actualizar `docs/knowledge/` con nuevos patrones
+   - Proponer actualizaciones a CLAUDE.md (presentar al usuario para aprobación)
+   - Ajustar factores de calibración de estimaciones
+   - Actualizar recomendaciones de estrategias de optimización
+
 ## Critical Patterns
 
 ### Entity Identity (mandatory)
