@@ -296,6 +296,61 @@ fix: correct ETA calculation when stop is skipped
 - Proponer soluciones intermedias que no escalan "para ir paso a paso" cuando el paso completo está claro
 - Optimizar para minimizar diff en lugar de maximizar calidad arquitectónica
 
+## Flujo Obligatorio para Toda Interacción (mandatory)
+
+**Toda interacción sigue un flujo estructurado. Sin excepciones. La profundidad escala con el tipo de interacción, pero la estructura siempre está presente.**
+
+### Clasificación de interacción (PRIMER paso antes de cualquier respuesta)
+
+| Tipo | Señal | Flujo |
+|------|-------|-------|
+| **Informational** | "qué hace X?", "explica Y", "dónde está Z?" | Micro-flow |
+| **Documentation** | Editar docs, knowledge modules, specs | Light-flow |
+| **Bug fix** | Error, test failure, comportamiento inesperado | Debug-flow |
+| **Code change** | Feature nueva, refactor, enhancement | Full-flow |
+
+### Micro-flow (preguntas informativas)
+
+1. **Consultar** — Buscar en `docs/decisions/log.md` y `docs/knowledge/` si ya existe respuesta
+2. **Responder** — Respuesta estructurada con referencias a archivos
+3. **Capturar** — Si la pregunta revela un gap de documentación, anotarlo: "Gap de documentación identificado: [topic]"
+
+### Light-flow (cambios de documentación)
+
+1. **Consultar** — Verificar docs existentes para overlap/conflictos
+2. **Proponer** — Declarar qué cambiará y por qué (1-2 frases)
+3. **Ejecutar** — Hacer cambios
+4. **Verificar** — Comprobar consistencia con docs relacionados
+
+### Debug-flow (bug fixes)
+
+1. **Consultar** — Buscar en `docs/superpowers/retrospectives/` bugs similares pasados
+2. **Systematic Debugging** — Invocar Skill 8 (obligatorio, sin atajos)
+3. **TDD** — Invocar Skill 7 (test que falla antes del fix)
+4. **Capturar** — Escribir execution log en `docs/superpowers/execution-logs/`
+5. **Retrospectiva** — Añadir entrada al log de retrospectiva
+
+### Full-flow (cambios de código)
+
+1. **Consultar** — Leer decisiones pasadas, retrospectivas, métricas de negocio (ver Learning Loop)
+2. **Brainstorm** — Invocar Skill 2 (obligatorio, sin escape "es simple")
+3. **Plan** — Invocar Skill 3 (escribir plan en `docs/superpowers/plans/`)
+4. **Ejecutar** — Invocar Skill 4 o 5 (TDD obligatorio via Skill 7)
+5. **Verificar** — Invocar Skill 9 (evidencia antes de claims)
+6. **Capturar** — Escribir execution log
+7. **Retrospectiva** — Escribir entrada de retrospectiva
+8. **Finalizar** — Invocar Skill 12
+
+### Anti-racionalizaciones
+
+| Pensamiento | Realidad |
+|-------------|----------|
+| "Es un cambio de una línea" | Los cambios de una línea rompen producción. Full-flow. |
+| "Ya sé la respuesta" | La consulta revela lo que no sabes que no sabes. |
+| "El micro-flow es overkill para esta pregunta" | 10 segundos de consulta nunca son overkill. |
+| "Saltemos brainstorming, la solución es obvia" | Las soluciones "obvias" que saltan brainstorming son las que pierden edge cases. |
+| "Nadie va a leer la retrospectiva" | Las futuras instancias de Claude sí la leerán. Ese es el learning loop. |
+
 ## Critical Patterns
 
 ### Entity Identity (mandatory)
