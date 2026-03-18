@@ -13,7 +13,11 @@ export const router = createBrowserRouter([
     children: [
       // Fleet map is full-screen with its own sidebar — no AppShell
       { path: 'admin/fleet-map', element: <FleetMapPage /> },
+      // Exception heatmap — full-screen with sidebar
+      { path: 'admin/exception-map', element: <ExceptionMapPage /> },
       { path: 'admin/routes/:publicId', element: <RouteDetailPage /> },
+      // Route analysis — full-screen with sidebar
+      { path: 'admin/routes/:publicId/analysis', element: <RouteAnalysisPage /> },
       // Customer route detail — full-screen with sidebar + map
       { path: 'customer/routes/:publicId', element: <CustomerRouteDetailPage /> },
       // Driver route — full-screen with sidebar + map, delivery execution focus
