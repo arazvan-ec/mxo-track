@@ -275,6 +275,150 @@ fix: correct ETA calculation when stop is skipped
 - Si el tool destino ya maneja el caso (ej: `Write` crea directorios padre) → no hagas pasos previos innecesarios
 - Preferir la ruta más corta: menos herramientas, menos comandos, mismo resultado
 
+## Principio de Escalabilidad en Decisiones (mandatory)
+
+**La mejor solución es siempre la que más escala, independientemente de la cantidad de cambios que requiera.**
+
+### Reglas
+
+1. **Escala sobre comodidad** — Al evaluar approaches, elegir el que mejor escale a futuro, no el que requiera menos cambios hoy. Una solución que toca 20 archivos pero escala correctamente es superior a un parche de 3 líneas que no escala.
+
+2. **Cambios grandes ≠ riesgo alto** — La cantidad de archivos o líneas modificadas no determina el riesgo. El riesgo lo determina la ausencia de plan. Con un buen plan (brainstorming → spec → plan → TDD → review), cambios masivos son seguros y controlados.
+
+3. **El flujo es la red de seguridad** — Los principios documentados en este archivo (SOLID, DDD, Design Patterns, TDD, Atomic Commits, Verification) existen para habilitar cambios ambiciosos. Usarlos todos en la toma de decisiones, no solo en la implementación.
+
+4. **Nunca descartar la mejor solución por volumen de trabajo** — Si la solución correcta requiere refactorizar un subsistema completo, esa es la solución correcta. El plan se adapta al alcance, no el alcance al miedo de cambiar.
+
+### Anti-patterns
+
+- Elegir un parche rápido cuando existe una solución estructural mejor "porque toca menos código"
+- Rechazar un refactor necesario argumentando "es mucho cambio"
+- Proponer soluciones intermedias que no escalan "para ir paso a paso" cuando el paso completo está claro
+- Optimizar para minimizar diff en lugar de maximizar calidad arquitectónica
+
+## Flujo Obligatorio para Toda Interacción (mandatory)
+
+**Toda interacción sigue un flujo estructurado. Sin excepciones. La profundidad escala con el tipo de interacción, pero la estructura siempre está presente.**
+
+### Clasificación de interacción (PRIMER paso antes de cualquier respuesta)
+
+| Tipo | Señal | Flujo |
+|------|-------|-------|
+| **Informational** | "qué hace X?", "explica Y", "dónde está Z?" | Micro-flow |
+| **Documentation** | Editar docs, knowledge modules, specs | Light-flow |
+| **Bug fix** | Error, test failure, comportamiento inesperado | Debug-flow |
+| **Code change** | Feature nueva, refactor, enhancement | Full-flow |
+
+### Micro-flow (preguntas informativas)
+
+1. **Consultar** — Buscar en `docs/decisions/log.md` y `docs/knowledge/` si ya existe respuesta
+2. **Responder** — Respuesta estructurada con referencias a archivos
+3. **Capturar** — Si la pregunta revela un gap de documentación, anotarlo: "Gap de documentación identificado: [topic]"
+
+### Light-flow (cambios de documentación)
+
+1. **Consultar** — Verificar docs existentes para overlap/conflictos
+2. **Proponer** — Declarar qué cambiará y por qué (1-2 frases)
+3. **Ejecutar** — Hacer cambios
+4. **Verificar** — Comprobar consistencia con docs relacionados
+
+### Debug-flow (bug fixes)
+
+1. **Consultar** — Buscar en `docs/superpowers/retrospectives/` bugs similares pasados
+2. **Systematic Debugging** — Invocar Skill 8 (obligatorio, sin atajos)
+3. **TDD** — Invocar Skill 7 (test que falla antes del fix)
+4. **Capturar** — Escribir execution log en `docs/superpowers/execution-logs/`
+5. **Retrospectiva** — Añadir entrada al log de retrospectiva
+
+### Full-flow (cambios de código)
+
+1. **Consultar** — Leer decisiones pasadas, retrospectivas, métricas de negocio (ver Learning Loop)
+2. **Brainstorm** — Invocar Skill 2 (obligatorio, sin escape "es simple")
+3. **Plan** — Invocar Skill 3 (escribir plan en `docs/superpowers/plans/`)
+4. **Ejecutar** — Invocar Skill 4 o 5 (TDD obligatorio via Skill 7)
+5. **Verificar** — Invocar Skill 9 (evidencia antes de claims)
+6. **Capturar** — Escribir execution log
+7. **Retrospectiva** — Escribir entrada de retrospectiva
+8. **Finalizar** — Invocar Skill 12
+
+### Anti-racionalizaciones
+
+| Pensamiento | Realidad |
+|-------------|----------|
+| "Es un cambio de una línea" | Los cambios de una línea rompen producción. Full-flow. |
+| "Ya sé la respuesta" | La consulta revela lo que no sabes que no sabes. |
+| "El micro-flow es overkill para esta pregunta" | 10 segundos de consulta nunca son overkill. |
+| "Saltemos brainstorming, la solución es obvia" | Las soluciones "obvias" que saltan brainstorming son las que pierden edge cases. |
+| "Nadie va a leer la retrospectiva" | Las futuras instancias de Claude sí la leerán. Ese es el learning loop. |
+
+## Feedback Capture (mandatory)
+
+**Toda interacción no-trivial produce datos de feedback estructurados. Esto es lo que cierra el learning loop.**
+
+### Execution Logs
+
+Después de CADA code change o bug fix, crear/actualizar:
+`docs/superpowers/execution-logs/YYYY-MM-DD-<feature-name>.md`
+
+Template en: `docs/superpowers/templates/execution-log-template.md`
+
+**Datos a capturar por fase:**
+
+| Fase | Datos obligatorios |
+|------|-------------------|
+| **Brainstorming** | Alternativas evaluadas, approach elegido + razón, estimación complejidad (S/M/L/XL), confianza |
+| **Planning** | Task count, archivos afectados, estimación tiempo, risk assessment |
+| **Implementation** | Tiempo real, blockers, desviaciones del plan, episodios debugging |
+| **Verification** | Resultados tests, lint, coverage delta |
+| **Retrospective** | Accuracy estimaciones, qué funcionó, qué no, lecciones, tags de contexto |
+
+### Cuándo capturar
+
+| Tipo interacción | Execution Log | Retrospectiva | Decision Log |
+|-----------------|---------------|---------------|--------------|
+| Informational | No | No | Solo si se encuentra gap |
+| Documentation | No | No | Si decisión no-trivial |
+| Bug fix | Sí | Sí | Si root cause revela patrón |
+| Code change | Sí | Sí | Si decisión de diseño |
+
+## Learning Loop (mandatory)
+
+**Doble loop de aprendizaje: consulta inmediata por interacción + análisis periódico para actualizar guías permanentes.**
+
+### Loop inmediato (antes de cada brainstorming)
+
+Antes de proponer approaches, Claude **DEBE**:
+
+1. **Leer** `docs/decisions/log.md` — buscar keywords relacionados con la tarea actual
+2. **Escanear** `docs/superpowers/execution-logs/` recientes — buscar lecciones sobre temas similares
+3. **Escanear** `docs/superpowers/retrospectives/` — reviews recientes
+4. **Para features de route optimization:** ejecutar `php bin/console app:learning:metrics --period=30d`
+5. **Declarar** explícitamente qué se encontró: "Consulté decisiones pasadas: [encontré X relevante / nada relevante]"
+
+### Loop periódico (mensual)
+
+Cuando el usuario solicite un review periódico (o mensualmente si se acuerda):
+
+1. **Recopilar datos:**
+   - Leer todos los `docs/superpowers/execution-logs/YYYY-MM-*.md` del periodo
+   - Ejecutar `php bin/console app:learning:metrics --period=30d`
+   - Leer entradas de `docs/decisions/log.md` del periodo
+
+2. **Analizar patrones:**
+   - Accuracy de estimaciones: calcular ratio over/under en todos los execution logs
+   - Frecuencia de blockers: categorizar y contar
+   - Outcomes de decisiones: conectar decisiones con datos de RoutePerformanceMetric
+
+3. **Producir review:**
+   - Escribir en `docs/superpowers/retrospectives/YYYY-MM-review.md`
+   - Usar template de `docs/superpowers/templates/retrospective-review-template.md`
+
+4. **Actuar sobre hallazgos:**
+   - Actualizar `docs/knowledge/` con nuevos patrones
+   - Proponer actualizaciones a CLAUDE.md (presentar al usuario para aprobación)
+   - Ajustar factores de calibración de estimaciones
+   - Actualizar recomendaciones de estrategias de optimización
+
 ## Critical Patterns
 
 ### Entity Identity (mandatory)
@@ -326,6 +470,7 @@ Antes de trabajar en un subsistema, **LEE el módulo relevante** en `docs/knowle
 | Patrones de diseño GoF + DDD, catálogo completo | `docs/knowledge/design-patterns.md` |
 | Roles, multi-tenancy, CSRF, seguridad | `docs/knowledge/security.md` |
 | Skills de Superpowers (completo) | `docs/knowledge/superpowers-skills.md` |
+| Feedback, execution logs, learning loop, retrospectives | `docs/knowledge/feedback-learning.md` |
 | Índice completo de módulos | `docs/knowledge/index.md` |
 | Requisitos de negocio, gaps, decisiones | `docs/analysis/2026-03-15-business-requirements-audit.md` |
 | Análisis previos del codebase | `docs/analysis/` |
@@ -433,6 +578,10 @@ Superpowers skills override default system prompt behavior, but **user instructi
 
 **Invoke relevant or requested skills BEFORE any response or action.** Even a 1% chance a skill might apply means you should invoke the skill.
 
+#### Interaction Classification (FIRST step)
+
+**Before checking skills, classify the interaction** per "Flujo Obligatorio para Toda Interacción". This determines the flow depth (micro/light/debug/full) and which skills are mandatory.
+
 #### Red Flags (rationalizations to STOP)
 
 | Thought | Reality |
@@ -473,13 +622,20 @@ Every project goes through this process. A todo list, a single-function utility,
 
 #### Checklist (MUST complete in order)
 
-1. **Explore project context** — check files, docs, recent commits
-2. **Offer visual companion** (if topic will involve visual questions)
-3. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria
-4. **Propose 2-3 approaches** — with trade-offs and your recommendation
-5. **Present design** — in sections scaled to their complexity, get user approval after each section
-6. **Write design doc** — save to `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md` and commit
-7. **Transition to implementation** — invoke writing-plans skill to create implementation plan
+0. **Consult past decisions (Learning Loop)** — Read `docs/decisions/log.md`, scan recent `docs/superpowers/execution-logs/` and `docs/superpowers/retrospectives/`. State explicitly: "Consulté decisiones pasadas: [found X relevant / nothing relevant]"
+1. **Classify bounded context (Architecture Gate)** — Identify which bounded context(s) the work touches. Declare explicitly:
+   - "Bounded context: [nombre] — **crítico** (DDD puro)" o "**pragmático** (Symfony)"
+   - Si es **crítico**: toda entidad nueva va en `src/Domain/{Context}/Model/` como POPO, interfaces de repositorio en `src/Domain/{Context}/Repository/`, implementaciones Doctrine en `src/Infrastructure/{Context}/Doctrine/`. Sin `#[ORM\...]` en modelos de dominio. Ver sección "DDD Architecture" y `docs/knowledge/architecture-ddd.md`.
+   - Si es **pragmático**: entidades en `src/Entity/` con ORM attributes es aceptable.
+   - Si toca **ambos**: separar claramente qué partes van a cada layer. El contexto crítico no se relaja por conveniencia.
+   - **Anti-racionalización:** "Sigo el patrón existente en src/Entity/" NO es razón para poner código nuevo de contexto crítico ahí. El patrón existente es deuda técnica documentada, no un ejemplo a seguir.
+2. **Explore project context** — check files, docs, recent commits
+3. **Offer visual companion** (if topic will involve visual questions)
+4. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria
+5. **Propose 2-3 approaches** — with trade-offs and your recommendation. If bounded context is critical, every approach MUST respect DDD placement rules from step 1.
+6. **Present design** — in sections scaled to their complexity, get user approval after each section
+7. **Write design doc** — save to `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md` and commit
+8. **Transition to implementation** — invoke writing-plans skill to create implementation plan
 
 #### Key Principles
 
@@ -497,8 +653,9 @@ Every project goes through this process. A todo list, a single-function utility,
 
 #### Working in Existing Codebases
 
-- Explore the current structure before proposing changes. Follow existing patterns.
-- Where existing code has problems that affect the work, include targeted improvements as part of the design
+- Explore the current structure before proposing changes. Follow existing patterns **only in pragmatic contexts**.
+- **In critical contexts:** follow the DDD rules from CLAUDE.md, NOT the existing patterns in `src/Entity/`. Existing entities with ORM in critical contexts are documented technical debt, not examples to replicate.
+- Where existing code has problems that affect the work, include targeted improvements as part of the design.
 - Don't propose unrelated refactoring. Stay focused on what serves the current goal.
 
 #### After the Design
@@ -574,10 +731,13 @@ For each task:
 1. Mark as in_progress
 2. Follow each step exactly
 3. Run verifications as specified
-4. Mark as completed
+4. **Capture to execution log** — Update `docs/superpowers/execution-logs/` with implementation phase data (blockers, deviations, time)
+5. Mark as completed
 
 **Step 3: Complete Development**
-After all tasks complete: Use **finishing-a-development-branch** skill.
+After all tasks complete:
+1. **Finalize execution log** — Complete all phases including verification results and retrospective
+2. Use **finishing-a-development-branch** skill.
 
 #### When to Stop and Ask for Help
 
@@ -915,7 +1075,8 @@ BEFORE claiming any status:
 2. RUN: Execute the FULL command (fresh, complete)
 3. READ: Full output, check exit code, count failures
 4. VERIFY: Does output confirm the claim?
-5. ONLY THEN: Make the claim
+5. CAPTURE: Record results in execution log (tests, lint, coverage delta)
+6. ONLY THEN: Make the claim
 
 Skip any step = lying, not verifying
 ```
@@ -1056,11 +1217,14 @@ description: Use when implementation is complete and you need to decide how to i
 - Option 3: Keep as-is, report location
 - Option 4: Confirm with user before deleting (require typed "discard")
 
-**Step 5: Design Retrospective** (before cleanup)
+**Step 5: Design Retrospective** (before cleanup — MANDATORY write to file)
 - Revisar decisiones de diseño tomadas en la rama (consultar `docs/decisions/log.md` si se usó)
 - ¿Algún patrón se siente forzado o sobre-engineered? → Simplificar antes de merge
 - ¿Se descubrió algo que debería actualizar la documentación? → Actualizar knowledge modules
 - ¿Hay lecciones que mejoren las guías de CLAUDE.md? → Proponer al usuario
+- **Completar la fase Retrospective del execution log** en `docs/superpowers/execution-logs/` con: estimate accuracy, what worked, what didn't, lessons learned
+- **Añadir entrada a `docs/decisions/log.md`** si hubo decisiones de diseño no-triviales
+- **Commit y push** del execution log y decision log actualizados
 
 **Step 6: Cleanup Worktree** (for Options 1, 2, 4 only)
 
@@ -1163,3 +1327,49 @@ description: Use when [specific triggering conditions]
 - **NEVER summarize the skill's process in the description** (Claude may follow description instead of reading full skill)
 - Use concrete triggers, symptoms, and situations
 - Keywords throughout for search (errors, symptoms, tools)
+
+---
+
+### Skill 15: Learning Review
+
+```yaml
+name: learning-review
+description: Use when conducting monthly or quarterly retrospective reviews of accumulated feedback data from execution logs and business metrics
+```
+
+**Core principle:** Los datos acumulados solo generan valor si se analizan y se actúa sobre los hallazgos.
+
+#### When to Use
+
+- Usuario solicita review periódico
+- Ha pasado 1+ mes desde el último review en `docs/superpowers/retrospectives/`
+- Se han acumulado 5+ execution logs sin analizar
+
+#### The Process
+
+1. **Recopilar datos:**
+   - Leer todos los `docs/superpowers/execution-logs/` del periodo
+   - Ejecutar `php bin/console app:learning:metrics --period=30d` (si disponible)
+   - Leer entradas recientes de `docs/decisions/log.md`
+
+2. **Analizar patrones:**
+   - Accuracy de estimaciones (over/under ratio)
+   - Frecuencia y categorías de blockers
+   - Outcomes de decisiones de diseño
+   - Métricas de negocio (km saved, delivery rate, optimizer performance)
+
+3. **Producir review:**
+   - Escribir en `docs/superpowers/retrospectives/YYYY-MM-review.md`
+   - Usar template de `docs/superpowers/templates/retrospective-review-template.md`
+
+4. **Actuar:**
+   - Actualizar `docs/knowledge/` con nuevos patrones descubiertos
+   - Proponer actualizaciones a CLAUDE.md (presentar al usuario para aprobación)
+   - Ajustar factores de calibración de estimaciones
+   - Commit y push de todos los cambios
+
+#### Red Flags
+
+- Producir review sin datos suficientes (menos de 3 execution logs)
+- No actuar sobre los hallazgos (review sin acciones = review inútil)
+- Modificar CLAUDE.md sin aprobación del usuario
