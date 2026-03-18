@@ -5,7 +5,7 @@ import type {
   TestRoutingStop,
 } from '@/api/hooks/useTestRoutingData';
 import { MapCanvas, type MapCanvasHandle } from '@/components/maps/MapCanvas';
-import { ComparisonLayer } from '@/components/maps/layers/ComparisonLayer';
+import { RoutePolylineLayer } from '@/components/maps/layers/RoutePolylineLayer';
 import { StopMarkersLayer } from '@/components/maps/layers/StopMarkersLayer';
 import { ROUTE_COLORS } from '@/components/maps/shared/colors';
 
@@ -136,37 +136,25 @@ export function TestRoutingPage() {
           initialZoom={12}
         >
           {/* Original route (dashed red) */}
-          <ComparisonLayer
-            routeId="original"
-            originalStops={allStopsBefore.map((s) => ({
-              lat: s.lat,
-              lng: s.lng,
-              sequence: s.seq,
-              address: s.address,
-              recipient: s.recipient,
-            }))}
-            optimizedStops={[]}
-            origin={origin}
-            originalColor="#EF4444"
-          />
+          {data.polylineBefore && (
+            <RoutePolylineLayer
+              id="original"
+              polyline={data.polylineBefore}
+              color="#EF4444"
+              dashed
+            />
+          )}
 
           {/* Optimized routes */}
           {routesData.map((route, idx) => {
+            if (!route.polylineAfter) return null;
             const color = ROUTE_COLORS[idx % ROUTE_COLORS.length];
             return (
-              <ComparisonLayer
+              <RoutePolylineLayer
                 key={route.name}
-                routeId={`opt-${idx}`}
-                originalStops={[]}
-                optimizedStops={route.stopsAfter.map((s) => ({
-                  lat: s.lat,
-                  lng: s.lng,
-                  sequence: s.seq,
-                  address: s.address,
-                  recipient: s.recipient,
-                }))}
-                origin={origin}
-                optimizedColor={color}
+                id={`opt-${idx}`}
+                polyline={route.polylineAfter}
+                color={color}
               />
             );
           })}

@@ -114,14 +114,15 @@ export interface FleetVehicle {
 }
 
 export interface FleetRoute {
-  public_id: string;
+  publicId: string;
   name: string;
   color: string;
-  vehicle_name?: string;
-  driver_name?: string;
+  vehicleName?: string;
+  driverName?: string;
   status: string;
-  total_stops: number;
-  delivered_stops: number;
+  totalStops: number;
+  deliveredStops: number;
+  polyline?: string;
   stops: FleetStop[];
 }
 
@@ -186,6 +187,7 @@ export interface PlannerPreviewRoute {
     sequence: number;
     isOrigin?: boolean;
   }>;
+  polyline?: string;
   stopsCount: number;
   validation?: {
     valid: boolean;

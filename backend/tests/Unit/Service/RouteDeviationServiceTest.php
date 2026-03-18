@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Service;
 
 use App\Entity\Route;
-use App\Entity\RouteSnapshot;
-use App\Repository\RouteSnapshotRepository;
+use App\Domain\Route\Model\RouteSnapshot;
+use App\Domain\Route\Repository\RouteSnapshotRepositoryInterface;
 use App\Service\RouteDeviationService;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
@@ -16,11 +16,11 @@ use PHPUnit\Framework\TestCase;
 final class RouteDeviationServiceTest extends TestCase
 {
     private RouteDeviationService $service;
-    private RouteSnapshotRepository $snapshotRepo;
+    private RouteSnapshotRepositoryInterface $snapshotRepo;
 
     protected function setUp(): void
     {
-        $this->snapshotRepo = $this->createMock(RouteSnapshotRepository::class);
+        $this->snapshotRepo = $this->createMock(RouteSnapshotRepositoryInterface::class);
         $this->service = new RouteDeviationService($this->snapshotRepo);
     }
 

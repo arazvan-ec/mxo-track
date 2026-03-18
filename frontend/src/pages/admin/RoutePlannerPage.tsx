@@ -4,7 +4,7 @@ import { ShipmentClusterLayer } from '@/components/maps/layers/ShipmentClusterLa
 import { StopMarker } from '@/components/maps/shared/StopMarker';
 import { OriginMarker } from '@/components/maps/shared/OriginMarker';
 import { ROUTE_COLORS } from '@/components/maps/shared/colors';
-import { Source, Layer } from 'react-map-gl/maplibre';
+import { RoutePolylineLayer } from '@/components/maps/layers/RoutePolylineLayer';
 import {
   usePlannerShipments,
   usePlannerVehicles,
@@ -242,27 +242,7 @@ export function RoutePlannerPage() {
     return locations.find((l) => l.publicId === originPublicId) ?? null;
   }, [originPublicId, locations]);
 
-  // Build preview route line GeoJSON for the map
-  const previewGeoJSON = useMemo(() => {
-    if (previewRoutes.length === 0) return null;
-    const features: GeoJSON.Feature<GeoJSON.LineString>[] = [];
-    previewRoutes.forEach((routeData, idx) => {
-      const validStops = routeData.stops
-        .filter((s) => s.latitude && s.longitude)
-        .sort((a, b) => a.sequence - b.sequence);
-      if (validStops.length < 2) return;
-      const color = ROUTE_COLORS[idx % ROUTE_COLORS.length];
-      features.push({
-        type: 'Feature',
-        properties: { color },
-        geometry: {
-          type: 'LineString',
-          coordinates: validStops.map((s) => [s.longitude, s.latitude]),
-        },
-      });
-    });
-    return { type: 'FeatureCollection' as const, features };
-  }, [previewRoutes]);
+  // (Preview route polylines come from backend via previewRoutes[].polyline)
 
   // Get shipment cluster color
   const getShipmentClusterColor = useCallback(
@@ -389,24 +369,19 @@ export function RoutePlannerPage() {
             />
           )}
 
-          {/* Step 3: Preview routes */}
-          {step >= 3 && previewGeoJSON && previewGeoJSON.features.length > 0 && (
-            <Source id="preview-routes" type="geojson" data={previewGeoJSON}>
-              <Layer
-                id="preview-routes-line"
-                type="line"
-                paint={{
-                  'line-color': ['get', 'color'],
-                  'line-width': 4,
-                  'line-opacity': 0.8,
-                }}
-                layout={{
-                  'line-cap': 'round',
-                  'line-join': 'round',
-                }}
+          {/* Step 3: Preview route polylines */}
+          {step >= 3 && previewRoutes.map((routeData, idx) => {
+            if (!routeData.polyline) return null;
+            const color = ROUTE_COLORS[idx % ROUTE_COLORS.length];
+            return (
+              <RoutePolylineLayer
+                key={routeData.route.publicId}
+                id={`preview-${idx}`}
+                polyline={routeData.polyline}
+                color={color}
               />
-            </Source>
-          )}
+            );
+          })}
 
           {/* Step 3: Stop markers for preview routes */}
           {step >= 3 &&

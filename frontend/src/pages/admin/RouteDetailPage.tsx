@@ -5,7 +5,6 @@ import { useVehicleTrail } from '@/api/hooks/useVehicleTrail';
 import { MapCanvas, type MapCanvasHandle } from '@/components/maps/MapCanvas';
 import { StopMarkersLayer } from '@/components/maps/layers/StopMarkersLayer';
 import { RoutePolylineLayer } from '@/components/maps/layers/RoutePolylineLayer';
-import { RouteSegmentsLayer } from '@/components/maps/layers/RouteSegmentsLayer';
 import { VehicleLayer } from '@/components/maps/layers/VehicleLayer';
 import { VehicleTrailLayer } from '@/components/maps/layers/VehicleTrailLayer';
 import { StopListPanel, RouteMetricsPanel, VehicleInfoPanel } from '@/components/panels';
@@ -102,17 +101,6 @@ export function RouteDetailPage() {
       address: s.address,
     }));
 
-  // Build segments for RouteSegmentsLayer (needs FleetStop shape)
-  const segmentStops = route.stops
-    .filter((s): s is StopData & { lat: number; lng: number } => s.lat != null && s.lng != null)
-    .map((s) => ({
-      lat: s.lat,
-      lng: s.lng,
-      address: s.address,
-      sequence: s.sequence,
-      status: s.status,
-    }));
-
   // Build vehicle markers
   const vehicleMarkers =
     mapData?.vehiclePosition && mapData.vehiclePublicId
@@ -191,15 +179,13 @@ export function RouteDetailPage() {
           initialCenter={mapData?.origin ?? undefined}
           initialZoom={mapData?.origin ? 13 : 6}
         >
-          {/* Route polyline or segments */}
-          {route.polyline ? (
+          {/* Route polyline */}
+          {route.polyline && (
             <RoutePolylineLayer
               id={route.publicId}
               polyline={route.polyline}
               color={route.color}
             />
-          ) : (
-            <RouteSegmentsLayer routeId={route.publicId} stops={segmentStops} />
           )}
 
           {/* Stop markers */}

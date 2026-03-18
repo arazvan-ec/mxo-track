@@ -43,8 +43,8 @@ export function useMercureRouteUpdates(routePublicIds: string[]) {
         const next = new Map(prev);
         next.set(data.routePublicId, {
           stops,
-          total_stops: nonOriginStops.length,
-          delivered_stops: nonOriginStops.filter((s) => s.status === 'DELIVERED').length,
+          totalStops: nonOriginStops.length,
+          deliveredStops: nonOriginStops.filter((s) => s.status === 'DELIVERED').length,
           status: (updatedRoute.status as string) || undefined,
         });
         return next;

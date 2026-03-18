@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Application\Fleet;
 
+use App\Domain\Route\Model\RouteMapOptions;
+use App\Domain\Route\Service\RouteMapProjection;
 use App\Entity\Customer;
 use App\Entity\Route;
 use App\Entity\RouteStop;
@@ -22,6 +24,7 @@ final readonly class FleetOverviewService
     public function __construct(
         private EntityManagerInterface $em,
         private VisibilityScopeService $visibilityScope,
+        private RouteMapProjection $routeMapProjection,
     ) {}
 
     public function getFleetMapData(User $user): FleetMapData
@@ -89,41 +92,18 @@ final readonly class FleetOverviewService
             ];
         }
 
-        // Build route data with stops
+        // Project route map data via domain service (single snapshot query)
+        $routeViews = $this->routeMapProjection->projectRoutes($activeRoutes, RouteMapOptions::minimal());
+
         $routesData = [];
-        foreach ($activeRoutes as $route) {
-            $stops = $this->em->createQueryBuilder()
-                ->select('rs')
-                ->from(RouteStop::class, 'rs')
-                ->where('rs.route = :route')
-                ->setParameter('route', $route)
-                ->orderBy('rs.sequence', 'ASC')
-                ->getQuery()
-                ->getResult();
-
-            $stopsData = array_map(static fn (RouteStop $s) => [
-                'lat' => $s->getLatitude(),
-                'lng' => $s->getLongitude(),
-                'address' => $s->getAddress(),
-                'sequence' => $s->getSequence(),
-                'status' => $s->getStatus()->value,
-                'recipient' => $s->getRecipientName(),
-            ], $stops);
-
-            $total = count($stops);
-            $delivered = count(array_filter($stops, static fn (RouteStop $s) => $s->getStatus() === RouteStopStatus::DELIVERED));
-
-            $routesData[] = [
-                'public_id' => $route->getPublicIdString(),
-                'name' => $route->getName(),
-                'status' => $route->getStatus()->value,
-                'vehicle_public_id' => $route->getVehicle()?->getPublicIdString(),
-                'vehicle_name' => $route->getVehicle()?->getName(),
-                'driver_email' => $route->getDriver()?->getEmail(),
-                'stops' => $stopsData,
-                'total_stops' => $total,
-                'delivered_stops' => $delivered,
-            ];
+        foreach ($routeViews as $view) {
+            $data = $view->toArray();
+            // Add fleet-specific counts from projected stops
+            $totalStops = \count($view->stops);
+            $deliveredStops = \count(array_filter($view->stops, static fn ($s) => $s->status === 'DELIVERED'));
+            $data['totalStops'] = $totalStops;
+            $data['deliveredStops'] = $deliveredStops;
+            $routesData[] = $data;
         }
 
         return new FleetMapData(vehicles: $vehiclesData, routes: $routesData);

@@ -103,7 +103,7 @@ export function OperatorDashboardPage() {
             ) : (
               activeRoutes.map((route) => (
                 <RouteListItem
-                  key={route.public_id}
+                  key={route.publicId}
                   route={route}
                   onFocus={() => {
                     const pts = route.stops
@@ -197,8 +197,8 @@ function RouteListItem({
   route: FleetRoute;
   onFocus: () => void;
 }) {
-  const delivered = route.delivered_stops;
-  const total = route.total_stops;
+  const delivered = route.deliveredStops;
+  const total = route.totalStops;
   const pct = total > 0 ? Math.round((delivered / total) * 100) : 0;
 
   const statusColor =
@@ -231,14 +231,14 @@ function RouteListItem({
 
       {/* Driver / Vehicle */}
       <div className="flex items-center gap-3 mb-2">
-        {route.driver_name && (
+        {route.driverName && (
           <span className="text-[10px] text-slate-400 truncate">
-            {route.driver_name}
+            {route.driverName}
           </span>
         )}
-        {route.vehicle_name && (
+        {route.vehicleName && (
           <span className="text-[10px] text-slate-500 truncate">
-            {route.vehicle_name}
+            {route.vehicleName}
           </span>
         )}
       </div>

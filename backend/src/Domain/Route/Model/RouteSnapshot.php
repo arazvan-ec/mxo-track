@@ -2,83 +2,56 @@
 
 declare(strict_types=1);
 
-namespace App\Entity;
+namespace App\Domain\Route\Model;
 
-use App\Repository\RouteSnapshotRepository;
+use App\Entity\Route;
 use DateTimeImmutable;
-use Doctrine\ORM\Mapping as ORM;
 
-#[ORM\Entity(repositoryClass: RouteSnapshotRepository::class)]
-#[ORM\Table(name: 'route_snapshot')]
-#[ORM\Index(name: 'idx_route_snapshot_route', columns: ['route_id'])]
+/**
+ * Immutable operational snapshot of a Route after optimization.
+ * Stores polylines, metrics, stop states, ETAs, and capacity validation.
+ *
+ * Persistence is handled via external XML mapping (no ORM attributes).
+ */
 class RouteSnapshot
 {
-    #[ORM\Id]
-    #[ORM\GeneratedValue]
-    #[ORM\Column]
     private ?int $id = null;
-
-    #[ORM\OneToOne(targetEntity: Route::class)]
-    #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private Route $route;
 
     // ── Polylines (encoded Google format from OSRM) ──
 
-    #[ORM\Column(type: 'text', nullable: true)]
     private ?string $polyline = null;
-
-    #[ORM\Column(type: 'text', nullable: true)]
     private ?string $originalPolyline = null;
-
-    #[ORM\Column(type: 'text', nullable: true)]
     private ?string $actualPolyline = null;
 
     // ── Optimization metrics ──
 
-    #[ORM\Column(type: 'decimal', precision: 10, scale: 2, nullable: true)]
     private ?string $distanceBeforeKm = null;
-
-    #[ORM\Column(type: 'decimal', precision: 10, scale: 2, nullable: true)]
     private ?string $distanceAfterKm = null;
-
-    #[ORM\Column(type: 'decimal', precision: 5, scale: 1, nullable: true)]
     private ?string $savingsPercent = null;
 
     // ── Timing ──
 
-    #[ORM\Column(nullable: true)]
     private ?int $drivingTimeMinutes = null;
-
-    #[ORM\Column(nullable: true)]
     private ?int $deliveryTimeMinutes = null;
-
-    #[ORM\Column(nullable: true)]
     private ?int $totalTimeMinutes = null;
 
     // ── Stop snapshots ──
 
-    #[ORM\Column(type: 'json', nullable: true)]
     private ?array $originalStopOrder = null;
-
-    #[ORM\Column(type: 'json', nullable: true)]
     private ?array $stopStates = null;
 
     // ── ETAs ──
 
-    #[ORM\Column(type: 'json', nullable: true)]
     private ?array $etas = null;
 
     // ── Capacity ──
 
-    #[ORM\Column(type: 'json', nullable: true)]
     private ?array $capacityValidation = null;
 
     // ── Timestamps ──
 
-    #[ORM\Column]
     private DateTimeImmutable $createdAt;
-
-    #[ORM\Column]
     private DateTimeImmutable $updatedAt;
 
     public function __construct(Route $route)

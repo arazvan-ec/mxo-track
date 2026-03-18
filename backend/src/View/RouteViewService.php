@@ -4,35 +4,40 @@ declare(strict_types=1);
 
 namespace App\View;
 
+use App\Domain\Route\Model\RouteMapOptions;
+use App\Domain\Route\Repository\RouteSnapshotRepositoryInterface;
+use App\Domain\Route\Service\RouteMapProjection;
 use App\Entity\Route;
-use App\Entity\RouteSnapshot;
-use App\Repository\RouteSnapshotRepository;
 
 /**
  * Reads from RouteSnapshot (persisted) and produces MapViewData DTOs.
  * Applies role-based filtering. No OSRM calls — all data from snapshot.
+ *
+ * Delegates route projection to RouteMapProjection domain service.
  */
 final class RouteViewService
 {
-    private const ROUTE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6'];
-
     public function __construct(
-        private readonly RouteSnapshotRepository $snapshotRepo,
+        private readonly RouteMapProjection $projection,
+        private readonly RouteSnapshotRepositoryInterface $snapshotRepo,
     ) {}
 
-    public function buildSingleRouteView(Route $route, string $role, ?MapViewOptions $options = null): MapViewData
+    public function buildSingleRouteView(Route $route, string $role, ?MapViewOptions $mapOptions = null): MapViewData
     {
-        $options ??= new MapViewOptions();
+        $mapOptions ??= new MapViewOptions();
+        $options = $this->buildProjectionOptions($role, $mapOptions);
         $snapshot = $this->snapshotRepo->findByRoute($route);
 
-        $routeView = $this->buildRouteViewData($route, $snapshot, $role, $options, 0);
+        $view = $this->projection->projectRoute($route, $options, 0, $snapshot);
+
+        $routeViewData = RouteViewData::fromMapView($view);
 
         $mercureTopic = $this->buildMercureTopic($route, $role);
 
         return new MapViewData(
-            routes: [$routeView],
-            options: $options,
-            origin: $this->extractOrigin($snapshot),
+            routes: [$routeViewData],
+            options: $mapOptions,
+            origin: $this->projection->extractOrigin($snapshot),
             mercureTopic: $mercureTopic,
         );
     }
@@ -40,25 +45,34 @@ final class RouteViewService
     /**
      * @param list<Route> $routes
      */
-    public function buildMultiRouteView(array $routes, string $role, ?MapViewOptions $options = null): MapViewData
+    public function buildMultiRouteView(array $routes, string $role, ?MapViewOptions $mapOptions = null): MapViewData
     {
-        $options ??= new MapViewOptions();
-        $routeViews = [];
+        $mapOptions ??= new MapViewOptions();
+        $options = $this->buildProjectionOptions($role, $mapOptions);
+        $views = $this->projection->projectRoutes($routes, $options);
+
+        $routeViewDatas = array_map(
+            static fn ($view) => RouteViewData::fromMapView($view),
+            $views,
+        );
+
+        // Aggregate global metrics
         $totalDistanceBefore = 0.0;
         $totalDistanceAfter = 0.0;
         $origin = null;
 
-        foreach ($routes as $index => $route) {
-            $snapshot = $this->snapshotRepo->findByRoute($route);
-            $routeViews[] = $this->buildRouteViewData($route, $snapshot, $role, $options, $index);
-
-            if ($snapshot !== null) {
-                $totalDistanceBefore += $snapshot->getDistanceBeforeKm() ?? 0.0;
-                $totalDistanceAfter += $snapshot->getDistanceAfterKm() ?? 0.0;
+        foreach ($views as $view) {
+            if ($view->metrics !== null) {
+                $totalDistanceBefore += $view->metrics->distanceBeforeKm ?? 0.0;
+                $totalDistanceAfter += $view->metrics->distanceAfterKm ?? 0.0;
             }
-
-            if ($origin === null) {
-                $origin = $this->extractOrigin($snapshot);
+            if ($origin === null && \count($view->stops) > 0) {
+                foreach ($view->stops as $stop) {
+                    if ($stop->isOrigin && $stop->lat !== null && $stop->lng !== null) {
+                        $origin = ['lat' => $stop->lat, 'lng' => $stop->lng, 'address' => $stop->address];
+                        break;
+                    }
+                }
             }
         }
 
@@ -77,152 +91,25 @@ final class RouteViewService
         }
 
         return new MapViewData(
-            routes: $routeViews,
-            options: $options,
+            routes: $routeViewDatas,
+            options: $mapOptions,
             origin: $origin,
             globalMetrics: $globalMetrics,
         );
     }
 
-    private function buildRouteViewData(
-        Route $route,
-        ?RouteSnapshot $snapshot,
-        string $role,
-        MapViewOptions $options,
-        int $colorIndex,
-    ): RouteViewData {
-        $color = self::ROUTE_COLORS[$colorIndex % \count(self::ROUTE_COLORS)];
-        $stops = $this->buildStopViews($snapshot);
+    private function buildProjectionOptions(string $role, MapViewOptions $mapOptions): RouteMapOptions
+    {
+        $isAdmin = $role === 'ROLE_ADMIN';
 
-        // Build full view first, then filter by role
-        $polyline = $options->showPolylines ? $snapshot?->getPolyline() : null;
-
-        $metrics = null;
-        $timing = null;
-        $validation = null;
-        $originalStops = null;
-        $comparisonPolyline = null;
-
-        if ($role === 'ROLE_ADMIN') {
-            if ($options->showOptimizationMetrics && $snapshot !== null) {
-                $metrics = [
-                    'distanceBeforeKm' => $snapshot->getDistanceBeforeKm(),
-                    'distanceAfterKm' => $snapshot->getDistanceAfterKm(),
-                    'savingsPercent' => $snapshot->getSavingsPercent(),
-                ];
-            }
-
-            if ($options->showTimingBreakdown && $snapshot !== null) {
-                $timing = [
-                    'drivingTimeMinutes' => $snapshot->getDrivingTimeMinutes(),
-                    'deliveryTimeMinutes' => $snapshot->getDeliveryTimeMinutes(),
-                    'totalTimeMinutes' => $snapshot->getTotalTimeMinutes(),
-                ];
-            }
-
-            if ($options->showCapacityValidation && $snapshot !== null) {
-                $validation = $snapshot->getCapacityValidation();
-            }
-
-            if ($options->showOriginalOrder && $snapshot !== null) {
-                $originalStops = $snapshot->getOriginalStopOrder();
-            }
-
-            if ($options->comparisonMode === 'planned_vs_actual' && $snapshot !== null) {
-                $comparisonPolyline = $snapshot->getActualPolyline();
-            }
-        }
-
-        try {
-            $publicId = $route->getPublicIdString();
-        } catch (\Error) {
-            $publicId = '';
-        }
-
-        return new RouteViewData(
-            publicId: $publicId,
-            name: $route->getName(),
-            color: $color,
-            vehicleName: $route->getVehicle()?->getName(),
-            driverName: $route->getDriver()?->getFullName(),
-            status: $route->getStatus()->value,
-            stops: $stops,
-            polyline: $polyline,
-            metrics: $metrics,
-            timing: $timing,
-            validation: $validation,
-            originalStops: $originalStops,
-            comparisonPolyline: $comparisonPolyline,
+        return new RouteMapOptions(
+            includeMetrics: $isAdmin && $mapOptions->showOptimizationMetrics,
+            includeTiming: $isAdmin && $mapOptions->showTimingBreakdown,
+            includeValidation: $isAdmin && $mapOptions->showCapacityValidation,
+            includeOriginalStops: $isAdmin && $mapOptions->showOriginalOrder,
+            includeComparisonPolyline: $isAdmin && $mapOptions->comparisonMode === 'planned_vs_actual',
+            includeEtas: true,
         );
-    }
-
-    /**
-     * @return list<StopViewData>
-     */
-    private function buildStopViews(?RouteSnapshot $snapshot): array
-    {
-        if ($snapshot === null) {
-            return [];
-        }
-
-        $stopStates = $snapshot->getStopStates();
-        if ($stopStates === null) {
-            return [];
-        }
-
-        $etas = $snapshot->getEtas() ?? [];
-
-        $views = [];
-        foreach ($stopStates as $state) {
-            $publicId = $state['publicId'] ?? null;
-            $stopEta = $publicId !== null ? ($etas[$publicId] ?? null) : null;
-
-            $views[] = new StopViewData(
-                sequence: $state['sequence'] ?? 0,
-                address: $state['address'] ?? '',
-                recipientName: $state['recipientName'] ?? null,
-                recipientPhone: $state['recipientPhone'] ?? null,
-                lat: $state['lat'] ?? null,
-                lng: $state['lng'] ?? null,
-                status: $state['status'] ?? 'PENDING',
-                isOrigin: $state['isOrigin'] ?? false,
-                deliveredAt: $state['deliveredAt'] ?? null,
-                exceptionCode: $state['exceptionCode'] ?? null,
-                exceptionNotes: $state['exceptionNotes'] ?? null,
-                etaMinutes: $stopEta['minutes'] ?? null,
-                etaTime: $stopEta !== null ? (new \DateTimeImmutable($stopEta['eta']))->format('H:i') : null,
-                etaDistanceKm: $stopEta['distance_km'] ?? null,
-            );
-        }
-
-        return $views;
-    }
-
-    /**
-     * @return array{lat: float, lng: float, address: string}|null
-     */
-    private function extractOrigin(?RouteSnapshot $snapshot): ?array
-    {
-        if ($snapshot === null) {
-            return null;
-        }
-
-        $stopStates = $snapshot->getStopStates();
-        if ($stopStates === null) {
-            return null;
-        }
-
-        foreach ($stopStates as $state) {
-            if ($state['isOrigin'] ?? false) {
-                return [
-                    'lat' => $state['lat'] ?? 0.0,
-                    'lng' => $state['lng'] ?? 0.0,
-                    'address' => $state['address'] ?? '',
-                ];
-            }
-        }
-
-        return null;
     }
 
     private function buildMercureTopic(Route $route, string $role): string

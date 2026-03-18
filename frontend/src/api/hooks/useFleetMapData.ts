@@ -15,7 +15,7 @@ export function useFleetMapData() {
       .filter((v) => v.last_position)
       .map((v) => v.public_id) ?? [];
 
-  const routeIds = query.data?.routes.map((r) => r.public_id) ?? [];
+  const routeIds = query.data?.routes.map((r) => r.publicId) ?? [];
 
   const { positions, connected } = useMapSubscription({
     vehicleIds,

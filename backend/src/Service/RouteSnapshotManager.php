@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Entity\Route;
-use App\Entity\RouteSnapshot;
+use App\Domain\Route\Model\RouteSnapshot;
+use App\Domain\Route\Repository\RouteSnapshotRepositoryInterface;
 use App\Entity\RouteStop;
-use App\Repository\RouteSnapshotRepository;
 use App\Routing\Coordinate;
 use App\Routing\RoutingEngineInterface;
 use Doctrine\ORM\EntityManagerInterface;
@@ -22,7 +22,7 @@ final class RouteSnapshotManager
         private readonly EntityManagerInterface $em,
         private readonly RoutingEngineInterface $routingEngine,
         private readonly RouteCapacityValidator $capacityValidator,
-        private readonly RouteSnapshotRepository $snapshotRepo,
+        private readonly RouteSnapshotRepositoryInterface $snapshotRepo,
     ) {}
 
     /**
@@ -93,10 +93,15 @@ final class RouteSnapshotManager
         $snapshot->touch();
 
         if ($isNew) {
-            $this->em->persist($snapshot);
+            $this->snapshotRepo->save($snapshot);
         }
 
         return $snapshot;
+    }
+
+    public function findByRoute(Route $route): ?RouteSnapshot
+    {
+        return $this->snapshotRepo->findByRoute($route);
     }
 
     /**
@@ -109,7 +114,7 @@ final class RouteSnapshotManager
 
         if ($snapshot === null) {
             $snapshot = new RouteSnapshot($route);
-            $this->em->persist($snapshot);
+            $this->snapshotRepo->save($snapshot);
         }
 
         $stops = $this->getStopsForRoute($route);
@@ -130,7 +135,7 @@ final class RouteSnapshotManager
 
         if ($snapshot === null) {
             $snapshot = new RouteSnapshot($route);
-            $this->em->persist($snapshot);
+            $this->snapshotRepo->save($snapshot);
         }
 
         $previousEtas = $snapshot->getEtas();

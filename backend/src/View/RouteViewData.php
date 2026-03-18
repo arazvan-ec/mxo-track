@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\View;
 
+use App\Domain\Route\Model\RouteMapView;
+use App\Domain\Route\Model\StopMapView;
+
 final class RouteViewData
 {
     /**
@@ -28,6 +31,46 @@ final class RouteViewData
         public readonly ?array $originalStops = null,
         public readonly ?string $comparisonPolyline = null,
     ) {}
+
+    public static function fromMapView(RouteMapView $view): self
+    {
+        $stops = array_map(static fn (StopMapView $s) => new StopViewData(
+            sequence: $s->sequence,
+            address: $s->address,
+            recipientName: $s->recipientName,
+            recipientPhone: $s->recipientPhone,
+            lat: $s->lat,
+            lng: $s->lng,
+            status: $s->status,
+            isOrigin: $s->isOrigin,
+            deliveredAt: $s->deliveredAt,
+            exceptionCode: $s->exceptionCode,
+            exceptionNotes: $s->exceptionNotes,
+            etaMinutes: $s->etaMinutes,
+            etaTime: $s->etaTime,
+            etaDistanceKm: $s->etaDistanceKm,
+        ), $view->stops);
+
+        $originalStops = $view->originalStops !== null
+            ? array_map(static fn (StopMapView $s) => $s->toArray(), $view->originalStops)
+            : null;
+
+        return new self(
+            publicId: $view->publicId,
+            name: $view->name,
+            color: $view->color,
+            vehicleName: $view->vehicleName,
+            driverName: $view->driverName,
+            status: $view->status,
+            stops: $stops,
+            polyline: $view->polyline,
+            metrics: $view->metrics?->toArray(),
+            timing: $view->timing?->toArray(),
+            validation: $view->validation,
+            originalStops: $originalStops,
+            comparisonPolyline: $view->comparisonPolyline,
+        );
+    }
 
     /**
      * @return array<string, mixed>

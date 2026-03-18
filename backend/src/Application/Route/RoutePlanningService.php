@@ -6,6 +6,8 @@ namespace App\Application\Route;
 
 use App\Domain\Event\RouteOptimized;
 use App\Domain\Event\RoutesBuilt;
+use App\Domain\Route\Model\RouteMapOptions;
+use App\Domain\Route\Service\RouteMapProjection;
 use App\Entity\CustomerLocation;
 use App\Entity\Route;
 use App\Entity\RouteStop;
@@ -36,6 +38,7 @@ final readonly class RoutePlanningService
         private EventDispatcherInterface $eventDispatcher,
         private OptimizationLogger $optimizationLogger,
         private RouteSnapshotManager $snapshotManager,
+        private RouteMapProjection $routeMapProjection,
     ) {}
 
     /**
@@ -136,35 +139,17 @@ final readonly class RoutePlanningService
 
         $this->em->flush();
 
+        // Project route map data via domain service
+        $routes = array_map(static fn (array $r) => $r['route'], $results);
+        $routeViews = $this->routeMapProjection->projectRoutes($routes, new RouteMapOptions(includeValidation: true));
+
         $routePublicIds = [];
         $response = [];
-        foreach ($results as $result) {
-            $route = $result['route'];
-            $routePublicIds[] = $route->getPublicIdString();
-            $stopsData = [];
-            foreach ($result['stops'] as $stop) {
-                $stopsData[] = [
-                    'sequence' => $stop->getSequence(),
-                    'address' => $stop->getAddress(),
-                    'latitude' => $stop->getLatitude(),
-                    'longitude' => $stop->getLongitude(),
-                    'isOrigin' => $stop->isOrigin(),
-                    'recipientName' => $stop->getRecipientName(),
-                ];
-            }
-
-            $response[] = [
-                'route' => [
-                    'publicId' => $route->getPublicIdString(),
-                    'name' => $route->getName(),
-                    'vehicle' => $route->getVehicle()?->getName(),
-                    'totalDistanceKm' => $route->getTotalDistanceKm(),
-                    'estimatedDurationMinutes' => $route->getEstimatedDurationMinutes(),
-                ],
-                'stopsCount' => \count($result['stops']),
-                'stops' => $stopsData,
-                'validation' => $result['validation'],
-            ];
+        foreach ($routeViews as $index => $view) {
+            $routePublicIds[] = $view->publicId;
+            $data = $view->toArray();
+            $data['stopsCount'] = \count($view->stops);
+            $response[] = $data;
         }
 
         $this->eventDispatcher->dispatch(new RoutesBuilt(

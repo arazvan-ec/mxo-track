@@ -8,7 +8,7 @@ use App\Entity\Route as RouteEntity;
 use App\Entity\User;
 use App\Http\ApiErrorResponder;
 use App\Repository\RouteRepository;
-use App\Repository\RouteSnapshotRepository;
+use App\Domain\Route\Repository\RouteSnapshotRepositoryInterface;
 use App\Service\EtaService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -24,7 +24,7 @@ class RouteEtaApiController extends AbstractController
     public function etas(
         string $publicId,
         RouteRepository $routeRepository,
-        RouteSnapshotRepository $snapshotRepository,
+        RouteSnapshotRepositoryInterface $snapshotRepository,
         EtaService $etaService,
         ApiErrorResponder $errorResponder,
     ): JsonResponse {
@@ -64,7 +64,7 @@ class RouteEtaApiController extends AbstractController
     /**
      * @return array<string, array{eta: string, eta_formatted: string, remaining_minutes: int, distance_km: float}>|null
      */
-    private function trySnapshotEtas(RouteEntity $route, RouteSnapshotRepository $snapshotRepository): ?array
+    private function trySnapshotEtas(RouteEntity $route, RouteSnapshotRepositoryInterface $snapshotRepository): ?array
     {
         $snapshot = $snapshotRepository->findByRoute($route);
         if ($snapshot === null || $snapshot->getEtas() === null) {
