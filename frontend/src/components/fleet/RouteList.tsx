@@ -19,10 +19,10 @@ export function RouteList({ routes, selectedId, onSelect }: Props) {
     <div className="space-y-1.5">
       {routes.map((r) => (
         <button
-          key={r.public_id}
+          key={r.publicId}
           onClick={() => onSelect(r)}
           className={`w-full text-left p-3 rounded-lg transition-all border ${
-            selectedId === r.public_id
+            selectedId === r.publicId
               ? 'bg-blue-600/20 border-blue-500/40 shadow-lg shadow-blue-500/10'
               : 'bg-slate-800/50 border-slate-700/30 hover:bg-slate-800/80 hover:border-slate-600/50'
           }`}
@@ -43,18 +43,18 @@ export function RouteList({ routes, selectedId, onSelect }: Props) {
           </div>
           <div className="flex items-center justify-between text-[11px]">
             <span className="text-slate-500">
-              {r.vehicle_name ?? 'No vehicle'}
+              {r.vehicleName ?? 'No vehicle'}
             </span>
             <div className="flex items-center gap-1.5">
-              <span className="text-emerald-400">{r.delivered_stops}</span>
+              <span className="text-emerald-400">{r.deliveredStops}</span>
               <span className="text-slate-600">/</span>
-              <span className="text-slate-400">{r.total_stops}</span>
+              <span className="text-slate-400">{r.totalStops}</span>
               <span className="text-slate-600 text-[10px]">stops</span>
             </div>
           </div>
-          {r.driver_name && (
+          {r.driverName && (
             <div className="mt-1 text-[10px] text-slate-500 truncate">
-              {r.driver_name}
+              {r.driverName}
             </div>
           )}
         </button>

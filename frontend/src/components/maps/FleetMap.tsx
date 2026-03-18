@@ -88,7 +88,7 @@ export const FleetMap = forwardRef<FleetMapHandle, Props>(function FleetMap(
 
       {vehicles.map((vehicle) => {
         if (!vehicle.last_position) return null;
-        const route = routes.find((r) => r.vehicle_name === vehicle.name);
+        const route = routes.find((r) => r.vehicleName === vehicle.name);
         return (
           <VehicleMarker
             key={vehicle.public_id}

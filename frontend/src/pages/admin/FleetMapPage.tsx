@@ -30,7 +30,7 @@ export function FleetMapPage() {
   const selectedVehicleRoute = selectedVehicleId
     ? routes.find((r) => {
         const vehicle = vehicles.find((v) => v.public_id === selectedVehicleId);
-        return vehicle && r.vehicle_name === vehicle.name;
+        return vehicle && r.vehicleName === vehicle.name;
       }) ?? null
     : null;
 
@@ -50,7 +50,7 @@ export function FleetMapPage() {
         mapRef.current?.flyTo(vehicle.last_position.lng, vehicle.last_position.lat);
       } else {
         // Fly to route stops if no position
-        const vehicleRoute = routes.find((r) => r.vehicle_name === vehicle.name);
+        const vehicleRoute = routes.find((r) => r.vehicleName === vehicle.name);
         if (vehicleRoute) {
           const validStops = vehicleRoute.stops.filter((s) => s.lat && s.lng);
           if (validStops.length > 0) {
@@ -66,12 +66,12 @@ export function FleetMapPage() {
     (route: FleetRoute) => {
       setSelectedVehicleId(null);
 
-      if (selectedRouteId === route.public_id) {
+      if (selectedRouteId === route.publicId) {
         setSelectedRouteId(null);
         return;
       }
 
-      setSelectedRouteId(route.public_id);
+      setSelectedRouteId(route.publicId);
 
       // Fly to route bounds
       const validStops = route.stops.filter((s) => s.lat && s.lng);
@@ -142,16 +142,16 @@ function getActiveStops(
   selectedRouteId: string | null,
 ): { routeId: string; stops: FleetStop[]; polyline?: string; color?: string } | null {
   if (selectedRouteId) {
-    const route = routes.find((r) => r.public_id === selectedRouteId);
-    if (route) return { routeId: route.public_id, stops: route.stops, polyline: route.polyline, color: route.color };
+    const route = routes.find((r) => r.publicId === selectedRouteId);
+    if (route) return { routeId: route.publicId, stops: route.stops, polyline: route.polyline, color: route.color };
   }
 
   if (selectedVehicleId) {
     const vehicle = vehicles.find((v) => v.public_id === selectedVehicleId);
     if (vehicle) {
-      const vehicleRoute = routes.find((r) => r.vehicle_name === vehicle.name);
+      const vehicleRoute = routes.find((r) => r.vehicleName === vehicle.name);
       if (vehicleRoute) {
-        return { routeId: vehicleRoute.public_id, stops: vehicleRoute.stops, polyline: vehicleRoute.polyline, color: vehicleRoute.color };
+        return { routeId: vehicleRoute.publicId, stops: vehicleRoute.stops, polyline: vehicleRoute.polyline, color: vehicleRoute.color };
       }
     }
   }

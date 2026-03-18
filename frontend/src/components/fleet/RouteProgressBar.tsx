@@ -6,8 +6,8 @@ interface Props {
 
 export function RouteProgressBar({ route }: Props) {
   const pct =
-    route.total_stops > 0
-      ? Math.round((route.delivered_stops / route.total_stops) * 100)
+    route.totalStops > 0
+      ? Math.round((route.deliveredStops / route.totalStops) * 100)
       : 0;
 
   return (
@@ -17,7 +17,7 @@ export function RouteProgressBar({ route }: Props) {
           {route.name}
         </span>
         <span className="text-xs text-slate-400">
-          {route.delivered_stops}/{route.total_stops} stops
+          {route.deliveredStops}/{route.totalStops} stops
         </span>
       </div>
       <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
