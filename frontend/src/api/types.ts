@@ -133,3 +133,96 @@ export interface FleetStop {
   status: string;
   recipient?: string;
 }
+
+// ── Route Planner types ──────────────────────────────────────────────
+
+export interface PlannerShipment {
+  publicId: string;
+  reference?: string;
+  lat: number;
+  lng: number;
+  address: string;
+  recipientName: string;
+  totalWeightKg?: number;
+  totalVolumeM3?: number;
+  totalParcels?: number;
+  addressRisk?: { is_risky: boolean; exception_rate?: number; sample_count?: number };
+}
+
+export interface PlannerVehicle {
+  publicId: string;
+  name: string;
+  maxWeightKg?: number;
+  maxVolumeM3?: number;
+  maxParcels?: number;
+}
+
+export interface PlannerLocation {
+  publicId: string;
+  name: string;
+  address?: string;
+  isDefault: boolean;
+}
+
+export interface PlannerCluster {
+  shipmentIds: string[];
+  centroid: { lat: number; lng: number };
+  color: string;
+}
+
+export interface PlannerPreviewRoute {
+  route: {
+    publicId: string;
+    name: string;
+    vehicle?: string;
+    totalDistanceKm?: number;
+    estimatedDurationMinutes?: number;
+  };
+  stops: Array<{
+    latitude: number;
+    longitude: number;
+    address: string;
+    recipientName?: string;
+    sequence: number;
+    isOrigin?: boolean;
+  }>;
+  stopsCount: number;
+  validation?: {
+    valid: boolean;
+    errors: string[];
+    totalWeightKg?: number;
+    maxWeightKg?: number;
+    weightUtilization?: number;
+    totalVolumeM3?: number;
+    maxVolumeM3?: number;
+    volumeUtilization?: number;
+    totalParcels?: number;
+    maxParcels?: number;
+    parcelUtilization?: number;
+  };
+}
+
+export interface PlannerPreviewResponse {
+  routes: PlannerPreviewRoute[];
+  optimizationLog?: unknown;
+}
+
+export interface DriverSuggestion {
+  driver_public_id: string;
+  driver_name: string;
+  driver_email: string;
+  score: number;
+  breakdown: {
+    zone: number;
+    rating: number;
+    workload: number;
+    skills: number;
+  };
+  top_criterion: string;
+}
+
+export interface PlannerConfirmResponse {
+  ok: boolean;
+  assigned: number;
+  errors: string[];
+}

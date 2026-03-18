@@ -6,6 +6,7 @@ import { RouteAnalysisPage } from './pages/admin/RouteAnalysisPage';
 import { RouteDetailPage } from './pages/admin/RouteDetailPage';
 import { TestRoutingPage } from './pages/admin/TestRoutingPage';
 import { OperatorDashboardPage } from './pages/admin/OperatorDashboardPage';
+import { RoutePlannerPage } from './pages/admin/RoutePlannerPage';
 import { CustomerRouteDetailPage } from './pages/customer/CustomerRouteDetailPage';
 import { DriverRoutePage } from './pages/driver/DriverRoutePage';
 
@@ -20,6 +21,7 @@ export const router = createBrowserRouter([
       { path: 'admin/routes/:publicId', element: <RouteDetailPage /> },
       { path: 'admin/test-routing', element: <TestRoutingPage /> },
       { path: 'admin/operator-dashboard', element: <OperatorDashboardPage /> },
+      { path: 'admin/route-planner', element: <RoutePlannerPage /> },
       // Route analysis — full-screen with sidebar
       { path: 'admin/routes/:publicId/analysis', element: <RouteAnalysisPage /> },
       // Customer route detail — full-screen with sidebar + map
