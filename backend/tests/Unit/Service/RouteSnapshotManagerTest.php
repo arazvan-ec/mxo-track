@@ -27,14 +27,14 @@ final class RouteSnapshotManagerTest extends TestCase
     private EntityManagerInterface $em;
     private RoutingEngineInterface $routingEngine;
     private RouteCapacityValidator $capacityValidator;
-    private RouteSnapshotRepository $snapshotRepo;
+    private RouteSnapshotRepositoryInterface $snapshotRepo;
 
     protected function setUp(): void
     {
         $this->em = $this->createMock(EntityManagerInterface::class);
         $this->routingEngine = $this->createMock(RoutingEngineInterface::class);
         $this->capacityValidator = $this->createMock(RouteCapacityValidator::class);
-        $this->snapshotRepo = $this->createMock(RouteSnapshotRepository::class);
+        $this->snapshotRepo = $this->createMock(RouteSnapshotRepositoryInterface::class);
 
         $this->manager = new RouteSnapshotManager(
             $this->em,
@@ -72,7 +72,7 @@ final class RouteSnapshotManagerTest extends TestCase
             'parcelUtilization' => null,
         ]);
 
-        $this->em->expects(self::once())->method('persist')
+        $this->snapshotRepo->expects(self::once())->method('save')
             ->with(self::isInstanceOf(RouteSnapshot::class));
 
         $snapshot = $this->manager->createSnapshot($route);
@@ -93,7 +93,7 @@ final class RouteSnapshotManagerTest extends TestCase
             'weightUtilization' => null, 'volumeUtilization' => null,
             'parcelUtilization' => null,
         ]);
-        $this->em->method('persist');
+        $this->snapshotRepo->method('save');
 
         $snapshot = $this->manager->createSnapshot(
             $route,
@@ -122,7 +122,7 @@ final class RouteSnapshotManagerTest extends TestCase
             'parcelUtilization' => null,
         ]);
 
-        $this->em->expects(self::never())->method('persist');
+        $this->snapshotRepo->expects(self::never())->method('save');
 
         $snapshot = $this->manager->createSnapshot($route);
 
@@ -160,7 +160,7 @@ final class RouteSnapshotManagerTest extends TestCase
             'weightUtilization' => null, 'volumeUtilization' => null,
             'parcelUtilization' => null,
         ]);
-        $this->em->method('persist');
+        $this->snapshotRepo->method('save');
 
         $snapshot = $this->manager->createSnapshot($route);
 
@@ -212,7 +212,7 @@ final class RouteSnapshotManagerTest extends TestCase
         $this->snapshotRepo->method('findByRoute')->willReturn(null);
         $this->mockStopsQuery([]);
 
-        $this->em->expects(self::once())->method('persist')
+        $this->snapshotRepo->expects(self::once())->method('save')
             ->with(self::isInstanceOf(RouteSnapshot::class));
 
         $result = $this->manager->updateStopStates($route);
@@ -233,7 +233,7 @@ final class RouteSnapshotManagerTest extends TestCase
             'weightUtilization' => null, 'volumeUtilization' => null,
             'parcelUtilization' => null,
         ]);
-        $this->em->method('persist');
+        $this->snapshotRepo->method('save');
 
         $originalOrder = [
             ['sequence' => 0, 'address' => 'Origin', 'isOrigin' => true],

@@ -16,11 +16,11 @@ use PHPUnit\Framework\TestCase;
 final class RouteDeviationServiceTest extends TestCase
 {
     private RouteDeviationService $service;
-    private RouteSnapshotRepository $snapshotRepo;
+    private RouteSnapshotRepositoryInterface $snapshotRepo;
 
     protected function setUp(): void
     {
-        $this->snapshotRepo = $this->createMock(RouteSnapshotRepository::class);
+        $this->snapshotRepo = $this->createMock(RouteSnapshotRepositoryInterface::class);
         $this->service = new RouteDeviationService($this->snapshotRepo);
     }
 
