@@ -35,7 +35,8 @@
 23. [Modelo de Datos](#23-modelo-de-datos)
 24. [Búsqueda](#24-búsqueda)
 25. [Providers Configurables por Tenant](#25-providers-configurables-por-tenant)
-26. [Historial de Cambios](#26-historial-de-cambios)
+26. [Sistema de Feedback y Aprendizaje](#26-sistema-de-feedback-y-aprendizaje)
+27. [Historial de Cambios](#27-historial-de-cambios)
 
 ---
 
@@ -885,7 +886,41 @@ Cuando un tenant no tiene `CustomerIntegration` configurada, se usan estos defau
 
 ---
 
-## 26. Historial de Cambios
+## 26. Sistema de Feedback y Aprendizaje
+
+Sistema de captura de datos y aprendizaje continuo que opera en dos niveles para mejorar decisiones de diseño y resultados de negocio.
+
+### 26.1 Workflow Feedback (docs/)
+
+- **Execution Logs** — Captura estructurada de datos en cada fase del desarrollo (brainstorming, planning, implementation, verification, retrospective)
+- **Retrospective Reviews** — Análisis mensual/trimestral de patrones, accuracy de estimaciones, blockers recurrentes
+- **Decision Log** — Registro de decisiones de diseño no-triviales con outcomes
+
+### 26.2 Business Feedback (Doctrine)
+
+- **RoutePerformanceMetric** — KPIs inmutables por ruta completada: km saved, delivery success rate, plan accuracy, tiempo ahorrado
+  - Creado automáticamente cuando una ruta finaliza (via PostRouteAnalysisHandler)
+  - Queryable por optimizer, customer, periodo
+- **OptimizationStrategyComparison** — Comparación A/B de estrategias de optimización sobre los mismos shipments
+  - Almacena resultados de ambas estrategias + outcome real de la elegida
+  - Permite aprender qué estrategia funciona mejor bajo qué condiciones
+
+### 26.3 Learning Loop
+
+- **Inmediato** — Antes de cada brainstorming, consulta de decisiones pasadas, execution logs, y métricas de negocio
+- **Periódico** — Review mensual con `app:learning:metrics` para analizar patrones y actualizar guías
+
+### 26.4 Console Command
+
+```bash
+php bin/console app:learning:metrics --period=30d --context=route-optimization
+```
+
+Output: resumen agregado de performance por optimizer, delivery rates, km saved, comparaciones A/B.
+
+---
+
+## 27. Historial de Cambios
 
 | Fecha | Versión | Cambios |
 |---|---|---|
@@ -895,6 +930,7 @@ Cuando un tenant no tiene `CustomerIntegration` configurada, se usan estos defau
 | 2026-03-11 | 1.3.0 | Fase 2 — IA Activa: 55 tests nuevos para servicios AI/ML (304 total). Tests para ExceptionClassifier, PostRouteAnalyzer, DeliveryRisk, AddressRisk, EmbeddingService, SearchService, AiAssistant, DeliveryNoteAiEnricher. Fix bug DeliveryRiskService (array vs entity). Fix bug AiAssistantService (customerId int→string). UI: clasificación AI en excepciones (badge + insight + acción sugerida). UI: badge de riesgo en planificador de rutas. |
 | 2026-03-12 | 1.3.1 | Refactor: OperatorKpiService migrado de DBAL (SQL crudo) a DQL QueryBuilder (Doctrine ORM). Consultas ahora tipadas con entidades y enums. `getTopDrivers()` mantiene DBAL nativo por funciones PostgreSQL-específicas. Tests actualizados con mocks de EntityManager/QueryBuilder. |
 | 2026-03-13 | 1.4.0 | Mapas unificados: planificador y test-routing usan `MxoRouteMap` compartido (colores, estilos, decoradores consistentes). Actualización en tiempo real via Mercure en las 3 vistas de ruta (admin, customer, driver): mapa se re-renderiza y lista de paradas reactiva actualiza estados, badges y contadores al instante. Nueva vista admin route show con mapa en vivo, métricas de optimización y lista de paradas reactiva. Documentación actualizada: realtime.md, api-surface.md, FEATURES.md. |
+| 2026-03-18 | 1.5.0 | Sistema de feedback y aprendizaje: flujo obligatorio para toda interacción (4 niveles), captura de datos en cada fase, doble learning loop (inmediato + periódico). Nuevas entidades RoutePerformanceMetric y OptimizationStrategyComparison. Console command `app:learning:metrics`. Skill 15: Learning Review. Knowledge module `feedback-learning.md`. |
 
 ---
 
