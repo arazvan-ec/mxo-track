@@ -25,7 +25,6 @@ use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\Mercure\HubInterface;
 
 #[CoversClass(RouteEventLogListener::class)]
 final class RouteEventLogListenerTest extends TestCase
@@ -35,7 +34,6 @@ final class RouteEventLogListenerTest extends TestCase
     private RouteRepository $routeRepo;
     private UserRepository $userRepo;
     private RouteStopRepository $stopRepo;
-    private HubInterface $hub;
 
     protected function setUp(): void
     {
@@ -43,7 +41,6 @@ final class RouteEventLogListenerTest extends TestCase
         $this->routeRepo = $this->createMock(RouteRepository::class);
         $this->userRepo = $this->createMock(UserRepository::class);
         $this->stopRepo = $this->createMock(RouteStopRepository::class);
-        $this->hub = $this->createMock(HubInterface::class);
 
         $this->stopRepo->method('findBy')->willReturn([]);
 
@@ -52,7 +49,6 @@ final class RouteEventLogListenerTest extends TestCase
             $this->routeRepo,
             $this->userRepo,
             $this->stopRepo,
-            $this->hub,
         );
     }
 

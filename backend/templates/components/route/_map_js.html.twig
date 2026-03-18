@@ -230,7 +230,7 @@
         if (!mercureUrl) return;
 
         var hub = new URL(mercureUrl);
-        hub.searchParams.set('topic', '/vehicles/' + vehiclePublicId + '/position');
+        hub.searchParams.set('topic', '/map/vehicles/' + vehiclePublicId + '/position');
         if (tokenData.token) {
           hub.searchParams.set('authorization', tokenData.token);
         }
@@ -335,8 +335,17 @@
         var es = new EventSource(hub);
         es.onmessage = function(e) {
           try {
-            var newData = JSON.parse(e.data);
-            self.update(newData);
+            var msg = JSON.parse(e.data);
+            // Unified envelope: {type, routePublicId, data, occurredAt}
+            if (msg.type && msg.routePublicId && msg.data) {
+              if (msg.type === 'route_snapshot') {
+                self.update(msg.data);
+              }
+              // Other event types are informational; no map update needed
+            } else {
+              // Legacy format: direct MapViewData
+              self.update(msg);
+            }
           } catch(err) {
             console.warn('MxoRouteMap: failed to parse Mercure update', err);
           }

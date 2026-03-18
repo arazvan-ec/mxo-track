@@ -495,9 +495,8 @@ function liveDashboard() {
 
       const hub = new URL(this.mercureUrl);
       this.vehicles.forEach(v => {
-        hub.searchParams.append('topic', '/vehicles/' + v.public_id + '/position');
+        hub.searchParams.append('topic', '/map/vehicles/' + v.public_id + '/position');
       });
-      hub.searchParams.append('topic', '/operator/fleet');
 
       if (this._mercureToken) {
         hub.searchParams.set('authorization', this._mercureToken);

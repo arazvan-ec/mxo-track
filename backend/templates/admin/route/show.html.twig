@@ -177,11 +177,21 @@
           .then(function(d) { this.events = d.events || []; }.bind(this));
         {% if mercurePublicUrl is defined and mercurePublicUrl %}
         var hub = new URL('{{ mercurePublicUrl }}');
-        hub.searchParams.append('topic', '/routes/{{ route.publicIdString }}/events');
+        hub.searchParams.append('topic', '/map/routes/{{ route.publicIdString }}/updates');
         var es = new EventSource(hub, {withCredentials: true});
         var self = this;
         es.onmessage = function(e) {
-          try { self.events.unshift(JSON.parse(e.data)); } catch(_) {}
+          try {
+            var msg = JSON.parse(e.data);
+            // Unified envelope: {type, routePublicId, data, occurredAt}
+            if (msg.type && msg.data) {
+              // Push event-like object for the timeline
+              self.events.unshift({type: msg.type, data: msg.data, occurredAt: msg.occurredAt});
+            } else {
+              // Legacy format
+              self.events.unshift(msg);
+            }
+          } catch(_) {}
         };
         {% endif %}
       },

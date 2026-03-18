@@ -538,7 +538,7 @@ function adminDashboard() {
         const hub = new URL('{{ mercure_public_url }}');
         // Subscribe to all vehicle topics by listing them
         Object.keys(this._vehicleNames).forEach(id => {
-          hub.searchParams.append('topic', '/vehicles/' + id + '/position');
+          hub.searchParams.append('topic', '/map/vehicles/' + id + '/position');
         });
 
         if (Object.keys(this._vehicleNames).length === 0) {

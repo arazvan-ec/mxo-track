@@ -15,15 +15,14 @@ use App\Repository\VehicleRepository;
 use App\Service\EtaService;
 use App\Service\RouteDeviationService;
 use App\Service\RouteSnapshotManager;
-use App\View\MapViewData;
-use App\View\MapViewOptions;
-use App\View\RouteViewService;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
-use Symfony\Component\Mercure\HubInterface;
-use Symfony\Component\Mercure\Update;
 
+/**
+ * Recalculates ETAs and detects route deviations on vehicle position updates.
+ * Mercure publishing is handled by MapEventProjector.
+ */
 final class EtaRecalculationListener
 {
     private const int ETA_CHANGE_THRESHOLD_MINUTES = 5;
@@ -41,8 +40,6 @@ final class EtaRecalculationListener
         private readonly EtaService $etaService,
         private readonly RouteDeviationService $deviationService,
         private readonly RouteSnapshotManager $snapshotManager,
-        private readonly RouteViewService $viewService,
-        private readonly HubInterface $hub,
         private readonly EventDispatcherInterface $dispatcher,
     ) {}
 
@@ -104,9 +101,6 @@ final class EtaRecalculationListener
 
         // Check for route deviation
         $this->checkDeviation($activeRoute, $event);
-
-        // Publish updated MapViewData via Mercure
-        $this->publishRouteViewUpdate($activeRoute);
     }
 
     /**
@@ -156,8 +150,6 @@ final class EtaRecalculationListener
                 distanceMeters: $result->distanceMeters,
                 thresholdMeters: $result->thresholdMeters,
             ));
-
-            $this->publishDeviationAlert($activeRoute, $event, $result->distanceMeters);
         } elseif (!$result->isDeviated && $wasDeviated) {
             // Transition: off-route → on-route
             $this->deviationState[$routeKey] = false;
@@ -169,40 +161,4 @@ final class EtaRecalculationListener
         }
     }
 
-    private function publishDeviationAlert(Route $route, VehiclePositionReceived $event, float $distanceMeters): void
-    {
-        try {
-            $this->hub->publish(new Update(
-                sprintf('/routes/%s/deviation', $route->getPublicIdString()),
-                json_encode([
-                    'type' => 'DEVIATION_DETECTED',
-                    'route_public_id' => $route->getPublicIdString(),
-                    'vehicle_public_id' => $event->vehiclePublicId,
-                    'latitude' => $event->latitude,
-                    'longitude' => $event->longitude,
-                    'distance_meters' => round($distanceMeters, 1),
-                    'occurred_at' => $event->occurredAt->format(\DATE_ATOM),
-                ], JSON_THROW_ON_ERROR),
-            ));
-        } catch (\Throwable) {
-            // Don't break on Mercure failure
-        }
-    }
-
-    private function publishRouteViewUpdate(Route $route): void
-    {
-        $roles = ['ROLE_ADMIN', 'ROLE_CUSTOMER', 'ROLE_DRIVER'];
-
-        foreach ($roles as $role) {
-            try {
-                $mapData = $this->viewService->buildSingleRouteView($route, $role);
-                $this->hub->publish(new Update(
-                    sprintf('/routes/%s/view/%s', $route->getPublicIdString(), strtolower(str_replace('ROLE_', '', $role))),
-                    $mapData->toJson(),
-                ));
-            } catch (\Throwable) {
-                // Don't break on Mercure failure
-            }
-        }
-    }
 }

@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domain\Event;
 
-final readonly class RouteAssigned
+use App\Domain\MapView\Projection\MapProjectableEventInterface;
+
+final readonly class RouteAssigned implements MapProjectableEventInterface
 {
     public function __construct(
         public string $routePublicId,
@@ -13,4 +15,14 @@ final readonly class RouteAssigned
         public int $assignedByUserId,
         public \DateTimeImmutable $occurredAt = new \DateTimeImmutable(),
     ) {}
+
+    public function getRoutePublicId(): string
+    {
+        return $this->routePublicId;
+    }
+
+    public function getOccurredAt(): \DateTimeImmutable
+    {
+        return $this->occurredAt;
+    }
 }

@@ -23,9 +23,11 @@ use App\Repository\RouteStopRepository;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
-use Symfony\Component\Mercure\HubInterface;
-use Symfony\Component\Mercure\Update;
 
+/**
+ * Persists RouteEvent entities for audit history.
+ * Mercure publishing is handled by MapEventProjector.
+ */
 final readonly class RouteEventLogListener
 {
     public function __construct(
@@ -33,7 +35,6 @@ final readonly class RouteEventLogListener
         private RouteRepository $routeRepo,
         private UserRepository $userRepo,
         private RouteStopRepository $stopRepo,
-        private HubInterface $hub,
     ) {}
 
     #[AsEventListener]
@@ -288,22 +289,6 @@ final readonly class RouteEventLogListener
     {
         $this->em->persist($routeEvent);
         $this->em->flush();
-
-        try {
-            $this->hub->publish(new Update(
-                sprintf('/routes/%s/events', $routePublicId),
-                json_encode([
-                    'type' => $routeEvent->getEventType()->value,
-                    'actor_type' => $routeEvent->getActorType(),
-                    'actor_email' => $routeEvent->getActorUser()?->getEmail(),
-                    'payload' => $routeEvent->getPayload(),
-                    'snapshot_metrics' => $routeEvent->getSnapshotMetrics(),
-                    'occurred_at' => $routeEvent->getOccurredAt()->format('c'),
-                ], JSON_THROW_ON_ERROR),
-            ));
-        } catch (\Throwable) {
-            // Mercure failure must not break event logging
-        }
     }
 
     private function buildSnapshotMetrics(\App\Entity\Route $route): array
