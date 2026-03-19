@@ -7,6 +7,7 @@ import { VehicleInfoPanel } from '@/components/panels/VehicleInfoPanel';
 import { StopMarkersLayer } from '@/components/maps/layers/StopMarkersLayer';
 import { RoutePolylineLayer } from '@/components/maps/layers/RoutePolylineLayer';
 import { VehicleLayer } from '@/components/maps/layers/VehicleLayer';
+import { DualMenuShell } from '@/components/layout/DualMenuShell';
 import type { StopData } from '@/api/types';
 
 /**
@@ -82,67 +83,65 @@ export function CustomerRouteDetailPage() {
     );
   }
 
-  return (
-    <div className="relative flex h-full w-full overflow-hidden">
-      {/* Sidebar */}
-      <div className="w-80 flex-shrink-0 bg-slate-900 border-r border-slate-800 flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="p-4 border-b border-slate-800">
-          <h1 className="text-lg font-semibold text-white truncate">{route.name}</h1>
-          <div className="flex items-center gap-2 mt-1">
-            {route.status && (
-              <span className="text-xs font-medium text-slate-400 uppercase">{route.status}</span>
-            )}
-            {sseConnected && (
-              <span className="w-2 h-2 rounded-full bg-emerald-500" title="Live updates active" />
-            )}
-          </div>
-        </div>
-
-        {/* Vehicle info (limited: name + speed only for customers) */}
-        {route.vehicleName && (
-          <div className="px-4 pt-3">
-            <VehicleInfoPanel
-              vehicle={{
-                name: route.vehicleName,
-                speed: vehiclePosition?.speed,
-              }}
-            />
-          </div>
-        )}
-
-        {/* Stops */}
-        <div className="flex-1 overflow-y-auto p-4">
-          <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">
-            Stops ({stops.filter((s) => !s.isOrigin).length})
-          </div>
-          <StopListPanel
-            stops={stops}
-            selectedSequence={selectedSequence}
-            onStopClick={handleStopClick}
-            showEta
-          />
+  const sidebar = (
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* Header */}
+      <div className="p-4 border-b border-slate-800">
+        <h1 className="text-lg font-semibold text-white truncate">{route.name}</h1>
+        <div className="flex items-center gap-2 mt-1">
+          {route.status && (
+            <span className="text-xs font-medium text-slate-400 uppercase">{route.status}</span>
+          )}
+          {sseConnected && (
+            <span className="w-2 h-2 rounded-full bg-emerald-500" title="Live updates active" />
+          )}
         </div>
       </div>
 
-      {/* Map */}
-      <div className="flex-1 relative">
-        <MapCanvas ref={mapRef}>
-          {route.polyline && (
-            <RoutePolylineLayer
-              id={route.publicId}
-              polyline={route.polyline}
-              color={route.color}
-            />
-          )}
-          <StopMarkersLayer
-            stops={markerStops}
-            keyPrefix={`customer-${route.publicId}-`}
-            onStopClick={handleStopClick}
+      {/* Vehicle info (limited: name + speed only for customers) */}
+      {route.vehicleName && (
+        <div className="px-4 pt-3">
+          <VehicleInfoPanel
+            vehicle={{
+              name: route.vehicleName,
+              speed: vehiclePosition?.speed,
+            }}
           />
-          {vehicleMarkers.length > 0 && <VehicleLayer vehicles={vehicleMarkers} />}
-        </MapCanvas>
+        </div>
+      )}
+
+      {/* Stops */}
+      <div className="flex-1 overflow-y-auto p-4">
+        <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">
+          Stops ({stops.filter((s) => !s.isOrigin).length})
+        </div>
+        <StopListPanel
+          stops={stops}
+          selectedSequence={selectedSequence}
+          onStopClick={handleStopClick}
+          showEta
+        />
       </div>
     </div>
+  );
+
+  return (
+    <DualMenuShell dataSidebar={sidebar} dataSidebarWidth="w-80">
+      <MapCanvas ref={mapRef}>
+        {route.polyline && (
+          <RoutePolylineLayer
+            id={route.publicId}
+            polyline={route.polyline}
+            color={route.color}
+          />
+        )}
+        <StopMarkersLayer
+          stops={markerStops}
+          keyPrefix={`customer-${route.publicId}-`}
+          onStopClick={handleStopClick}
+        />
+        {vehicleMarkers.length > 0 && <VehicleLayer vehicles={vehicleMarkers} />}
+      </MapCanvas>
+    </DualMenuShell>
   );
 }

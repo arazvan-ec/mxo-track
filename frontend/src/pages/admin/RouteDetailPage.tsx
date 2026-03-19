@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import { useParams, Link } from 'react-router';
+import { useParams } from 'react-router';
 import { useRouteMapData } from '@/api/hooks/useRouteMapData';
 import { useVehicleTrail } from '@/api/hooks/useVehicleTrail';
 import { MapCanvas, type MapCanvasHandle } from '@/components/maps/MapCanvas';
@@ -8,6 +8,7 @@ import { RoutePolylineLayer } from '@/components/maps/layers/RoutePolylineLayer'
 import { VehicleLayer } from '@/components/maps/layers/VehicleLayer';
 import { VehicleTrailLayer } from '@/components/maps/layers/VehicleTrailLayer';
 import { StopListPanel, RouteMetricsPanel, VehicleInfoPanel } from '@/components/panels';
+import { DualMenuShell } from '@/components/layout/DualMenuShell';
 import type { StopData, RouteData } from '@/api/types';
 
 const STATUS_COLORS: Record<string, string> = {
@@ -118,63 +119,55 @@ export function RouteDetailPage() {
 
   const statusBadge = STATUS_COLORS[route.status ?? ''] ?? STATUS_COLORS.PLANNED;
 
-  return (
-    <div className="relative flex h-full w-full overflow-hidden">
-      {/* Sidebar */}
-      <aside className="w-80 bg-slate-900 border-r border-slate-800 flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="p-4 border-b border-slate-800 space-y-3">
-          <Link
-            to="/app/admin/fleet-map"
-            className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
-          >
-            &larr; Back to fleet map
-          </Link>
-
-          <div>
-            <h1 className="text-lg font-semibold text-white truncate">{route.name}</h1>
-            <div className="flex items-center gap-2 mt-1">
-              <span
-                className={`text-[10px] font-medium uppercase px-1.5 py-0.5 rounded border ${statusBadge}`}
-              >
-                {route.status}
+  const sidebar = (
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* Header */}
+      <div className="p-4 border-b border-slate-800 space-y-3">
+        <div>
+          <h1 className="text-lg font-semibold text-white truncate">{route.name}</h1>
+          <div className="flex items-center gap-2 mt-1">
+            <span
+              className={`text-[10px] font-medium uppercase px-1.5 py-0.5 rounded border ${statusBadge}`}
+            >
+              {route.status}
+            </span>
+            {sseConnected && (
+              <span className="flex items-center gap-1 text-[10px] text-emerald-500">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Live
               </span>
-              {sseConnected && (
-                <span className="flex items-center gap-1 text-[10px] text-emerald-500">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  Live
-                </span>
-              )}
-            </div>
+            )}
           </div>
         </div>
+      </div>
 
-        {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {/* Vehicle info */}
-          <VehicleInfoPanel vehicle={vehicleInfo} />
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {/* Vehicle info */}
+        <VehicleInfoPanel vehicle={vehicleInfo} />
 
-          {/* Metrics */}
-          <RouteMetricsPanel metrics={metrics} />
+        {/* Metrics */}
+        <RouteMetricsPanel metrics={metrics} />
 
-          {/* Stops */}
-          <div>
-            <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">
-              Stops ({route.stops.filter((s) => !s.isOrigin).length})
-            </div>
-            <StopListPanel
-              stops={route.stops}
-              selectedSequence={selectedStopSequence}
-              onStopClick={handleStopClick}
-              showEta
-            />
+        {/* Stops */}
+        <div>
+          <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">
+            Stops ({route.stops.filter((s) => !s.isOrigin).length})
           </div>
+          <StopListPanel
+            stops={route.stops}
+            selectedSequence={selectedStopSequence}
+            onStopClick={handleStopClick}
+            showEta
+          />
         </div>
-      </aside>
+      </div>
+    </div>
+  );
 
-      {/* Map area */}
-      <div className="flex-1 relative">
-        <MapCanvas
+  return (
+    <DualMenuShell dataSidebar={sidebar} dataSidebarWidth="w-80">
+      <MapCanvas
           ref={mapRef}
           initialCenter={mapData?.origin ?? undefined}
           initialZoom={mapData?.origin ? 13 : 6}
@@ -200,7 +193,6 @@ export function RouteDetailPage() {
           {/* Vehicle trail */}
           <VehicleTrailLayer coordinates={trailCoordinates} />
         </MapCanvas>
-      </div>
-    </div>
+    </DualMenuShell>
   );
 }

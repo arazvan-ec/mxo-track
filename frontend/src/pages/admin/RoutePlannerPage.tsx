@@ -5,6 +5,7 @@ import { StopMarker } from '@/components/maps/shared/StopMarker';
 import { OriginMarker } from '@/components/maps/shared/OriginMarker';
 import { ROUTE_COLORS } from '@/components/maps/shared/colors';
 import { RoutePolylineLayer } from '@/components/maps/layers/RoutePolylineLayer';
+import { DualMenuShell } from '@/components/layout/DualMenuShell';
 import {
   usePlannerShipments,
   usePlannerVehicles,
@@ -257,41 +258,30 @@ export function RoutePlannerPage() {
     [clusters],
   );
 
-  return (
-    <div className="relative flex h-screen w-full overflow-hidden bg-slate-900">
-      {/* Sidebar */}
-      <div className="flex flex-col w-96 bg-slate-900/95 backdrop-blur-xl border-r border-slate-700/50 overflow-hidden">
-        {/* Header */}
-        <div className="flex-shrink-0 px-5 pt-4 pb-3">
-          <a
-            href="/admin"
-            className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm font-medium mb-3"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+  const sidebar = (
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* Header */}
+      <div className="flex-shrink-0 px-5 pt-4 pb-3">
+        <div className="flex items-center gap-2.5 mb-4">
+          <div className="w-8 h-8 rounded-lg bg-purple-600 flex items-center justify-center">
+            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" />
             </svg>
-            Back to Dashboard
-          </a>
-          <div className="flex items-center gap-2.5 mb-4">
-            <div className="w-8 h-8 rounded-lg bg-purple-600 flex items-center justify-center">
-              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" />
-              </svg>
-            </div>
-            <div>
-              <h1 className="text-white font-bold text-base tracking-tight">Route Planner</h1>
-              <p className="text-slate-500 text-[10px] uppercase tracking-widest">Build optimized routes</p>
-            </div>
           </div>
-
-          {/* Step indicator */}
-          <StepIndicator currentStep={step} />
+          <div>
+            <h1 className="text-white font-bold text-base tracking-tight">Route Planner</h1>
+            <p className="text-slate-500 text-[10px] uppercase tracking-widest">Build optimized routes</p>
+          </div>
         </div>
 
-        {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto px-4 pb-4">
-          {step === 1 && (
-            <Step1Panel
+        {/* Step indicator */}
+        <StepIndicator currentStep={step} />
+      </div>
+
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto px-4 pb-4">
+        {step === 1 && (
+          <Step1Panel
               customerId={customerId}
               onCustomerIdChange={setCustomerId}
               shipments={shipments}
@@ -346,10 +336,12 @@ export function RoutePlannerPage() {
           )}
         </div>
       </div>
+  );
 
+  return (
+    <DualMenuShell dataSidebar={sidebar} dataSidebarWidth="w-96">
       {/* Map */}
-      <div className="flex-1 relative">
-        <MapCanvas ref={mapRef}>
+      <MapCanvas ref={mapRef}>
           {/* Step 1 & 2: Show shipment markers */}
           {(step === 1 || step === 2) && shipments.length > 0 && (
             <ShipmentClusterLayer
@@ -417,8 +409,7 @@ export function RoutePlannerPage() {
             return null;
           })()}
         </MapCanvas>
-      </div>
-    </div>
+    </DualMenuShell>
   );
 }
 

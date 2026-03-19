@@ -30,3 +30,10 @@ Registro de decisiones de diseño significativas. Cada entrada captura el contex
 - **Decisión:** Mantener VehicleMarker/StopMarker como DOM (necesitan SVG custom, son <50 por vista). Migrar ShipmentMarkers a clustering WebGL nativo y ExceptionMarkers a heatmap WebGL.
 - **Alternativas descartadas:** Migrar todo a WebGL — perdemos SVG custom y números en markers de stops.
 - **Resultado:** ShipmentClusterLayer y ExceptionHeatmapLayer implementados como Source+Layer nativos. DOM markers conservados donde aportan valor visual.
+
+### [2026-03-19] DualMenuShell — Navegación unificada para React SPA
+
+- **Problema:** Las 9 páginas React SPA (`/app/*`) tenían sidebars de datos (métricas, paradas, filtros) pero cero navegación de vuelta al sistema Twig. Los usuarios quedaban "atrapados" sin forma de volver al dashboard o cambiar de sección.
+- **Decisión:** Componente `DualMenuShell` con dos hamburger buttons independientes: (1) navegación overlay con links al sistema Twig por rol via `useMe()`, (2) toggle para colapsar/expandir el sidebar de datos contextual de cada página. Cada página pasa su sidebar como prop. NavigationSidebar replica los links de `_sidebar_content.html.twig`.
+- **Alternativas descartadas:** (A) Un solo hamburger con nav+datos combinados — pierde control independiente. (B) AppShell wrapper persistente — requiere reestructurar todas las páginas y conflicta con layouts full-screen de mapa. (C) Barra de navegación fija top — consume espacio vertical valioso en vistas de mapa.
+- **Resultado:** 9 páginas migradas, build OK (0 errores TypeScript). Ambos hamburgers funcionan independientemente. Links de navegación correctos por rol (admin/customer/driver).

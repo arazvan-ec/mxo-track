@@ -6,6 +6,7 @@ import { StopListPanel } from '@/components/panels/StopListPanel';
 import { StopMarkersLayer } from '@/components/maps/layers/StopMarkersLayer';
 import { RoutePolylineLayer } from '@/components/maps/layers/RoutePolylineLayer';
 import { VehicleLayer } from '@/components/maps/layers/VehicleLayer';
+import { DualMenuShell } from '@/components/layout/DualMenuShell';
 import type { StopData } from '@/api/types';
 
 /**
@@ -105,81 +106,79 @@ export function DriverRoutePage() {
     );
   }
 
-  return (
-    <div className="relative flex h-full w-full overflow-hidden">
-      {/* Sidebar */}
-      <div className="w-80 flex-shrink-0 bg-slate-900 border-r border-slate-800 flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="p-4 border-b border-slate-800">
-          <h1 className="text-lg font-semibold text-white truncate">{route.name}</h1>
-          <div className="flex items-center gap-2 mt-1">
-            {route.status && (
-              <span className="text-xs font-medium text-slate-400 uppercase">{route.status}</span>
-            )}
-            {sseConnected && (
-              <span className="w-2 h-2 rounded-full bg-emerald-500" title="Live updates active" />
-            )}
-          </div>
-        </div>
-
-        {/* Progress bar */}
-        <div className="px-4 pt-3">
-          <div className="bg-slate-800/60 rounded-lg p-3 border border-slate-700/40">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] text-slate-500 uppercase tracking-wider">Progress</span>
-              <span className="text-xs font-medium text-white">
-                {deliveredCount}/{totalCount}
-              </span>
-            </div>
-            <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-emerald-500 rounded-full transition-all duration-500"
-                style={{ width: totalCount > 0 ? `${(deliveredCount / totalCount) * 100}%` : '0%' }}
-              />
-            </div>
-            {currentStop && (
-              <div className="mt-2 text-xs text-slate-400">
-                Next: <span className="text-white">{currentStop.address}</span>
-                {currentStop.etaTime && (
-                  <span className="text-blue-400 ml-1">ETA {currentStop.etaTime}</span>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Stops */}
-        <div className="flex-1 overflow-y-auto p-4">
-          <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">
-            Stops ({totalCount})
-          </div>
-          <StopListPanel
-            stops={stops}
-            selectedSequence={selectedSequence ?? currentStop?.sequence}
-            onStopClick={handleStopClick}
-            showEta
-          />
+  const sidebar = (
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* Header */}
+      <div className="p-4 border-b border-slate-800">
+        <h1 className="text-lg font-semibold text-white truncate">{route.name}</h1>
+        <div className="flex items-center gap-2 mt-1">
+          {route.status && (
+            <span className="text-xs font-medium text-slate-400 uppercase">{route.status}</span>
+          )}
+          {sseConnected && (
+            <span className="w-2 h-2 rounded-full bg-emerald-500" title="Live updates active" />
+          )}
         </div>
       </div>
 
-      {/* Map */}
-      <div className="flex-1 relative">
-        <MapCanvas ref={mapRef}>
-          {route.polyline && (
-            <RoutePolylineLayer
-              id={route.publicId}
-              polyline={route.polyline}
-              color={route.color}
+      {/* Progress bar */}
+      <div className="px-4 pt-3">
+        <div className="bg-slate-800/60 rounded-lg p-3 border border-slate-700/40">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] text-slate-500 uppercase tracking-wider">Progress</span>
+            <span className="text-xs font-medium text-white">
+              {deliveredCount}/{totalCount}
+            </span>
+          </div>
+          <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+              style={{ width: totalCount > 0 ? `${(deliveredCount / totalCount) * 100}%` : '0%' }}
             />
+          </div>
+          {currentStop && (
+            <div className="mt-2 text-xs text-slate-400">
+              Next: <span className="text-white">{currentStop.address}</span>
+              {currentStop.etaTime && (
+                <span className="text-blue-400 ml-1">ETA {currentStop.etaTime}</span>
+              )}
+            </div>
           )}
-          <StopMarkersLayer
-            stops={markerStops}
-            keyPrefix={`driver-${route.publicId}-`}
-            onStopClick={handleStopClick}
-          />
-          {vehicleMarkers.length > 0 && <VehicleLayer vehicles={vehicleMarkers} />}
-        </MapCanvas>
+        </div>
+      </div>
+
+      {/* Stops */}
+      <div className="flex-1 overflow-y-auto p-4">
+        <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">
+          Stops ({totalCount})
+        </div>
+        <StopListPanel
+          stops={stops}
+          selectedSequence={selectedSequence ?? currentStop?.sequence}
+          onStopClick={handleStopClick}
+          showEta
+        />
       </div>
     </div>
+  );
+
+  return (
+    <DualMenuShell dataSidebar={sidebar} dataSidebarWidth="w-80">
+      <MapCanvas ref={mapRef}>
+        {route.polyline && (
+          <RoutePolylineLayer
+            id={route.publicId}
+            polyline={route.polyline}
+            color={route.color}
+          />
+        )}
+        <StopMarkersLayer
+          stops={markerStops}
+          keyPrefix={`driver-${route.publicId}-`}
+          onStopClick={handleStopClick}
+        />
+        {vehicleMarkers.length > 0 && <VehicleLayer vehicles={vehicleMarkers} />}
+      </MapCanvas>
+    </DualMenuShell>
   );
 }
