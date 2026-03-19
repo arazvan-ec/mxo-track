@@ -37,3 +37,11 @@ Registro de decisiones de diseño significativas. Cada entrada captura el contex
 - **Decisión:** Componente `DualMenuShell` con dos hamburger buttons independientes: (1) navegación overlay con links al sistema Twig por rol via `useMe()`, (2) toggle para colapsar/expandir el sidebar de datos contextual de cada página. Cada página pasa su sidebar como prop. NavigationSidebar replica los links de `_sidebar_content.html.twig`.
 - **Alternativas descartadas:** (A) Un solo hamburger con nav+datos combinados — pierde control independiente. (B) AppShell wrapper persistente — requiere reestructurar todas las páginas y conflicta con layouts full-screen de mapa. (C) Barra de navegación fija top — consume espacio vertical valioso en vistas de mapa.
 - **Resultado:** 9 páginas migradas, build OK (0 errores TypeScript). Ambos hamburgers funcionan independientemente. Links de navegación correctos por rol (admin/customer/driver).
+- **Actualización [2026-03-19]:** Feedback del usuario — el overlay de navegación cubría el data sidebar. Cambiado a inline en desktop (prop `mode: 'inline' | 'overlay'` + `useIsDesktop` hook). En mobile se preserva overlay. Layout desktop: `[Nav w-64] | [Data sidebar] | [Map flex-1]`.
+
+### [2026-03-19] NavigationSidebar inline vs overlay — responsive approach
+
+- **Problema:** NavigationSidebar como overlay (z-50 + backdrop) cubría el data sidebar. El usuario quiere ambos sidebars visibles side by side.
+- **Decisión:** Prop `mode` en NavigationSidebar (`'overlay' | 'inline'`). `DualMenuShell` usa `useIsDesktop()` hook (matchMedia 1024px) para elegir modo. Desktop = inline, mobile = overlay.
+- **Alternativas descartadas:** (A) Dos componentes separados — YAGNI, más indirección. (B) CSS-only responsive — backdrop necesita lógica JS condicional.
+- **Resultado:** Build OK, 0 errores. Nav sidebar inline en desktop, overlay preservado en mobile.
