@@ -43,7 +43,7 @@
 | **RoutePlanTemplate** | Plantilla de ruta reutilizable |
 | **CsvImportRun** | Metadata de importación CSV |
 | **RouteEvent** | Histórico inmutable de eventos de ruta (append-only) |
-| **RouteSnapshot** | Cache de métricas de optimización y progreso (1:1 con Route) |
+| **RouteSnapshot** | Cache de métricas de optimización y progreso (1:1 con Route). Domain POPO en `src/Domain/Route/Model/`, persistido via XML mapping externo |
 | **AuditLog** | Auditoría de seguridad |
 | **ApiKey** | API key (hash SHA-256, nunca plain) |
 
@@ -103,11 +103,11 @@ Vehicle (global, no scoped)
 
 ## Arquitectura de Capas de Rutas
 
-El dominio de rutas usa un modelo de 4 capas que preserva la inmutabilidad del plan original mientras permite que el estado operativo cambie:
+**[PARTIAL]** El dominio de rutas usa un modelo de 4 capas que preserva la inmutabilidad del plan original mientras permite que el estado operativo cambie. Solo RouteSnapshot es un Domain POPO (`src/Domain/Route/Model/`); Route, RouteStop y RouteEvent siguen siendo entidades ORM en `src/Entity/` con atributos Doctrine directos:
 
-1. **RouteSnapshot (inmutable)** — Captura el plan original: orden de paradas, polyline, métricas de ahorro, validación de capacidad
-2. **Route + RouteStop (mutable)** — Estado operativo: status de ruta/paradas, vehículo y driver asignados
-3. **RouteEvent (append-only)** — Historial inmutable de 15 tipos de evento (entregas, excepciones, desviaciones, re-optimizaciones)
+1. **RouteSnapshot (inmutable)** — Captura el plan original: orden de paradas, polyline, métricas de ahorro, validación de capacidad. Domain POPO con persistencia via XML mapping externo.
+2. **Route + RouteStop (mutable)** — Estado operativo: status de ruta/paradas, vehículo y driver asignados. Entidades ORM en `src/Entity/`.
+3. **RouteEvent (append-only)** — Historial inmutable de 15 tipos de evento (entregas, excepciones, desviaciones, re-optimizaciones). Entidad ORM en `src/Entity/`.
 4. **Estado en tiempo real** — stopStates, ETAs, actualPolyline actualizados via Mercure SSE
 
 Para diagrama completo, flujo end-to-end, constraints y gaps: ver `docs/knowledge/route-optimization.md` > "Arquitectura del Dominio de Rutas".
