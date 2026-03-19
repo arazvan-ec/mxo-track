@@ -20,6 +20,14 @@
 
 - [Decisión o recomendación derivada del análisis]
 
+## Gaps detectados
+
+| Documento | Sección | Gap | Severidad |
+|-----------|---------|-----|-----------|
+| `path/to/doc` | [sección] | [descripción del gap] | High/Medium/Low |
+
+Severidad: **High** = doc activamente misleading, **Medium** = números/listas obsoletas, **Low** = omisión menor
+
 ## Contexto adicional
 
 [Solo si es necesario — datos, métricas, o detalles que podrían ser útiles más adelante]

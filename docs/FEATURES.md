@@ -256,6 +256,18 @@ Cuando un conductor marca una entrega o reporta una excepción, `RouteSnapshotLi
 
 Usa Mercure SSE para actualización en tiempo real sin polling. Las posiciones de los vehículos se mueven en el mapa conforme llegan nuevas coordenadas.
 
+### MapView Bounded Context (`src/Domain/MapView/`)
+
+Motor de proyección de eventos que alimenta la UI del mapa en tiempo real. Separado como bounded context DDD puro:
+
+| Capa | Archivos | Responsabilidad |
+|------|----------|-----------------|
+| **Model** | `MapUpdate`, `MapUpdateType`, `VehiclePosition` | Datos de proyección (POPOs, sin ORM) |
+| **Projection** | `MapProjectableEventInterface`, `MapProjectorInterface` | Contratos para proyectar domain events en actualizaciones de mapa |
+| **Publisher** | `MapPublisherInterface` | Contrato para publicar actualizaciones (implementado via Mercure) |
+
+Los domain events que implementan `MapProjectableEventInterface` (13 eventos) se proyectan automáticamente en actualizaciones de mapa publicadas a los clientes SSE.
+
 ---
 
 ## 8. Portal del Conductor
@@ -724,30 +736,35 @@ Columnas soportadas:
 | `SoftDeleteTrait` | 7 entidades con borrado lógico: User, Customer, Vehicle, Route, Shipment |
 | `CustomerScopedEntityInterface` | 9 entidades con aislamiento multi-tenant |
 
-### Entidades Principales (36 total)
+### Entidades Principales (39 entidades en `src/Entity/` + modelos de dominio en `src/Domain/`)
 
 | Categoría | Entidades |
 |---|---|
 | **Core** | User, Customer, Vehicle, CustomerVehicle |
-| **Rutas** | Route, RouteStop |
+| **Rutas** | Route, RouteStop, RouteEvent, RoutePlanTemplate |
 | **Envíos** | Shipment, Parcel, ShipmentEvent |
 | **Tracking GPS** | VehiclePosition, VehicleLastPosition, VehicleCheckpoint |
 | **Entrega** | Pod, DriverAction, DriverFeedback, VehicleInspection |
 | **Ubicaciones** | CustomerLocation, DeliveryZone |
 | **Programación** | DeliverySlot, DeliveryRating, DriverAvailability |
-| **Notificaciones** | Notification, PushSubscription, RecipientNotification |
+| **Notificaciones** | Notification, NotificationLog, NotificationPreference, PushSubscription, RecipientNotification, RecipientAction |
 | **Integraciones** | ApiKey, WebhookEndpoint, CsvImportRun, CustomerIntegration |
 | **Realtime** | RealtimeEvent |
-| **Analytics** | AuditLog, AddressRisk |
-| **Plantillas** | RoutePlanTemplate |
+| **Analytics** | AuditLog, AddressRisk, RoutePerformanceMetric, OptimizationStrategyComparison, RouteOptimizationLog |
+| **Domain Models** **[PARTIAL]** | RouteSnapshot, RouteMapView, StopMapView, MapUpdate, MapUpdateType, RouteMapMetrics, RouteMapOptions, RouteMapTiming, VehiclePosition (Domain) — POPOs en `src/Domain/`, sin ORM |
 
-### Enums (15 total)
+> **[PARTIAL]** La migración a DDD está en progreso. Route Planning tiene modelos de dominio (RouteSnapshot, MapView), pero las entidades principales (Route, RouteStop, Shipment) permanecen en `src/Entity/` con ORM attributes. Ver `docs/knowledge/architecture-ddd.md`.
+
+### Enums (24 total: 17 en `src/Enum/`, 6 en `src/Provider/`, 1 en `src/Domain/`)
+
+**Enums de dominio** (`src/Enum/`):
 
 | Enum | Valores |
 |---|---|
-| `UserRole` | ADMIN, CUSTOMER, DRIVER |
+| `UserRole` | ADMIN, OPERATOR, CUSTOMER, DRIVER |
 | `RouteStatus` | PLANNED, ACTIVE, DONE, CANCELLED |
 | `RouteStopStatus` | PENDING, DELIVERED, EXCEPTION, SKIPPED |
+| `RouteEventType` | CREATED, OPTIMIZED, ASSIGNED, STARTED, COMPLETED, CANCELLED, STOP_DELIVERED, STOP_EXCEPTION, STOP_SKIPPED, REOPTIMIZED, etc. |
 | `ShipmentEventType` | CREATED, PICKED_UP, IN_HUB, IN_TRANSIT, OUT_FOR_DELIVERY, DELIVERED, EXCEPTION, RESCHEDULE_REQUESTED |
 | `ExceptionCode` | ABSENT, WRONG_ADDRESS, REFUSED, DAMAGED, OTHER |
 | `ServiceType` | DELIVERY, DELIVERY_AND_PICKUP, RETURN |
@@ -755,11 +772,29 @@ Columnas soportadas:
 | `VehicleSkill` | REFRIGERATED, HEAVY_LOAD, PEDESTRIAN_ACCESS, HAZMAT, FRAGILE |
 | `ShipmentPriority` | LOW, NORMAL, HIGH, URGENT, CRITICAL |
 | `ClientFrequency` | NOT_FREQUENT, FREQUENT, VERY_FREQUENT, SUPER_FREQUENT |
+| `NotificationChannel` | Canales de notificación |
+| `NotificationLogStatus` | Estados de log de notificaciones |
+| `NotificationTriggerType` | Tipos de trigger de notificaciones |
+| `OptimizationOperation` | Operaciones de optimización |
+| `OptimizationStepCategory` | Categorías de pasos de optimización |
+| `RecipientActionType` | Tipos de acción de destinatario |
+
+**Enums de providers** (`src/Provider/`):
+
+| Enum | Valores |
+|---|---|
 | `ServiceType` | ROUTING, ROUTE_OPTIMIZER, GPS, REALTIME |
 | `RoutingProvider` | OSRM, GOOGLE_DIRECTIONS |
 | `RouteOptimizerProvider` | VROOM, GREEDY |
 | `GpsProviderType` | TRACCAR, WEBHOOK |
 | `RealtimeProviderType` | MERCURE, HTTP_POLLING |
+| `SmsNotifierProviderType` | Tipos de provider SMS |
+
+**Enums de dominio** (`src/Domain/`):
+
+| Enum | Valores |
+|---|---|
+| `MapUpdateType` | Tipos de actualización de mapa (MapView bounded context) |
 
 ---
 

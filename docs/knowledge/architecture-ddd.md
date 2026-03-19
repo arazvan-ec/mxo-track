@@ -26,7 +26,7 @@ Las reglas obligatorias de SOLID y DDD están en **CLAUDE.md** (secciones "SOLID
 | Componente | Problema | Violación SOLID |
 |-----------|----------|-----------------|
 | Entidades (`src/Entity/`) | Doctrine ORM attributes embebidos, Symfony Security interfaces (User), Validator constraints | SRP, DIP |
-| Repositorios (`src/Repository/`) | Clases concretas Doctrine, sin interfaces de dominio | DIP |
+| Repositorios (`src/Repository/`) | Clases concretas Doctrine, casi sin interfaces de dominio (solo `RouteSnapshotRepositoryInterface` existe) | DIP |
 | Servicios de aplicación | Dependen de `EntityManagerInterface` directamente, `$em->persist()`, `$em->flush()` | DIP |
 | Traits (PublicIdTrait, SoftDeleteTrait) | Contienen `#[ORM\...]` attributes | SRP |
 
@@ -34,11 +34,11 @@ Las reglas obligatorias de SOLID y DDD están en **CLAUDE.md** (secciones "SOLID
 
 ### Contextos Críticos — razón para DDD puro
 
-| Bounded Context | Entidades Core | Razón |
-|----------------|---------------|-------|
-| **Route Planning** | Route, RouteStop, RouteSnapshot, RouteEvent | Corazón del negocio — km y tiempo ahorrados |
-| **Shipment/Delivery** | Shipment, Parcel, DeliveryEvidence, POD | Flujo operativo principal |
-| **Route Optimization** | (ya bien separado via port interfaces) | Solo falta repository interfaces |
+| Bounded Context | Entidades Core | Razón | Estado migración |
+|----------------|---------------|-------|-----------------|
+| **Route Planning** | Route, RouteStop, RouteSnapshot, RouteEvent | Corazón del negocio — km y tiempo ahorrados | **[PARTIAL]** — RouteSnapshot y modelos de vista (RouteMapView, StopMapView, etc.) son POPOs en `src/Domain/Route/Model/`; RouteSnapshotRepositoryInterface existe en Domain. Pero Route, RouteStop y RouteEvent siguen en `src/Entity/` con ORM attributes. |
+| **Shipment/Delivery** | Shipment, Parcel, DeliveryEvidence, POD | Flujo operativo principal | **[PLANNED]** — Todas las entidades siguen en `src/Entity/` con ORM. Sin interfaces de repositorio en Domain. |
+| **Route Optimization** | (ya bien separado via port interfaces) | Solo falta repository interfaces | **[PARTIAL]** — Port interfaces existen; repository interfaces en Domain aún no (solo RouteSnapshotRepositoryInterface). |
 
 ### Contextos CRUD — razón para quedarse pragmático
 
@@ -62,6 +62,8 @@ Cada sprint de migración de un contexto crítico incluye:
 
 ### Repository Interface (Domain Layer)
 
+**[PLANNED]** — Este ejemplo muestra el patrón objetivo. Actualmente solo existe `RouteSnapshotRepositoryInterface` en Domain; `RouteRepositoryInterface` aún no existe.
+
 ```php
 // src/Domain/Route/Repository/RouteRepositoryInterface.php
 namespace App\Domain\Route\Repository;
@@ -77,6 +79,8 @@ interface RouteRepositoryInterface
 ```
 
 ### Repository Implementation (Infrastructure Layer)
+
+**[PLANNED]** — No existe aún. Ejemplo del patrón objetivo.
 
 ```php
 // src/Infrastructure/Route/Doctrine/DoctrineRouteRepository.php
@@ -111,6 +115,8 @@ final readonly class DoctrineRouteRepository implements RouteRepositoryInterface
 
 ### Service dependiendo de Interface
 
+**[PLANNED]** — Ejemplo del patrón objetivo. Los servicios actuales dependen de repositorios concretos Doctrine, no de interfaces de dominio.
+
 ```php
 // src/Application/Route/RouteLifecycleService.php
 final readonly class RouteLifecycleService
@@ -123,6 +129,8 @@ final readonly class RouteLifecycleService
 ```
 
 ### Entidad DDD Pura (contextos críticos)
+
+**[PLANNED]** — Route sigue en `src/Entity/Route.php` con ORM attributes. Este ejemplo muestra el estado objetivo. Los únicos POPOs de dominio actuales en `src/Domain/Route/Model/` son RouteSnapshot, RouteMapView, StopMapView, RouteMapMetrics, RouteMapOptions y RouteMapTiming.
 
 ```php
 // src/Domain/Route/Model/Route.php
@@ -152,7 +160,7 @@ final class Route  // Sin #[ORM\Entity], sin Doctrine attributes
 }
 ```
 
-Con mapping Doctrine separado:
+**[PLANNED]** — No existe mapping externo aún. Todas las entidades usan ORM attributes inline.
 
 ```php
 // src/Infrastructure/Route/Doctrine/Mapping/RouteMapping.php

@@ -216,6 +216,16 @@ Después de cada implementación que involucre una decisión de diseño signific
 - DTOs in `src/Dto/` with `fromArray()` factory + Symfony Validator constraints
 - Symfony 7.4 lock enforced: `extra.symfony.require=7.4.*`, `conflict >=8.0`
 
+### Documentation Honesty (mandatory)
+
+La documentación describe **lo que ES**, no lo que debería ser. Cuando el codebase tiene arquitectura aspiracional (e.g., DDD patterns planificados pero no implementados):
+
+- **Estado actual** es la voz default: "Las entidades usan ORM attributes en `src/Entity/`"
+- **Estado aspiracional** usa marcadores: "**[PLANNED]** Las entidades en contextos críticos migrarán a `src/Domain/{Context}/Model/` como POPOs"
+- **Estado parcial** usa: "**[PARTIAL]** Domain events son POPOs (13 events), pero entidades permanecen en `src/Entity/` con ORM attributes"
+
+Aplica a: knowledge modules, FEATURES.md, architecture docs. NO aplica a instrucciones de comportamiento en CLAUDE.md (que describen comportamiento deseado).
+
 ## Atomic Commits & Push (mandatory)
 
 **Cada paso de progreso debe committearse y pushearse inmediatamente.** No acumular cambios.
@@ -276,6 +286,31 @@ fix: correct ETA calculation when stop is skipped
 - Si el tool destino ya maneja el caso (ej: `Write` crea directorios padre) → no hagas pasos previos innecesarios
 - Preferir la ruta más corta: menos herramientas, menos comandos, mismo resultado
 
+## Pre-Exploration Gate (mandatory)
+
+**Antes de ejecutar Grep, Glob o Bash para descubrir estructura del codebase** (contar entidades, listar servicios, inventariar enums, explorar directorios), **DEBES leer `docs/codebase-manifest.md` primero**.
+
+- Si el dato está ahí y `Generated` es < 7 días → **úsalo directamente, sin explorar**
+- Si falta o está obsoleto → explora, luego ejecuta `make manifest` y commitea el resultado
+
+### Mapeo exploración → documento existente
+
+| En vez de ejecutar... | Lee... |
+|-----------------------|--------|
+| `ls src/Entity/` o contar entidades | `docs/codebase-manifest.md` → Entity List + Metrics |
+| `ls src/Enum/` o contar enums | `docs/codebase-manifest.md` → Enum List + Metrics |
+| `find src/ -name "*.php" \| wc -l` | `docs/codebase-manifest.md` → Metrics |
+| `grep -r "class.*Controller"` | `docs/codebase-manifest.md` → Metrics; detalle en `docs/knowledge/api-surface.md` |
+| Contar tests, migrations, services | `docs/codebase-manifest.md` → Metrics |
+| Estructura de `src/` | `docs/codebase-manifest.md` → Directory Tree |
+| Detalle de una entidad específica | `docs/knowledge/domain-model.md` |
+| Inventario completo de features | `docs/FEATURES.md` |
+| Arquitectura, bounded contexts | `docs/knowledge/architecture-ddd.md` |
+
+### Cuándo regenerar
+
+Ejecutar `make manifest` después de cualquier sesión que añada o elimine entidades, enums, servicios o controllers. Commitear el resultado.
+
 ## Principio de Escalabilidad en Decisiones (mandatory)
 
 **La mejor solución es siempre la que más escala, independientemente de la cantidad de cambios que requiera.**
@@ -309,12 +344,26 @@ fix: correct ETA calculation when stop is skipped
 | **Documentation** | Editar docs, knowledge modules, specs | Light-flow |
 | **Bug fix** | Error, test failure, comportamiento inesperado | Debug-flow |
 | **Code change** | Feature nueva, refactor, enhancement | Full-flow |
+| **Exploration** | "audita X", "analiza Y", "cómo funciona Z?", análisis de codebase, architecture review | Explore-flow |
 
 ### Micro-flow (preguntas informativas)
 
 1. **Consultar** — Buscar en `docs/decisions/log.md` y `docs/knowledge/` si ya existe respuesta
 2. **Responder** — Respuesta estructurada con referencias a archivos
-3. **Capturar** — Si la pregunta revela un gap de documentación, anotarlo: "Gap de documentación identificado: [topic]"
+3. **Capturar** — Si la pregunta revela un gap de documentación, declarar: "Gap de documentación: [módulo] — [descripción]". Si el gap es significativo, añadir entrada en `docs/superpowers/agent-outputs/YYYY-MM-DD-doc-gaps.md` (append al archivo diario si ya existe).
+
+### Explore-flow (exploraciones del codebase)
+
+Aplica cuando la interacción produce hallazgos sustantivos sobre el codebase (conteos, patrones de arquitectura, detalles de implementación, gaps entre docs y código). Si es un fact lookup simple, usar Micro-flow.
+
+1. **Consultar** — Verificar si hallazgos ya existen en `docs/knowledge/`, `docs/superpowers/agent-outputs/`, o `docs/analysis/`
+2. **Explorar** — Leer código, trazar patrones, recopilar evidencia
+3. **Responder** — Respuesta estructurada con hallazgos y referencias a archivos
+4. **Capturar** — Si los hallazgos son sustantivos (revelan gaps, corrigen misconceptions, producen conocimiento reutilizable):
+   a. Escribir en `docs/superpowers/agent-outputs/YYYY-MM-DD-<topic>.md` usando template de subagent-output
+   b. Si un knowledge module es directamente contradictorio, marcar: "STALE: [módulo] — [qué está mal]"
+   c. Commit y push
+5. **Proponer actualización** (opcional) — Si un knowledge module o FEATURES.md necesita actualizarse, proponer el cambio específico al usuario. No actualizar silenciosamente.
 
 ### Light-flow (cambios de documentación)
 
@@ -495,7 +544,7 @@ Antes de trabajar en un subsistema, **LEE el módulo relevante** en `docs/knowle
 
 ## Features Document
 
-`docs/FEATURES.md` — descripción completa de todas las características. **Debe mantenerse actualizado** con cada PR que añada, modifique o elimine funcionalidad.
+`docs/FEATURES.md` — descripción completa de todas las características. **Debe mantenerse actualizado** con cada PR que añada, modifique o elimine funcionalidad. Los conteos (entidades, enums) y listados deben reflejar la realidad — verificar antes de usarlos como referencia. Cuando una exploración revele discrepancia, actualizar el archivo o registrar el gap en agent-outputs.
 
 ## Backlog Arquitectónico
 
