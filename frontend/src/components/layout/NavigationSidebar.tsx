@@ -2,6 +2,8 @@ import { useMe } from '@/api/hooks/useMe';
 
 interface Props {
   onClose: () => void;
+  /** 'overlay' (default) = fixed + backdrop; 'inline' = static flex child */
+  mode?: 'overlay' | 'inline';
 }
 
 interface NavItem {
@@ -189,20 +191,26 @@ function getNavSections(role: string | undefined): NavSection[] {
 
 /* ── Component ───────────────────────────────────────────────────── */
 
-export function NavigationSidebar({ onClose }: Props) {
+export function NavigationSidebar({ onClose, mode = 'overlay' }: Props) {
   const { data: me } = useMe();
   const sections = getNavSections(me?.role);
+  const inline = mode === 'inline';
 
   return (
     <>
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/50 z-40"
-        onClick={onClose}
-      />
+      {/* Backdrop (overlay mode only) */}
+      {!inline && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40"
+          onClick={onClose}
+        />
+      )}
 
       {/* Sidebar panel */}
-      <aside className="fixed top-0 left-0 bottom-0 w-72 bg-slate-800 z-50 flex flex-col shadow-2xl animate-slide-in-left">
+      <aside className={inline
+        ? 'w-64 flex-shrink-0 bg-slate-800 flex flex-col border-r border-slate-700 h-full'
+        : 'fixed top-0 left-0 bottom-0 w-72 bg-slate-800 z-50 flex flex-col shadow-2xl animate-slide-in-left'
+      }>
         {/* Brand header */}
         <div className="flex h-14 shrink-0 items-center justify-between px-4 border-b border-slate-700">
           <a href="/" className="flex items-center gap-3">
