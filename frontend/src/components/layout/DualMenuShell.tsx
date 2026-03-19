@@ -31,8 +31,8 @@ export function DualMenuShell({
 
   return (
     <div className="flex h-screen w-full bg-slate-900">
-      {/* Navigation sidebar (inline) */}
-      {navOpen && <NavigationSidebar mode="inline" onClose={() => setNavOpen(false)} />}
+      {/* Navigation sidebar (overlay) */}
+      {navOpen && <NavigationSidebar onClose={() => setNavOpen(false)} />}
 
       {/* Data sidebar (collapsible, inline) */}
       {dataSidebar && dataOpen && (
