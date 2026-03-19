@@ -38,16 +38,22 @@
 
 ## Gaps detectados
 
-| Documento | Sección | Gap | Severidad |
-|-----------|---------|-----|-----------|
-| `docs/FEATURES.md` | Entidades Principales | 36 documentadas vs 39 reales | Medium |
-| `docs/FEATURES.md` | Enums | 15 documentadas vs 17 reales | Medium |
-| `docs/knowledge/architecture-ddd.md` | Bounded Contexts | Shipment/Delivery listado como "DDD puro" pero está en src/Entity/ con ORM | High |
-| `docs/knowledge/architecture-ddd.md` | Repository Interfaces | Ejemplos de interfaces que no existen (solo 1 real) | High |
-| `docs/knowledge/domain-model.md` | Arquitectura de Capas | Presenta 4 capas como implementadas, solo RouteSnapshot es POPO | Medium |
-| `CLAUDE.md` | Flujo Obligatorio | Sin tipo Exploration, Capturar sin destino | Medium |
-| `docs/knowledge/index.md` | Tabla de módulos | Sin tracking de frescura | Low |
+Todos los gaps fueron resueltos en la rama `claude/improve-documentation-workflow-WKyGZ`.
+
+| Documento | Sección | Gap | Severidad | Estado |
+|-----------|---------|-----|-----------|--------|
+| `docs/FEATURES.md` | Entidades Principales | 36 documentadas vs 39 reales | Medium | RESUELTO — conteo y tabla actualizados |
+| `docs/FEATURES.md` | Enums | 15 documentadas vs 24 reales (17 domain + 6 provider + 1 Domain layer) | Medium | RESUELTO — tabla completa con 3 categorías |
+| `docs/FEATURES.md` | Mapa de Flota | MapView bounded context sin documentar | Medium | RESUELTO — sección MapView añadida |
+| `docs/knowledge/architecture-ddd.md` | Bounded Contexts | Shipment/Delivery listado como "DDD puro" pero está en src/Entity/ con ORM | High | RESUELTO — marcadores [PLANNED]/[PARTIAL] |
+| `docs/knowledge/architecture-ddd.md` | Repository Interfaces | Ejemplos de interfaces que no existen (solo 1 real) | High | RESUELTO — marcadores [PLANNED] con nota |
+| `docs/knowledge/domain-model.md` | Arquitectura de Capas | Presenta 4 capas como implementadas, solo RouteSnapshot es POPO | Medium | RESUELTO — marcador [PARTIAL] |
+| `docs/knowledge/domain-model.md` | Enums | 11 enums listados vs 24 reales | Medium | RESUELTO — tabla completa con 3 categorías |
+| `docs/knowledge/domain-model.md` | Repositories | 18 repositories no documentados | High | RESUELTO — tabla de repositories añadida |
+| `docs/knowledge/domain-model.md` | MapView | Bounded context sin documentar | Medium | RESUELTO — sección MapView añadida |
+| `CLAUDE.md` | Flujo Obligatorio | Sin tipo Exploration, Capturar sin destino | Medium | RESUELTO — Explore-flow añadido |
+| `docs/knowledge/index.md` | Tabla de módulos | Sin tracking de frescura | Low | RESUELTO — columna Verificado añadida |
 
 ## Contexto adicional
 
-Este es el primer uso real de `docs/superpowers/agent-outputs/`. Los gaps de severidad High en architecture-ddd.md ya fueron corregidos con marcadores [PLANNED]/[PARTIAL]. Los gaps Medium en FEATURES.md fueron corregidos con conteos actualizados.
+Este es el primer uso real de `docs/superpowers/agent-outputs/`. Todos los 11 gaps fueron resueltos en 8 commits atómicos.

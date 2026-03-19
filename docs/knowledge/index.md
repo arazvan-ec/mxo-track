@@ -9,7 +9,7 @@
 
 | Módulo | Archivo | Verificado | Descripción | Cuándo consultarlo |
 |--------|---------|------------|-------------|-------------------|
-| Modelo de Dominio | `domain-model.md` | -- | Entidades, relaciones, enums, patrones de identidad | Trabajar con entidades, migraciones, relaciones |
+| Modelo de Dominio | `domain-model.md` | 2026-03-19 | Entidades, relaciones, enums, patrones de identidad | Trabajar con entidades, migraciones, relaciones |
 | Provider Framework | `provider-framework.md` | -- | Providers configurables, factories, proxies, resolución per-tenant | Añadir/modificar providers, CustomerIntegration |
 | API Surface | `api-surface.md` | -- | Endpoints, DTOs, autenticación, error handling | Trabajar con controllers, APIs, DTOs |
 | Deployment | `deployment.md` | -- | Docker local, Railway producción, env vars | Deploy, configuración, infraestructura |
@@ -19,7 +19,7 @@
 | Notifications | `notifications.md` | -- | SMS, WhatsApp, push, webhooks, in-app | Sistema de notificaciones |
 | AI/ML | `ai-ml.md` | -- | Claude API, embeddings, clasificación, clustering | Funcionalidades de IA |
 | Route Optimization | `route-optimization.md` | -- | VROOM, OSRM, capacidad, constraints, arquitectura 4 capas, dos ejes, gaps | Optimización y planificación de rutas |
-| Architecture DDD/SOLID | `architecture-ddd.md` | -- | Bounded contexts, desacoplamiento, patrones de migración, anti-patterns | Crear código nuevo, refactorizar entidades/servicios, code review |
+| Architecture DDD/SOLID | `architecture-ddd.md` | 2026-03-19 | Bounded contexts, desacoplamiento, patrones de migración, anti-patterns | Crear código nuevo, refactorizar entidades/servicios, code review |
 | Design Patterns | `design-patterns.md` | -- | Catálogo GoF + DDD: 15 en uso, 4 candidatos, con ejemplos del codebase | Elegir patrón para nuevo código, entender patrones existentes |
 | Security | `security.md` | -- | Roles, multi-tenancy, CSRF, rate limiting, audit | Seguridad, autenticación, autorización |
 | Superpowers Skills | `superpowers-skills.md` | -- | Skills completas: TDD, brainstorming, debugging, verification, etc. | Aplicar cualquier skill de desarrollo |
