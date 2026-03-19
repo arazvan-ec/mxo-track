@@ -724,30 +724,33 @@ Columnas soportadas:
 | `SoftDeleteTrait` | 7 entidades con borrado lógico: User, Customer, Vehicle, Route, Shipment |
 | `CustomerScopedEntityInterface` | 9 entidades con aislamiento multi-tenant |
 
-### Entidades Principales (36 total)
+### Entidades Principales (39 entidades en `src/Entity/` + modelos de dominio en `src/Domain/`)
 
 | Categoría | Entidades |
 |---|---|
 | **Core** | User, Customer, Vehicle, CustomerVehicle |
-| **Rutas** | Route, RouteStop |
+| **Rutas** | Route, RouteStop, RouteEvent, RoutePlanTemplate |
 | **Envíos** | Shipment, Parcel, ShipmentEvent |
 | **Tracking GPS** | VehiclePosition, VehicleLastPosition, VehicleCheckpoint |
 | **Entrega** | Pod, DriverAction, DriverFeedback, VehicleInspection |
 | **Ubicaciones** | CustomerLocation, DeliveryZone |
 | **Programación** | DeliverySlot, DeliveryRating, DriverAvailability |
-| **Notificaciones** | Notification, PushSubscription, RecipientNotification |
+| **Notificaciones** | Notification, NotificationLog, NotificationPreference, PushSubscription, RecipientNotification, RecipientAction |
 | **Integraciones** | ApiKey, WebhookEndpoint, CsvImportRun, CustomerIntegration |
 | **Realtime** | RealtimeEvent |
-| **Analytics** | AuditLog, AddressRisk |
-| **Plantillas** | RoutePlanTemplate |
+| **Analytics** | AuditLog, AddressRisk, RoutePerformanceMetric, OptimizationStrategyComparison, RouteOptimizationLog |
+| **Domain Models** **[PARTIAL]** | RouteSnapshot, RouteMapView, StopMapView, MapUpdate, MapUpdateType, RouteMapMetrics, RouteMapOptions, RouteMapTiming, VehiclePosition (Domain) — POPOs en `src/Domain/`, sin ORM |
 
-### Enums (15 total)
+> **[PARTIAL]** La migración a DDD está en progreso. Route Planning tiene modelos de dominio (RouteSnapshot, MapView), pero las entidades principales (Route, RouteStop, Shipment) permanecen en `src/Entity/` con ORM attributes. Ver `docs/knowledge/architecture-ddd.md`.
+
+### Enums (17 total)
 
 | Enum | Valores |
 |---|---|
 | `UserRole` | ADMIN, CUSTOMER, DRIVER |
 | `RouteStatus` | PLANNED, ACTIVE, DONE, CANCELLED |
 | `RouteStopStatus` | PENDING, DELIVERED, EXCEPTION, SKIPPED |
+| `RouteEventType` | Tipos de eventos de ruta |
 | `ShipmentEventType` | CREATED, PICKED_UP, IN_HUB, IN_TRANSIT, OUT_FOR_DELIVERY, DELIVERED, EXCEPTION, RESCHEDULE_REQUESTED |
 | `ExceptionCode` | ABSENT, WRONG_ADDRESS, REFUSED, DAMAGED, OTHER |
 | `ServiceType` | DELIVERY, DELIVERY_AND_PICKUP, RETURN |
@@ -755,11 +758,12 @@ Columnas soportadas:
 | `VehicleSkill` | REFRIGERATED, HEAVY_LOAD, PEDESTRIAN_ACCESS, HAZMAT, FRAGILE |
 | `ShipmentPriority` | LOW, NORMAL, HIGH, URGENT, CRITICAL |
 | `ClientFrequency` | NOT_FREQUENT, FREQUENT, VERY_FREQUENT, SUPER_FREQUENT |
-| `ServiceType` | ROUTING, ROUTE_OPTIMIZER, GPS, REALTIME |
-| `RoutingProvider` | OSRM, GOOGLE_DIRECTIONS |
-| `RouteOptimizerProvider` | VROOM, GREEDY |
-| `GpsProviderType` | TRACCAR, WEBHOOK |
-| `RealtimeProviderType` | MERCURE, HTTP_POLLING |
+| `NotificationChannel` | Canales de notificación |
+| `NotificationLogStatus` | Estados de log de notificaciones |
+| `NotificationTriggerType` | Tipos de trigger de notificaciones |
+| `OptimizationOperation` | Operaciones de optimización |
+| `OptimizationStepCategory` | Categorías de pasos de optimización |
+| `RecipientActionType` | Tipos de acción de destinatario |
 
 ---
 
