@@ -107,6 +107,16 @@ Parent Context                    Forked Context
 └─────────────┘                  └──────────────────┘
 ```
 
+### Hard Output Limits (Web Environment)
+
+In Claude Code web, the Read tool has a **25,000 token limit**. Forked agents whose output exceeds this limit become unreadable by the parent — the work is effectively lost.
+
+**Mandatory constraints for all forked agents:**
+- Maximum output: **300 lines** or **15,000 tokens** (whichever is reached first)
+- If analysis exceeds limit: write detailed content to a file in the repo, return summary + file path
+- Start every output with a **5-10 line executive summary** of key findings
+- Never include full source code in output — reference file paths and line numbers instead
+
 ### Fork Strategy Providers
 
 The fork decision depends on the active provider (see `core/providers.yaml` → `fork_strategy`):
