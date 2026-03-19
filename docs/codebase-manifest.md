@@ -3,7 +3,7 @@
 > **Auto-generated** by `make manifest` (`backend/bin/generate-manifest.sh`).
 > Do not edit manually — regenerate after adding/removing entities, enums, services, or controllers.
 
-**Generated:** 2026-03-19 22:31
+**Generated:** 2026-03-19 22:44
 **Regenerate:** `make manifest`
 
 ## Metrics
