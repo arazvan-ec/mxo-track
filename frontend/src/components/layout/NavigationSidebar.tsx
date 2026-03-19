@@ -207,9 +207,10 @@ export function NavigationSidebar({ onClose, mode = 'overlay' }: Props) {
       )}
 
       {/* Sidebar panel */}
-      <aside className={inline
-        ? 'w-64 flex-shrink-0 bg-slate-800 flex flex-col border-r border-slate-700 h-full'
-        : 'fixed top-0 left-0 bottom-0 w-72 bg-slate-800 z-50 flex flex-col shadow-2xl animate-slide-in-left'
+      <aside className={
+        inline
+          ? 'w-64 flex-shrink-0 bg-slate-800 flex flex-col border-r border-slate-700 h-full'
+          : 'fixed top-0 left-0 bottom-0 w-72 bg-slate-800 z-50 flex flex-col shadow-2xl animate-slide-in-left'
       }>
         {/* Brand header */}
         <div className="flex h-14 shrink-0 items-center justify-between px-4 border-b border-slate-700">
