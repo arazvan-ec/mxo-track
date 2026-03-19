@@ -286,6 +286,31 @@ fix: correct ETA calculation when stop is skipped
 - Si el tool destino ya maneja el caso (ej: `Write` crea directorios padre) → no hagas pasos previos innecesarios
 - Preferir la ruta más corta: menos herramientas, menos comandos, mismo resultado
 
+## Pre-Exploration Gate (mandatory)
+
+**Antes de ejecutar Grep, Glob o Bash para descubrir estructura del codebase** (contar entidades, listar servicios, inventariar enums, explorar directorios), **DEBES leer `docs/codebase-manifest.md` primero**.
+
+- Si el dato está ahí y `Generated` es < 7 días → **úsalo directamente, sin explorar**
+- Si falta o está obsoleto → explora, luego ejecuta `make manifest` y commitea el resultado
+
+### Mapeo exploración → documento existente
+
+| En vez de ejecutar... | Lee... |
+|-----------------------|--------|
+| `ls src/Entity/` o contar entidades | `docs/codebase-manifest.md` → Entity List + Metrics |
+| `ls src/Enum/` o contar enums | `docs/codebase-manifest.md` → Enum List + Metrics |
+| `find src/ -name "*.php" \| wc -l` | `docs/codebase-manifest.md` → Metrics |
+| `grep -r "class.*Controller"` | `docs/codebase-manifest.md` → Metrics; detalle en `docs/knowledge/api-surface.md` |
+| Contar tests, migrations, services | `docs/codebase-manifest.md` → Metrics |
+| Estructura de `src/` | `docs/codebase-manifest.md` → Directory Tree |
+| Detalle de una entidad específica | `docs/knowledge/domain-model.md` |
+| Inventario completo de features | `docs/FEATURES.md` |
+| Arquitectura, bounded contexts | `docs/knowledge/architecture-ddd.md` |
+
+### Cuándo regenerar
+
+Ejecutar `make manifest` después de cualquier sesión que añada o elimine entidades, enums, servicios o controllers. Commitear el resultado.
+
 ## Principio de Escalabilidad en Decisiones (mandatory)
 
 **La mejor solución es siempre la que más escala, independientemente de la cantidad de cambios que requiera.**

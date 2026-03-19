@@ -5,6 +5,10 @@
 
 Índice de módulos de conocimiento del proyecto mxo-track. Cada módulo cubre un subsistema específico y se consulta bajo demanda.
 
+## Consulta Rápida: Codebase Manifest
+
+**Antes de explorar el codebase con herramientas**, lee `docs/codebase-manifest.md`. Contiene counts, listas de entidades/enums, directory tree y bounded contexts — todo auto-generado con `make manifest`. Ver sección "Pre-Exploration Gate" en CLAUDE.md.
+
 ## Módulos Disponibles
 
 | Módulo | Archivo | Verificado | Descripción | Cuándo consultarlo |
