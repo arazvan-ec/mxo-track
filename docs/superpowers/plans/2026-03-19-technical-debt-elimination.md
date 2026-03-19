@@ -609,45 +609,216 @@
 
 ---
 
-## Fase 7: Business Features — Decisiones Pendientes
+## Fase 7: User-Configurable Providers
 
-**Objetivo:** Cada decisión requiere su propio brainstorming + spec + plan. Esta fase es un placeholder que define qué se necesita decidir.
+**Objetivo:** Per-tenant configurable service providers con transparent proxy, fallback chains, y nuevas implementaciones.
+**Spec existente:** `docs/superpowers/specs/2026-03-11-user-configurable-providers-design.md`
+**Plan detallado existente:** `docs/superpowers/plans/2026-03-11-user-configurable-providers.md`
+**Dependencias:** Fase 3 (credential encryption para API keys) recomendada antes. Fase 4 (GPS ISP split) recomendada antes para que los proxies usen interfaces correctas.
 
-- [ ] **Task 7.1: Brainstorm — Selección de estrategia de optimización (Decisión 1)**
+Este plan ya existe con tareas detalladas. Resumen de lo que cubre:
+
+- [ ] **Task 7.1: Provider Framework foundation**
+  1. ServiceType enum, ProviderUnavailableException
+  2. Provider enums (RouteOptimizerProvider, RoutingProvider, GpsProviderType, RealtimeProviderType)
+  3. CustomerIntegration entity + migration
+  4. ProviderFactoryInterface + ProviderFactoryRegistry
+  5. TenantContext, ProviderResolver, CachedProviderResolver
+  6. FallbackChain
+  7. Referencia: Tasks 1-7 del plan `2026-03-11-user-configurable-providers.md`
+
+- [ ] **Task 7.2: Transparent Proxies**
+  1. TenantAwareRouteOptimizer (proxy para RouteOptimizerInterface)
+  2. TenantAwareRoutingEngine (proxy para RoutingEngineInterface)
+  3. TenantAwareGpsProvider (proxy para GpsPositionProviderInterface — post Fase 4)
+  4. TenantAwareRealtimePublisher (proxy para RealtimePublisherInterface)
+  5. Referencia: Tasks 8-11 del plan existente
+
+- [ ] **Task 7.3: New Provider implementations**
+  1. GreedyOptimizer + Factory (route optimizer fallback)
+  2. HaversineEngine + Factory (routing fallback sin OSRM)
+  3. GoogleDirectionsEngine + Factory (routing via Google)
+  4. WebhookGpsProvider + Factory (GPS via webhooks)
+  5. HttpPollingPublisher + Factory (realtime sin Mercure)
+  6. Referencia: Tasks 12-16 del plan existente
+
+- [ ] **Task 7.4: Admin UI + Integration**
+  1. CustomerIntegrationController (CRUD admin)
+  2. EventPollingController (API endpoint para HTTP polling)
+  3. DI configuration (services.yaml aliases para proxies)
+  4. Referencia: Tasks 17-19 del plan existente
+
+- [ ] **Task 7.5: Verificación de Fase 7**
+  1. Full test suite → GREEN
+  2. Verificar: cada ServiceType tiene al menos 2 providers
+  3. Verificar: proxies resuelven correctamente per-tenant
+  4. Commit: `chore: verify Phase 7 completion — user-configurable providers`
+
+---
+
+## Fase 8: Route Creation UI (GAP-1.1, GAP-1.2, GAP-3.1)
+
+**Objetivo:** Flujo UI completo: seleccionar shipments → configurar vehículo/driver → preview optimización en mapa → confirmar ruta.
+**Dependencias:** Fase 2 (event sourcing completo), Fase 7 (strategy selection via providers). Idealmente después de ambas.
+**Stack:** React SPA (ya existe en `/app/*`) + MapLibre GL JS + API endpoints existentes.
+
+**Nota:** Los 3 gaps (GAP-1.1, GAP-1.2, GAP-3.1) son facetas del mismo flujo. El backend ya soporta toda la funcionalidad — solo falta la UI interactiva.
+
+- [ ] **Task 8.0: Brainstorm — Diseño del flujo de creación de rutas**
+  1. Invocar Skill 2 para brainstorming completo
+  2. Definir: wireframes del flujo paso a paso
+  3. Definir: qué API endpoints existen y cuáles faltan
+  4. Definir: interacción con mapa (drag stops, preview polyline)
+  5. Escribir spec en `docs/superpowers/specs/`
+
+- [ ] **Task 8.1: API — Endpoint de preview de optimización**
+  1. Nuevo endpoint: `POST /api/v1/routes/preview`
+  2. Acepta: shipment IDs + vehicle ID + optimization strategy
+  3. Retorna: optimized stop order + polyline + metrics (sin persistir)
+  4. TDD: test primero, implementar después
+  5. Commit: `feat: add route optimization preview API endpoint`
+
+- [ ] **Task 8.2: React — Componente ShipmentSelector**
+  1. Listado de shipments pendientes (sin ruta asignada)
+  2. Filtros: customer, priority, delivery zone, date range
+  3. Selección múltiple con checkbox
+  4. Summary panel: count, total weight, total volume
+  5. Commit: `feat: add ShipmentSelector React component`
+
+- [ ] **Task 8.3: React — Componente RouteConfigurator**
+  1. Selección de vehículo (filtrado por capacity, skills)
+  2. Selección de driver (filtrado por availability)
+  3. Selección de origin (CustomerLocation)
+  4. Selección de strategy (si Fase 7 completada, sino default)
+  5. Capacity validation preview
+  6. Commit: `feat: add RouteConfigurator React component`
+
+- [ ] **Task 8.4: React — Componente RoutePreviewMap**
+  1. Mapa MapLibre con stops como markers (draggable para reorder manual)
+  2. Polyline de la ruta optimizada
+  3. Panel lateral: métricas (distancia, tiempo, savings %)
+  4. Comparación visual si hay múltiples strategies
+  5. Botón "Confirmar ruta" → POST /api/v1/routes
+  6. Commit: `feat: add RoutePreviewMap React component`
+
+- [ ] **Task 8.5: React — Flujo completo integrado**
+  1. Wizard/stepper: Step 1 (shipments) → Step 2 (config) → Step 3 (preview) → Confirm
+  2. Ruta: `/app/admin/routes/create`
+  3. Integration tests E2E
+  4. Commit: `feat: add complete route creation wizard`
+
+- [ ] **Task 8.6: Verificación de Fase 8**
+  1. Full test suite (PHP + JS) → GREEN
+  2. Manual QA: crear ruta end-to-end via UI
+  3. Commit: `chore: verify Phase 8 completion — route creation UI`
+
+---
+
+## Fase 9: Business Decisions — Strategy, Re-optimization, Historical Data
+
+**Objetivo:** Resolver las 3 decisiones de negocio pendientes del backlog arquitectónico.
+**Dependencias:** Fase 2 (event sourcing), Fase 7 (providers), Fase 8 (UI) informan estas decisiones.
+
+- [ ] **Task 9.1: Brainstorm — Selección de estrategia de optimización (Decisión 1)**
   1. Invocar Skill 2 para brainstorming
-  2. Evaluar opciones: manual, recomendación, paralelo + comparación, combinación
-  3. Escribir spec en `docs/superpowers/specs/`
-  4. Escribir plan en `docs/superpowers/plans/`
+  2. Opciones: admin elige manualmente, sistema recomienda, ejecución paralela + comparación, combinación
+  3. Contexto: con Fase 7, el admin puede configurar providers per-tenant. ¿Necesita UI per-route también?
+  4. Escribir spec + plan
 
-- [ ] **Task 7.2: Brainstorm — Política de re-optimización (Decisión 2)**
+- [ ] **Task 9.2: Brainstorm — Política de re-optimización (Decisión 2)**
   1. Invocar Skill 2
-  2. Evaluar opciones: siempre manual, automática, reglas configurables, IA
-  3. Spec + plan
+  2. Opciones: siempre manual, automática por defecto, reglas configurables por customer, recomendación IA
+  3. Contexto: con event sourcing (Fase 2), cada re-opt produce evento traceable
+  4. Spec + plan
 
-- [ ] **Task 7.3: Brainstorm — Datos históricos para planificación (Decisión 3)**
+- [ ] **Task 9.3: Brainstorm — Datos históricos para planificación (Decisión 3)**
   1. Invocar Skill 2
-  2. Evaluar opciones: analytics only, auto-feedback, recomendaciones, híbrido
-  3. Spec + plan
+  2. Opciones: analytics/reporting only, auto-feedback al optimizador, sistema de recomendaciones, híbrido
+  3. Contexto: con event sourcing, el historical data es más rico (every event captured)
+  4. Spec + plan
+
+---
+
+## Fase 10: Cleanup — Minor Debt Items
+
+**Objetivo:** Items menores que no justifican una fase propia.
+**Independiente de todas las demás fases.**
+
+- [ ] **Task 10.1: SlaReportController PDF export**
+  1. Instalar DomPDF: `composer require dompdf/dompdf`
+  2. Implementar generación de PDF en `SlaReportController`
+  3. Test: endpoint retorna PDF válido
+  4. Commit: `feat: implement SLA report PDF export with DomPDF`
+
+- [ ] **Task 10.2: User.php SRP — Documentar decisión consciente**
+  1. Añadir entrada en `docs/decisions/log.md` documentando:
+     - User.php mezcla 5 responsabilidades (identidad, auth, roles, multi-tenancy, persistence)
+     - Decisión: NO refactorizar — contexto pragmático, costo supera beneficio
+     - Trigger para revisitar: si User.php crece más allá de 500 líneas o necesita 6ta responsabilidad
+  2. Commit: `docs: document User.php SRP exclusion as conscious decision`
+
+- [ ] **Task 10.3: Provider framework codegen evaluation**
+  1. Contar proxies actuales (4) + los de Fase 7
+  2. Si total > 6: diseñar codegen o proxy genérico
+  3. Si total ≤ 6: documentar que trigger no se alcanzó
+  4. Commit: `docs: evaluate provider framework codegen trigger`
 
 ---
 
 ## Resumen
 
-| Fase | Sub-fase | Tasks | Estimación | Dependencias |
-|------|----------|-------|-----------|--------------|
-| 1. Foundation | — | 8 | M | Ninguna |
-| 2. Event Sourcing + DDD | 2A: Event Completeness | 7 | S-M | Fase 1 |
-| | 2B: Events-First Pattern | 10 | L | 2A |
-| | 2C: Projections | 6 | M-L | 2B |
-| | 2D: POPO Migration | 8 | M | 2C |
-| 3. Security | — | 5 | S | Ninguna |
-| 4. SOLID GPS | — | 3 | S | Ninguna |
-| 5. Delivery DDD | — | 8 | L | Fase 1 (idealmente 2) |
-| 6. Infrastructure | — | 4 | S | Ninguna |
-| 7. Business | — | 3 | XL (cada una) | Fases 1-6 |
-| **Total** | | **62** | | |
+| Fase | Sub-fase | Tasks | Estimación | Dependencias | Sesión Claude |
+|------|----------|-------|-----------|--------------|---------------|
+| 1. Foundation | — | 8 | M | Ninguna | Sesión A |
+| 2. Event Sourcing + DDD | 2A: Event Completeness | 7 | S-M | Fase 1 | Sesión A (cont.) |
+| | 2B: Events-First Pattern | 10 | L | 2A | Sesión A (cont.) |
+| | 2C: Projections | 6 | M-L | 2B | Sesión A (cont.) |
+| | 2D: POPO Migration | 8 | M | 2C | Sesión A (cont.) |
+| 3. Security | — | 5 | S | Ninguna | Sesión B |
+| 4. SOLID GPS | — | 3 | S | Ninguna | Sesión C |
+| 5. Delivery DDD | — | 8 | L | Fase 1 | Sesión D (después de F1) |
+| 6. Infrastructure | — | 4 | S | Ninguna | Sesión C (cont.) |
+| 7. Providers | — | 5 | L-XL | F3 recom., F4 recom. | Sesión E (después de F3+F4) |
+| 8. Route Creation UI | — | 6 | XL | F2, F7 | Sesión F (después de F2+F7) |
+| 9. Business Decisions | — | 3 | XL (cada una) | F2, F7, F8 | Sesión G |
+| 10. Cleanup | — | 3 | S | Ninguna | Sesión B o C |
+| **Total** | | **76** | | | |
 
-**Ruta crítica:** Fase 1 → Fase 2 (2A→2B→2C→2D) → Fase 5 → Fase 7
-**Parallelizable:** Fases 3, 4, 6 son independientes y pueden ejecutarse en cualquier momento.
+---
 
-**Nota sobre Fase 2:** Es la fase más grande y compleja. Las sub-fases son estrictamente secuenciales porque cada una construye sobre la anterior. Sin embargo, cada sub-fase es deployable independientemente (el sistema funciona correctamente después de cada una).
+## Paralelización entre sesiones de Claude
+
+```
+Tiempo ──────────────────────────────────────────────────────────────────→
+
+Sesión A: [F1: Foundation] → [F2A] → [F2B] → [F2C] → [F2D]
+Sesión B: [F3: Security] → [F10: Cleanup]
+Sesión C: [F4: SOLID GPS] → [F6: Infrastructure]
+Sesión D:                    [F5: Delivery DDD] ←── espera F1
+Sesión E:                                  [F7: Providers] ←── espera F3+F4
+Sesión F:                                                    [F8: UI] ←── espera F2+F7
+Sesión G:                                                              [F9: Business] ←── espera F8
+```
+
+**Máximo paralelismo inmediato:** 3 sesiones (A, B, C) pueden empezar ya.
+**Sesión D** puede empezar cuando Sesión A complete Fase 1.
+**Sesión E** puede empezar cuando B y C terminen.
+**Sesión F** puede empezar cuando A y E terminen.
+**Sesión G** puede empezar cuando F termine.
+
+### Conflictos de merge potenciales
+
+| Sesiones en paralelo | Archivos compartidos | Riesgo | Mitigación |
+|---------------------|---------------------|--------|------------|
+| A + D | Route entities, services | ALTO | D espera a que A complete F1. Si D empieza F5 mientras A está en F2, no hay conflicto (distintas entidades) |
+| B + C | Ninguno | BAJO | Sin conflicto, dominios distintos |
+| A + B | Ninguno | BAJO | Sin conflicto |
+| A + C | GpsDeviceProviderInterface (si F4 toca listeners que F2A también toca) | MEDIO | C debe completar F4 antes de que A llegue a F2B |
+| E (providers) | services.yaml, factories | MEDIO | E trabaja en su propio namespace (Provider/), merge limpio |
+
+### Reglas para sesiones paralelas
+
+1. **Cada sesión trabaja en su propio feature branch** — merge a main cuando la fase completa
+2. **Fase 1 es bloqueante** — ninguna sesión que dependa de F1 empieza hasta que F1 se mergee
+3. **Comunicación via commits** — cada sesión pushea frecuentemente para que las demás vean el estado
+4. **Conflictos se resuelven en la sesión que mergea después** — la primera sesión en mergear gana; la segunda resuelve conflictos
