@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'INPUT=$(cat); FILE_PATH=$(echo \"$INPUT\" | jq -r \".tool_input.file_path // empty\"); case \"$FILE_PATH\" in */frontend/src/*|*/backend/src/*) ;; *) exit 0 ;; esac; TODAY=$(date +%Y-%m-%d); SPECS_DIR=\"/home/user/mxo-track/docs/superpowers/specs\"; if ls \"$SPECS_DIR\"/${TODAY}-*.md 1>/dev/null 2>&1; then exit 0; fi; echo \"{\\\"hookSpecificOutput\\\":{\\\"hookEventName\\\":\\\"PreToolUse\\\",\\\"permissionDecision\\\":\\\"deny\\\",\\\"permissionDecisionReason\\\":\\\"FULL-FLOW GATE: No spec file found for today ($TODAY) in docs/superpowers/specs/. Follow CLAUDE.md Full-flow: Consult decisions -> Brainstorm (Skill 2) -> write spec -> Plan (Skill 3) -> then implement. Do NOT edit source code without completing brainstorming and writing a spec first.\\\"}}\"'",
+            "command": "/home/user/mxo-track/.claude/hooks/full-flow-gate.sh",
             "timeout": 5,
             "statusMessage": "Checking Full-flow compliance..."
           }
