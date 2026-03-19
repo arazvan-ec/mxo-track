@@ -5,6 +5,7 @@ import { useVehicleTrail } from '@/api/hooks/useVehicleTrail';
 import { FleetMap, type FleetMapHandle } from '@/components/maps/FleetMap';
 import { FleetSidebar } from '@/components/fleet/FleetSidebar';
 import { HeaderBar } from '@/components/fleet/HeaderBar';
+import { DualMenuShell } from '@/components/layout/DualMenuShell';
 import type { FleetVehicle, FleetRoute, FleetStop } from '@/api/types';
 
 export function FleetMapPage() {
@@ -106,31 +107,31 @@ export function FleetMapPage() {
     );
   }
 
+  const sidebar = (
+    <FleetSidebar
+      vehicles={vehicles}
+      routes={routes}
+      kpi={kpi}
+      selectedVehicleId={selectedVehicleId}
+      selectedRouteId={selectedRouteId}
+      onSelectVehicle={handleSelectVehicle}
+      onSelectRoute={handleSelectRoute}
+      selectedVehicleRoute={selectedVehicleRoute}
+    />
+  );
+
   return (
-    <div className="relative flex h-full w-full overflow-hidden">
-      <FleetSidebar
+    <DualMenuShell dataSidebar={sidebar} dataSidebarWidth="w-80">
+      <HeaderBar sseConnected={sseConnected} />
+      <FleetMap
+        ref={mapRef}
         vehicles={vehicles}
         routes={routes}
-        kpi={kpi}
-        selectedVehicleId={selectedVehicleId}
-        selectedRouteId={selectedRouteId}
-        onSelectVehicle={handleSelectVehicle}
-        onSelectRoute={handleSelectRoute}
-        selectedVehicleRoute={selectedVehicleRoute}
+        activeStops={activeStops}
+        trailCoordinates={trailCoordinates}
+        onVehicleClick={handleVehicleClick}
       />
-
-      <div className="flex-1 relative">
-        <HeaderBar sseConnected={sseConnected} />
-        <FleetMap
-          ref={mapRef}
-          vehicles={vehicles}
-          routes={routes}
-          activeStops={activeStops}
-          trailCoordinates={trailCoordinates}
-          onVehicleClick={handleVehicleClick}
-        />
-      </div>
-    </div>
+    </DualMenuShell>
   );
 }
 
