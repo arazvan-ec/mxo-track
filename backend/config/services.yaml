@@ -114,8 +114,11 @@ services:
   App\Routing\RoutingEngineInterface:
     alias: App\Provider\Routing\TenantAwareRoutingEngine
 
-  App\Tracking\GpsDeviceProviderInterface:
-    alias: App\Provider\Gps\TenantAwareGpsProvider
+  App\Tracking\GpsPositionProviderInterface:
+    alias: App\Provider\Gps\TenantAwareGpsPositionProvider
+
+  App\Tracking\GpsDeviceManagerInterface:
+    alias: App\Tracking\TraccarGpsProvider
 
   App\Realtime\RealtimePublisherInterface:
     alias: App\Provider\Realtime\TenantAwareRealtimePublisher
