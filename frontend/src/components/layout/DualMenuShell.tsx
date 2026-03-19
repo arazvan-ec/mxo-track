@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { NavigationSidebar } from './NavigationSidebar';
+import { useIsDesktop } from '@/hooks/useIsDesktop';
 
 interface DualMenuShellProps {
   /** The page-specific data sidebar content */
@@ -28,11 +29,17 @@ export function DualMenuShell({
 }: DualMenuShellProps) {
   const [navOpen, setNavOpen] = useState(false);
   const [dataOpen, setDataOpen] = useState(true);
+  const isDesktop = useIsDesktop();
 
   return (
     <div className="flex h-screen w-full bg-slate-900">
-      {/* Navigation sidebar (overlay) */}
-      {navOpen && <NavigationSidebar onClose={() => setNavOpen(false)} />}
+      {/* Navigation sidebar: inline on desktop, overlay on mobile */}
+      {navOpen && (
+        <NavigationSidebar
+          mode={isDesktop ? 'inline' : 'overlay'}
+          onClose={() => setNavOpen(false)}
+        />
+      )}
 
       {/* Data sidebar (collapsible, inline) */}
       {dataSidebar && dataOpen && (
