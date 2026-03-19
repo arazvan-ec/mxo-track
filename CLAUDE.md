@@ -244,6 +244,7 @@ Aplica a: knowledge modules, FEATURES.md, architecture docs. NO aplica a instruc
 - Después de cada commit (o máximo cada 2-3 commits si son parte del mismo paso lógico)
 - **Siempre** antes de lanzar subagentes (para que el progreso esté seguro)
 - **Siempre** al terminar una tarea del TodoWrite
+- **Siempre** ejecutar `make manifest` antes del push final o al finalizar una rama (mantiene el codebase manifest fresco)
 
 ### Artefactos de trabajo van al repo, no a rutas efímeras
 
@@ -309,7 +310,7 @@ fix: correct ETA calculation when stop is skipped
 
 ### Cuándo regenerar
 
-Ejecutar `make manifest` después de cualquier sesión que añada o elimine entidades, enums, servicios o controllers. Commitear el resultado.
+Ejecutar `make manifest` y commitear el resultado **siempre** como último paso antes de push o al finalizar una rama. Sin condiciones — es barato (~1 segundo) y garantiza que el manifest esté siempre fresco.
 
 ## Principio de Escalabilidad en Decisiones (mandatory)
 
@@ -356,7 +357,7 @@ Ejecutar `make manifest` después de cualquier sesión que añada o elimine enti
 
 Aplica cuando la interacción produce hallazgos sustantivos sobre el codebase (conteos, patrones de arquitectura, detalles de implementación, gaps entre docs y código). Si es un fact lookup simple, usar Micro-flow.
 
-1. **Consultar** — Verificar si hallazgos ya existen en `docs/knowledge/`, `docs/superpowers/agent-outputs/`, o `docs/analysis/`
+1. **Consultar** — Leer `docs/codebase-manifest.md` primero (counts, listas, directory tree). Luego verificar si hallazgos ya existen en `docs/knowledge/`, `docs/superpowers/agent-outputs/`, o `docs/analysis/`
 2. **Explorar** — Leer código, trazar patrones, recopilar evidencia
 3. **Responder** — Respuesta estructurada con hallazgos y referencias a archivos
 4. **Capturar** — Si los hallazgos son sustantivos (revelan gaps, corrigen misconceptions, producen conocimiento reutilizable):
