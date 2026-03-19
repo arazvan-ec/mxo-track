@@ -36,7 +36,8 @@
 24. [Búsqueda](#24-búsqueda)
 25. [Providers Configurables por Tenant](#25-providers-configurables-por-tenant)
 26. [Sistema de Feedback y Aprendizaje](#26-sistema-de-feedback-y-aprendizaje)
-27. [Historial de Cambios](#27-historial-de-cambios)
+27. [React SPA con Navegación Unificada](#27-react-spa-con-navegación-unificada)
+28. [Historial de Cambios](#28-historial-de-cambios)
 
 ---
 
@@ -955,7 +956,52 @@ Output: resumen agregado de performance por optimizer, delivery rates, km saved,
 
 ---
 
-## 27. Historial de Cambios
+## 27. React SPA con Navegación Unificada
+
+### Páginas React SPA (`/app/*`)
+
+9 páginas full-screen construidas con React + MapLibre GL, servidas via `SpaController` (catch-all). Coexisten con las 43 vistas Twig del sistema principal.
+
+| Ruta | Página | Sidebar de datos |
+|------|--------|-----------------|
+| `/app/admin/test-routing` | TestRoutingPage | Métricas, paradas, route cards (w-96) |
+| `/app/admin/operator-dashboard` | OperatorDashboardPage | KPIs, rutas activas (w-80) |
+| `/app/admin/fleet-map` | FleetMapPage | Vehículos, rutas, KPIs (w-80) |
+| `/app/admin/route-planner` | RoutePlannerPage | Wizard multi-step (w-96) |
+| `/app/admin/routes/:publicId` | RouteDetailPage | Paradas, métricas, vehículo (w-80) |
+| `/app/admin/routes/:publicId/analysis` | RouteAnalysisPage | Comparación, métricas, leyenda (w-80) |
+| `/app/admin/exception-map` | ExceptionMapPage | Filtros, resumen, tipos (w-80) |
+| `/app/customer/routes/:publicId` | CustomerRouteDetailPage | Paradas, vehículo (w-80) |
+| `/app/driver/routes/:publicId` | DriverRoutePage | Progreso, paradas (w-80) |
+
+### DualMenuShell — Navegación + Datos
+
+Componente shell (`frontend/src/components/layout/DualMenuShell.tsx`) que envuelve todas las páginas SPA con **dos hamburger buttons independientes**:
+
+| Hamburger | Icono | Función | Default |
+|-----------|-------|---------|---------|
+| **Navegación** | 3 líneas (menu) | Abre sidebar overlay con links al sistema Twig | Cerrado |
+| **Datos** | Sliders (adjustments) | Colapsa/expande el sidebar de datos de la página | Abierto |
+
+- Ambos botones siempre visibles (esquina superior izquierda del mapa)
+- Estado activo: highlight `bg-blue-600`
+- Funcionan independientemente — colapsar datos no afecta navegación y viceversa
+
+### NavigationSidebar — Links por Rol
+
+Sidebar overlay (`frontend/src/components/layout/NavigationSidebar.tsx`) con links de navegación adaptados al rol del usuario via `useMe()` hook:
+
+| Rol | Secciones de navegación |
+|-----|------------------------|
+| **ROLE_ADMIN** | Principal (Dashboard, Fleet Map), Operaciones (Rutas, Envíos, Planificador, Test Routing), Administración (Vehículos, Usuarios, Clientes, Excepciones), Seguimiento (Mapa de Excepciones, Dashboard Operador) |
+| **ROLE_CUSTOMER** | Principal (Dashboard), Mis Entregas (Rutas, Envíos), Seguimiento (Tracking) |
+| **ROLE_DRIVER** | Conductor (Mis Rutas) |
+
+Links apuntan a URLs Twig (navegación completa del sistema), no a rutas SPA.
+
+---
+
+## 28. Historial de Cambios
 
 | Fecha | Versión | Cambios |
 |---|---|---|
@@ -966,6 +1012,7 @@ Output: resumen agregado de performance por optimizer, delivery rates, km saved,
 | 2026-03-12 | 1.3.1 | Refactor: OperatorKpiService migrado de DBAL (SQL crudo) a DQL QueryBuilder (Doctrine ORM). Consultas ahora tipadas con entidades y enums. `getTopDrivers()` mantiene DBAL nativo por funciones PostgreSQL-específicas. Tests actualizados con mocks de EntityManager/QueryBuilder. |
 | 2026-03-13 | 1.4.0 | Mapas unificados: planificador y test-routing usan `MxoRouteMap` compartido (colores, estilos, decoradores consistentes). Actualización en tiempo real via Mercure en las 3 vistas de ruta (admin, customer, driver): mapa se re-renderiza y lista de paradas reactiva actualiza estados, badges y contadores al instante. Nueva vista admin route show con mapa en vivo, métricas de optimización y lista de paradas reactiva. Documentación actualizada: realtime.md, api-surface.md, FEATURES.md. |
 | 2026-03-18 | 1.5.0 | Sistema de feedback y aprendizaje: flujo obligatorio para toda interacción (4 niveles), captura de datos en cada fase, doble learning loop (inmediato + periódico). Nuevas entidades RoutePerformanceMetric y OptimizationStrategyComparison. Console command `app:learning:metrics`. Skill 15: Learning Review. Knowledge module `feedback-learning.md`. |
+| 2026-03-19 | 1.6.0 | Navegación unificada para React SPA: DualMenuShell con dos hamburger buttons independientes (navegación + datos). NavigationSidebar con links por rol replicando sidebar Twig. 9 páginas SPA migradas. Sección 27 añadida. |
 
 ---
 

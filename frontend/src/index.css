@@ -55,3 +55,17 @@ body {
   border-top-color: rgba(51, 65, 85, 0.6) !important;
 }
 
+/* Navigation sidebar slide-in animation */
+@keyframes slide-in-left {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in-left {
+  animation: slide-in-left 0.2s ease-out;
+}
+
