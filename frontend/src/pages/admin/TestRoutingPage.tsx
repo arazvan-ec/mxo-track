@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useTestRoutingData } from '@/api/hooks/useTestRoutingData';
 import type {
   TestRoutingRoute,
@@ -12,6 +12,7 @@ import { ROUTE_COLORS } from '@/components/maps/shared/colors';
 export function TestRoutingPage() {
   const { data, isLoading, error } = useTestRoutingData();
   const mapRef = useRef<MapCanvasHandle>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -52,16 +53,40 @@ export function TestRoutingPage() {
 
   return (
     <div className="flex h-screen w-full bg-slate-900">
+      {/* Mobile backdrop */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/50 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-96 flex-shrink-0 overflow-y-auto border-r border-slate-700 bg-slate-900 p-4 space-y-4">
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 w-[85vw] max-w-96 transform transition-transform duration-300 overflow-y-auto border-r border-slate-700 bg-slate-900 p-4 space-y-4 lg:relative lg:w-96 lg:max-w-none lg:translate-x-0 lg:flex-shrink-0 ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
         {/* Header */}
-        <div>
-          <h1 className="text-lg font-bold text-slate-100">
-            Test Routing: VROOM + OSRM
-          </h1>
-          <p className="text-xs text-slate-400 mt-1">
-            Comparison of original vs optimized routes
-          </p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-lg font-bold text-slate-100">
+              Test Routing: VROOM + OSRM
+            </h1>
+            <p className="text-xs text-slate-400 mt-1">
+              Comparison of original vs optimized routes
+            </p>
+          </div>
+          {/* Close button (mobile only) */}
+          <button
+            type="button"
+            className="lg:hidden -m-1 p-1 text-slate-400 hover:text-slate-200"
+            onClick={() => setSidebarOpen(false)}
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
 
         {/* Global Metrics */}
@@ -175,10 +200,22 @@ export function TestRoutingPage() {
           ))}
         </MapCanvas>
 
+        {/* Mobile sidebar toggle */}
+        <button
+          type="button"
+          className="absolute top-4 left-4 z-10 bg-slate-800/90 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-slate-700 transition-colors border border-slate-600 lg:hidden"
+          onClick={() => setSidebarOpen(true)}
+        >
+          <svg className="h-4 w-4 inline-block mr-1" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+          </svg>
+          Menu
+        </button>
+
         {/* Fit bounds button */}
         <button
           type="button"
-          className="absolute top-4 left-4 bg-slate-800/90 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-slate-700 transition-colors border border-slate-600"
+          className="absolute top-4 left-24 lg:left-4 bg-slate-800/90 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-slate-700 transition-colors border border-slate-600"
           onClick={() => mapRef.current?.fitBounds(allPoints)}
         >
           Fit all
