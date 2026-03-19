@@ -6,7 +6,8 @@ namespace App\Command;
 
 use App\Entity\Vehicle;
 use App\Service\TraccarIngestionService;
-use App\Tracking\GpsDeviceProviderInterface;
+use App\Tracking\GpsDeviceManagerInterface;
+use App\Tracking\GpsPositionProviderInterface;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -25,7 +26,8 @@ class SimulateGpsCommand extends Command
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
-        private readonly GpsDeviceProviderInterface $gpsProvider,
+        private readonly GpsDeviceManagerInterface $deviceManager,
+        private readonly GpsPositionProviderInterface $positionProvider,
         private readonly TraccarIngestionService $ingestionService,
         private readonly HttpClientInterface $httpClient,
         #[Autowire('%kernel.project_dir%')]
@@ -95,7 +97,7 @@ class SimulateGpsCommand extends Command
             sleep(3);
 
             $output->writeln('Ingesting posiciones desde Traccar...');
-            $positions = $this->gpsProvider->getPositions($traccarDeviceId, $startTime);
+            $positions = $this->positionProvider->getPositions($traccarDeviceId, $startTime);
             $totalCreated = $this->ingestionService->ingestForVehicle($vehicle, $positions);
             $output->writeln(sprintf('<info>%d</info> posiciones ingested en Symfony.', $totalCreated));
         }
@@ -330,8 +332,8 @@ class SimulateGpsCommand extends Command
 
     private function ensureTraccarDevice(Vehicle $vehicle, string $uniqueId, OutputInterface $output): ?\App\Tracking\DeviceInfo
     {
-        $this->gpsProvider->login();
-        $devices = $this->gpsProvider->getDevices();
+        $this->deviceManager->login();
+        $devices = $this->deviceManager->getDevices();
 
         foreach ($devices as $device) {
             if ($device->uniqueId === $uniqueId) {
@@ -341,7 +343,7 @@ class SimulateGpsCommand extends Command
         }
 
         $output->writeln('Creando device en Traccar...');
-        return $this->gpsProvider->createDevice($vehicle->getName(), $uniqueId);
+        return $this->deviceManager->createDevice($vehicle->getName(), $uniqueId);
     }
 
     /** @return list<array{lat: float, lon: float}> */

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Command;
 
 use App\Entity\Vehicle;
-use App\Tracking\GpsDeviceProviderInterface;
+use App\Tracking\GpsDeviceManagerInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -18,7 +18,7 @@ class TraccarSyncDevicesCommand extends Command
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
-        private readonly GpsDeviceProviderInterface $gpsProvider,
+        private readonly GpsDeviceManagerInterface $gpsProvider,
     ) {
         parent::__construct();
     }

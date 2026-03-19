@@ -4,32 +4,34 @@ declare(strict_types=1);
 
 namespace App\Service;
 
-use App\Tracking\GpsDeviceProviderInterface;
+use App\Tracking\GpsDeviceManagerInterface;
+use App\Tracking\GpsPositionProviderInterface;
 use DateTimeImmutable;
 
 /**
- * @deprecated Use App\Tracking\GpsDeviceProviderInterface instead.
+ * @deprecated Use GpsDeviceManagerInterface and GpsPositionProviderInterface instead.
  */
 final class TraccarApiClient
 {
     public function __construct(
-        private readonly GpsDeviceProviderInterface $provider,
+        private readonly GpsDeviceManagerInterface $deviceManager,
+        private readonly GpsPositionProviderInterface $positionProvider,
     ) {
     }
 
     public function login(): void
     {
-        $this->provider->login();
+        $this->deviceManager->login();
     }
 
     public function getSessionCookie(): ?string
     {
-        return $this->provider->getSessionCookie();
+        return $this->deviceManager->getSessionCookie();
     }
 
     public function canConnect(): bool
     {
-        return $this->provider->isAvailable();
+        return $this->positionProvider->isAvailable();
     }
 
     /** @return list<array<string,mixed>> */
@@ -37,14 +39,14 @@ final class TraccarApiClient
     {
         return array_map(
             static fn($d) => ['id' => $d->id, 'name' => $d->name, 'uniqueId' => $d->uniqueId],
-            $this->provider->getDevices(),
+            $this->deviceManager->getDevices(),
         );
     }
 
     /** @return array<string,mixed> */
     public function createDevice(string $name, string $uniqueId): array
     {
-        $d = $this->provider->createDevice($name, $uniqueId);
+        $d = $this->deviceManager->createDevice($name, $uniqueId);
 
         return ['id' => $d->id, 'name' => $d->name, 'uniqueId' => $d->uniqueId];
     }
@@ -64,7 +66,7 @@ final class TraccarApiClient
                 'id' => $p->rawId,
                 'deviceId' => $p->deviceId,
             ],
-            $this->provider->getPositions($deviceId, $from),
+            $this->positionProvider->getPositions($deviceId, $from),
         );
     }
 }
