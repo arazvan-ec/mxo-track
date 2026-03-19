@@ -1,13 +1,27 @@
 # Codebase Manifest
 
 > **Auto-generated** by `make manifest` (`backend/bin/generate-manifest.sh`).
-> Do not edit manually — regenerate after adding/removing entities, enums, services, or controllers.
+> Do not edit manually — regenerate with `make manifest`.
 
+**Generated:** 2026-03-19 22:46
 **Generated:** 2026-03-19 22:44
 **Generated:** 2026-03-19 22:39
 **Regenerate:** `make manifest`
 
-## Metrics
+## Project Overview
+
+| Area | Path | Files | Tech |
+|------|------|------:|------|
+| Backend | `backend/` | 475 PHP | Symfony 7.4, PHP 8.4 |
+| Frontend | `frontend/` | 56 JS/TS | React |
+| ML Service | `ml-service/` | 17 Python | FastAPI |
+| Docker/Infra | `docker/` + `scripts/` | 9 + 5 | Docker, OSRM, VROOM, Traccar |
+| OpenSpec | `openspec/` | 28 specs | YAML specs |
+| Docs | `docs/` | — | Knowledge modules, analysis |
+
+---
+
+## Backend Metrics
 
 | Category | Count |
 |----------|------:|
@@ -119,7 +133,7 @@
 - **MapView/** — Model,Projection,Publisher
 - **Route/** — Model,Repository,Service
 
-## src/ Directory Tree (2 levels)
+## Backend Directory Tree (2 levels)
 
 ```
 Ai
@@ -184,9 +198,119 @@ Validator
 View
 ```
 
-## Deep Reference
+---
 
-For detailed information beyond this manifest, consult:
+## Frontend
+
+| Category | Count |
+|----------|------:|
+| JS/TS files total | 56 |
+| Pages | 9 |
+
+### Directory Tree
+
+```
+api
+api/hooks
+assets
+components
+components/fleet
+components/layout
+components/maps
+components/panels
+pages
+pages/admin
+pages/customer
+pages/driver
+```
+
+---
+
+## ML Service
+
+| Category | Count |
+|----------|------:|
+| Python files | 17 |
+| API Routers | 7 |
+| Models | 7 |
+
+### Directory Tree
+
+```
+app
+app/models
+app/routers
+```
+
+---
+
+## Docker & Infrastructure
+
+### Docker configs (`docker/`)
+
+- `nginx-railway.conf`
+- `osrm/data/.gitkeep`
+- `osrm/prepare-map.sh`
+- `php/Dockerfile`
+- `traccar-local/traccar.xml`
+- `traccar-railway/traccar.xml`
+- `vroom/config-railway.yml`
+- `vroom/config.yml`
+- `vroom/entrypoint.sh`
+
+### Scripts (`scripts/`)
+
+- `osrm-start.sh`
+- `railway-setup-vars.sh`
+- `railway-start.sh`
+- `railway-worker-start.sh`
+- `traccar-start.sh`
+
+---
+
+## OpenSpec
+
+| Category | Count |
+|----------|------:|
+| Total spec files | 28 |
+| Entity specs | 12 |
+| Business rules | 5 |
+| API contracts | 5 |
+
+### Spec files
+
+- `specs/api-architecture-diagnostic.yaml`
+- `specs/api-consumers/traccar.yaml`
+- `specs/api-contracts/admin-web.yaml`
+- `specs/api-contracts/driver-api.yaml`
+- `specs/api-contracts/mercure-token-api.yaml`
+- `specs/api-contracts/shipment-api.yaml`
+- `specs/api-contracts/vehicle-api.yaml`
+- `specs/architectural-constraints/layer-dependencies.yaml`
+- `specs/architecture-profile.yaml`
+- `specs/business-rules/delivery.yaml`
+- `specs/business-rules/multi-tenant.yaml`
+- `specs/business-rules/security.yaml`
+- `specs/business-rules/shipment.yaml`
+- `specs/business-rules/vehicle-tracking.yaml`
+- `specs/constitution.md`
+- `specs/entities/audit-log.yaml`
+- `specs/entities/customer.yaml`
+- `specs/entities/driver-action.yaml`
+- `specs/entities/pod.yaml`
+- `specs/entities/route-stop.yaml`
+- `specs/entities/route.yaml`
+- `specs/entities/shipment-event.yaml`
+- `specs/entities/shipment.yaml`
+- `specs/entities/user.yaml`
+- `specs/entities/vehicle-last-position.yaml`
+- `specs/entities/vehicle-position.yaml`
+- `specs/entities/vehicle.yaml`
+- `specs/spec-manifest.yaml`
+
+---
+
+## Deep Reference
 
 | Topic | Document |
 |-------|----------|
@@ -196,3 +320,6 @@ For detailed information beyond this manifest, consult:
 | API endpoints, controllers | `docs/knowledge/api-surface.md` |
 | Design patterns in use | `docs/knowledge/design-patterns.md` |
 | All knowledge modules | `docs/knowledge/index.md` |
+| Deployment, Docker, Railway | `docs/knowledge/deployment.md` |
+| GPS tracking, Traccar | `docs/knowledge/gps-tracking.md` |
+| Route optimization, VROOM/OSRM | `docs/knowledge/route-optimization.md` |
