@@ -14,7 +14,7 @@ class ImportRunTracker
     {
     }
 
-    public function track(Customer $customer, int $created, int $skipped, ?int $qualityScore = null): void
+    public function track(Customer $customer, int $created, int $skipped, ?int $qualityScore = null): CsvImportRun
     {
         $run = new CsvImportRun($customer, $created, $skipped);
 
@@ -23,5 +23,7 @@ class ImportRunTracker
         }
 
         $this->entityManager->persist($run);
+
+        return $run;
     }
 }
