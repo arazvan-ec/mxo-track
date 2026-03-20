@@ -18,6 +18,9 @@ use App\Enum\OptimizationOperation;
 use App\Enum\OptimizationStepCategory;
 use App\Domain\Route\Repository\RouteRepositoryInterface;
 use App\Domain\Route\Repository\RouteStopRepositoryInterface;
+use App\Provider\ProviderFactoryRegistry;
+use App\Provider\ServiceType;
+use App\RouteOptimization\RouteOptimizerInterface;
 use App\Service\OptimizationLogger;
 use App\Service\RouteBuilder;
 use App\Service\RouteCapacityValidator;
@@ -40,6 +43,7 @@ final readonly class RoutePlanningService
         private OptimizationLogger $optimizationLogger,
         private RouteSnapshotManager $snapshotManager,
         private RouteMapProjection $routeMapProjection,
+        private ProviderFactoryRegistry $providerFactoryRegistry,
     ) {}
 
     /**
@@ -130,12 +134,21 @@ final readonly class RoutePlanningService
                 ->findOneBy(['publicId' => $input->originPublicId]);
         }
 
+        $optimizerOverride = null;
+        if ($input->optimizerName !== null) {
+            $optimizerOverride = $this->providerFactoryRegistry->createByName($input->optimizerName);
+            if (!$optimizerOverride instanceof RouteOptimizerInterface) {
+                throw new \InvalidArgumentException(sprintf('Provider "%s" is not a route optimizer.', $input->optimizerName));
+            }
+        }
+
         $results = $this->routeBuilder->buildRoutes(
             $shipments,
             $vehicles,
             $customer,
             $origin,
             $input->maxStopsPerRoute,
+            $optimizerOverride,
         );
 
         $this->em->flush();

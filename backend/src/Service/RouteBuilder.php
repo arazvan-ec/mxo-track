@@ -49,6 +49,7 @@ final class RouteBuilder
         Customer $customer,
         ?CustomerLocation $origin = null,
         int $maxStopsPerRoute = 30,
+        ?RouteOptimizerInterface $optimizerOverride = null,
     ): array {
         if (\count($shipments) === 0 || \count($vehicles) === 0) {
             return [];
@@ -83,7 +84,8 @@ final class RouteBuilder
             sprintf('Llamando al optimizador con %d vehiculos y %d jobs', \count($optimizableVehicles), \count($optimizableJobs)),
         );
 
-        $result = $this->optimizer->optimize($optimizableVehicles, $optimizableJobs);
+        $activeOptimizer = $optimizerOverride ?? $this->optimizer;
+        $result = $activeOptimizer->optimize($optimizableVehicles, $optimizableJobs);
 
         $this->optimizationLogger->logStep(
             OptimizationStepCategory::RESULT_SUMMARY,
