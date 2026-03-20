@@ -75,6 +75,7 @@ final readonly class ExceptionReoptimizationSubscriber
                 distanceKm: $distanceAfter,
                 durationMinutes: $result['durationMinutes'],
                 pendingStopsCount: \count($result['optimized']),
+                trigger: 'exception',
             ));
 
             $this->logger->info('Auto-reoptimized route after exception.', [

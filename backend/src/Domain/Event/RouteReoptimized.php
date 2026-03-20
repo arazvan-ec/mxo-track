@@ -14,6 +14,7 @@ final readonly class RouteReoptimized implements MapProjectableEventInterface
         public ?float $distanceKm,
         public ?int $durationMinutes,
         public int $pendingStopsCount,
+        public string $trigger = 'manual',
         public \DateTimeImmutable $occurredAt = new \DateTimeImmutable(),
     ) {}
 
