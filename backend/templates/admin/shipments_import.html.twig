@@ -32,6 +32,32 @@
     </p>
   </div>
 
+  {# ── Create Routes CTA (shown after successful import) ────────────── #}
+  {% for importRunId in app.flashes('import_run_id') %}
+    <div class="rounded-xl bg-emerald-50 border border-emerald-200 p-6">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="flex-shrink-0">
+            <svg class="h-8 w-8 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z"/>
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-sm font-semibold text-emerald-900">Envios importados correctamente</h3>
+            <p class="mt-0.5 text-sm text-emerald-700">Puedes crear rutas optimizadas con los envios que acabas de importar.</p>
+          </div>
+        </div>
+        <a href="/app/admin/route-planner?import_id={{ importRunId }}"
+           class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition-colors">
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+          </svg>
+          Crear Rutas
+        </a>
+      </div>
+    </div>
+  {% endfor %}
+
   {# ── Import form card ──────────────────────────────────────────────── #}
   <div class="bg-white shadow-sm ring-1 ring-gray-900/5 rounded-xl">
     <form method="post" enctype="multipart/form-data" action="{{ path('admin_shipments_import') }}">
