@@ -6,6 +6,7 @@ namespace App\Controller\Admin;
 
 use App\Application\Route\BuildRoutesInput;
 use App\Application\Route\RoutePlanningService;
+use App\Entity\CsvImportRun;
 use App\Entity\Customer;
 use App\Entity\CustomerLocation;
 use App\Domain\Route\Model\Route;
@@ -78,6 +79,63 @@ class RoutePlannerController extends AbstractController
         }
 
         $shipments = $qb->orderBy('s.id', 'DESC')->getQuery()->getResult();
+
+        $data = [];
+        foreach ($shipments as $shipment) {
+            $addressRisk = $this->addressRiskService->checkAddress($shipment->getAddress() ?? '');
+            $data[] = [
+                'publicId' => $shipment->getPublicIdString(),
+                'reference' => $shipment->getReference(),
+                'address' => $shipment->getAddress(),
+                'recipientName' => $shipment->getRecipientName(),
+                'lat' => $shipment->getLatitude(),
+                'lng' => $shipment->getLongitude(),
+                'totalWeightKg' => $shipment->getTotalWeightKg(),
+                'totalVolumeM3' => $shipment->getTotalVolumeM3(),
+                'totalParcels' => $shipment->getTotalParcels(),
+                'addressRisk' => $addressRisk,
+            ];
+        }
+
+        return new JsonResponse($data);
+    }
+
+    /**
+     * Return shipments from a specific CSV import run (unassigned, with coordinates).
+     */
+    #[SymfonyRoute('/import-shipments/{importRunPublicId}', name: 'admin_route_planner_import_shipments', methods: ['GET'])]
+    public function importShipments(string $importRunPublicId): JsonResponse
+    {
+        try {
+            $importRun = $this->em->getRepository(CsvImportRun::class)->findOneBy([
+                'publicId' => Ulid::fromString($importRunPublicId),
+            ]);
+        } catch (\InvalidArgumentException) {
+            return new JsonResponse(['error' => 'ID de importacion invalido.'], 400);
+        }
+
+        if (!$importRun instanceof CsvImportRun) {
+            return new JsonResponse(['error' => 'Importacion no encontrada.'], 404);
+        }
+
+        $assignedDql = $this->em->createQueryBuilder()
+            ->select('IDENTITY(rs_sub.shipment)')
+            ->from(RouteStop::class, 'rs_sub')
+            ->join('rs_sub.route', 'r_sub')
+            ->where('rs_sub.shipment IS NOT NULL')
+            ->getDQL();
+
+        $shipments = $this->em->createQueryBuilder()
+            ->select('s')
+            ->from(Shipment::class, 's')
+            ->where('s.csvImportRun = :importRun')
+            ->andWhere('s.latitude IS NOT NULL')
+            ->andWhere('s.longitude IS NOT NULL')
+            ->andWhere(sprintf('s.id NOT IN (%s)', $assignedDql))
+            ->setParameter('importRun', $importRun)
+            ->orderBy('s.id', 'ASC')
+            ->getQuery()
+            ->getResult();
 
         $data = [];
         foreach ($shipments as $shipment) {
