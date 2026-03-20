@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://doctrine-project.org/schemas/orm/doctrine-mapping
+                  https://www.doctrine-project.org/schemas/orm/doctrine-mapping.xsd">
+
+    <entity name="App\Domain\Shipment\Model\Parcel" table="parcel">
+        <unique-constraints>
+            <unique-constraint name="uniq_parcel_public_id" columns="public_id"/>
+        </unique-constraints>
+        <indexes>
+            <index name="idx_parcel_shipment" columns="shipment_id"/>
+            <index name="idx_parcel_ean" columns="ean"/>
+        </indexes>
+
+        <lifecycle-callbacks>
+            <lifecycle-callback type="prePersist" method="initializePublicId"/>
+            <lifecycle-callback type="preUpdate" method="touchUpdatedAt"/>
+        </lifecycle-callbacks>
+
+        <id name="id" type="bigint" column="id">
+            <generator strategy="IDENTITY"/>
+        </id>
+
+        <field name="publicId" type="ulid" column="public_id" unique="true"/>
+        <field name="sequenceNumber" type="integer" column="sequence_number"/>
+        <field name="weightKg" type="decimal" column="weight_kg" precision="10" scale="2"/>
+        <field name="volumeM3" type="decimal" column="volume_m3" precision="10" scale="4"/>
+        <field name="ean" type="string" length="30" nullable="true"/>
+        <field name="description" type="string" length="255" nullable="true"/>
+        <field name="status" type="string" length="20" enum-type="App\Enum\ParcelStatus"/>
+        <field name="createdAt" type="datetime_immutable" column="created_at"/>
+        <field name="updatedAt" type="datetime_immutable" column="updated_at"/>
+
+        <many-to-one field="shipment" target-entity="App\Domain\Shipment\Model\Shipment" inversed-by="parcels">
+            <join-column name="shipment_id" nullable="false" on-delete="CASCADE"/>
+        </many-to-one>
+    </entity>
+
+</doctrine-mapping>
