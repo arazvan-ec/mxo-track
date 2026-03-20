@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Domain\Route\Repository\RouteRepositoryInterface;
+use App\Domain\Route\Repository\RouteStopRepositoryInterface;
 use App\Entity\Customer;
 use App\Entity\CustomerLocation;
 use App\Entity\Route;
@@ -16,7 +18,6 @@ use App\RouteOptimization\OptimizableJob;
 use App\RouteOptimization\OptimizableVehicle;
 use App\RouteOptimization\OptimizationResult;
 use App\RouteOptimization\RouteOptimizerInterface;
-use Doctrine\ORM\EntityManagerInterface;
 
 /**
  * Builds optimized delivery routes using a VRP solver.
@@ -28,7 +29,8 @@ use Doctrine\ORM\EntityManagerInterface;
 final class RouteBuilder
 {
     public function __construct(
-        private readonly EntityManagerInterface $em,
+        private readonly RouteRepositoryInterface $routeRepo,
+        private readonly RouteStopRepositoryInterface $stopRepo,
         private readonly RouteOptimizerInterface $optimizer,
         private readonly RouteCapacityValidator $capacityValidator,
         private readonly OptimizationLogger $optimizationLogger,
@@ -93,7 +95,7 @@ final class RouteBuilder
         $materializedRoutes = $this->materializeRoutes($result, $vehicles, $shipments, $customer, $origin);
 
         // Flush to assign IDs before creating snapshots (snapshots query by route)
-        $this->em->flush();
+        $this->routeRepo->flush();
 
         foreach ($materializedRoutes as $mr) {
             $route = $mr['route'];
@@ -218,7 +220,7 @@ final class RouteBuilder
             $route->setVehicle($vehicle);
             $route->setCustomer($customer);
             $route->setOriginLocation($origin);
-            $this->em->persist($route);
+            $this->routeRepo->save($route);
 
             $stops = [];
             $seq = 0;
@@ -229,7 +231,7 @@ final class RouteBuilder
                 $originStop->setOrigin(true);
                 $originStop->setLatitude($origin->getLatitude());
                 $originStop->setLongitude($origin->getLongitude());
-                $this->em->persist($originStop);
+                $this->stopRepo->save($originStop);
                 $stops[] = $originStop;
                 $seq++;
             }
@@ -254,7 +256,7 @@ final class RouteBuilder
                 $stop->setRecipientPhone($shipment->getRecipientPhone());
                 $stop->setDeliveryWindowStart($shipment->getPreferredWindowStart());
                 $stop->setDeliveryWindowEnd($shipment->getPreferredWindowEnd());
-                $this->em->persist($stop);
+                $this->stopRepo->save($stop);
                 $stops[] = $stop;
                 $seq++;
             }

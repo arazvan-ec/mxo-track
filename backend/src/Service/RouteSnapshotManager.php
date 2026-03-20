@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Domain\Route\Repository\RouteStopRepositoryInterface;
 use App\Entity\Route;
 use App\Domain\Route\Model\RouteSnapshot;
 use App\Domain\Route\Repository\RouteSnapshotRepositoryInterface;
 use App\Entity\RouteStop;
 use App\Routing\Coordinate;
 use App\Routing\RoutingEngineInterface;
-use Doctrine\ORM\EntityManagerInterface;
 
 /**
  * Manages RouteSnapshot lifecycle: creates after build/optimize,
@@ -19,7 +19,7 @@ use Doctrine\ORM\EntityManagerInterface;
 final class RouteSnapshotManager
 {
     public function __construct(
-        private readonly EntityManagerInterface $em,
+        private readonly RouteStopRepositoryInterface $stopRepo,
         private readonly RoutingEngineInterface $routingEngine,
         private readonly RouteCapacityValidator $capacityValidator,
         private readonly RouteSnapshotRepositoryInterface $snapshotRepo,
@@ -268,13 +268,6 @@ final class RouteSnapshotManager
      */
     private function getStopsForRoute(Route $route): array
     {
-        return $this->em->createQueryBuilder()
-            ->select('s')
-            ->from(RouteStop::class, 's')
-            ->where('s.route = :route')
-            ->setParameter('route', $route)
-            ->orderBy('s.sequence', 'ASC')
-            ->getQuery()
-            ->getResult();
+        return $this->stopRepo->findByRoute($route);
     }
 }

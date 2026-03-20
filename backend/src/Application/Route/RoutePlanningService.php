@@ -15,8 +15,8 @@ use App\Entity\Shipment;
 use App\Entity\Vehicle;
 use App\Enum\OptimizationOperation;
 use App\Enum\OptimizationStepCategory;
-use App\Repository\RouteRepository;
-use App\Repository\RouteStopRepository;
+use App\Domain\Route\Repository\RouteRepositoryInterface;
+use App\Domain\Route\Repository\RouteStopRepositoryInterface;
 use App\Service\OptimizationLogger;
 use App\Service\RouteBuilder;
 use App\Service\RouteCapacityValidator;
@@ -33,8 +33,8 @@ final readonly class RoutePlanningService
         private RouteBuilder $routeBuilder,
         private RouteOptimizationService $optimizationService,
         private RouteCapacityValidator $capacityValidator,
-        private RouteRepository $routeRepo,
-        private RouteStopRepository $stopRepo,
+        private RouteRepositoryInterface $routeRepo,
+        private RouteStopRepositoryInterface $stopRepo,
         private EventDispatcherInterface $eventDispatcher,
         private OptimizationLogger $optimizationLogger,
         private RouteSnapshotManager $snapshotManager,

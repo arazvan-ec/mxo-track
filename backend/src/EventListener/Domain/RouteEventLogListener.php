@@ -15,13 +15,13 @@ use App\Domain\Event\RouteStarted;
 use App\Domain\Event\RoutesBuilt;
 use App\Domain\Event\StopDelivered;
 use App\Domain\Event\StopExceptionReported;
+use App\Domain\Route\Repository\RouteEventRepositoryInterface;
+use App\Domain\Route\Repository\RouteRepositoryInterface;
+use App\Domain\Route\Repository\RouteStopRepositoryInterface;
 use App\Entity\RouteEvent;
 use App\Enum\RouteEventType;
 use App\Enum\RouteStopStatus;
-use App\Repository\RouteRepository;
-use App\Repository\RouteStopRepository;
 use App\Repository\UserRepository;
-use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 
 /**
@@ -31,10 +31,10 @@ use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 final readonly class RouteEventLogListener
 {
     public function __construct(
-        private EntityManagerInterface $em,
-        private RouteRepository $routeRepo,
+        private RouteEventRepositoryInterface $eventRepo,
+        private RouteRepositoryInterface $routeRepo,
         private UserRepository $userRepo,
-        private RouteStopRepository $stopRepo,
+        private RouteStopRepositoryInterface $stopRepo,
     ) {}
 
     #[AsEventListener]
@@ -287,13 +287,13 @@ final readonly class RouteEventLogListener
 
     private function persistAndPublish(RouteEvent $routeEvent, string $routePublicId): void
     {
-        $this->em->persist($routeEvent);
-        $this->em->flush();
+        $this->eventRepo->save($routeEvent);
+        $this->eventRepo->flush();
     }
 
     private function buildSnapshotMetrics(\App\Entity\Route $route): array
     {
-        $stops = $this->stopRepo->findBy(['route' => $route]);
+        $stops = $this->stopRepo->findByRoute($route);
 
         $total = 0;
         $delivered = 0;

@@ -6,10 +6,10 @@ namespace App\Application\Route;
 
 use App\Domain\Event\RouteCompleted;
 use App\Domain\Event\RouteStarted;
+use App\Domain\Route\Repository\RouteRepositoryInterface;
 use App\Entity\Route;
 use App\Entity\User;
 use App\Entity\VehicleInspection;
-use App\Repository\RouteRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
@@ -17,7 +17,7 @@ readonly class RouteLifecycleService
 {
     public function __construct(
         private EntityManagerInterface $em,
-        private RouteRepository $routeRepo,
+        private RouteRepositoryInterface $routeRepo,
         private EventDispatcherInterface $eventDispatcher,
     ) {}
 

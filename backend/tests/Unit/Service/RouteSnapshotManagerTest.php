@@ -8,14 +8,12 @@ use App\Entity\Route;
 use App\Domain\Route\Model\RouteSnapshot;
 use App\Entity\RouteStop;
 use App\Domain\Route\Repository\RouteSnapshotRepositoryInterface;
+use App\Domain\Route\Repository\RouteStopRepositoryInterface;
 use App\Routing\Coordinate;
 use App\Routing\MultiWaypointRouteResult;
 use App\Routing\RoutingEngineInterface;
 use App\Service\RouteCapacityValidator;
 use App\Service\RouteSnapshotManager;
-use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\ORM\Query;
-use Doctrine\ORM\QueryBuilder;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -24,20 +22,20 @@ use PHPUnit\Framework\TestCase;
 final class RouteSnapshotManagerTest extends TestCase
 {
     private RouteSnapshotManager $manager;
-    private EntityManagerInterface $em;
+    private RouteStopRepositoryInterface $stopRepo;
     private RoutingEngineInterface $routingEngine;
     private RouteCapacityValidator $capacityValidator;
     private RouteSnapshotRepositoryInterface $snapshotRepo;
 
     protected function setUp(): void
     {
-        $this->em = $this->createMock(EntityManagerInterface::class);
+        $this->stopRepo = $this->createMock(RouteStopRepositoryInterface::class);
         $this->routingEngine = $this->createMock(RoutingEngineInterface::class);
         $this->capacityValidator = $this->createMock(RouteCapacityValidator::class);
         $this->snapshotRepo = $this->createMock(RouteSnapshotRepositoryInterface::class);
 
         $this->manager = new RouteSnapshotManager(
-            $this->em,
+            $this->stopRepo,
             $this->routingEngine,
             $this->capacityValidator,
             $this->snapshotRepo,
@@ -46,17 +44,7 @@ final class RouteSnapshotManagerTest extends TestCase
 
     private function mockStopsQuery(array $stops): void
     {
-        $query = $this->createMock(Query::class);
-        $query->method('getResult')->willReturn($stops);
-
-        $qb = $this->createMock(QueryBuilder::class);
-        $qb->method('select')->willReturnSelf();
-        $qb->method('from')->willReturnSelf();
-        $qb->method('where')->willReturnSelf();
-        $qb->method('setParameter')->willReturnSelf();
-        $qb->method('orderBy')->willReturnSelf();
-        $qb->method('getQuery')->willReturn($query);
-        $this->em->method('createQueryBuilder')->willReturn($qb);
+        $this->stopRepo->method('findByRoute')->willReturn($stops);
     }
 
     #[Test]

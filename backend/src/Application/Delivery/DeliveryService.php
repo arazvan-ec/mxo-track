@@ -15,7 +15,7 @@ use App\Entity\ShipmentEvent;
 use App\Entity\User;
 use App\Enum\ExceptionCode;
 use App\Enum\ShipmentEventType;
-use App\Repository\RouteStopRepository;
+use App\Domain\Route\Repository\RouteStopRepositoryInterface;
 use App\Repository\ShipmentRepository;
 use App\Message\NlpClassificationMessage;
 use App\Service\AuditLogger;
@@ -34,7 +34,7 @@ readonly class DeliveryService
         private AuditLogger $auditLogger,
         private EventDispatcherInterface $eventDispatcher,
         private MessageBusInterface $messageBus,
-        private RouteStopRepository $stopRepo,
+        private RouteStopRepositoryInterface $stopRepo,
         private ShipmentRepository $shipmentRepo,
     ) {}
 

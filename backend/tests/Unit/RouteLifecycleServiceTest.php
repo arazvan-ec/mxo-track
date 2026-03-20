@@ -12,7 +12,7 @@ use App\Entity\Route;
 use App\Entity\User;
 use App\Entity\VehicleInspection;
 use App\Enum\RouteStatus;
-use App\Repository\RouteRepository;
+use App\Domain\Route\Repository\RouteRepositoryInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\EntityRepository;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -26,14 +26,14 @@ use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 final class RouteLifecycleServiceTest extends TestCase
 {
     private EntityManagerInterface&MockObject $em;
-    private RouteRepository&MockObject $routeRepo;
+    private RouteRepositoryInterface&MockObject $routeRepo;
     private EventDispatcherInterface&MockObject $eventDispatcher;
     private RouteLifecycleService $service;
 
     protected function setUp(): void
     {
         $this->em = $this->createMock(EntityManagerInterface::class);
-        $this->routeRepo = $this->createMock(RouteRepository::class);
+        $this->routeRepo = $this->createMock(RouteRepositoryInterface::class);
         $this->eventDispatcher = $this->createMock(EventDispatcherInterface::class);
 
         $this->service = new RouteLifecycleService(
