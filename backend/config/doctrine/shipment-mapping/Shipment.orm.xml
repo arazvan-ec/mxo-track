@@ -48,6 +48,10 @@
             <join-column name="customer_id" nullable="false"/>
         </many-to-one>
 
+        <many-to-one field="csvImportRun" target-entity="App\Entity\CsvImportRun">
+            <join-column name="csv_import_run_id" nullable="true" on-delete="SET NULL"/>
+        </many-to-one>
+
         <one-to-many field="parcels" target-entity="App\Domain\Shipment\Model\Parcel" mapped-by="shipment" orphan-removal="true">
             <cascade>
                 <cascade-persist/>

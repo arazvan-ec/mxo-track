@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Shipment\Model;
 
+use App\Entity\CsvImportRun;
 use App\Entity\Customer;
 use App\Entity\CustomerScopedEntityInterface;
 use App\Entity\SoftDeletableInterface;
@@ -45,6 +46,7 @@ class Shipment implements CustomerScopedEntityInterface, SoftDeletableInterface
     private ShipmentPriority $priority = ShipmentPriority::NORMAL;
     private ?string $trackingToken = null;
     private ?array $requiredSkills = [];
+    private ?CsvImportRun $csvImportRun = null;
     private DateTimeImmutable $createdAt;
     private ?DateTimeImmutable $deletedAt = null;
 
@@ -186,4 +188,9 @@ class Shipment implements CustomerScopedEntityInterface, SoftDeletableInterface
     public function isDeleted(): bool { return $this->deletedAt !== null; }
 
     public function softDelete(): void { $this->deletedAt = new DateTimeImmutable(); }
+
+    // ── CSV Import Run ──
+
+    public function getCsvImportRun(): ?CsvImportRun { return $this->csvImportRun; }
+    public function setCsvImportRun(?CsvImportRun $csvImportRun): void { $this->csvImportRun = $csvImportRun; }
 }
