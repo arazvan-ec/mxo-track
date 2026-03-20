@@ -12,10 +12,12 @@ import {
   usePlannerVehicles,
   usePlannerLocations,
   usePlannerOptimizers,
+  usePlannerCalibrations,
   useClusterMutation,
   usePreviewMutation,
   useConfirmMutation,
 } from '@/api/hooks/useRoutePlanner';
+import type { CalibrationEntry } from '@/api/hooks/useRoutePlanner';
 import type {
   PlannerShipment,
   PlannerVehicle,
@@ -53,6 +55,7 @@ export function RoutePlannerPage() {
   const [originPublicId, setOriginPublicId] = useState('');
   const [maxStopsPerRoute, setMaxStopsPerRoute] = useState(30);
   const [optimizerName, setOptimizerName] = useState<string>('');
+  const [useCalibration, setUseCalibration] = useState(false);
 
   // Step 3 state
   const [previewRoutes, setPreviewRoutes] = useState<PlannerPreviewRoute[]>([]);
@@ -66,6 +69,7 @@ export function RoutePlannerPage() {
   const vehiclesQuery = usePlannerVehicles();
   const locationsQuery = usePlannerLocations(customerId || undefined);
   const optimizersQuery = usePlannerOptimizers();
+  const calibrationsQuery = usePlannerCalibrations(customerId || undefined);
 
   // Mutations
   const clusterMutation = useClusterMutation();
@@ -79,6 +83,7 @@ export function RoutePlannerPage() {
   const vehicles = vehiclesQuery.data ?? [];
   const locations = locationsQuery.data ?? [];
   const optimizers = optimizersQuery.data ?? [];
+  const calibrations = calibrationsQuery.data ?? [];
 
   // Auto-load shipments from import when import_id is in URL
   const importAutoLoaded = useRef(false);
@@ -183,6 +188,11 @@ export function RoutePlannerPage() {
   // -- Step 3 handlers --
 
   const handleGeneratePreview = useCallback(() => {
+    // Build calibrated service times map if calibration is enabled
+    const calibratedTimes = useCalibration && calibrations.length > 0
+      ? Object.fromEntries(calibrations.map((c) => [c.address, c.avgSeconds]))
+      : null;
+
     previewMutation.mutate(
       {
         shipment_ids: Array.from(selectedShipmentIds),
@@ -190,6 +200,7 @@ export function RoutePlannerPage() {
         origin_public_id: originPublicId || null,
         max_stops_per_route: maxStopsPerRoute,
         optimizer_name: optimizerName || null,
+        calibrated_service_times: calibratedTimes,
       },
       {
         onSuccess: (data) => {
@@ -214,7 +225,7 @@ export function RoutePlannerPage() {
         },
       },
     );
-  }, [selectedShipmentIds, selectedVehicleIds, originPublicId, maxStopsPerRoute, optimizerName, previewMutation]);
+  }, [selectedShipmentIds, selectedVehicleIds, originPublicId, maxStopsPerRoute, optimizerName, useCalibration, calibrations, previewMutation]);
 
   const loadAllDriverSuggestions = useCallback(async (routes: PlannerPreviewRoute[]) => {
     setLoadingDrivers(true);
@@ -348,12 +359,15 @@ export function RoutePlannerPage() {
               maxStopsPerRoute={maxStopsPerRoute}
               optimizers={optimizers}
               optimizerName={optimizerName}
+              calibrations={calibrations}
+              useCalibration={useCalibration}
               isGenerating={previewMutation.isPending}
               onToggleVehicle={handleToggleVehicle}
               onToggleAll={handleToggleAllVehicles}
               onOriginChange={setOriginPublicId}
               onMaxStopsChange={setMaxStopsPerRoute}
               onOptimizerChange={setOptimizerName}
+              onCalibrationToggle={setUseCalibration}
               onBack={() => setStep(1)}
               onGenerate={handleGeneratePreview}
             />
@@ -699,12 +713,15 @@ interface Step2Props {
   maxStopsPerRoute: number;
   optimizers: Array<{ name: string; label: string }>;
   optimizerName: string;
+  calibrations: CalibrationEntry[];
+  useCalibration: boolean;
   isGenerating: boolean;
   onToggleVehicle: (id: string) => void;
   onToggleAll: (checked: boolean) => void;
   onOriginChange: (v: string) => void;
   onMaxStopsChange: (v: number) => void;
   onOptimizerChange: (v: string) => void;
+  onCalibrationToggle: (v: boolean) => void;
   onBack: () => void;
   onGenerate: () => void;
 }
@@ -718,12 +735,15 @@ function Step2Panel({
   maxStopsPerRoute,
   optimizers,
   optimizerName,
+  calibrations,
+  useCalibration,
   isGenerating,
   onToggleVehicle,
   onToggleAll,
   onOriginChange,
   onMaxStopsChange,
   onOptimizerChange,
+  onCalibrationToggle,
   onBack,
   onGenerate,
 }: Step2Props) {
@@ -826,6 +846,46 @@ function Step2Panel({
                     </option>
                   ))}
                 </select>
+              </div>
+            )}
+
+            {/* Calibrated service times */}
+            {calibrations.length > 0 && (
+              <div className="bg-emerald-900/20 border border-emerald-700/30 rounded-lg p-3 space-y-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={useCalibration}
+                    onChange={(e) => onCalibrationToggle(e.target.checked)}
+                    className="rounded border-emerald-600 bg-slate-800 text-emerald-600 focus:ring-emerald-500/30"
+                  />
+                  <span className="text-xs font-medium text-emerald-300">
+                    Use calibrated service times
+                  </span>
+                  <span className="text-[10px] text-emerald-400/60 ml-auto">
+                    {calibrations.length} addresses
+                  </span>
+                </label>
+                {useCalibration && (
+                  <div className="max-h-28 overflow-y-auto space-y-1">
+                    {calibrations.slice(0, 10).map((cal) => (
+                      <div key={cal.address} className="flex items-center justify-between text-[11px]">
+                        <span className="text-slate-400 truncate flex-1 mr-2">{cal.address}</span>
+                        <span className="text-emerald-300 font-medium flex-shrink-0">
+                          {Math.round(cal.avgSeconds / 60)}m
+                        </span>
+                        <span className="text-slate-500 ml-1 flex-shrink-0">
+                          ({cal.sampleCount}x)
+                        </span>
+                      </div>
+                    ))}
+                    {calibrations.length > 10 && (
+                      <p className="text-[10px] text-slate-500">
+                        +{calibrations.length - 10} more addresses
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
