@@ -39,6 +39,17 @@ export function usePlannerLocations(customerId?: string) {
   });
 }
 
+export function usePlannerImportShipments(importId?: string) {
+  return useQuery({
+    queryKey: ['planner-import-shipments', importId],
+    queryFn: () =>
+      api.get<PlannerShipment[]>(
+        `/admin/route-planner/import-shipments/${encodeURIComponent(importId!)}`,
+      ),
+    enabled: false, // manual trigger with refetch
+  });
+}
+
 export function useClusterMutation() {
   return useMutation({
     mutationFn: (payload: { shipment_ids: string[]; num_clusters: number }) =>

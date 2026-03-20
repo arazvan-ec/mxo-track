@@ -55,12 +55,9 @@ class AdminShipmentController extends AbstractController
             $result = $importer->import($csv->getPathname(), $customer);
 
             if ($result['created'] > 0) {
-                $latestRun = $entityManager->getRepository(CsvImportRun::class)->findOneBy(
-                    ['customer' => $customer],
-                    ['createdAt' => 'DESC'],
-                );
+                $importRun = $result['import_run'];
                 $eventDispatcher->dispatch(new ShipmentsImported(
-                    importRunId: $latestRun?->getId() ?? 0,
+                    importRunId: $importRun?->getId() ?? 0,
                     customerId: $customer->getId(),
                     createdCount: $result['created'],
                     skippedCount: $result['skipped'],
@@ -70,6 +67,10 @@ class AdminShipmentController extends AbstractController
                     'success',
                     sprintf('%d envio(s) creado(s) correctamente.', $result['created']),
                 );
+
+                if ($importRun !== null) {
+                    $this->addFlash('import_run_id', $importRun->getPublicIdString());
+                }
             }
 
             if ($result['skipped'] > 0) {

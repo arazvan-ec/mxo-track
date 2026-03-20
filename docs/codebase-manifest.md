@@ -3,14 +3,14 @@
 > **Auto-generated** by `make manifest` (`backend/bin/generate-manifest.sh`).
 > Do not edit manually — regenerate with `make manifest`.
 
-**Generated:** 2026-03-20 01:29
+**Generated:** 2026-03-20 01:40
 **Regenerate:** `make manifest`
 
 ## Project Overview
 
 | Area | Path | Files | Tech |
 |------|------|------:|------|
-| Backend | `backend/` | 492 PHP | Symfony 7.4, PHP 8.4 |
+| Backend | `backend/` | 498 PHP | Symfony 7.4, PHP 8.4 |
 | Frontend | `frontend/` | 59 JS/TS | React |
 | ML Service | `ml-service/` | 17 Python | FastAPI |
 | Docker/Infra | `docker/` + `scripts/` | 9 + 5 | Docker, OSRM, VROOM, Traccar |
@@ -23,13 +23,13 @@
 
 | Category | Count |
 |----------|------:|
-| Entities (src/Entity/) | 38 |
-| Domain Models (src/Domain/*/Model/) | 12 |
+| Entities (src/Entity/) | 34 |
+| Domain Models (src/Domain/*/Model/) | 16 |
 | Enums — core (src/Enum/) | 17 |
 | Enums — provider | 4 |
 | **Enums total** | **21** |
 | Controllers | 61 |
-| Application Services (src/Application/) | 21 |
+| Application Services (src/Application/) | 23 |
 | Domain/Infra Services (src/Service/) | 72 |
 | Repositories | 18 |
 | Console Commands | 18 |
@@ -37,8 +37,8 @@
 | Event Listeners | 11 |
 | Messenger Messages | 4 |
 | Message Handlers | 4 |
-| Tests | 110 |
-| Migrations | 32 |
+| Tests | 117 |
+| Migrations | 33 |
 
 ## Entity List
 
@@ -61,8 +61,6 @@
 - NotificationLog
 - NotificationPreference
 - OptimizationStrategyComparison
-- Parcel
-- Pod
 - PushSubscription
 - RealtimeEvent
 - RecipientAction
@@ -70,8 +68,6 @@
 - RouteOptimizationLog
 - RoutePerformanceMetric
 - RoutePlanTemplate
-- Shipment
-- ShipmentEvent
 - SoftDeletableInterface
 - User
 - Vehicle
@@ -95,6 +91,10 @@
 - **Route/** RouteSnapshot
 - **Route/** RouteStop
 - **Route/** StopMapView
+- **Shipment/** Parcel
+- **Shipment/** Pod
+- **Shipment/** Shipment
+- **Shipment/** ShipmentEvent
 
 ## Enum List
 
@@ -130,6 +130,7 @@
 - **Event/** — 
 - **MapView/** — Model,Projection,Publisher
 - **Route/** — Model,Repository,Service
+- **Shipment/** — Model,Repository
 
 ## Backend Directory Tree (2 levels)
 
@@ -155,6 +156,7 @@ Domain
 Domain/Event
 Domain/MapView
 Domain/Route
+Domain/Shipment
 Dto
 Dto/Api
 Dto/Driver
@@ -171,6 +173,7 @@ Infrastructure
 Infrastructure/MapView
 Infrastructure/Route
 Infrastructure/Security
+Infrastructure/Shipment
 Logging
 Message
 MessageHandler
@@ -321,10 +324,12 @@ Services with the interfaces they implement (auto-extracted from source):
 | DatabasePodStorage | PodStorageInterface | `Service/DatabasePodStorage.php` |
 | DeviationDetected | MapProjectableEventInterface | `Domain/Event/DeviationDetected.php` |
 | DeviationEnded | MapProjectableEventInterface | `Domain/Event/DeviationEnded.php` |
+| DoctrinePodRepository | PodRepositoryInterface | `Infrastructure/Shipment/Doctrine/DoctrinePodRepository.php` |
 | DoctrineRouteEventRepository | RouteEventRepositoryInterface | `Infrastructure/Route/Doctrine/DoctrineRouteEventRepository.php` |
 | DoctrineRouteRepository | RouteRepositoryInterface | `Infrastructure/Route/Doctrine/DoctrineRouteRepository.php` |
 | DoctrineRouteSnapshotRepository | RouteSnapshotRepositoryInterface | `Infrastructure/Route/Doctrine/DoctrineRouteSnapshotRepository.php` |
 | DoctrineRouteStopRepository | RouteStopRepositoryInterface | `Infrastructure/Route/Doctrine/DoctrineRouteStopRepository.php` |
+| DoctrineShipmentRepository | ShipmentRepositoryInterface | `Infrastructure/Shipment/Doctrine/DoctrineShipmentRepository.php` |
 | EtaChanged | MapProjectableEventInterface | `Domain/Event/EtaChanged.php` |
 | GoogleDirectionsEngine | RoutingEngineInterface | `Provider/Routing/GoogleDirectionsEngine.php` |
 | GoogleDirectionsFactory | ProviderFactoryInterface | `Provider/Routing/GoogleDirectionsFactory.php` |
@@ -346,6 +351,7 @@ Services with the interfaces they implement (auto-extracted from source):
 | RouteOptimized | MapProjectableEventInterface | `Domain/Event/RouteOptimized.php` |
 | RouteReoptimized | MapProjectableEventInterface | `Domain/Event/RouteReoptimized.php` |
 | RouteStarted | MapProjectableEventInterface | `Domain/Event/RouteStarted.php` |
+| Shipment | CustomerScopedEntityInterface, SoftDeletableInterface | `Domain/Shipment/Model/Shipment.php` |
 | StopDelivered | MapProjectableEventInterface | `Domain/Event/StopDelivered.php` |
 | StopExceptionReported | MapProjectableEventInterface | `Domain/Event/StopExceptionReported.php` |
 | StopSkipped | MapProjectableEventInterface | `Domain/Event/StopSkipped.php` |
@@ -383,8 +389,6 @@ Key Doctrine relationships (auto-extracted from entity attributes):
 - **NotificationLog** → Customer, Shipment
 - **NotificationPreference** → Customer
 - **OptimizationStrategyComparison** → Customer, Route
-- **Parcel** → Shipment
-- **Pod** → RouteStop, Shipment, User
 - **PushSubscription** → User
 - **RealtimeEvent** → Customer
 - **RecipientAction** → Shipment
@@ -392,8 +396,6 @@ Key Doctrine relationships (auto-extracted from entity attributes):
 - **RouteOptimizationLog** → Customer, Route
 - **RoutePerformanceMetric** → Customer, Route
 - **RoutePlanTemplate** → Customer
-- **Shipment** → Customer, Parcel
-- **ShipmentEvent** → Shipment
 - **User** → Customer
 - **VehicleCheckpoint** → Vehicle
 - **VehicleInspection** → Route, User

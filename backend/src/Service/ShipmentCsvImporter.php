@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Dto\CsvQualityReport;
+use App\Entity\CsvImportRun;
 use App\Entity\Customer;
 use App\Domain\Shipment\Model\Parcel;
 use App\Domain\Shipment\Model\Shipment;
@@ -41,21 +42,23 @@ final class ShipmentCsvImporter
     ) {
     }
 
-    /** @return array{created: int, skipped: int, errors: int, quality_report: CsvQualityReport|null} */
+    /** @return array{created: int, skipped: int, errors: int, quality_report: CsvQualityReport|null, import_run: CsvImportRun|null} */
     public function import(string $csvPath, Customer $customer): array
     {
         $created = 0;
         $skipped = 0;
         $errors = 0;
         $qualityReport = null;
+        /** @var Shipment[] $createdShipments */
+        $createdShipments = [];
 
         if (!is_file($csvPath)) {
-            return ['created' => 0, 'skipped' => 0, 'errors' => 0, 'quality_report' => null];
+            return ['created' => 0, 'skipped' => 0, 'errors' => 0, 'quality_report' => null, 'import_run' => null];
         }
 
         $fh = fopen($csvPath, 'rb');
         if ($fh === false) {
-            return ['created' => 0, 'skipped' => 0, 'errors' => 0, 'quality_report' => null];
+            return ['created' => 0, 'skipped' => 0, 'errors' => 0, 'quality_report' => null, 'import_run' => null];
         }
 
         // Read all data rows (skip header) for quality analysis
@@ -211,13 +214,19 @@ final class ShipmentCsvImporter
             $this->entityManager->persist(
                 new ShipmentEvent($shipment, ShipmentEventType::CREATED, ['source' => 'csv_import']),
             );
+            $createdShipments[] = $shipment;
             $created++;
         }
 
-        $this->importRunTracker->track($customer, $created, $skipped, $qualityReport->score);
+        $importRun = $this->importRunTracker->track($customer, $created, $skipped, $qualityReport->score);
+
+        foreach ($createdShipments as $shipment) {
+            $shipment->setCsvImportRun($importRun);
+        }
+
         $this->entityManager->flush();
 
-        return ['created' => $created, 'skipped' => $skipped, 'errors' => $errors, 'quality_report' => $qualityReport];
+        return ['created' => $created, 'skipped' => $skipped, 'errors' => $errors, 'quality_report' => $qualityReport, 'import_run' => $importRun];
     }
 
     private static function parsePriority(string $name): ?ShipmentPriority

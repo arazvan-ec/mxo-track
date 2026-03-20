@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller\Customer;
 
+use App\Application\Fleet\CustomerOptimizationKpiService;
 use App\Application\Fleet\FleetOverviewService;
 use App\Entity\Customer;
 use App\Entity\CustomerVehicle;
@@ -25,6 +26,7 @@ class CustomerDashboardController extends AbstractController
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly FleetOverviewService $fleetOverview,
+        private readonly CustomerOptimizationKpiService $optimizationKpiService,
         #[Autowire('%env(MERCURE_PUBLIC_URL)%')] private readonly string $mercurePublicUrl,
     ) {}
 
@@ -63,9 +65,12 @@ class CustomerDashboardController extends AbstractController
             ->getQuery()
             ->getResult();
 
+        $optimizationKpis = $this->optimizationKpiService->getOptimizationKpis($customer);
+
         return $this->render('customer/dashboard.html.twig', [
             'customer' => $customer,
             'kpis' => $kpis->toArray(),
+            'optimizationKpis' => $optimizationKpis->toArray(),
             'activeRoutes' => $activeRoutesList,
             'activeRouteProgress' => $activeRouteProgress,
             'vehiclesWithPosition' => $vehiclesWithPosition,
@@ -79,6 +84,14 @@ class CustomerDashboardController extends AbstractController
         $customer = $this->resolveCustomer();
 
         return $this->json($this->fleetOverview->getCustomerKpis($customer)->toArray());
+    }
+
+    #[SymfonyRoute('/dashboard/optimization-kpis', name: 'customer_dashboard_optimization_kpis', methods: ['GET'])]
+    public function optimizationKpis(): JsonResponse
+    {
+        $customer = $this->resolveCustomer();
+
+        return $this->json($this->optimizationKpiService->getOptimizationKpis($customer)->toArray());
     }
 
     private function resolveCustomer(): Customer
