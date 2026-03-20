@@ -63,3 +63,4 @@ docker/osrm/data/*
 .claude/active-spec
 .claude/active-plan
 .claude/session-state.json
+.claude/session-context.md
