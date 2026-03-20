@@ -6,7 +6,7 @@ namespace App\Tests\Unit\Notification;
 
 use App\Entity\Customer;
 use App\Entity\NotificationPreference;
-use App\Entity\Shipment;
+use App\Domain\Shipment\Model\Shipment;
 use App\Enum\NotificationChannel;
 use App\Enum\NotificationTriggerType;
 use App\Notification\NotificationCommand;

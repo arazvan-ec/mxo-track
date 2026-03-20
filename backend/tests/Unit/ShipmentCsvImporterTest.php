@@ -6,8 +6,8 @@ namespace App\Tests\Unit;
 
 use App\Dto\CsvQualityReport;
 use App\Entity\Customer;
-use App\Entity\Shipment;
-use App\Entity\ShipmentEvent;
+use App\Domain\Shipment\Model\Shipment;
+use App\Domain\Shipment\Model\ShipmentEvent;
 use App\Service\CsvQualityAnalyzer;
 use App\Service\ImportRunTracker;
 use App\Service\ShipmentCsvImporter;

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\EventListener\Domain;
 
 use App\Domain\Event\ShipmentsImported;
-use App\Entity\Shipment;
+use App\Domain\Shipment\Model\Shipment;
 use App\Service\EmbeddingService;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;

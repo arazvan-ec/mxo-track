@@ -2,100 +2,51 @@
 
 declare(strict_types=1);
 
-namespace App\Entity;
+namespace App\Domain\Shipment\Model;
 
-use App\Entity\Concerns\PublicIdTrait;
-use App\Entity\Concerns\SoftDeleteTrait;
+use App\Entity\Customer;
+use App\Entity\CustomerScopedEntityInterface;
+use App\Entity\SoftDeletableInterface;
 use App\Enum\ServiceType;
 use App\Enum\ShipmentPriority;
 use App\Enum\VehicleSkill;
 use DateTimeImmutable;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
-use Doctrine\DBAL\Types\Types;
-use Doctrine\ORM\Mapping as ORM;
-use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Uid\Ulid;
 
-#[ORM\Entity(repositoryClass: \App\Repository\ShipmentRepository::class)]
-#[ORM\UniqueConstraint(name: 'uniq_shipment_public_id', columns: ['public_id'])]
-#[ORM\UniqueConstraint(name: 'uniq_shipment_tracking_token', columns: ['tracking_token'])]
-#[ORM\Index(name: 'idx_shipment_deleted_at', columns: ['deleted_at'])]
-#[ORM\HasLifecycleCallbacks]
+/**
+ * Shipment entity — domain POPO.
+ * Persistence handled via external XML mapping (no ORM attributes).
+ */
 class Shipment implements CustomerScopedEntityInterface, SoftDeletableInterface
 {
-    use PublicIdTrait;
-    use SoftDeleteTrait;
-
-    #[ORM\Column(length: 80, unique: true)]
+    private ?string $id = null;
+    private Ulid $publicId;
     private string $reference;
-
-    #[ORM\ManyToOne(targetEntity: Customer::class)]
-    #[ORM\JoinColumn(nullable: false)]
     private Customer $customer;
-
-    #[ORM\Column(length: 150, nullable: true)]
     private ?string $recipientName = null;
-
-    #[ORM\Column(length: 30, nullable: true)]
     private ?string $recipientPhone = null;
-
-    #[ORM\Column(length: 255, nullable: true)]
     private ?string $address = null;
-
-    #[ORM\Column(type: 'float', nullable: true)]
     private ?float $latitude = null;
-
-    #[ORM\Column(type: 'float', nullable: true)]
     private ?float $longitude = null;
-
-    #[ORM\Column(type: 'text', nullable: true)]
     private ?string $notes = null;
-
-    #[ORM\Column(type: 'text', nullable: true)]
     private ?string $description = null;
-
-    #[ORM\Column(length: 30, enumType: ServiceType::class)]
     private ServiceType $serviceType = ServiceType::DELIVERY;
-
-    #[ORM\Column(type: 'decimal', precision: 10, scale: 2, nullable: true)]
-    #[Assert\PositiveOrZero]
     private ?string $totalWeightKg = null;
-
-    #[ORM\Column(type: 'decimal', precision: 10, scale: 4, nullable: true)]
-    #[Assert\PositiveOrZero]
     private ?string $totalVolumeM3 = null;
-
-    #[ORM\Column]
-    #[Assert\PositiveOrZero]
     private int $totalParcels = 1;
-
-    #[ORM\Column(nullable: true)]
     private ?DateTimeImmutable $estimatedDeliveryDate = null;
-
-    #[ORM\Column(type: 'time_immutable', nullable: true)]
     private ?DateTimeImmutable $preferredWindowStart = null;
-
-    #[ORM\Column(type: 'time_immutable', nullable: true)]
     private ?DateTimeImmutable $preferredWindowEnd = null;
-
-    #[ORM\Column(type: 'integer', nullable: true)]
     private ?int $serviceTimeSeconds = null;
-
     /** @var Collection<int, Parcel> */
-    #[ORM\OneToMany(targetEntity: Parcel::class, mappedBy: 'shipment', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $parcels;
-
-    #[ORM\Column(type: 'smallint', enumType: ShipmentPriority::class)]
     private ShipmentPriority $priority = ShipmentPriority::NORMAL;
-
-    #[ORM\Column(length: 20, nullable: true, unique: true)]
     private ?string $trackingToken = null;
-
-    #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $requiredSkills = [];
-
-    #[ORM\Column]
     private DateTimeImmutable $createdAt;
+    private ?DateTimeImmutable $deletedAt = null;
 
     public function __construct(string $reference, Customer $customer)
     {
@@ -104,6 +55,7 @@ class Shipment implements CustomerScopedEntityInterface, SoftDeletableInterface
         $this->createdAt = new DateTimeImmutable();
         $this->trackingToken = self::generateTrackingToken();
         $this->parcels = new ArrayCollection();
+        $this->publicId = new Ulid();
     }
 
     public static function generateTrackingToken(): string
@@ -113,6 +65,19 @@ class Shipment implements CustomerScopedEntityInterface, SoftDeletableInterface
 
         return sprintf('TRK-%s-%s', substr($hex, 0, 4), substr($hex, 4, 4));
     }
+
+    // ── Identity ──
+
+    public function getId(): ?string { return $this->id; }
+    public function getPublicId(): Ulid { return $this->publicId; }
+    public function getPublicIdString(): string { return (string) $this->publicId; }
+
+    public function initializePublicId(): void
+    {
+        $this->publicId ??= new Ulid();
+    }
+
+    // ── Core Accessors ──
 
     public function getReference(): string { return $this->reference; }
     public function setReference(string $reference): void { $this->reference = $reference; }
@@ -213,4 +178,12 @@ class Shipment implements CustomerScopedEntityInterface, SoftDeletableInterface
             $requiredSkills,
         );
     }
+
+    // ── SoftDeletableInterface ──
+
+    public function getDeletedAt(): ?DateTimeImmutable { return $this->deletedAt; }
+
+    public function isDeleted(): bool { return $this->deletedAt !== null; }
+
+    public function softDelete(): void { $this->deletedAt = new DateTimeImmutable(); }
 }

@@ -2,32 +2,24 @@
 
 declare(strict_types=1);
 
-namespace App\Entity;
+namespace App\Domain\Shipment\Model;
 
-use App\Entity\Concerns\PublicIdTrait;
 use App\Enum\ShipmentEventType;
 use DateTimeImmutable;
-use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Uid\Ulid;
 
-#[ORM\Entity]
-#[ORM\Table(name: 'shipment_event')]
-#[ORM\UniqueConstraint(name: 'uniq_shipment_event_public_id', columns: ['public_id'])]
-#[ORM\HasLifecycleCallbacks]
+/**
+ * ShipmentEvent entity — domain POPO.
+ * Persistence handled via external XML mapping (no ORM attributes).
+ * Append-only event log for shipment lifecycle tracking.
+ */
 class ShipmentEvent
 {
-    use PublicIdTrait;
-
-    #[ORM\ManyToOne(targetEntity: Shipment::class)]
-    #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
+    private ?string $id = null;
+    private Ulid $publicId;
     private Shipment $shipment;
-
-    #[ORM\Column(length: 40, enumType: ShipmentEventType::class)]
     private ShipmentEventType $eventType;
-
-    #[ORM\Column(type: 'json')]
     private array $payload = [];
-
-    #[ORM\Column]
     private DateTimeImmutable $createdAt;
 
     public function __construct(Shipment $shipment, ShipmentEventType $eventType, array $payload = [])
@@ -36,8 +28,23 @@ class ShipmentEvent
         $this->eventType = $eventType;
         $this->payload = $payload;
         $this->createdAt = new DateTimeImmutable();
+        $this->publicId = new Ulid();
     }
 
+    // ── Identity ──
+
+    public function getId(): ?string { return $this->id; }
+    public function getPublicId(): Ulid { return $this->publicId; }
+    public function getPublicIdString(): string { return (string) $this->publicId; }
+
+    public function initializePublicId(): void
+    {
+        $this->publicId ??= new Ulid();
+    }
+
+    // ── Accessors ──
+
+    public function getShipment(): Shipment { return $this->shipment; }
     public function getEventType(): ShipmentEventType { return $this->eventType; }
     public function getPayload(): array { return $this->payload; }
     public function setPayload(array $payload): void { $this->payload = $payload; }

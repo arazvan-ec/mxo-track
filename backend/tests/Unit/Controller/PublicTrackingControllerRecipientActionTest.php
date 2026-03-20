@@ -8,7 +8,7 @@ use App\Application\Tracking\PublicTrackingService;
 use App\Application\Tracking\TrackingInfo;
 use App\Controller\PublicTrackingController;
 use App\Entity\RecipientAction;
-use App\Entity\Shipment;
+use App\Domain\Shipment\Model\Shipment;
 use App\Enum\RecipientActionType;
 use App\Notification\DeliveryRatingService;
 use App\Notification\DeliverySlotService;

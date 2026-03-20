@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit;
 
 use App\Entity\CustomerLocation;
-use App\Entity\Shipment;
+use App\Domain\Shipment\Model\Shipment;
 use App\Entity\Vehicle;
 use App\Enum\ShipmentPriority;
 use App\Enum\VehicleSkill;

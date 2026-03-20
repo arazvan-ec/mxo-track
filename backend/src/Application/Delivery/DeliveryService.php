@@ -8,15 +8,15 @@ use App\Domain\Event\StopDelivered;
 use App\Domain\Event\StopExceptionReported;
 use App\Dto\Driver\DeliverStopInput;
 use App\Dto\Driver\ExceptionStopInput;
-use App\Entity\Pod;
+use App\Domain\Shipment\Model\Pod;
 use App\Domain\Route\Model\RouteStop;
-use App\Entity\Shipment;
-use App\Entity\ShipmentEvent;
+use App\Domain\Shipment\Model\Shipment;
+use App\Domain\Shipment\Model\ShipmentEvent;
 use App\Entity\User;
 use App\Enum\ExceptionCode;
 use App\Enum\ShipmentEventType;
 use App\Domain\Route\Repository\RouteStopRepositoryInterface;
-use App\Repository\ShipmentRepository;
+use App\Domain\Shipment\Repository\ShipmentRepositoryInterface;
 use App\Message\NlpClassificationMessage;
 use App\Service\AuditLogger;
 use App\Service\DeliveryEvidenceFactory;
@@ -35,7 +35,7 @@ readonly class DeliveryService
         private EventDispatcherInterface $eventDispatcher,
         private MessageBusInterface $messageBus,
         private RouteStopRepositoryInterface $stopRepo,
-        private ShipmentRepository $shipmentRepo,
+        private ShipmentRepositoryInterface $shipmentRepo,
     ) {}
 
     /**

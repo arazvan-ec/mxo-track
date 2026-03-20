@@ -95,7 +95,7 @@ final class SendNotificationHandler
     }
 
     private function persistLog(
-        \App\Entity\Shipment $shipment,
+        \App\Domain\Shipment\Model\Shipment $shipment,
         \App\Entity\Customer $customer,
         NotificationChannel $channel,
         NotificationTriggerType $triggerType,

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://doctrine-project.org/schemas/orm/doctrine-mapping
+                  https://www.doctrine-project.org/schemas/orm/doctrine-mapping.xsd">
+
+    <entity name="App\Domain\Shipment\Model\Pod" table="pod">
+        <unique-constraints>
+            <unique-constraint name="uniq_pod_public_id" columns="public_id"/>
+        </unique-constraints>
+
+        <lifecycle-callbacks>
+            <lifecycle-callback type="prePersist" method="initializePublicId"/>
+        </lifecycle-callbacks>
+
+        <id name="id" type="bigint" column="id">
+            <generator strategy="IDENTITY"/>
+        </id>
+
+        <field name="publicId" type="ulid" column="public_id" unique="true"/>
+        <field name="signedByName" type="string" column="signed_by_name" length="120"/>
+        <field name="recipientIdEncoded" type="text" column="recipient_id_encoded"/>
+        <field name="confirmedByDriver" type="boolean" column="confirmed_by_driver"/>
+        <field name="createdAt" type="datetime_immutable" column="created_at"/>
+
+        <one-to-one field="routeStop" target-entity="App\Domain\Route\Model\RouteStop">
+            <join-column name="route_stop_id" nullable="false" on-delete="CASCADE"/>
+        </one-to-one>
+
+        <many-to-one field="shipment" target-entity="App\Domain\Shipment\Model\Shipment">
+            <join-column name="shipment_id" nullable="true" on-delete="SET NULL"/>
+        </many-to-one>
+
+        <many-to-one field="createdByUser" target-entity="App\Entity\User">
+            <join-column name="created_by_user_id" nullable="false"/>
+        </many-to-one>
+    </entity>
+
+</doctrine-mapping>

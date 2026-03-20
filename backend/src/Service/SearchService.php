@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Domain\Route\Model\Route;
-use App\Entity\Shipment;
+use App\Domain\Shipment\Model\Shipment;
 use App\Entity\User;
 use App\Entity\Vehicle;
 use Doctrine\ORM\EntityManagerInterface;

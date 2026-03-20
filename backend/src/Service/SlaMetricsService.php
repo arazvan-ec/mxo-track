@@ -7,7 +7,7 @@ namespace App\Service;
 use App\Entity\Customer;
 use App\Domain\Route\Model\Route;
 use App\Domain\Route\Model\RouteStop;
-use App\Entity\ShipmentEvent;
+use App\Domain\Shipment\Model\ShipmentEvent;
 use App\Enum\RouteStatus;
 use App\Enum\RouteStopStatus;
 use App\Enum\ShipmentEventType;

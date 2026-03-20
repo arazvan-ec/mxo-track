@@ -9,7 +9,7 @@ use App\Domain\Route\Service\RouteMapProjection;
 use App\Entity\Customer;
 use App\Domain\Route\Model\Route;
 use App\Domain\Route\Model\RouteStop;
-use App\Entity\Shipment;
+use App\Domain\Shipment\Model\Shipment;
 use App\Entity\User;
 use App\Entity\Vehicle;
 use App\Entity\VehicleLastPosition;

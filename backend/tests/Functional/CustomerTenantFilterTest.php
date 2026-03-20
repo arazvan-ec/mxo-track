@@ -7,7 +7,7 @@ namespace App\Tests\Functional;
 use App\Doctrine\CustomerTenantFilter;
 use App\Entity\Customer;
 use App\Entity\CustomerScopedEntityInterface;
-use App\Entity\Shipment;
+use App\Domain\Shipment\Model\Shipment;
 use App\Entity\User;
 use App\Enum\UserRole;
 use App\EventSubscriber\DoctrineCustomerFilterSubscriber;

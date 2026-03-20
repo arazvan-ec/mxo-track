@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit;
 
-use App\Entity\ShipmentEvent;
+use App\Domain\Shipment\Model\ShipmentEvent;
 use App\Message\NlpClassificationMessage;
 use App\MessageHandler\NlpClassificationHandler;
 use App\Service\ExceptionClassifierService;
@@ -99,7 +99,7 @@ final class NlpClassificationHandlerTest extends TestCase
 
     private function createShipmentEvent(array $payload = []): ShipmentEvent
     {
-        $shipment = $this->createMock(\App\Entity\Shipment::class);
+        $shipment = $this->createMock(\App\Domain\Shipment\Model\Shipment::class);
         $event = new ShipmentEvent($shipment, \App\Enum\ShipmentEventType::EXCEPTION, $payload);
 
         return $event;

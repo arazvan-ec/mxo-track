@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Domain\Shipment\Model\Shipment;
 use App\Entity\Concerns\PublicIdTrait;
 use App\Enum\RecipientActionType;
 use App\Repository\RecipientActionRepository;

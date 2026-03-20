@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Controller\Customer;
 
 use App\Entity\Customer;
-use App\Entity\Shipment;
-use App\Entity\ShipmentEvent;
+use App\Domain\Shipment\Model\Shipment;
+use App\Domain\Shipment\Model\ShipmentEvent;
 use App\Enum\ShipmentEventType;
 use App\Repository\ShipmentRepository;
 use Doctrine\ORM\EntityManagerInterface;

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Domain\Route\Model\RouteStop;
-use App\Entity\ShipmentEvent;
+use App\Domain\Shipment\Model\ShipmentEvent;
 use App\Enum\RouteStopStatus;
 use App\Enum\ShipmentEventType;
 use Doctrine\ORM\EntityManagerInterface;

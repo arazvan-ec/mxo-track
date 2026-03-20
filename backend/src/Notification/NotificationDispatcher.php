@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notification;
 
-use App\Entity\Shipment;
+use App\Domain\Shipment\Model\Shipment;
 use App\Enum\NotificationTriggerType;
 use App\Notification\Message\SendNotificationMessage;
 use Symfony\Component\Messenger\MessageBusInterface;

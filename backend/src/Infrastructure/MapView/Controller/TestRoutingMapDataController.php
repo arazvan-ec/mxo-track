@@ -6,7 +6,7 @@ namespace App\Infrastructure\MapView\Controller;
 
 use App\Entity\Customer;
 use App\Entity\CustomerLocation;
-use App\Entity\Shipment;
+use App\Domain\Shipment\Model\Shipment;
 use App\Entity\Vehicle;
 use App\Routing\Coordinate;
 use App\Routing\OsrmRoutingEngine;

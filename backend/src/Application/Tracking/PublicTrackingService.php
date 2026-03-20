@@ -6,7 +6,7 @@ namespace App\Application\Tracking;
 
 use App\Domain\Route\Model\RouteSnapshot;
 use App\Domain\Route\Model\RouteStop;
-use App\Entity\ShipmentEvent;
+use App\Domain\Shipment\Model\ShipmentEvent;
 use App\Entity\VehicleLastPosition;
 use App\Repository\ShipmentRepository;
 use Doctrine\ORM\EntityManagerInterface;

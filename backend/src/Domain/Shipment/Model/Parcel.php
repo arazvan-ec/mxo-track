@@ -2,52 +2,28 @@
 
 declare(strict_types=1);
 
-namespace App\Entity;
+namespace App\Domain\Shipment\Model;
 
-use App\Entity\Concerns\PublicIdTrait;
 use App\Enum\ParcelStatus;
 use DateTimeImmutable;
-use Doctrine\ORM\Mapping as ORM;
-use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Uid\Ulid;
 
-#[ORM\Entity]
-#[ORM\Table(name: 'parcel')]
-#[ORM\UniqueConstraint(name: 'uniq_parcel_public_id', columns: ['public_id'])]
-#[ORM\Index(name: 'idx_parcel_shipment', columns: ['shipment_id'])]
-#[ORM\Index(name: 'idx_parcel_ean', columns: ['ean'])]
-#[ORM\HasLifecycleCallbacks]
+/**
+ * Parcel entity — domain POPO.
+ * Persistence handled via external XML mapping (no ORM attributes).
+ */
 class Parcel
 {
-    use PublicIdTrait;
-
-    #[ORM\ManyToOne(targetEntity: Shipment::class, inversedBy: 'parcels')]
-    #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
+    private ?string $id = null;
+    private Ulid $publicId;
     private Shipment $shipment;
-
-    #[ORM\Column]
     private int $sequenceNumber = 1;
-
-    #[ORM\Column(type: 'decimal', precision: 10, scale: 2)]
-    #[Assert\Positive(message: 'El peso es obligatorio y debe ser positivo.')]
     private string $weightKg = '0';
-
-    #[ORM\Column(type: 'decimal', precision: 10, scale: 4)]
-    #[Assert\Positive(message: 'El volumen es obligatorio y debe ser positivo.')]
     private string $volumeM3 = '0';
-
-    #[ORM\Column(length: 30, nullable: true)]
     private ?string $ean = null;
-
-    #[ORM\Column(length: 255, nullable: true)]
     private ?string $description = null;
-
-    #[ORM\Column(length: 20, enumType: ParcelStatus::class)]
     private ParcelStatus $status = ParcelStatus::REGISTERED;
-
-    #[ORM\Column]
     private DateTimeImmutable $createdAt;
-
-    #[ORM\Column]
     private DateTimeImmutable $updatedAt;
 
     public function __construct(Shipment $shipment, int $sequenceNumber, float $weightKg, float $volumeM3)
@@ -59,8 +35,22 @@ class Parcel
         $now = new DateTimeImmutable();
         $this->createdAt = $now;
         $this->updatedAt = $now;
+        $this->publicId = new Ulid();
         $shipment->addParcel($this);
     }
+
+    // ── Identity ──
+
+    public function getId(): ?string { return $this->id; }
+    public function getPublicId(): Ulid { return $this->publicId; }
+    public function getPublicIdString(): string { return (string) $this->publicId; }
+
+    public function initializePublicId(): void
+    {
+        $this->publicId ??= new Ulid();
+    }
+
+    // ── Accessors ──
 
     public function getShipment(): Shipment { return $this->shipment; }
 
@@ -95,7 +85,6 @@ class Parcel
     public function getCreatedAt(): DateTimeImmutable { return $this->createdAt; }
     public function getUpdatedAt(): DateTimeImmutable { return $this->updatedAt; }
 
-    #[ORM\PreUpdate]
     public function touchUpdatedAt(): void
     {
         $this->updatedAt = new DateTimeImmutable();

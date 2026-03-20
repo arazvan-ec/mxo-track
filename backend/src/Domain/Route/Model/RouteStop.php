@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Route\Model;
 
-use App\Entity\Shipment;
+use App\Domain\Shipment\Model\Shipment;
 use App\Enum\ExceptionCode;
 use App\Enum\RouteStopStatus;
 use DateTimeImmutable;
