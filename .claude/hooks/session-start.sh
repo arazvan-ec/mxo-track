@@ -74,6 +74,11 @@ TODAY=$(date +%Y-%m-%d)
   fi
 } > "$CONTEXT_FILE" 2>/dev/null || true
 
+# --- Output context so Claude sees it directly (no Read needed) ---
+if [ -f "$CONTEXT_FILE" ]; then
+  cat "$CONTEXT_FILE"
+fi
+
 # --- Session state management ---
 
 # Only reset if the session date has changed (new day) or file doesn't exist
