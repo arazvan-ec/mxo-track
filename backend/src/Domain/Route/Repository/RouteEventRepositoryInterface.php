@@ -16,5 +16,10 @@ interface RouteEventRepositoryInterface
 
     public function save(RouteEvent $event): void;
 
+    /**
+     * Find the most recent event of a given type for a route.
+     */
+    public function findLastByTypeForRoute(Route $route, \App\Enum\RouteEventType $type): ?RouteEvent;
+
     public function flush(): void;
 }

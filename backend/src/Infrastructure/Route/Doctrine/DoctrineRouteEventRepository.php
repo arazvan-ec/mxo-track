@@ -7,6 +7,7 @@ namespace App\Infrastructure\Route\Doctrine;
 use App\Domain\Route\Repository\RouteEventRepositoryInterface;
 use App\Domain\Route\Model\Route;
 use App\Domain\Route\Model\RouteEvent;
+use App\Enum\RouteEventType;
 use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class DoctrineRouteEventRepository implements RouteEventRepositoryInterface
@@ -25,6 +26,21 @@ final readonly class DoctrineRouteEventRepository implements RouteEventRepositor
             ->orderBy('e.occurredAt', 'ASC')
             ->getQuery()
             ->getResult();
+    }
+
+    public function findLastByTypeForRoute(Route $route, RouteEventType $type): ?RouteEvent
+    {
+        return $this->em->createQueryBuilder()
+            ->select('e')
+            ->from(RouteEvent::class, 'e')
+            ->where('e.route = :route')
+            ->andWhere('e.eventType = :type')
+            ->setParameter('route', $route)
+            ->setParameter('type', $type->value)
+            ->orderBy('e.occurredAt', 'DESC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
     }
 
     public function save(RouteEvent $event): void
