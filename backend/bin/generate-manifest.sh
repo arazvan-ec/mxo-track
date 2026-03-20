@@ -261,6 +261,83 @@ cat >> "$OUTPUT" <<EOF
 
 ---
 
+## Service Map
+
+Services with the interfaces they implement (auto-extracted from source):
+
+| Service | Implements | Path |
+|---------|-----------|------|
+EOF
+
+# Extract class...implements in one pass across all relevant dirs
+TMPSERVICES=$(mktemp)
+grep -rP "^(final |readonly |abstract )*(class)\s+\w+.*\bimplements\b" \
+    "$SRC/Service" "$SRC/Application" "$SRC/Domain" "$SRC/Infrastructure" \
+    "$SRC/RouteOptimization" "$SRC/Provider" 2>/dev/null > "$TMPSERVICES" || true
+while IFS=: read -r filepath line; do
+    classname=$(echo "$line" | grep -oP '\bclass\s+\K\w+' || true)
+    interfaces=$(echo "$line" | grep -oP 'implements\s+\K.*' | sed 's/{.*//' | sed 's/\s*$//' || true)
+    relpath=$(echo "$filepath" | sed "s|$SRC/||")
+    [ -n "$classname" ] && echo "| $classname | $interfaces | \`$relpath\` |"
+done < "$TMPSERVICES" | sort >> "$OUTPUT"
+rm -f "$TMPSERVICES"
+
+cat >> "$OUTPUT" <<EOF
+
+---
+
+## Entity Relationships
+
+Key Doctrine relationships (auto-extracted from entity attributes):
+
+EOF
+
+# Extract Doctrine relationships from Entity files
+find "$SRC/Entity" -maxdepth 1 -name "*.php" 2>/dev/null | sort | while read -r f; do
+    entity=$(basename "$f" .php)
+    # Match ORM\ManyToOne etc., extract target class
+    rels=$(grep -oP '(ManyToOne|OneToMany|ManyToMany|OneToOne)\(targetEntity:\s*\K[^,\)]+' "$f" 2>/dev/null | sed 's/::class//' | sort -u) || true
+    if [ -n "$rels" ]; then
+        rel_list=$(echo "$rels" | paste -sd',' - | sed 's/,/, /g')
+        echo "- **$entity** → $rel_list"
+    fi
+done >> "$OUTPUT" || true
+
+cat >> "$OUTPUT" <<EOF
+
+---
+
+## Route Map (API Endpoints)
+
+Controller endpoints (auto-extracted from \`#[Route]\` attributes):
+
+| Method | Path | Controller | Action |
+|--------|------|-----------|--------|
+EOF
+
+# Extract Route attributes from controllers: class prefix + method routes
+TMPROUTES=$(mktemp)
+find "$SRC/Controller" -name "*.php" 2>/dev/null | sort | while read -r f; do
+    controller=$(basename "$f" .php)
+    perl -0777 -ne '
+        my $prefix = "";
+        if (/#\[Route\(\x27([^\x27]*)\x27[^\]]*\]\s*\nclass\b/m) {
+            $prefix = $1;
+        }
+        while (/#\[Route\(\x27([^\x27]*)\x27[^]]*?(?:methods:\s*\[\x27(\w+)\x27\])?[^\]]*\]\s*\n\s*public\s+function\s+(\w+)/g) {
+            my ($path, $method, $func) = ($1, $2 || "GET", $3);
+            my $full = $prefix . $path;
+            print "| $method | `$full` | '"$controller"' | $func |\n";
+        }
+    ' "$f"
+done > "$TMPROUTES" || true
+sort -t'|' -k3,3 "$TMPROUTES" >> "$OUTPUT"
+rm -f "$TMPROUTES"
+
+cat >> "$OUTPUT" <<EOF
+
+---
+
 ## Deep Reference
 
 | Topic | Document |
