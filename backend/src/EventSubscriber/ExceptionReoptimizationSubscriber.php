@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventSubscriber;
 
+use App\Domain\Event\RouteReoptimized;
 use App\Domain\Event\StopExceptionReported;
 use App\Entity\Route;
 use App\Entity\VehicleLastPosition;
@@ -13,6 +14,7 @@ use App\Service\RouteOptimizationService;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 /**
  * Automatically re-optimizes pending stops when a shipment exception is reported
@@ -25,6 +27,7 @@ final readonly class ExceptionReoptimizationSubscriber
         private RouteOptimizationService $optimizer,
         private EntityManagerInterface $em,
         private LoggerInterface $logger,
+        private EventDispatcherInterface $eventDispatcher,
     ) {}
 
     #[AsEventListener]
@@ -62,13 +65,25 @@ final readonly class ExceptionReoptimizationSubscriber
             $result = $this->optimizer->reoptimizePendingStops($route, $currentLat, $currentLng);
             $this->optimizer->applyOptimizedOrder($result['optimized']);
 
+            $distanceBefore = $result['distanceBefore'];
+            $distanceAfter = $result['distanceAfter'];
+            $improvement = $distanceBefore > 0 ? (1 - $distanceAfter / $distanceBefore) * 100 : 0;
+
+            $this->eventDispatcher->dispatch(new RouteReoptimized(
+                routePublicId: $event->routePublicId,
+                improvementPercent: $improvement,
+                distanceKm: $distanceAfter,
+                durationMinutes: $result['durationMinutes'],
+                pendingStopsCount: \count($result['optimized']),
+            ));
+
             $this->logger->info('Auto-reoptimized route after exception.', [
                 'route_public_id' => $event->routePublicId,
                 'stop_public_id' => $event->stopPublicId,
                 'reason' => $event->reason->value,
                 'stops_reordered' => \count($result['optimized']),
-                'distance_before' => $result['distanceBefore'],
-                'distance_after' => $result['distanceAfter'],
+                'distance_before' => $distanceBefore,
+                'distance_after' => $distanceAfter,
             ]);
         } catch (\Throwable $e) {
             $this->logger->error('Auto-reoptimization failed after exception.', [

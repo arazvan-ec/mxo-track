@@ -6,6 +6,7 @@ namespace App\Application\Route;
 
 use App\Domain\Event\RouteOptimized;
 use App\Domain\Event\RoutesBuilt;
+use App\Domain\Event\StopsReordered;
 use App\Domain\Route\Model\RouteMapOptions;
 use App\Domain\Route\Service\RouteMapProjection;
 use App\Entity\CustomerLocation;
@@ -303,6 +304,11 @@ final readonly class RoutePlanningService
         }
 
         $this->em->flush();
+
+        $this->eventDispatcher->dispatch(new StopsReordered(
+            routePublicId: $routePublicId,
+            order: $order,
+        ));
     }
 
     /**

@@ -94,4 +94,10 @@ class RouteStop
         $this->exceptionCode = $code;
         $this->exceptionNotes = $notes;
     }
+
+    public function markSkipped(?string $reason = null): void
+    {
+        $this->status = RouteStopStatus::SKIPPED;
+        $this->exceptionNotes = $reason;
+    }
 }

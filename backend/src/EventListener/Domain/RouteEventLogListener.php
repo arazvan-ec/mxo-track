@@ -11,10 +11,13 @@ use App\Domain\Event\RouteAssigned;
 use App\Domain\Event\RouteCancelled;
 use App\Domain\Event\RouteCompleted;
 use App\Domain\Event\RouteOptimized;
+use App\Domain\Event\RouteReoptimized;
 use App\Domain\Event\RouteStarted;
 use App\Domain\Event\RoutesBuilt;
 use App\Domain\Event\StopDelivered;
 use App\Domain\Event\StopExceptionReported;
+use App\Domain\Event\StopSkipped;
+use App\Domain\Event\StopsReordered;
 use App\Domain\Route\Repository\RouteEventRepositoryInterface;
 use App\Domain\Route\Repository\RouteRepositoryInterface;
 use App\Domain\Route\Repository\RouteStopRepositoryInterface;
@@ -259,6 +262,73 @@ final readonly class RouteEventLogListener
                 'longitude' => $event->longitude,
                 'distance_meters' => round($event->distanceMeters, 1),
                 'threshold_meters' => $event->thresholdMeters,
+            ],
+            snapshotMetrics: $this->buildSnapshotMetrics($route),
+            occurredAt: $event->occurredAt,
+        ), $event->routePublicId);
+    }
+
+    #[AsEventListener]
+    public function onRouteReoptimized(RouteReoptimized $event): void
+    {
+        $route = $this->routeRepo->findOneByPublicId($event->routePublicId);
+        if (!$route) {
+            return;
+        }
+
+        $this->persistAndPublish(new RouteEvent(
+            route: $route,
+            eventType: RouteEventType::REOPTIMIZED,
+            actorType: 'system',
+            payload: [
+                'improvement_percent' => $event->improvementPercent,
+                'distance_km' => $event->distanceKm,
+                'duration_minutes' => $event->durationMinutes,
+                'pending_stops_count' => $event->pendingStopsCount,
+            ],
+            snapshotMetrics: $this->buildSnapshotMetrics($route),
+            occurredAt: $event->occurredAt,
+        ), $event->routePublicId);
+    }
+
+    #[AsEventListener]
+    public function onStopsReordered(StopsReordered $event): void
+    {
+        $route = $this->routeRepo->findOneByPublicId($event->routePublicId);
+        if (!$route) {
+            return;
+        }
+
+        $this->persistAndPublish(new RouteEvent(
+            route: $route,
+            eventType: RouteEventType::STOPS_REORDERED,
+            actorType: 'system',
+            payload: [
+                'order' => $event->order,
+            ],
+            snapshotMetrics: $this->buildSnapshotMetrics($route),
+            occurredAt: $event->occurredAt,
+        ), $event->routePublicId);
+    }
+
+    #[AsEventListener]
+    public function onStopSkipped(StopSkipped $event): void
+    {
+        $route = $this->routeRepo->findOneByPublicId($event->routePublicId);
+        if (!$route) {
+            return;
+        }
+
+        $actor = $this->userRepo->find($event->driverUserId);
+
+        $this->persistAndPublish(new RouteEvent(
+            route: $route,
+            eventType: RouteEventType::STOP_SKIPPED,
+            actorType: 'driver',
+            actorUser: $actor,
+            payload: [
+                'stop_public_id' => $event->stopPublicId,
+                'reason' => $event->reason,
             ],
             snapshotMetrics: $this->buildSnapshotMetrics($route),
             occurredAt: $event->occurredAt,

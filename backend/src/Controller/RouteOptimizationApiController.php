@@ -22,6 +22,7 @@ use App\Realtime\RealtimePublisherInterface;
 use App\Realtime\SseMessage;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 #[Route('/api')]
 class RouteOptimizationApiController extends AbstractController
@@ -34,6 +35,7 @@ class RouteOptimizationApiController extends AbstractController
         private readonly DeliveryNoteGenerator $deliveryNoteGenerator,
         private readonly ApiErrorResponder $errorResponder,
         private readonly RealtimePublisherInterface $publisher,
+        private readonly EventDispatcherInterface $eventDispatcher,
     ) {}
 
     /**
@@ -175,6 +177,18 @@ class RouteOptimizationApiController extends AbstractController
 
         $result = $this->optimizer->reoptimizePendingStops($route, $currentLat, $currentLng);
         $this->optimizer->applyOptimizedOrder($result['optimized']);
+
+        $distanceBefore = $result['distanceBefore'];
+        $distanceAfter = $result['distanceAfter'];
+        $improvement = $distanceBefore > 0 ? (1 - $distanceAfter / $distanceBefore) * 100 : 0;
+
+        $this->eventDispatcher->dispatch(new \App\Domain\Event\RouteReoptimized(
+            routePublicId: $publicId,
+            improvementPercent: $improvement,
+            distanceKm: $distanceAfter,
+            durationMinutes: $result['durationMinutes'],
+            pendingStopsCount: \count($result['optimized']),
+        ));
 
         // Publish realtime update
         try {

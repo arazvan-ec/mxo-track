@@ -131,6 +131,30 @@ final class RouteStopTest extends TestCase
     }
 
     #[Test]
+    public function markSkippedTransitionsToSkippedStatus(): void
+    {
+        $route = new Route('Test Route');
+        $stop = new RouteStop($route, 1, 'Address');
+
+        $stop->markSkipped('Too far from route');
+
+        self::assertSame(RouteStopStatus::SKIPPED, $stop->getStatus());
+        self::assertSame('Too far from route', $stop->getExceptionNotes());
+    }
+
+    #[Test]
+    public function markSkippedWithoutReason(): void
+    {
+        $route = new Route('Test Route');
+        $stop = new RouteStop($route, 1, 'Address');
+
+        $stop->markSkipped();
+
+        self::assertSame(RouteStopStatus::SKIPPED, $stop->getStatus());
+        self::assertNull($stop->getExceptionNotes());
+    }
+
+    #[Test]
     public function allExceptionCodesAreAccepted(): void
     {
         $route = new Route('Test Route');

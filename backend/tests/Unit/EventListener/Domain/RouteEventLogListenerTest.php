@@ -9,9 +9,12 @@ use App\Domain\Event\RouteCancelled;
 use App\Domain\Event\RouteCompleted;
 use App\Domain\Event\RouteOptimized;
 use App\Domain\Event\RouteStarted;
+use App\Domain\Event\RouteReoptimized;
 use App\Domain\Event\RoutesBuilt;
 use App\Domain\Event\StopDelivered;
 use App\Domain\Event\StopExceptionReported;
+use App\Domain\Event\StopSkipped;
+use App\Domain\Event\StopsReordered;
 use App\Entity\Route;
 use App\Entity\RouteEvent;
 use App\Entity\User;
@@ -293,5 +296,79 @@ final class RouteEventLogListenerTest extends TestCase
 
         $event = new RouteStarted(routePublicId: 'route1', driverUserId: 1);
         $this->listener->onRouteStarted($event);
+    }
+
+    #[Test]
+    public function onRouteReoptimizedCreatesReoptimizedEvent(): void
+    {
+        $route = $this->createRoute();
+        $this->stubRoute($route);
+
+        $this->eventRepo->expects(self::once())
+            ->method('save')
+            ->with(self::callback(function (RouteEvent $e): bool {
+                return $e->getEventType() === RouteEventType::REOPTIMIZED
+                    && $e->getActorType() === 'system'
+                    && $e->getPayload()['improvement_percent'] === 12.5
+                    && $e->getPayload()['pending_stops_count'] === 5;
+            }));
+
+        $event = new RouteReoptimized(
+            routePublicId: 'route1',
+            improvementPercent: 12.5,
+            distanceKm: 30.0,
+            durationMinutes: 40,
+            pendingStopsCount: 5,
+        );
+        $this->listener->onRouteReoptimized($event);
+    }
+
+    #[Test]
+    public function onStopsReorderedCreatesReorderedEvent(): void
+    {
+        $route = $this->createRoute();
+        $this->stubRoute($route);
+
+        $this->eventRepo->expects(self::once())
+            ->method('save')
+            ->with(self::callback(function (RouteEvent $e): bool {
+                return $e->getEventType() === RouteEventType::STOPS_REORDERED
+                    && $e->getActorType() === 'system'
+                    && $e->getPayload()['order'] === [0 => 'stop1', 1 => 'stop2'];
+            }));
+
+        $event = new StopsReordered(
+            routePublicId: 'route1',
+            order: [0 => 'stop1', 1 => 'stop2'],
+        );
+        $this->listener->onStopsReordered($event);
+    }
+
+    #[Test]
+    public function onStopSkippedCreatesSkippedEvent(): void
+    {
+        $route = $this->createRoute();
+        $this->stubRoute($route);
+
+        $driver = $this->createMock(User::class);
+        $this->userRepo->method('find')->with(7)->willReturn($driver);
+
+        $this->eventRepo->expects(self::once())
+            ->method('save')
+            ->with(self::callback(function (RouteEvent $e) use ($driver): bool {
+                return $e->getEventType() === RouteEventType::STOP_SKIPPED
+                    && $e->getActorType() === 'driver'
+                    && $e->getActorUser() === $driver
+                    && $e->getPayload()['stop_public_id'] === 'stop1'
+                    && $e->getPayload()['reason'] === 'Too far';
+            }));
+
+        $event = new StopSkipped(
+            stopPublicId: 'stop1',
+            routePublicId: 'route1',
+            driverUserId: 7,
+            reason: 'Too far',
+        );
+        $this->listener->onStopSkipped($event);
     }
 }
