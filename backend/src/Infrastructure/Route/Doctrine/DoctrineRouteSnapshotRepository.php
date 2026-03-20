@@ -6,7 +6,7 @@ namespace App\Infrastructure\Route\Doctrine;
 
 use App\Domain\Route\Model\RouteSnapshot;
 use App\Domain\Route\Repository\RouteSnapshotRepositoryInterface;
-use App\Entity\Route;
+use App\Domain\Route\Model\Route;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 

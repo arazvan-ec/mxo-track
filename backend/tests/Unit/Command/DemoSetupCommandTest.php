@@ -7,7 +7,7 @@ namespace App\Tests\Unit\Command;
 use App\Command\DemoSetupCommand;
 use App\Entity\Customer;
 use App\Entity\CustomerLocation;
-use App\Entity\Route;
+use App\Domain\Route\Model\Route;
 use App\Entity\Shipment;
 use App\Entity\User;
 use App\Entity\Vehicle;

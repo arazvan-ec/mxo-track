@@ -2,80 +2,72 @@
 
 declare(strict_types=1);
 
-namespace App\Entity;
+namespace App\Domain\Route\Model;
 
-use App\Entity\Concerns\PublicIdTrait;
-use App\Entity\Concerns\SoftDeleteTrait;
+use App\Entity\Customer;
+use App\Entity\CustomerLocation;
+use App\Entity\SoftDeletableInterface;
+use App\Entity\User;
+use App\Entity\Vehicle;
+use App\Enum\RouteEventType;
 use App\Enum\RouteStatus;
 use DateTimeImmutable;
-use Doctrine\ORM\Mapping as ORM;
-use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Uid\Ulid;
 
-#[ORM\Entity(repositoryClass: \App\Repository\RouteRepository::class)]
-#[ORM\Table(name: 'route_plan')]
-#[ORM\UniqueConstraint(name: 'uniq_route_public_id', columns: ['public_id'])]
-#[ORM\Index(name: 'idx_route_deleted_at', columns: ['deleted_at'])]
-#[ORM\HasLifecycleCallbacks]
+/**
+ * Route aggregate root — domain POPO.
+ * Persistence handled via external XML mapping (no ORM attributes).
+ */
 class Route implements SoftDeletableInterface
 {
-    use PublicIdTrait;
-    use SoftDeleteTrait;
-
-    #[ORM\Column(length: 140)]
-    #[Assert\NotBlank(message: 'El nombre de la ruta es obligatorio.')]
-    #[Assert\Length(max: 140)]
+    private ?string $id = null;
+    private Ulid $publicId;
     private string $name;
-
-    #[ORM\Column(length: 20, enumType: RouteStatus::class)]
+    private int $version = 1;
     private RouteStatus $status = RouteStatus::PLANNED;
-
-    #[ORM\ManyToOne(targetEntity: User::class)]
-    #[ORM\JoinColumn(name: 'driver_id', nullable: true, onDelete: 'SET NULL')]
     private ?User $driver = null;
-
-    #[ORM\ManyToOne(targetEntity: Vehicle::class)]
-    #[ORM\JoinColumn(name: 'vehicle_id', nullable: true, onDelete: 'SET NULL')]
     private ?Vehicle $vehicle = null;
-
-    #[ORM\Column(nullable: true)]
     private ?DateTimeImmutable $startAt = null;
-
-    #[ORM\Column(nullable: true)]
     private ?DateTimeImmutable $endAt = null;
-
-    #[ORM\ManyToOne(targetEntity: Customer::class)]
-    #[ORM\JoinColumn(name: 'customer_id', nullable: true, onDelete: 'SET NULL')]
     private ?Customer $customer = null;
-
-    #[ORM\ManyToOne(targetEntity: CustomerLocation::class)]
-    #[ORM\JoinColumn(name: 'origin_location_id', nullable: true, onDelete: 'SET NULL')]
     private ?CustomerLocation $originLocation = null;
-
-    #[ORM\Column(type: 'decimal', precision: 10, scale: 2, nullable: true)]
     private ?string $totalWeightKg = null;
-
-    #[ORM\Column(type: 'decimal', precision: 10, scale: 4, nullable: true)]
     private ?string $totalVolumeM3 = null;
-
-    #[ORM\Column(nullable: true)]
     private ?int $totalParcels = null;
-
-    #[ORM\Column(type: 'decimal', precision: 8, scale: 2, nullable: true)]
     private ?string $totalDistanceKm = null;
-
-    #[ORM\Column(nullable: true)]
     private ?int $estimatedDurationMinutes = null;
-
-    #[ORM\Column(type: 'json', nullable: true)]
     private ?array $aiAnalysis = null;
-
-    #[ORM\Column(options: ['default' => false])]
     private bool $autoReoptimize = false;
+    private ?DateTimeImmutable $deletedAt = null;
 
     public function __construct(string $name)
     {
         $this->name = $name;
+        $this->publicId = new Ulid();
     }
+
+    // ── Identity ──
+
+    public function getId(): ?string { return $this->id; }
+    public function getPublicId(): Ulid { return $this->publicId; }
+    public function getPublicIdString(): string { return (string) $this->publicId; }
+    public function getVersion(): int { return $this->version; }
+
+    /**
+     * Ensure publicId is initialized (called via lifecycle callback on prePersist).
+     */
+    public function initializePublicId(): void
+    {
+        $this->publicId ??= new Ulid();
+    }
+
+    // ── Soft Delete ──
+
+    public function getDeletedAt(): ?DateTimeImmutable { return $this->deletedAt; }
+    public function isDeleted(): bool { return $this->deletedAt !== null; }
+    public function softDelete(): void { $this->deletedAt = new DateTimeImmutable(); }
+
+    // ── Accessors ──
 
     public function getName(): string { return $this->name; }
     public function setName(string $name): void { $this->name = $name; }
@@ -113,6 +105,8 @@ class Route implements SoftDeletableInterface
     public function isAutoReoptimize(): bool { return $this->autoReoptimize; }
     public function setAutoReoptimize(bool $autoReoptimize): void { $this->autoReoptimize = $autoReoptimize; }
 
+    // ── Domain Logic ──
+
     public function start(): void
     {
         if ($this->status === RouteStatus::PLANNED) {
@@ -127,5 +121,67 @@ class Route implements SoftDeletableInterface
             $this->status = RouteStatus::DONE;
             $this->endAt = new DateTimeImmutable();
         }
+    }
+
+    /**
+     * Apply a RouteEvent to mutate aggregate state.
+     * This is the single entry point for all state transitions.
+     */
+    public function apply(RouteEvent $event): void
+    {
+        match ($event->getEventType()) {
+            RouteEventType::CREATED => $this->applyCreated($event),
+            RouteEventType::STARTED => $this->start(),
+            RouteEventType::COMPLETED => $this->finish(),
+            RouteEventType::CANCELLED => $this->applyCancelled(),
+            RouteEventType::OPTIMIZED,
+            RouteEventType::REOPTIMIZED => $this->applyOptimized($event),
+            RouteEventType::ASSIGNED => $this->applyAssigned($event),
+            default => null, // Stop-level and metadata events are no-ops at Route level
+        };
+    }
+
+    /**
+     * Rebuild Route state from a sequence of events.
+     *
+     * @param list<RouteEvent> $events Ordered by occurredAt ASC
+     */
+    public static function rebuildFromEvents(string $name, array $events): self
+    {
+        $route = new self($name);
+
+        foreach ($events as $event) {
+            $route->apply($event);
+        }
+
+        return $route;
+    }
+
+    private function applyCreated(RouteEvent $event): void
+    {
+        // Route was already constructed with name; CREATED is the initial event.
+    }
+
+    private function applyCancelled(): void
+    {
+        $this->status = RouteStatus::CANCELLED;
+    }
+
+    private function applyOptimized(RouteEvent $event): void
+    {
+        $payload = $event->getPayload();
+        if (isset($payload['distance_km'])) {
+            $this->setTotalDistanceKm((float) $payload['distance_km']);
+        }
+        if (isset($payload['duration_minutes'])) {
+            $this->setEstimatedDurationMinutes((int) $payload['duration_minutes']);
+        }
+    }
+
+    private function applyAssigned(RouteEvent $event): void
+    {
+        // Driver and Vehicle assignment requires entity references.
+        // When rebuilding from events, we can only store IDs — actual entity
+        // resolution happens at the infrastructure layer.
     }
 }

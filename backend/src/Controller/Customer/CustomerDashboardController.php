@@ -7,7 +7,7 @@ namespace App\Controller\Customer;
 use App\Application\Fleet\FleetOverviewService;
 use App\Entity\Customer;
 use App\Entity\CustomerVehicle;
-use App\Entity\Route;
+use App\Domain\Route\Model\Route;
 use App\Entity\VehicleLastPosition;
 use App\Enum\RouteStatus;
 use Doctrine\ORM\EntityManagerInterface;

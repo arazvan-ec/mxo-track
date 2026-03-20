@@ -7,7 +7,7 @@ namespace App\View;
 use App\Domain\Route\Model\RouteMapOptions;
 use App\Domain\Route\Repository\RouteSnapshotRepositoryInterface;
 use App\Domain\Route\Service\RouteMapProjection;
-use App\Entity\Route;
+use App\Domain\Route\Model\Route;
 
 /**
  * Reads from RouteSnapshot (persisted) and produces MapViewData DTOs.

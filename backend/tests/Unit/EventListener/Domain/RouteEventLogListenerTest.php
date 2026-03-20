@@ -9,19 +9,22 @@ use App\Domain\Event\RouteCancelled;
 use App\Domain\Event\RouteCompleted;
 use App\Domain\Event\RouteOptimized;
 use App\Domain\Event\RouteStarted;
+use App\Domain\Event\RouteReoptimized;
 use App\Domain\Event\RoutesBuilt;
 use App\Domain\Event\StopDelivered;
 use App\Domain\Event\StopExceptionReported;
-use App\Entity\Route;
-use App\Entity\RouteEvent;
+use App\Domain\Event\StopSkipped;
+use App\Domain\Event\StopsReordered;
+use App\Domain\Route\Model\Route;
+use App\Domain\Route\Model\RouteEvent;
 use App\Entity\User;
 use App\Enum\ExceptionCode;
 use App\Enum\RouteEventType;
+use App\Domain\Route\Repository\RouteEventRepositoryInterface;
+use App\Domain\Route\Repository\RouteRepositoryInterface;
+use App\Domain\Route\Repository\RouteStopRepositoryInterface;
 use App\EventListener\Domain\RouteEventLogListener;
-use App\Repository\RouteRepository;
-use App\Repository\RouteStopRepository;
 use App\Repository\UserRepository;
-use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -30,22 +33,22 @@ use PHPUnit\Framework\TestCase;
 final class RouteEventLogListenerTest extends TestCase
 {
     private RouteEventLogListener $listener;
-    private EntityManagerInterface $em;
-    private RouteRepository $routeRepo;
+    private RouteEventRepositoryInterface $eventRepo;
+    private RouteRepositoryInterface $routeRepo;
     private UserRepository $userRepo;
-    private RouteStopRepository $stopRepo;
+    private RouteStopRepositoryInterface $stopRepo;
 
     protected function setUp(): void
     {
-        $this->em = $this->createMock(EntityManagerInterface::class);
-        $this->routeRepo = $this->createMock(RouteRepository::class);
+        $this->eventRepo = $this->createMock(RouteEventRepositoryInterface::class);
+        $this->routeRepo = $this->createMock(RouteRepositoryInterface::class);
         $this->userRepo = $this->createMock(UserRepository::class);
-        $this->stopRepo = $this->createMock(RouteStopRepository::class);
+        $this->stopRepo = $this->createMock(RouteStopRepositoryInterface::class);
 
-        $this->stopRepo->method('findBy')->willReturn([]);
+        $this->stopRepo->method('findByRoute')->willReturn([]);
 
         $this->listener = new RouteEventLogListener(
-            $this->em,
+            $this->eventRepo,
             $this->routeRepo,
             $this->userRepo,
             $this->stopRepo,
@@ -72,12 +75,12 @@ final class RouteEventLogListenerTest extends TestCase
         $this->stubRoute($route);
 
         $persisted = [];
-        $this->em->expects(self::exactly(2))
-            ->method('persist')
+        $this->eventRepo->expects(self::exactly(2))
+            ->method('save')
             ->willReturnCallback(function (object $entity) use (&$persisted): void {
                 $persisted[] = $entity;
             });
-        $this->em->expects(self::exactly(2))->method('flush');
+        $this->eventRepo->expects(self::exactly(2))->method('flush');
 
         $event = new RoutesBuilt(
             routePublicIds: ['route1', 'route2'],
@@ -100,14 +103,14 @@ final class RouteEventLogListenerTest extends TestCase
         $route = $this->createRoute();
         $this->stubRoute($route);
 
-        $this->em->expects(self::once())
-            ->method('persist')
+        $this->eventRepo->expects(self::once())
+            ->method('save')
             ->with(self::callback(function (RouteEvent $e): bool {
                 return $e->getEventType() === RouteEventType::OPTIMIZED
                     && $e->getActorType() === 'system'
                     && $e->getPayload()['improvement_percent'] === 14.9;
             }));
-        $this->em->expects(self::once())->method('flush');
+        $this->eventRepo->expects(self::once())->method('flush');
 
         $event = new RouteOptimized(
             routePublicId: 'route1',
@@ -128,8 +131,8 @@ final class RouteEventLogListenerTest extends TestCase
         $driver = $this->createMock(User::class);
         $this->userRepo->method('find')->with(42)->willReturn($driver);
 
-        $this->em->expects(self::once())
-            ->method('persist')
+        $this->eventRepo->expects(self::once())
+            ->method('save')
             ->with(self::callback(function (RouteEvent $e) use ($driver): bool {
                 return $e->getEventType() === RouteEventType::STARTED
                     && $e->getActorType() === 'driver'
@@ -147,8 +150,8 @@ final class RouteEventLogListenerTest extends TestCase
         $this->stubRoute($route);
         $this->userRepo->method('find')->willReturn(null);
 
-        $this->em->expects(self::once())
-            ->method('persist')
+        $this->eventRepo->expects(self::once())
+            ->method('save')
             ->with(self::callback(fn (RouteEvent $e): bool => $e->getEventType() === RouteEventType::COMPLETED && $e->getActorType() === 'driver'));
 
         $event = new RouteCompleted(routePublicId: 'route1', driverUserId: 1);
@@ -162,8 +165,8 @@ final class RouteEventLogListenerTest extends TestCase
         $this->stubRoute($route);
         $this->userRepo->method('find')->willReturn(null);
 
-        $this->em->expects(self::once())
-            ->method('persist')
+        $this->eventRepo->expects(self::once())
+            ->method('save')
             ->with(self::callback(function (RouteEvent $e): bool {
                 return $e->getEventType() === RouteEventType::STOP_DELIVERED
                     && $e->getActorType() === 'driver'
@@ -188,8 +191,8 @@ final class RouteEventLogListenerTest extends TestCase
         $this->stubRoute($route);
         $this->userRepo->method('find')->willReturn(null);
 
-        $this->em->expects(self::once())
-            ->method('persist')
+        $this->eventRepo->expects(self::once())
+            ->method('save')
             ->with(self::callback(function (RouteEvent $e): bool {
                 return $e->getEventType() === RouteEventType::STOP_EXCEPTION
                     && $e->getPayload()['exception_code'] === 'ABSENT';
@@ -215,8 +218,8 @@ final class RouteEventLogListenerTest extends TestCase
         $admin = $this->createMock(User::class);
         $this->userRepo->method('find')->with(5)->willReturn($admin);
 
-        $this->em->expects(self::once())
-            ->method('persist')
+        $this->eventRepo->expects(self::once())
+            ->method('save')
             ->with(self::callback(function (RouteEvent $e) use ($admin): bool {
                 return $e->getEventType() === RouteEventType::CANCELLED
                     && $e->getActorType() === 'admin'
@@ -241,8 +244,8 @@ final class RouteEventLogListenerTest extends TestCase
         $admin = $this->createMock(User::class);
         $this->userRepo->method('find')->with(5)->willReturn($admin);
 
-        $this->em->expects(self::once())
-            ->method('persist')
+        $this->eventRepo->expects(self::once())
+            ->method('save')
             ->with(self::callback(function (RouteEvent $e): bool {
                 return $e->getEventType() === RouteEventType::ASSIGNED
                     && $e->getActorType() === 'admin'
@@ -264,8 +267,8 @@ final class RouteEventLogListenerTest extends TestCase
     {
         $this->routeRepo->method('findOneByPublicId')->willReturn(null);
 
-        $this->em->expects(self::never())->method('persist');
-        $this->em->expects(self::never())->method('flush');
+        $this->eventRepo->expects(self::never())->method('save');
+        $this->eventRepo->expects(self::never())->method('flush');
 
         $event = new RouteStarted(routePublicId: 'nonexistent', driverUserId: 1);
         $this->listener->onRouteStarted($event);
@@ -279,8 +282,8 @@ final class RouteEventLogListenerTest extends TestCase
         $this->userRepo->method('find')->willReturn(null);
 
         // Return empty stops — metrics should be all zeros
-        $this->em->expects(self::once())
-            ->method('persist')
+        $this->eventRepo->expects(self::once())
+            ->method('save')
             ->with(self::callback(function (RouteEvent $e): bool {
                 $metrics = $e->getSnapshotMetrics();
 
@@ -293,5 +296,79 @@ final class RouteEventLogListenerTest extends TestCase
 
         $event = new RouteStarted(routePublicId: 'route1', driverUserId: 1);
         $this->listener->onRouteStarted($event);
+    }
+
+    #[Test]
+    public function onRouteReoptimizedCreatesReoptimizedEvent(): void
+    {
+        $route = $this->createRoute();
+        $this->stubRoute($route);
+
+        $this->eventRepo->expects(self::once())
+            ->method('save')
+            ->with(self::callback(function (RouteEvent $e): bool {
+                return $e->getEventType() === RouteEventType::REOPTIMIZED
+                    && $e->getActorType() === 'system'
+                    && $e->getPayload()['improvement_percent'] === 12.5
+                    && $e->getPayload()['pending_stops_count'] === 5;
+            }));
+
+        $event = new RouteReoptimized(
+            routePublicId: 'route1',
+            improvementPercent: 12.5,
+            distanceKm: 30.0,
+            durationMinutes: 40,
+            pendingStopsCount: 5,
+        );
+        $this->listener->onRouteReoptimized($event);
+    }
+
+    #[Test]
+    public function onStopsReorderedCreatesReorderedEvent(): void
+    {
+        $route = $this->createRoute();
+        $this->stubRoute($route);
+
+        $this->eventRepo->expects(self::once())
+            ->method('save')
+            ->with(self::callback(function (RouteEvent $e): bool {
+                return $e->getEventType() === RouteEventType::STOPS_REORDERED
+                    && $e->getActorType() === 'system'
+                    && $e->getPayload()['order'] === [0 => 'stop1', 1 => 'stop2'];
+            }));
+
+        $event = new StopsReordered(
+            routePublicId: 'route1',
+            order: [0 => 'stop1', 1 => 'stop2'],
+        );
+        $this->listener->onStopsReordered($event);
+    }
+
+    #[Test]
+    public function onStopSkippedCreatesSkippedEvent(): void
+    {
+        $route = $this->createRoute();
+        $this->stubRoute($route);
+
+        $driver = $this->createMock(User::class);
+        $this->userRepo->method('find')->with(7)->willReturn($driver);
+
+        $this->eventRepo->expects(self::once())
+            ->method('save')
+            ->with(self::callback(function (RouteEvent $e) use ($driver): bool {
+                return $e->getEventType() === RouteEventType::STOP_SKIPPED
+                    && $e->getActorType() === 'driver'
+                    && $e->getActorUser() === $driver
+                    && $e->getPayload()['stop_public_id'] === 'stop1'
+                    && $e->getPayload()['reason'] === 'Too far';
+            }));
+
+        $event = new StopSkipped(
+            stopPublicId: 'stop1',
+            routePublicId: 'route1',
+            driverUserId: 7,
+            reason: 'Too far',
+        );
+        $this->listener->onStopSkipped($event);
     }
 }

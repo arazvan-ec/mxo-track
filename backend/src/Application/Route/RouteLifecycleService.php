@@ -6,10 +6,13 @@ namespace App\Application\Route;
 
 use App\Domain\Event\RouteCompleted;
 use App\Domain\Event\RouteStarted;
-use App\Entity\Route;
+use App\Domain\Route\Repository\RouteEventRepositoryInterface;
+use App\Domain\Route\Repository\RouteRepositoryInterface;
+use App\Domain\Route\Model\Route;
+use App\Domain\Route\Model\RouteEvent;
 use App\Entity\User;
 use App\Entity\VehicleInspection;
-use App\Repository\RouteRepository;
+use App\Enum\RouteEventType;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
@@ -17,7 +20,8 @@ readonly class RouteLifecycleService
 {
     public function __construct(
         private EntityManagerInterface $em,
-        private RouteRepository $routeRepo,
+        private RouteRepositoryInterface $routeRepo,
+        private RouteEventRepositoryInterface $eventRepo,
         private EventDispatcherInterface $eventDispatcher,
     ) {}
 
@@ -35,7 +39,15 @@ readonly class RouteLifecycleService
             throw new InspectionNotCompletedException();
         }
 
-        $route->start();
+        // Event-first: create event → apply → persist
+        $routeEvent = new RouteEvent(
+            route: $route,
+            eventType: RouteEventType::STARTED,
+            actorType: 'driver',
+            payload: ['driver_user_id' => (int) $driver->getId()],
+        );
+        $route->apply($routeEvent);
+        $this->eventRepo->save($routeEvent);
         $this->em->flush();
 
         $this->eventDispatcher->dispatch(new RouteStarted(
@@ -54,7 +66,15 @@ readonly class RouteLifecycleService
     {
         $route = $this->resolveRouteForDriver($routePublicId, $driver);
 
-        $route->finish();
+        // Event-first: create event → apply → persist
+        $routeEvent = new RouteEvent(
+            route: $route,
+            eventType: RouteEventType::COMPLETED,
+            actorType: 'driver',
+            payload: ['driver_user_id' => (int) $driver->getId()],
+        );
+        $route->apply($routeEvent);
+        $this->eventRepo->save($routeEvent);
         $this->em->flush();
 
         $this->eventDispatcher->dispatch(new RouteCompleted(

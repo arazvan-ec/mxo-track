@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit;
 
-use App\Entity\Route;
-use App\Entity\RouteStop;
+use App\Domain\Route\Model\Route;
+use App\Domain\Route\Model\RouteStop;
 use App\Service\AddressRiskService;
 use App\Service\DeliveryRiskService;
 use App\Service\MlApiClient;

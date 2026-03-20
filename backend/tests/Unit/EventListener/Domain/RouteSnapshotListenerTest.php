@@ -8,7 +8,7 @@ use App\Domain\Event\RouteCompleted;
 use App\Domain\Event\RouteStarted;
 use App\Domain\Event\StopDelivered;
 use App\Domain\Event\StopExceptionReported;
-use App\Entity\Route;
+use App\Domain\Route\Model\Route;
 use App\Domain\Route\Model\RouteSnapshot;
 use App\Enum\ExceptionCode;
 use App\EventListener\Domain\RouteSnapshotListener;

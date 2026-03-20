@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://doctrine-project.org/schemas/orm/doctrine-mapping
+                  https://www.doctrine-project.org/schemas/orm/doctrine-mapping.xsd">
+
+    <entity name="App\Domain\Route\Model\RouteEvent" table="route_event">
+        <indexes>
+            <index name="idx_route_event_route_occurred" columns="route_id,occurred_at"/>
+            <index name="idx_route_event_type_occurred" columns="event_type,occurred_at"/>
+        </indexes>
+
+        <id name="id" type="bigint" column="id">
+            <generator strategy="IDENTITY"/>
+        </id>
+
+        <field name="eventType" type="string" length="40" column="event_type" enum-type="App\Enum\RouteEventType"/>
+        <field name="actorType" type="string" length="20" column="actor_type"/>
+        <field name="payload" type="json" column="payload"/>
+        <field name="snapshotMetrics" type="json" column="snapshot_metrics" nullable="true"/>
+        <field name="occurredAt" type="datetime_immutable" column="occurred_at"/>
+        <field name="createdAt" type="datetime_immutable" column="created_at"/>
+
+        <many-to-one field="route" target-entity="App\Domain\Route\Model\Route">
+            <join-column name="route_id" nullable="false" on-delete="CASCADE"/>
+        </many-to-one>
+
+        <many-to-one field="actorUser" target-entity="App\Entity\User">
+            <join-column name="actor_user_id" nullable="true" on-delete="SET NULL"/>
+        </many-to-one>
+    </entity>
+
+</doctrine-mapping>

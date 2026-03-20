@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit;
 
-use App\Entity\Route;
-use App\Entity\RouteStop;
+use App\Domain\Route\Model\Route;
+use App\Domain\Route\Model\RouteStop;
 use App\Enum\ExceptionCode;
 use App\Enum\RouteStopStatus;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -128,6 +128,30 @@ final class RouteStopTest extends TestCase
         self::assertNull($stop->getNotes());
         self::assertNull($stop->getShipment());
         self::assertFalse($stop->isOrigin());
+    }
+
+    #[Test]
+    public function markSkippedTransitionsToSkippedStatus(): void
+    {
+        $route = new Route('Test Route');
+        $stop = new RouteStop($route, 1, 'Address');
+
+        $stop->markSkipped('Too far from route');
+
+        self::assertSame(RouteStopStatus::SKIPPED, $stop->getStatus());
+        self::assertSame('Too far from route', $stop->getExceptionNotes());
+    }
+
+    #[Test]
+    public function markSkippedWithoutReason(): void
+    {
+        $route = new Route('Test Route');
+        $stop = new RouteStop($route, 1, 'Address');
+
+        $stop->markSkipped();
+
+        self::assertSame(RouteStopStatus::SKIPPED, $stop->getStatus());
+        self::assertNull($stop->getExceptionNotes());
     }
 
     #[Test]

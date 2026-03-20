@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://doctrine-project.org/schemas/orm/doctrine-mapping
+                  https://www.doctrine-project.org/schemas/orm/doctrine-mapping.xsd">
+
+    <entity name="App\Domain\Route\Model\Route" table="route_plan">
+        <unique-constraints>
+            <unique-constraint name="uniq_route_public_id" columns="public_id"/>
+        </unique-constraints>
+        <indexes>
+            <index name="idx_route_deleted_at" columns="deleted_at"/>
+        </indexes>
+
+        <lifecycle-callbacks>
+            <lifecycle-callback type="prePersist" method="initializePublicId"/>
+        </lifecycle-callbacks>
+
+        <id name="id" type="bigint" column="id">
+            <generator strategy="IDENTITY"/>
+        </id>
+
+        <field name="publicId" type="ulid" column="public_id" unique="true"/>
+        <field name="version" type="integer" column="version" version="true"/>
+        <field name="name" type="string" length="140"/>
+        <field name="status" type="string" length="20" enum-type="App\Enum\RouteStatus"/>
+        <field name="startAt" type="datetime_immutable" column="start_at" nullable="true"/>
+        <field name="endAt" type="datetime_immutable" column="end_at" nullable="true"/>
+        <field name="totalWeightKg" type="decimal" column="total_weight_kg" precision="10" scale="2" nullable="true"/>
+        <field name="totalVolumeM3" type="decimal" column="total_volume_m3" precision="10" scale="4" nullable="true"/>
+        <field name="totalParcels" type="integer" column="total_parcels" nullable="true"/>
+        <field name="totalDistanceKm" type="decimal" column="total_distance_km" precision="8" scale="2" nullable="true"/>
+        <field name="estimatedDurationMinutes" type="integer" column="estimated_duration_minutes" nullable="true"/>
+        <field name="aiAnalysis" type="json" column="ai_analysis" nullable="true"/>
+        <field name="autoReoptimize" type="boolean" column="auto_reoptimize">
+            <options>
+                <option name="default">false</option>
+            </options>
+        </field>
+        <field name="deletedAt" type="datetime_immutable" column="deleted_at" nullable="true"/>
+
+        <many-to-one field="driver" target-entity="App\Entity\User">
+            <join-column name="driver_id" nullable="true" on-delete="SET NULL"/>
+        </many-to-one>
+
+        <many-to-one field="vehicle" target-entity="App\Entity\Vehicle">
+            <join-column name="vehicle_id" nullable="true" on-delete="SET NULL"/>
+        </many-to-one>
+
+        <many-to-one field="customer" target-entity="App\Entity\Customer">
+            <join-column name="customer_id" nullable="true" on-delete="SET NULL"/>
+        </many-to-one>
+
+        <many-to-one field="originLocation" target-entity="App\Entity\CustomerLocation">
+            <join-column name="origin_location_id" nullable="true" on-delete="SET NULL"/>
+        </many-to-one>
+    </entity>
+
+</doctrine-mapping>

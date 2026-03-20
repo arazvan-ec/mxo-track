@@ -8,7 +8,7 @@ use App\Domain\Event\DeviationDetected;
 use App\Domain\Event\EtaChanged;
 use App\Domain\Event\VehiclePositionReceived;
 use App\Dto\DeviationCheckResult;
-use App\Entity\Route;
+use App\Domain\Route\Model\Route;
 use App\Entity\Vehicle;
 use App\Enum\RouteStatus;
 use App\EventListener\Domain\EtaRecalculationListener;

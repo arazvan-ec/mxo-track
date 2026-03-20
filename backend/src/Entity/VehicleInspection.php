@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Domain\Route\Model\Route;
 use App\Entity\Concerns\PublicIdTrait;
 use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;

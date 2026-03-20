@@ -10,7 +10,7 @@ use App\Entity\RecipientAction;
 use App\Entity\ShipmentEvent;
 use App\Enum\RecipientActionType;
 use App\Enum\ShipmentEventType;
-use App\Entity\RouteStop;
+use App\Domain\Route\Model\RouteStop;
 use App\Notification\DeliveryRatingService;
 use App\Notification\DeliverySlotService;
 use App\Notification\Message\SendRecipientNotificationMessage;

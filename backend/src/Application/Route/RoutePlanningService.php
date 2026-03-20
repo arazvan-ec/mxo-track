@@ -6,17 +6,18 @@ namespace App\Application\Route;
 
 use App\Domain\Event\RouteOptimized;
 use App\Domain\Event\RoutesBuilt;
+use App\Domain\Event\StopsReordered;
 use App\Domain\Route\Model\RouteMapOptions;
 use App\Domain\Route\Service\RouteMapProjection;
 use App\Entity\CustomerLocation;
-use App\Entity\Route;
-use App\Entity\RouteStop;
+use App\Domain\Route\Model\Route;
+use App\Domain\Route\Model\RouteStop;
 use App\Entity\Shipment;
 use App\Entity\Vehicle;
 use App\Enum\OptimizationOperation;
 use App\Enum\OptimizationStepCategory;
-use App\Repository\RouteRepository;
-use App\Repository\RouteStopRepository;
+use App\Domain\Route\Repository\RouteRepositoryInterface;
+use App\Domain\Route\Repository\RouteStopRepositoryInterface;
 use App\Service\OptimizationLogger;
 use App\Service\RouteBuilder;
 use App\Service\RouteCapacityValidator;
@@ -33,8 +34,8 @@ final readonly class RoutePlanningService
         private RouteBuilder $routeBuilder,
         private RouteOptimizationService $optimizationService,
         private RouteCapacityValidator $capacityValidator,
-        private RouteRepository $routeRepo,
-        private RouteStopRepository $stopRepo,
+        private RouteRepositoryInterface $routeRepo,
+        private RouteStopRepositoryInterface $stopRepo,
         private EventDispatcherInterface $eventDispatcher,
         private OptimizationLogger $optimizationLogger,
         private RouteSnapshotManager $snapshotManager,
@@ -303,6 +304,11 @@ final readonly class RoutePlanningService
         }
 
         $this->em->flush();
+
+        $this->eventDispatcher->dispatch(new StopsReordered(
+            routePublicId: $routePublicId,
+            order: $order,
+        ));
     }
 
     /**

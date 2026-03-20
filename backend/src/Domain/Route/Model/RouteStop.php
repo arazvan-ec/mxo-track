@@ -2,43 +2,38 @@
 
 declare(strict_types=1);
 
-namespace App\Entity;
+namespace App\Domain\Route\Model;
 
-use App\Entity\Concerns\PublicIdTrait;
+use App\Entity\Shipment;
 use App\Enum\ExceptionCode;
 use App\Enum\RouteStopStatus;
 use DateTimeImmutable;
-use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Uid\Ulid;
 
-#[ORM\Entity(repositoryClass: \App\Repository\RouteStopRepository::class)]
-#[ORM\UniqueConstraint(name: 'uniq_route_stop_public_id', columns: ['public_id'])]
-#[ORM\HasLifecycleCallbacks]
+/**
+ * RouteStop entity — domain POPO.
+ * Persistence handled via external XML mapping (no ORM attributes).
+ */
 class RouteStop
 {
-    use PublicIdTrait;
-
-    #[ORM\ManyToOne(targetEntity: Route::class)]
-    #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
+    private ?string $id = null;
+    private Ulid $publicId;
     private Route $route;
-
-    #[ORM\Column] private int $sequence;
-    #[ORM\Column(length: 255)] private string $address;
-    #[ORM\Column(type: 'float', nullable: true)] private ?float $latitude = null;
-    #[ORM\Column(type: 'float', nullable: true)] private ?float $longitude = null;
-    #[ORM\Column(length: 150, nullable: true)] private ?string $recipientName = null;
-    #[ORM\Column(length: 30, nullable: true)] private ?string $recipientPhone = null;
-    #[ORM\Column(type: 'text', nullable: true)] private ?string $notes = null;
-    #[ORM\Column(length: 20, enumType: RouteStopStatus::class)] private RouteStopStatus $status = RouteStopStatus::PENDING;
-    #[ORM\Column(nullable: true)] private ?DateTimeImmutable $deliveredAt = null;
-    #[ORM\Column(length: 30, enumType: ExceptionCode::class, nullable: true)] private ?ExceptionCode $exceptionCode = null;
-    #[ORM\Column(type: 'text', nullable: true)] private ?string $exceptionNotes = null;
-    #[ORM\Column(type: 'text', nullable: true)] private ?string $aiNotes = null;
-    #[ORM\Column] private bool $isOrigin = false;
-    #[ORM\Column(type: 'time_immutable', nullable: true)] private ?DateTimeImmutable $deliveryWindowStart = null;
-    #[ORM\Column(type: 'time_immutable', nullable: true)] private ?DateTimeImmutable $deliveryWindowEnd = null;
-
-    #[ORM\ManyToOne(targetEntity: Shipment::class)]
-    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private int $sequence;
+    private string $address;
+    private ?float $latitude = null;
+    private ?float $longitude = null;
+    private ?string $recipientName = null;
+    private ?string $recipientPhone = null;
+    private ?string $notes = null;
+    private RouteStopStatus $status = RouteStopStatus::PENDING;
+    private ?DateTimeImmutable $deliveredAt = null;
+    private ?ExceptionCode $exceptionCode = null;
+    private ?string $exceptionNotes = null;
+    private ?string $aiNotes = null;
+    private bool $isOrigin = false;
+    private ?DateTimeImmutable $deliveryWindowStart = null;
+    private ?DateTimeImmutable $deliveryWindowEnd = null;
     private ?Shipment $shipment = null;
 
     public function __construct(Route $route, int $sequence, string $address)
@@ -46,7 +41,21 @@ class RouteStop
         $this->route = $route;
         $this->sequence = $sequence;
         $this->address = $address;
+        $this->publicId = new Ulid();
     }
+
+    // ── Identity ──
+
+    public function getId(): ?string { return $this->id; }
+    public function getPublicId(): Ulid { return $this->publicId; }
+    public function getPublicIdString(): string { return (string) $this->publicId; }
+
+    public function initializePublicId(): void
+    {
+        $this->publicId ??= new Ulid();
+    }
+
+    // ── Accessors ──
 
     public function getRoute(): Route { return $this->route; }
     public function getSequence(): int { return $this->sequence; }
@@ -78,6 +87,8 @@ class RouteStop
     public function getAiNotes(): ?string { return $this->aiNotes; }
     public function setAiNotes(?string $aiNotes): void { $this->aiNotes = $aiNotes; }
 
+    // ── Domain Logic ──
+
     public function markDelivered(): void
     {
         if ($this->status !== RouteStopStatus::DELIVERED) {
@@ -93,5 +104,11 @@ class RouteStop
         $this->status = RouteStopStatus::EXCEPTION;
         $this->exceptionCode = $code;
         $this->exceptionNotes = $notes;
+    }
+
+    public function markSkipped(?string $reason = null): void
+    {
+        $this->status = RouteStopStatus::SKIPPED;
+        $this->exceptionNotes = $reason;
     }
 }

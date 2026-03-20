@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service;
 
-use App\Entity\Route;
-use App\Entity\RouteStop;
+use App\Domain\Route\Repository\RouteStopRepositoryInterface;
+use App\Domain\Route\Model\Route;
+use App\Domain\Route\Model\RouteStop;
 use App\Enum\OptimizationStepCategory;
 use App\Enum\RouteStopStatus;
 use App\RouteOptimization\OptimizableJob;
@@ -13,7 +14,6 @@ use App\RouteOptimization\OptimizableVehicle;
 use App\RouteOptimization\RouteOptimizerInterface;
 use App\Routing\Coordinate;
 use App\Routing\RoutingEngineInterface;
-use Doctrine\ORM\EntityManagerInterface;
 
 /**
  * Re-optimizes the stop order of an existing route.
@@ -23,7 +23,7 @@ use Doctrine\ORM\EntityManagerInterface;
 final class RouteOptimizationService
 {
     public function __construct(
-        private readonly EntityManagerInterface $em,
+        private readonly RouteStopRepositoryInterface $stopRepo,
         private readonly RouteOptimizerInterface $routeOptimizer,
         private readonly RoutingEngineInterface $routingEngine,
         private readonly OptimizationLogger $optimizationLogger,
@@ -162,7 +162,7 @@ final class RouteOptimizationService
             $item['stop']->setSequence($item['newSequence']);
         }
 
-        $this->em->flush();
+        $this->stopRepo->flush();
     }
 
     /**
@@ -421,15 +421,7 @@ final class RouteOptimizationService
      */
     private function getStopsForRoute(Route $route): array
     {
-        /** @var list<RouteStop> */
-        return $this->em->createQueryBuilder()
-            ->select('s')
-            ->from(RouteStop::class, 's')
-            ->where('s.route = :route')
-            ->setParameter('route', $route)
-            ->orderBy('s.sequence', 'ASC')
-            ->getQuery()
-            ->getResult();
+        return $this->stopRepo->findByRoute($route);
     }
 
     /**

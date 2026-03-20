@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Entity\Customer;
-use App\Entity\Route;
+use App\Domain\Route\Model\Route;
 use App\Entity\RouteOptimizationLog;
 use App\Enum\OptimizationOperation;
 use App\Enum\OptimizationStepCategory;

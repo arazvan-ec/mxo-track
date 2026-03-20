@@ -7,7 +7,7 @@ namespace App\Tests\Unit\View;
 use App\Domain\Route\Model\RouteSnapshot;
 use App\Domain\Route\Repository\RouteSnapshotRepositoryInterface;
 use App\Domain\Route\Service\RouteMapProjection;
-use App\Entity\Route;
+use App\Domain\Route\Model\Route;
 use App\Enum\RouteStatus;
 use App\View\MapViewData;
 use App\View\MapViewOptions;

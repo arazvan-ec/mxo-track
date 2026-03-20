@@ -11,7 +11,7 @@ use App\Domain\Route\Model\RouteMapView;
 use App\Domain\Route\Model\RouteSnapshot;
 use App\Domain\Route\Model\StopMapView;
 use App\Domain\Route\Repository\RouteSnapshotRepositoryInterface;
-use App\Entity\Route;
+use App\Domain\Route\Model\Route;
 
 /**
  * Projects Route + RouteSnapshot into RouteMapView Value Objects.

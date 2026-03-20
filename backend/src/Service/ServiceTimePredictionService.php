@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service;
 
-use App\Entity\RouteStop;
+use App\Domain\Route\Model\RouteStop;
 use Psr\Log\LoggerInterface;
 
 /**

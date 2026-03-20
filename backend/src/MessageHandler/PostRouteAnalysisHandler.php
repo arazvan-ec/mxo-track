@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
-use App\Entity\Route;
+use App\Domain\Route\Model\Route;
 use App\Entity\RoutePerformanceMetric;
 use App\Message\PostRouteAnalysisMessage;
 use App\Repository\RoutePerformanceMetricRepository;

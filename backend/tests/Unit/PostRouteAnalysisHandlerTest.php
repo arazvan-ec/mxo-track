@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit;
 
-use App\Entity\Route;
+use App\Domain\Route\Model\Route;
 use App\Message\PostRouteAnalysisMessage;
 use App\MessageHandler\PostRouteAnalysisHandler;
 use App\Service\PostRouteAnalyzer;

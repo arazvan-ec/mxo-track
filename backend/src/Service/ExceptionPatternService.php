@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service;
 
-use App\Entity\RouteStop;
+use App\Domain\Route\Model\RouteStop;
 use App\Entity\ShipmentEvent;
 use App\Enum\RouteStopStatus;
 use App\Enum\ShipmentEventType;

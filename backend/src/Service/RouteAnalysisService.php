@@ -6,8 +6,8 @@ namespace App\Service;
 
 use App\Dto\RouteAnalysisResult;
 use App\Dto\StopAnalysis;
-use App\Entity\Route as RouteEntity;
-use App\Entity\RouteStop;
+use App\Domain\Route\Model\Route as RouteEntity;
+use App\Domain\Route\Model\RouteStop;
 use App\Enum\RouteStatus;
 use App\Enum\RouteStopStatus;
 use Doctrine\ORM\EntityManagerInterface;

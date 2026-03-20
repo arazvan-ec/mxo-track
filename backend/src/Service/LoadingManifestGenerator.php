@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Dto\LoadingManifestItem;
-use App\Entity\Route;
-use App\Entity\RouteStop;
+use App\Domain\Route\Model\Route;
+use App\Domain\Route\Model\RouteStop;
 use Doctrine\ORM\EntityManagerInterface;
 
 final class LoadingManifestGenerator
@@ -27,7 +27,7 @@ final class LoadingManifestGenerator
     {
         /** @var list<RouteStop> $stops */
         $stops = $this->em->createQuery(
-            'SELECT rs FROM App\Entity\RouteStop rs
+            'SELECT rs FROM App\Domain\Route\Model\RouteStop rs
              WHERE rs.route = :route AND rs.isOrigin = false AND rs.shipment IS NOT NULL
              ORDER BY rs.sequence ASC'
         )

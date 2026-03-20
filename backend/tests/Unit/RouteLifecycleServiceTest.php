@@ -8,11 +8,12 @@ use App\Application\Route\InspectionNotCompletedException;
 use App\Application\Route\RouteLifecycleService;
 use App\Application\Route\RouteNotFoundException;
 use App\Application\Route\RouteNotOwnedException;
-use App\Entity\Route;
+use App\Domain\Route\Model\Route;
 use App\Entity\User;
 use App\Entity\VehicleInspection;
 use App\Enum\RouteStatus;
-use App\Repository\RouteRepository;
+use App\Domain\Route\Repository\RouteEventRepositoryInterface;
+use App\Domain\Route\Repository\RouteRepositoryInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\EntityRepository;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -26,19 +27,22 @@ use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 final class RouteLifecycleServiceTest extends TestCase
 {
     private EntityManagerInterface&MockObject $em;
-    private RouteRepository&MockObject $routeRepo;
+    private RouteRepositoryInterface&MockObject $routeRepo;
+    private RouteEventRepositoryInterface&MockObject $eventRepo;
     private EventDispatcherInterface&MockObject $eventDispatcher;
     private RouteLifecycleService $service;
 
     protected function setUp(): void
     {
         $this->em = $this->createMock(EntityManagerInterface::class);
-        $this->routeRepo = $this->createMock(RouteRepository::class);
+        $this->routeRepo = $this->createMock(RouteRepositoryInterface::class);
+        $this->eventRepo = $this->createMock(RouteEventRepositoryInterface::class);
         $this->eventDispatcher = $this->createMock(EventDispatcherInterface::class);
 
         $this->service = new RouteLifecycleService(
             $this->em,
             $this->routeRepo,
+            $this->eventRepo,
             $this->eventDispatcher,
         );
     }

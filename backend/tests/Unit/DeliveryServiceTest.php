@@ -12,12 +12,12 @@ use App\Application\Delivery\StopNotFoundException;
 use App\Dto\Driver\DeliverStopInput;
 use App\Dto\Driver\ExceptionStopInput;
 use App\Entity\Pod;
-use App\Entity\Route;
-use App\Entity\RouteStop;
+use App\Domain\Route\Model\Route;
+use App\Domain\Route\Model\RouteStop;
 use App\Entity\Shipment;
 use App\Entity\ShipmentEvent;
 use App\Entity\User;
-use App\Repository\RouteStopRepository;
+use App\Domain\Route\Repository\RouteStopRepositoryInterface;
 use App\Repository\ShipmentRepository;
 use App\Service\AuditLogger;
 use App\Service\DeliveryEvidenceFactory;
@@ -42,7 +42,7 @@ final class DeliveryServiceTest extends TestCase
     private AuditLogger&MockObject $auditLogger;
     private EventDispatcherInterface&MockObject $eventDispatcher;
     private MessageBusInterface&MockObject $messageBus;
-    private RouteStopRepository&MockObject $stopRepo;
+    private RouteStopRepositoryInterface&MockObject $stopRepo;
     private ShipmentRepository&MockObject $shipmentRepo;
     private DeliveryService $service;
 
@@ -54,7 +54,7 @@ final class DeliveryServiceTest extends TestCase
         $this->auditLogger = $this->createMock(AuditLogger::class);
         $this->eventDispatcher = $this->createMock(EventDispatcherInterface::class);
         $this->messageBus = $this->createMock(MessageBusInterface::class);
-        $this->stopRepo = $this->createMock(RouteStopRepository::class);
+        $this->stopRepo = $this->createMock(RouteStopRepositoryInterface::class);
         $this->shipmentRepo = $this->createMock(ShipmentRepository::class);
 
         $this->service = new DeliveryService(

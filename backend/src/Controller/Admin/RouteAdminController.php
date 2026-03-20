@@ -6,8 +6,8 @@ namespace App\Controller\Admin;
 
 use App\Application\Route\RoutePlanningService;
 use App\Entity\Customer;
-use App\Entity\Route;
-use App\Entity\RouteStop;
+use App\Domain\Route\Model\Route;
+use App\Domain\Route\Model\RouteStop;
 use App\Entity\User;
 use App\Enum\RouteStatus;
 use App\Enum\RouteStopStatus;

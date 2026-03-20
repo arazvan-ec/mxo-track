@@ -13,7 +13,7 @@
             <generator strategy="IDENTITY"/>
         </id>
 
-        <one-to-one field="route" target-entity="App\Entity\Route">
+        <one-to-one field="route" target-entity="App\Domain\Route\Model\Route">
             <join-column name="route_id" nullable="false" on-delete="CASCADE"/>
         </one-to-one>
 

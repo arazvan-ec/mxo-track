@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Service;
 
-use App\Entity\Route;
+use App\Domain\Route\Model\Route;
 use App\Entity\RouteOptimizationLog;
 use App\Entity\RoutePerformanceMetric;
 use App\Domain\Route\Model\RouteSnapshot;
-use App\Entity\RouteStop;
+use App\Domain\Route\Model\RouteStop;
 use App\Enum\RouteStopStatus;
 use Doctrine\ORM\EntityManagerInterface;
 

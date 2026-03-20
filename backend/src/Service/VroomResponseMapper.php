@@ -6,8 +6,8 @@ namespace App\Service;
 
 use App\Entity\Customer;
 use App\Entity\CustomerLocation;
-use App\Entity\Route;
-use App\Entity\RouteStop;
+use App\Domain\Route\Model\Route;
+use App\Domain\Route\Model\RouteStop;
 use App\Entity\Shipment;
 use App\Entity\Vehicle;
 use Doctrine\ORM\EntityManagerInterface;
