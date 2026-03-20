@@ -6,6 +6,7 @@ namespace App\Entity;
 
 use App\Entity\Concerns\PublicIdTrait;
 use App\Entity\Concerns\SoftDeleteTrait;
+use App\Enum\RouteEventType;
 use App\Enum\RouteStatus;
 use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
@@ -127,5 +128,69 @@ class Route implements SoftDeletableInterface
             $this->status = RouteStatus::DONE;
             $this->endAt = new DateTimeImmutable();
         }
+    }
+
+    /**
+     * Apply a RouteEvent to mutate aggregate state.
+     * This is the single entry point for all state transitions.
+     */
+    public function apply(RouteEvent $event): void
+    {
+        match ($event->getEventType()) {
+            RouteEventType::CREATED => $this->applyCreated($event),
+            RouteEventType::STARTED => $this->start(),
+            RouteEventType::COMPLETED => $this->finish(),
+            RouteEventType::CANCELLED => $this->applyCancelled(),
+            RouteEventType::OPTIMIZED,
+            RouteEventType::REOPTIMIZED => $this->applyOptimized($event),
+            RouteEventType::ASSIGNED => $this->applyAssigned($event),
+            default => null, // Stop-level and metadata events are no-ops at Route level
+        };
+    }
+
+    /**
+     * Rebuild Route state from a sequence of events.
+     *
+     * @param list<RouteEvent> $events Ordered by occurredAt ASC
+     */
+    public static function rebuildFromEvents(string $name, array $events): self
+    {
+        $route = new self($name);
+
+        foreach ($events as $event) {
+            $route->apply($event);
+        }
+
+        return $route;
+    }
+
+    private function applyCreated(RouteEvent $event): void
+    {
+        // Route was already constructed with name; CREATED is the initial event.
+        // No additional state mutation needed beyond what constructor provides.
+    }
+
+    private function applyCancelled(): void
+    {
+        $this->status = RouteStatus::CANCELLED;
+    }
+
+    private function applyOptimized(RouteEvent $event): void
+    {
+        $payload = $event->getPayload();
+        if (isset($payload['distance_km'])) {
+            $this->setTotalDistanceKm((float) $payload['distance_km']);
+        }
+        if (isset($payload['duration_minutes'])) {
+            $this->setEstimatedDurationMinutes((int) $payload['duration_minutes']);
+        }
+    }
+
+    private function applyAssigned(RouteEvent $event): void
+    {
+        // Driver and Vehicle assignment requires entity references.
+        // When rebuilding from events, we can only store IDs — actual entity
+        // resolution happens at the infrastructure layer.
+        // For now, this is a placeholder for the event-first pattern.
     }
 }
