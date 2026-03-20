@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\EventSubscriber;
 
 use App\Domain\Event\RouteReoptimized;
-use App\Domain\Event\StopExceptionReported;
+use App\Domain\Event\StopDelivered;
 use App\Domain\Route\Model\Route;
+use App\Domain\Route\Repository\RouteEventRepositoryInterface;
 use App\Entity\VehicleLastPosition;
+use App\Enum\RouteEventType;
 use App\Enum\RouteStatus;
 use App\Repository\RouteRepository;
 use App\Service\RouteOptimizationService;
@@ -17,10 +19,10 @@ use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 /**
- * Automatically re-optimizes pending stops when a shipment exception is reported
- * on a route that has auto-reoptimization enabled.
+ * Automatically re-optimizes pending stops when accumulated delay
+ * exceeds a threshold. Includes cooldown to prevent rapid-fire re-opts.
  */
-final readonly class ExceptionReoptimizationSubscriber
+final readonly class DelayReoptimizationSubscriber
 {
     public function __construct(
         private RouteRepository $routeRepo,
@@ -28,10 +30,13 @@ final readonly class ExceptionReoptimizationSubscriber
         private EntityManagerInterface $em,
         private LoggerInterface $logger,
         private EventDispatcherInterface $eventDispatcher,
+        private RouteEventRepositoryInterface $eventRepo,
+        private int $delayThresholdMinutes = 30,
+        private int $cooldownMinutes = 10,
     ) {}
 
     #[AsEventListener]
-    public function onStopExceptionReported(StopExceptionReported $event): void
+    public function onStopDelivered(StopDelivered $event): void
     {
         $route = $this->routeRepo->findOneByPublicId($event->routePublicId);
         if (!$route instanceof Route) {
@@ -46,7 +51,14 @@ final readonly class ExceptionReoptimizationSubscriber
             return;
         }
 
-        // Determine current driver position from vehicle's last known position
+        if (!$this->isDelayExceeded($route)) {
+            return;
+        }
+
+        if ($this->isInCooldown($route)) {
+            return;
+        }
+
         $currentLat = null;
         $currentLng = null;
         $vehicle = $route->getVehicle();
@@ -75,23 +87,52 @@ final readonly class ExceptionReoptimizationSubscriber
                 distanceKm: $distanceAfter,
                 durationMinutes: $result['durationMinutes'],
                 pendingStopsCount: \count($result['optimized']),
-                trigger: 'exception',
+                trigger: 'delay',
             ));
 
-            $this->logger->info('Auto-reoptimized route after exception.', [
+            $this->logger->info('Auto-reoptimized route due to delay.', [
                 'route_public_id' => $event->routePublicId,
-                'stop_public_id' => $event->stopPublicId,
-                'reason' => $event->reason->value,
                 'stops_reordered' => \count($result['optimized']),
-                'distance_before' => $distanceBefore,
-                'distance_after' => $distanceAfter,
             ]);
         } catch (\Throwable $e) {
-            $this->logger->error('Auto-reoptimization failed after exception.', [
+            $this->logger->error('Auto-reoptimization failed due to delay.', [
                 'route_public_id' => $event->routePublicId,
-                'stop_public_id' => $event->stopPublicId,
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    private function isDelayExceeded(Route $route): bool
+    {
+        $estimatedMinutes = $route->getEstimatedDurationMinutes();
+        if ($estimatedMinutes === null || $estimatedMinutes <= 0) {
+            return false;
+        }
+
+        $startEvent = $this->eventRepo->findLastByTypeForRoute($route, RouteEventType::STARTED);
+        if ($startEvent === null) {
+            return false;
+        }
+
+        $startedAt = $startEvent->getCreatedAt();
+        $now = new \DateTimeImmutable();
+        $elapsedMinutes = ($now->getTimestamp() - $startedAt->getTimestamp()) / 60;
+
+        $delayMinutes = $elapsedMinutes - $estimatedMinutes;
+
+        return $delayMinutes >= $this->delayThresholdMinutes;
+    }
+
+    private function isInCooldown(Route $route): bool
+    {
+        $lastReopt = $this->eventRepo->findLastByTypeForRoute($route, RouteEventType::REOPTIMIZED);
+        if ($lastReopt === null) {
+            return false;
+        }
+
+        $now = new \DateTimeImmutable();
+        $minutesSinceLastReopt = ($now->getTimestamp() - $lastReopt->getCreatedAt()->getTimestamp()) / 60;
+
+        return $minutesSinceLastReopt < $this->cooldownMinutes;
     }
 }

@@ -50,6 +50,32 @@ export function usePlannerImportShipments(importId?: string) {
   });
 }
 
+export function usePlannerOptimizers() {
+  return useQuery({
+    queryKey: ['planner-optimizers'],
+    queryFn: () => api.get<Array<{ name: string; label: string }>>('/admin/route-planner/optimizers'),
+  });
+}
+
+export interface CalibrationEntry {
+  address: string;
+  avgSeconds: number;
+  sampleCount: number;
+  minSeconds: number;
+  maxSeconds: number;
+}
+
+export function usePlannerCalibrations(customerId?: string) {
+  return useQuery({
+    queryKey: ['planner-calibrations', customerId],
+    queryFn: () =>
+      api.get<CalibrationEntry[]>(
+        `/admin/route-planner/calibrations?customer_id=${encodeURIComponent(customerId!)}`,
+      ),
+    enabled: !!customerId,
+  });
+}
+
 export function useClusterMutation() {
   return useMutation({
     mutationFn: (payload: { shipment_ids: string[]; num_clusters: number }) =>
@@ -67,6 +93,8 @@ export function usePreviewMutation() {
       vehicle_ids: string[];
       origin_public_id: string | null;
       max_stops_per_route: number;
+      optimizer_name?: string | null;
+      calibrated_service_times?: Record<string, number> | null;
     }) => api.post<PlannerPreviewResponse>('/admin/route-planner/preview', payload),
   });
 }

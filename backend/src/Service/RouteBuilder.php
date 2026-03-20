@@ -41,6 +41,7 @@ final class RouteBuilder
     /**
      * @param list<Shipment> $shipments
      * @param list<Vehicle> $vehicles
+     * @param array<string, int>|null $serviceTimeOverrides Map of address → service time in seconds
      * @return list<array{route: Route, stops: list<RouteStop>, validation: array}>
      */
     public function buildRoutes(
@@ -49,6 +50,8 @@ final class RouteBuilder
         Customer $customer,
         ?CustomerLocation $origin = null,
         int $maxStopsPerRoute = 30,
+        ?RouteOptimizerInterface $optimizerOverride = null,
+        ?array $serviceTimeOverrides = null,
     ): array {
         if (\count($shipments) === 0 || \count($vehicles) === 0) {
             return [];
@@ -64,7 +67,7 @@ final class RouteBuilder
         );
 
         $totalShipments = \count($shipments);
-        $optimizableJobs = $this->mapShipmentsToOptimizable($shipments);
+        $optimizableJobs = $this->mapShipmentsToOptimizable($shipments, $serviceTimeOverrides);
         $skipped = $totalShipments - \count($optimizableJobs);
 
         $this->optimizationLogger->logStep(
@@ -83,7 +86,8 @@ final class RouteBuilder
             sprintf('Llamando al optimizador con %d vehiculos y %d jobs', \count($optimizableVehicles), \count($optimizableJobs)),
         );
 
-        $result = $this->optimizer->optimize($optimizableVehicles, $optimizableJobs);
+        $activeOptimizer = $optimizerOverride ?? $this->optimizer;
+        $result = $activeOptimizer->optimize($optimizableVehicles, $optimizableJobs);
 
         $this->optimizationLogger->logStep(
             OptimizationStepCategory::RESULT_SUMMARY,
@@ -157,7 +161,10 @@ final class RouteBuilder
      * @param list<Shipment> $shipments
      * @return list<OptimizableJob>
      */
-    private function mapShipmentsToOptimizable(array $shipments): array
+    /**
+     * @param array<string, int>|null $serviceTimeOverrides Map of address → service time in seconds
+     */
+    private function mapShipmentsToOptimizable(array $shipments, ?array $serviceTimeOverrides = null): array
     {
         $result = [];
 
@@ -177,11 +184,18 @@ final class RouteBuilder
                 ];
             }
 
+            // Use calibrated service time if available, then shipment's own, then default 300s
+            $serviceTime = $shipment->getServiceTimeSeconds() ?? 300;
+            $address = $shipment->getAddress();
+            if ($serviceTimeOverrides !== null && $address !== null && isset($serviceTimeOverrides[$address])) {
+                $serviceTime = $serviceTimeOverrides[$address];
+            }
+
             $result[] = new OptimizableJob(
                 id: $index,
                 latitude: $shipment->getLatitude(),
                 longitude: $shipment->getLongitude(),
-                serviceTimeSeconds: $shipment->getServiceTimeSeconds() ?? 300,
+                serviceTimeSeconds: $serviceTime,
                 weightKg: $shipment->getTotalWeightKg() ?? 0.0,
                 volumeM3: $shipment->getTotalVolumeM3() ?? 0.0,
                 parcels: $shipment->getTotalParcels(),

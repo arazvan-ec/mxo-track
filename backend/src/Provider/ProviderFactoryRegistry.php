@@ -44,6 +44,17 @@ class ProviderFactoryRegistry
     }
 
     /**
+     * Create a provider instance by its provider type name using default config.
+     */
+    public function createByName(string $providerType): object
+    {
+        $factory = $this->factories[$providerType]
+            ?? throw new \InvalidArgumentException("Unknown provider: {$providerType}");
+
+        return $factory->create([]);
+    }
+
+    /**
      * @return array<string, list<string>> Keyed by service type value
      */
     public function getAvailableProviders(): array
