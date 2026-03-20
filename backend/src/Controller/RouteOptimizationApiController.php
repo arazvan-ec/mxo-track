@@ -18,8 +18,8 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\Mercure\HubInterface;
-use Symfony\Component\Mercure\Update;
+use App\Realtime\RealtimePublisherInterface;
+use App\Realtime\SseMessage;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
@@ -33,7 +33,7 @@ class RouteOptimizationApiController extends AbstractController
         private readonly RoutePlanningService $routePlanningService,
         private readonly DeliveryNoteGenerator $deliveryNoteGenerator,
         private readonly ApiErrorResponder $errorResponder,
-        private readonly HubInterface $hub,
+        private readonly RealtimePublisherInterface $publisher,
     ) {}
 
     /**
@@ -176,21 +176,21 @@ class RouteOptimizationApiController extends AbstractController
         $result = $this->optimizer->reoptimizePendingStops($route, $currentLat, $currentLng);
         $this->optimizer->applyOptimizedOrder($result['optimized']);
 
-        // Publish Mercure update
+        // Publish realtime update
         try {
-            $this->hub->publish(new Update(
-                sprintf('/routes/%s/updates', $publicId),
-                json_encode([
+            $this->publisher->publish(new SseMessage(
+                data: [
                     'type' => 'route_reoptimized',
                     'route_public_id' => $publicId,
                     'distance_before' => $result['distanceBefore'],
                     'distance_after' => $result['distanceAfter'],
                     'duration_minutes' => $result['durationMinutes'],
                     'stops_reordered' => \count($result['optimized']),
-                ], JSON_THROW_ON_ERROR),
+                ],
+                topics: [sprintf('/routes/%s/updates', $publicId)],
             ));
         } catch (\Throwable) {
-            // Don't break the flow on Mercure failure
+            // Don't break the flow on publish failure
         }
 
         return new JsonResponse([
