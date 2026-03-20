@@ -47,7 +47,13 @@ Make multi-route maps visually distinguishable by:
 - **Simple prop threading** vs **React context for route color**: Prop threading is simpler, no over-engineering for 6 call sites
 - **Arrow via symbol layer** vs **custom line pattern**: Symbol layer is MapLibre-native and performant
 
+## Approach Chosen: A — Prop Threading Simple
+
+Aprobado por el usuario. Razón: mínima complejidad, cambios localizados, sin abstracciones nuevas.
+
 ## Alternatives Discarded
 
+- **Approach B — React Context:** Over-engineering para 7 call sites. En multi-route views necesitaría un provider por ruta, añadiendo complejidad sin beneficio real.
+- **Approach C — Color en StopData:** Mezcla presentación con datos. StopData es interfaz de datos, no de UI.
 - Color all markers (including delivered) with route color — loses status visibility
 - Use different marker shapes per route — more complex, less intuitive
