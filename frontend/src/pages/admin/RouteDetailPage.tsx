@@ -185,6 +185,7 @@ export function RouteDetailPage() {
           <StopMarkersLayer
             stops={mapStops}
             onStopClick={handleStopClick}
+            routeColor={route.color}
           />
 
           {/* Vehicle marker */}

@@ -431,7 +431,8 @@ export function RoutePlannerPage() {
 
           {/* Step 3: Stop markers for preview routes */}
           {step >= 3 &&
-            previewRoutes.map((routeData) => {
+            previewRoutes.map((routeData, idx) => {
+              const routeColor = ROUTE_COLORS[idx % ROUTE_COLORS.length];
               return routeData.stops
                 .filter((s) => s.latitude && s.longitude && !s.isOrigin)
                 .map((s) => (
@@ -442,6 +443,7 @@ export function RoutePlannerPage() {
                     sequence={s.sequence}
                     status="PENDING"
                     address={s.address}
+                    routeColor={routeColor}
                   />
                 ));
             })}

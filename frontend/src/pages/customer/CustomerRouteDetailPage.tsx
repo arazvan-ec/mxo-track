@@ -139,6 +139,7 @@ export function CustomerRouteDetailPage() {
           stops={markerStops}
           keyPrefix={`customer-${route.publicId}-`}
           onStopClick={handleStopClick}
+          routeColor={route.color}
         />
         {vehicleMarkers.length > 0 && <VehicleLayer vehicles={vehicleMarkers} />}
       </MapCanvas>

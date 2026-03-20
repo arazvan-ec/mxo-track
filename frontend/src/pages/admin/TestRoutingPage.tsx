@@ -161,19 +161,23 @@ export function TestRoutingPage() {
         })}
 
         {/* Stop markers for optimized routes */}
-        {routesData.map((route, idx) => (
-          <StopMarkersLayer
-            key={`stops-${idx}`}
-            keyPrefix={`route-${idx}-`}
-            stops={route.stopsAfter.map((s) => ({
-              lat: s.lat,
-              lng: s.lng,
-              sequence: s.seq,
-              status: 'PENDING',
-              address: s.address,
-            }))}
-          />
-        ))}
+        {routesData.map((route, idx) => {
+          const routeColor = ROUTE_COLORS[idx % ROUTE_COLORS.length];
+          return (
+            <StopMarkersLayer
+              key={`stops-${idx}`}
+              keyPrefix={`route-${idx}-`}
+              routeColor={routeColor}
+              stops={route.stopsAfter.map((s) => ({
+                lat: s.lat,
+                lng: s.lng,
+                sequence: s.seq,
+                status: 'PENDING',
+                address: s.address,
+              }))}
+            />
+          );
+        })}
       </MapCanvas>
 
       {/* Fit bounds button */}
