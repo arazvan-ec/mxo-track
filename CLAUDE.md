@@ -1,15 +1,3 @@
-# Para optimizar una ruta
-
-1. Cada entrega debe tener una configuracion de volumen y peso
-2. Tambien necesitamos la configuracion de volumen y peso que entra en cada vehiculo
-
-# Demo para cliente
-
-1. CSV para importar
-2. Con ese CSV tenemos que crear X rutas, cada vehiculo puede hacer x entregas, poder configurar antes de acceptar la ruta
-
-# CLAUDE.md: claude --resume 2a057aa1-7456-4257-ab81-debee0c6a901 <> eliminar customer vehicle -> seguir
-
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
@@ -38,6 +26,18 @@ php bin/console doctrine:fixtures:load -n       # Load fixtures (admin user)
 make lint                               # PHP syntax lint (all src files)
 php vendor/bin/phpunit                  # Run tests
 ```
+
+## Priority Tiers
+
+No todas las reglas tienen el mismo peso. Ante conflicto o presión de tiempo:
+
+| Tier | Secciones | Cuándo aplicar |
+|------|-----------|----------------|
+| **T1: Siempre** | SOLID, DDD placement, Critical Patterns, Conventions | Todo código, sin excepciones |
+| **T2: Features** | Brainstorming (Skill 2), Plans (Skill 3), TDD (Skill 7), Atomic Commits | Features y bug fixes |
+| **T3: Proceso completo** | Execution Logs, Retrospectives, Learning Loop, Decision Log | Cambios no-triviales, cuando el tiempo lo permite |
+
+**Regla:** T1 nunca se salta. T2 se salta solo con aprobación explícita del usuario. T3 se puede diferir si hay presión de tiempo, documentando qué se saltó.
 
 ## SOLID Principles (mandatory)
 
@@ -103,6 +103,9 @@ Controller → Application Service → Domain Interface ← Infrastructure Imple
 
 ## DDD Architecture (mandatory)
 
+**[CURRENT]** ~30% del codebase usa DDD puro (Route Planning parcial, Route Optimization). El resto está en `src/Entity/` con ORM attributes.
+**[TARGET]** Contextos críticos completamente en `src/Domain/{Context}/Model/` como POPOs.
+
 Pureza híbrida: **contextos críticos → DDD puro, contextos CRUD → pragmático Symfony.** Todo código nuevo en contextos críticos sigue DDD desde el inicio.
 
 ### Bounded Contexts
@@ -113,7 +116,7 @@ Pureza híbrida: **contextos críticos → DDD puro, contextos CRUD → pragmát
 
 ### Reglas
 
-**Código nuevo en contexto crítico → siempre DDD:**
+**Código nuevo en contexto crítico → siempre DDD.** Código existente en `src/Entity/` es deuda técnica documentada — no replicar el patrón, pero no es necesario migrar al tocar un archivo existente salvo que el cambio lo justifique.
 ```
 src/Domain/{Context}/Model/        # Entidades POPOs, Value Objects
 src/Domain/{Context}/Repository/   # Interfaces de repositorio
@@ -501,30 +504,9 @@ When modifying a class constructor (adding/removing/changing parameters):
 
 **Why:** Symfony auto-wires most services, but Factories use `new` directly. Changing a constructor without updating its Factory causes runtime errors that tests may not catch if the Factory path isn't covered.
 
-## Knowledge Modules (consultar bajo demanda)
+## Knowledge Modules
 
-Antes de trabajar en un subsistema, **LEE el módulo relevante** en `docs/knowledge/`:
-
-| Si vas a trabajar en... | Lee primero |
-|------------------------|-------------|
-| Entidades, relaciones, migraciones, enums | `docs/knowledge/domain-model.md` |
-| Providers, factories, resolución per-tenant | `docs/knowledge/provider-framework.md` |
-| Controllers, DTOs, APIs, endpoints | `docs/knowledge/api-surface.md` |
-| Docker, Railway, variables de entorno | `docs/knowledge/deployment.md` |
-| Tests, PHPUnit, coverage | `docs/knowledge/testing.md` |
-| Mercure, SSE, tokens JWT | `docs/knowledge/realtime.md` |
-| Traccar, posiciones GPS, simulación | `docs/knowledge/gps-tracking.md` |
-| SMS, WhatsApp, push, webhooks | `docs/knowledge/notifications.md` |
-| Claude AI, embeddings, ML | `docs/knowledge/ai-ml.md` |
-| VROOM, OSRM, capacidad, rutas | `docs/knowledge/route-optimization.md` |
-| DDD, SOLID, desacoplamiento, bounded contexts | `docs/knowledge/architecture-ddd.md` |
-| Patrones de diseño GoF + DDD, catálogo completo | `docs/knowledge/design-patterns.md` |
-| Roles, multi-tenancy, CSRF, seguridad | `docs/knowledge/security.md` |
-| Skills de Superpowers (completo) | `docs/knowledge/superpowers-skills.md` |
-| Feedback, execution logs, learning loop, retrospectives | `docs/knowledge/feedback-learning.md` |
-| Índice completo de módulos | `docs/knowledge/index.md` |
-| Requisitos de negocio, gaps, decisiones | `docs/analysis/2026-03-15-business-requirements-audit.md` |
-| Análisis previos del codebase | `docs/analysis/` |
+Antes de trabajar en un subsistema, consulta el módulo relevante. Índice completo en `docs/knowledge/index.md`.
 
 **Regla:** No duplicar info entre CLAUDE.md y los módulos. Al modificar un subsistema, actualizar el módulo correspondiente.
 
@@ -532,9 +514,9 @@ Antes de trabajar en un subsistema, **LEE el módulo relevante** en `docs/knowle
 
 **CLAUDE.md contiene dos tipos de contenido con reglas distintas:**
 
-1. **Instrucciones de comportamiento** (skills, convenciones, critical patterns) — **SIEMPRE inline en CLAUDE.md**. Son instrucciones que Claude debe seguir en cada interacción. Moverlas a módulos externos degrada su efectividad porque Claude puede no leerlas a tiempo.
+1. **Instrucciones de comportamiento** (process gates Skills 1-6, convenciones, critical patterns, interaction flow) — **SIEMPRE inline en CLAUDE.md**. Son instrucciones que Claude debe seguir en cada interacción. Moverlas a módulos externos degrada su efectividad.
 
-2. **Referencia bajo demanda** (domain model, deployment, API surface, etc.) — **En `docs/knowledge/`**. Son datos de contexto que se consultan cuando se trabaja en un subsistema específico. No necesitan estar presentes en cada turno.
+2. **Referencia bajo demanda** (domain model, deployment, API surface, execution skills 7-15, etc.) — **En `docs/knowledge/`**. Son datos de contexto o guías de ejecución que se consultan cuando aplican. No necesitan estar presentes en cada turno.
 
 **Antes de modificar CLAUDE.md, preguntarse:**
 - ¿Es una instrucción de comportamiento? → **Debe quedarse inline en CLAUDE.md**
@@ -904,548 +886,20 @@ Good agent prompts are:
 - **No constraints:** Agent might refactor everything
 - **Vague output:** "Fix it" → you don't know what changed
 
----
-
-### Problema conocido: Fallos de infraestructura en subagentes
-
-Los subagentes (Agent tool) pueden fallar con errores de runtime del entorno de ejecución, como `undefined is not an object (evaluating 'H.includes')`. Cuando esto ocurre, **todas** las herramientas del subagente fallan (Read, Bash, Grep, Glob) y el agente no puede hacer ningún trabajo útil.
-
-**Síntomas:**
-- El subagente reporta que no puede ejecutar ninguna herramienta
-- Errores JavaScript internos en las llamadas a herramientas
-- El resultado del agente dice "infrastructure errors" o similar
-
-**Solución:**
-1. **No reintentar el mismo subagente** — el entorno está roto y reintentar no lo arregla
-2. **Ejecutar la tarea en el hilo principal** — si el subagente falla, hacer el trabajo directamente sin delegar
-3. **Alternativa: lanzar un nuevo subagente** — un nuevo agente obtiene un entorno fresco que puede funcionar
-4. **Si persiste:** informar al usuario y sugerir reiniciar la sesión de Claude Code
-
-**Regla:** Cuando un subagente falla por infraestructura, no marcar la tarea como completada. Reintentarla en el hilo principal o con un nuevo subagente.
+> **Nota:** Problemas conocidos de subagentes (infrastructure failures, tool_use id errors) y límites de output documentados en `docs/knowledge/superpowers-skills.md` § Problemas Conocidos.
 
 ---
 
-### Problema conocido: Error "tool_use ids must be unique" (API 400)
-
-La API de Claude rechaza peticiones con HTTP 400 y mensaje `tool_use ids must be unique` cuando el historial de conversación contiene bloques `tool_use` con IDs duplicados. Esto es un **bug del cliente** (Claude Code / Agent SDK), no del servidor.
-
-**Causas principales:**
-- Llamadas a herramientas en paralelo que generan IDs duplicados
-- Conversaciones largas con muchos turnos de tool_use donde la reconstrucción del historial introduce duplicados
-- Sesiones reanudadas (`--resume`) con historial corrupto
-
-**Síntomas:**
-- Error 400: `messages.N.content.M: tool_use ids must be unique`
-- La conversación se corta abruptamente y no se puede continuar
-- Las herramientas dejan de funcionar en la sesión actual
-
-**Mitigación (qué hacer Claude para reducir riesgo):**
-1. **Hacer commits frecuentes** — cada tarea completada debe committearse inmediatamente para que el progreso no se pierda si la sesión se corrompe
-2. **Documentar estado en TodoWrite** — mantener el todo list actualizado para que al reanudar se sepa qué falta
-3. **Preferir tareas atómicas** — dividir trabajo grande en pasos pequeños e independientes; si la sesión se rompe a mitad de un paso, se pierde menos trabajo
-4. **Limitar profundidad de subagentes** — conversaciones con muchas llamadas paralelas a herramientas son más propensas al error; si una tarea necesita >20 tool calls secuenciales, considerar dividirla
-
-**Recuperación (qué hacer cuando ocurre):**
-1. **Usar `/clear`** — resetea el historial de la conversación y puede permitir continuar
-2. **Iniciar nueva sesión** — `claude` sin `--resume` empieza con historial limpio
-3. **Resumir sesión anterior con cuidado** — `claude --resume <id>` puede funcionar si el error fue puntual, pero si el historial está corrupto fallará de nuevo
-4. **Revisar git log** — verificar qué commits se hicieron antes del error para saber desde dónde continuar
-5. **Leer TodoWrite** — si había una lista de tareas, verificar cuáles están completadas y cuáles pendientes
-
-**Regla:** Ante este error, NUNCA asumir que el trabajo previo se guardó. Verificar con `git log` y `git status` antes de continuar. Hacer commits más frecuentes es la mejor protección.
-
----
-
-### Subagent Output Limits (mandatory)
-
-Los subagentes (Agent tool) tienen un límite de lectura de 25,000 tokens en el entorno web. Si el output de un subagente excede este límite, el agente padre no puede leer el resultado y el trabajo se pierde.
-
-#### Reglas para subagentes
-
-1. **Límite absoluto:** El output final de cualquier subagente no debe exceder **300 líneas** o **15,000 tokens** (lo que se alcance primero)
-2. **Preferir escribir a archivo:** Si el análisis produce contenido extenso, el subagente debe escribirlo a un archivo en el repo (e.g., `docs/superpowers/agent-outputs/`) y retornar solo un resumen de ~50-100 líneas con la ruta al archivo
-3. **Nunca incluir código fuente completo en el output:** Referenciar archivos y líneas en vez de copiar bloques de código
-4. **Resúmenes ejecutivos:** Todo output de subagente debe empezar con un resumen de 5-10 líneas con los hallazgos clave
-
-#### Reglas para el agente principal (al despachar subagentes)
-
-1. **Incluir en CADA prompt de subagente:** "Tu output final no debe exceder 200 líneas. Si necesitas documentar más, escribe a un archivo y retorna la ruta."
-2. **Para agentes Explore:** Pedir hallazgos específicos, no dumps de código
-3. **Para agentes Plan:** Pedir plan conciso con file paths y pasos, sin código completo inline
-
-#### Anti-patterns
-
-- Subagente que retorna el contenido completo de múltiples archivos → referenciar paths y líneas
-- Subagente que lista todos los resultados de grep/glob → filtrar y resumir
-- Plan de 500+ líneas con código completo inline → extraer código a archivos, plan solo con referencias
-
----
-
-### Skill 7: Test-Driven Development
-
-```yaml
-name: test-driven-development
-description: Use when implementing any feature or bugfix, before writing implementation code
-```
-
-Write the test first. Watch it fail. Write minimal code to pass.
-
-**Core principle:** If you didn't watch the test fail, you don't know if it tests the right thing.
-
-**Violating the letter of the rules is violating the spirit of the rules.**
-
-#### The Iron Law
-
-```
-NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST
-```
-
-Write code before the test? Delete it. Start over.
-
-**No exceptions:**
-- Don't keep it as "reference"
-- Don't "adapt" it while writing tests
-- Don't look at it
-- Delete means delete
-
-#### Red-Green-Refactor
-
-**RED - Write Failing Test**
-- One behavior, clear name, real code (no mocks unless unavoidable)
-
-**Verify RED - Watch It Fail (MANDATORY)**
-- Test fails (not errors), failure message is expected, fails because feature missing
-
-**GREEN - Minimal Code**
-- Write simplest code to pass the test. Don't add features.
-
-**Verify GREEN - Watch It Pass (MANDATORY)**
-- Test passes, other tests still pass, output pristine
-
-**REFACTOR - Clean Up**
-- After green only: remove duplication, improve names, extract helpers
-- Keep tests green. Don't add behavior.
-
-#### Common Rationalizations
-
-| Excuse | Reality |
-|--------|---------|
-| "Too simple to test" | Simple code breaks. Test takes 30 seconds. |
-| "I'll test after" | Tests passing immediately prove nothing. |
-| "Need to explore first" | Fine. Throw away exploration, start with TDD. |
-| "TDD will slow me down" | TDD faster than debugging. |
-| "Already spent X hours, deleting is wasteful" | Sunk cost fallacy. |
-
-#### Red Flags - STOP and Start Over
-
-- Code before test
-- Test passes immediately
-- Can't explain why test failed
-- Rationalizing "just this once"
-- "Tests after achieve the same purpose"
-- "Keep as reference"
-- "TDD is dogmatic, I'm being pragmatic"
-
-**All of these mean: Delete code. Start over with TDD.**
-
-#### Verification Checklist
-
-- [ ] Every new function/method has a test
-- [ ] Watched each test fail before implementing
-- [ ] Each test failed for expected reason
-- [ ] Wrote minimal code to pass each test
-- [ ] All tests pass
-- [ ] Output pristine (no errors, warnings)
-- [ ] Tests use real code (mocks only if unavoidable)
-- [ ] Edge cases and errors covered
-
----
-
-### Skill 8: Systematic Debugging
-
-```yaml
-name: systematic-debugging
-description: Use when encountering any bug, test failure, or unexpected behavior, before proposing fixes
-```
-
-**Core principle:** ALWAYS find root cause before attempting fixes. Symptom fixes are failure.
-
-**Violating the letter of this process is violating the spirit of debugging.**
-
-#### The Iron Law
-
-```
-NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST
-```
-
-#### The Four Phases
-
-**Phase 1: Root Cause Investigation (MANDATORY before any fix)**
-
-1. **Read Error Messages Carefully** - Don't skip. Read stack traces completely.
-2. **Reproduce Consistently** - Can you trigger it reliably? If not → gather more data, don't guess.
-3. **Check Recent Changes** - Git diff, recent commits, new dependencies, config changes.
-4. **Gather Evidence in Multi-Component Systems** - For EACH component boundary: log what enters/exits, verify config propagation, check state at each layer. Run once to gather evidence.
-5. **Trace Data Flow** - Where does bad value originate? Keep tracing up until you find the source. Fix at source, not at symptom.
-
-**Phase 2: Pattern Analysis**
-1. Find working examples in same codebase
-2. Compare against references COMPLETELY (don't skim)
-3. Identify ALL differences between working and broken
-4. Understand dependencies
-
-**Phase 3: Hypothesis and Testing**
-1. Form SINGLE hypothesis: "I think X is the root cause because Y"
-2. Make SMALLEST possible change to test
-3. One variable at a time
-4. If didn't work → form NEW hypothesis, DON'T add more fixes on top
-
-**Phase 4: Implementation**
-1. Create failing test case (MUST have before fixing)
-2. Implement SINGLE fix addressing root cause
-3. Verify fix: test passes, no other tests broken
-4. **If 3+ fixes failed:** STOP. Question the architecture. Discuss with user before attempting more fixes.
-
-#### Red Flags - STOP and Follow Process
-
-- "Quick fix for now, investigate later"
-- "Just try changing X and see if it works"
-- Proposing solutions before tracing data flow
-- "One more fix attempt" (when already tried 2+)
-- Each fix reveals new problem in different place
-
-**ALL of these mean: STOP. Return to Phase 1.**
-
-#### Real-World Impact
-
-- Systematic approach: 15-30 minutes to fix
-- Random fixes approach: 2-3 hours of thrashing
-- First-time fix rate: 95% vs 40%
-
----
-
-### Skill 9: Verification Before Completion
-
-```yaml
-name: verification-before-completion
-description: Use when about to claim work is complete, fixed, or passing - requires running verification commands and confirming output before making any success claims
-```
-
-**Core principle:** Evidence before claims, always.
-
-**Violating the letter of this rule is violating the spirit of this rule.**
-
-#### The Iron Law
-
-```
-NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE
-```
-
-If you haven't run the verification command in this message, you cannot claim it passes.
-
-#### The Gate Function
-
-```
-BEFORE claiming any status:
-1. IDENTIFY: What command proves this claim?
-2. RUN: Execute the FULL command (fresh, complete)
-3. READ: Full output, check exit code, count failures
-4. VERIFY: Does output confirm the claim?
-5. CAPTURE: Record results in execution log (tests, lint, coverage delta)
-6. ONLY THEN: Make the claim
-
-Skip any step = lying, not verifying
-```
-
-#### Common Failures
-
-| Claim | Requires | Not Sufficient |
-|-------|----------|----------------|
-| Tests pass | Test command output: 0 failures | Previous run, "should pass" |
-| Linter clean | Linter output: 0 errors | Partial check, extrapolation |
-| Build succeeds | Build command: exit 0 | Linter passing, logs look good |
-| Bug fixed | Test original symptom: passes | Code changed, assumed fixed |
-| Agent completed | VCS diff shows changes | Agent reports "success" |
-| Requirements met | Line-by-line checklist | Tests passing |
-
-#### Red Flags - STOP
-
-- Using "should", "probably", "seems to"
-- Expressing satisfaction before verification ("Great!", "Perfect!", "Done!")
-- About to commit/push/PR without verification
-- Trusting agent success reports
-- Relying on partial verification
-
-#### Rationalization Prevention
-
-| Excuse | Reality |
-|--------|---------|
-| "Should work now" | RUN the verification |
-| "I'm confident" | Confidence ≠ evidence |
-| "Just this once" | No exceptions |
-| "Agent said success" | Verify independently |
-| "Partial check is enough" | Partial proves nothing |
-
----
-
-### Skill 10: Receiving Code Review
-
-```yaml
-name: receiving-code-review
-description: Use when receiving code review feedback - requires technical rigor and verification, not performative agreement or blind implementation
-```
-
-**Core principle:** Verify before implementing. Ask before assuming. Technical correctness over social comfort.
-
-#### The Response Pattern
-
-```
-1. READ: Complete feedback without reacting
-2. UNDERSTAND: Restate requirement in own words (or ask)
-3. VERIFY: Check against codebase reality
-4. EVALUATE: Technically sound for THIS codebase?
-5. RESPOND: Technical acknowledgment or reasoned pushback
-6. IMPLEMENT: One item at a time, test each
-```
-
-#### Forbidden Responses
-
-**NEVER:** "You're absolutely right!", "Great point!", "Let me implement that now" (before verification)
-
-**INSTEAD:** Restate the technical requirement, ask clarifying questions, push back with technical reasoning if wrong, just start working.
-
-#### Handling Unclear Feedback
-
-If ANY item is unclear: **STOP** - do not implement anything yet. Ask for clarification on unclear items.
-
-#### When To Push Back
-
-- Suggestion breaks existing functionality
-- Reviewer lacks full context
-- Violates YAGNI (unused feature)
-- Technically incorrect for this stack
-- Conflicts with user's architectural decisions
-
-#### Implementation Order (for multi-item feedback)
-
-1. Clarify anything unclear FIRST
-2. Blocking issues (breaks, security)
-3. Simple fixes (typos, imports)
-4. Complex fixes (refactoring, logic)
-5. Test each fix individually
-6. Verify no regressions
-
----
-
-### Skill 11: Requesting Code Review
-
-```yaml
-name: requesting-code-review
-description: Use when completing tasks, implementing major features, or before merging to verify work meets requirements
-```
-
-#### When to Request Review
-
-**Mandatory:**
-- After each task in subagent-driven development
-- After completing major feature
-- Before merge to main
-
-**Optional but valuable:**
-- When stuck (fresh perspective)
-- Before refactoring (baseline check)
-- After fixing complex bug
-
-#### How to Request
-
-1. Get git SHAs (BASE_SHA and HEAD_SHA)
-2. Dispatch code-reviewer subagent with: what was implemented, plan/requirements, base SHA, head SHA, description
-3. Act on feedback: Fix Critical immediately, Fix Important before proceeding, Note Minor for later
-
----
-
-### Skill 12: Finishing a Development Branch
-
-```yaml
-name: finishing-a-development-branch
-description: Use when implementation is complete and you need to decide how to integrate the work
-```
-
-**Core principle:** Verify tests → Present options → Execute choice → Clean up.
-
-#### The Process
-
-**Step 1: Verify Tests** - Run project test suite. If tests fail, STOP. Don't proceed.
-
-**Step 2: Determine Base Branch**
-
-**Step 3: Present Options**
-```
-1. Merge back to <base-branch> locally
-2. Push and create a Pull Request
-3. Keep the branch as-is (I'll handle it later)
-4. Discard this work
-```
-
-**Step 4: Execute Choice**
-- Option 1: Merge locally, verify tests on merged result, delete feature branch
-- Option 2: Push branch, create PR via `gh pr create`
-- Option 3: Keep as-is, report location
-- Option 4: Confirm with user before deleting (require typed "discard")
-
-**Step 5: Design Retrospective** (before cleanup — MANDATORY write to file)
-- Revisar decisiones de diseño tomadas en la rama (consultar `docs/decisions/log.md` si se usó)
-- ¿Algún patrón se siente forzado o sobre-engineered? → Simplificar antes de merge
-- ¿Se descubrió algo que debería actualizar la documentación? → Actualizar knowledge modules
-- ¿Hay lecciones que mejoren las guías de CLAUDE.md? → Proponer al usuario
-- **Completar la fase Retrospective del execution log** en `docs/superpowers/execution-logs/` con: estimate accuracy, what worked, what didn't, lessons learned
-- **Añadir entrada a `docs/decisions/log.md`** si hubo decisiones de diseño no-triviales
-- **Commit y push** del execution log y decision log actualizados
-
-**Step 6: Cleanup Worktree** (for Options 1, 2, 4 only)
-
-#### Red Flags
-
-- Never proceed with failing tests
-- Never merge without verifying tests on result
-- Never delete work without confirmation
-- Never force-push without explicit request
-
----
-
-### Skill 13: Using Git Worktrees
-
-```yaml
-name: using-git-worktrees
-description: Use when starting feature work that needs isolation from current workspace
-```
-
-**Core principle:** Systematic directory selection + safety verification = reliable isolation.
-
-#### Directory Selection Process
-
-1. Check existing: `.worktrees/` (preferred, hidden) or `worktrees/`
-2. Check CLAUDE.md for preference
-3. Ask user if no directory exists
-
-#### Safety Verification
-
-**MUST verify directory is gitignored before creating worktree.** If NOT ignored: add to `.gitignore`, commit, then proceed.
-
-#### Creation Steps
-
-1. Detect project name
-2. Create worktree with new branch: `git worktree add "$path" -b "$BRANCH_NAME"`
-3. Run project setup (auto-detect: `composer install`, `npm install`, etc.)
-4. Verify clean baseline (run tests)
-5. Report location and test status
-
----
-
-### Skill 14: Writing Skills
-
-```yaml
-name: writing-skills
-description: Use when creating new skills, editing existing skills, or verifying skills work before deployment
-```
-
-**Writing skills IS Test-Driven Development applied to process documentation.**
-
-#### What is a Skill?
-
-A **skill** is a reference guide for proven techniques, patterns, or tools. Skills help future Claude instances find and apply effective approaches.
-
-**Skills are:** Reusable techniques, patterns, tools, reference guides
-**Skills are NOT:** Narratives about how you solved a problem once
-
-#### The Iron Law (Same as TDD)
-
-```
-NO SKILL WITHOUT A FAILING TEST FIRST
-```
-
-#### TDD Mapping for Skills
-
-| TDD Concept | Skill Creation |
-|-------------|----------------|
-| Test case | Pressure scenario with subagent |
-| Production code | Skill document (SKILL.md) |
-| Test fails (RED) | Agent violates rule without skill (baseline) |
-| Test passes (GREEN) | Agent complies with skill present |
-| Refactor | Close loopholes while maintaining compliance |
-
-#### RED-GREEN-REFACTOR for Skills
-
-**RED:** Run pressure scenario WITHOUT skill. Document exact behavior and rationalizations.
-**GREEN:** Write minimal skill addressing those specific violations. Verify agents now comply.
-**REFACTOR:** Identify new rationalizations → add explicit counters → re-test until bulletproof.
-
-#### SKILL.md Structure
-
-```markdown
----
-name: skill-name-with-hyphens
-description: Use when [specific triggering conditions]
----
-
-# Skill Name
-
-## Overview - Core principle in 1-2 sentences
-## When to Use - Symptoms and use cases
-## Core Pattern - Before/after code comparison
-## Quick Reference - Table or bullets for scanning
-## Common Mistakes - What goes wrong + fixes
-```
-
-#### Claude Search Optimization (CSO)
-
-- Description starts with "Use when..." — triggering conditions only
-- **NEVER summarize the skill's process in the description** (Claude may follow description instead of reading full skill)
-- Use concrete triggers, symptoms, and situations
-- Keywords throughout for search (errors, symptoms, tools)
-
----
-
-### Skill 15: Learning Review
-
-```yaml
-name: learning-review
-description: Use when conducting monthly or quarterly retrospective reviews of accumulated feedback data from execution logs and business metrics
-```
-
-**Core principle:** Los datos acumulados solo generan valor si se analizan y se actúa sobre los hallazgos.
-
-#### When to Use
-
-- Usuario solicita review periódico
-- Ha pasado 1+ mes desde el último review en `docs/superpowers/retrospectives/`
-- Se han acumulado 5+ execution logs sin analizar
-
-#### The Process
-
-1. **Recopilar datos:**
-   - Leer todos los `docs/superpowers/execution-logs/` del periodo
-   - Ejecutar `php bin/console app:learning:metrics --period=30d` (si disponible)
-   - Leer entradas recientes de `docs/decisions/log.md`
-
-2. **Analizar patrones:**
-   - Accuracy de estimaciones (over/under ratio)
-   - Frecuencia y categorías de blockers
-   - Outcomes de decisiones de diseño
-   - Métricas de negocio (km saved, delivery rate, optimizer performance)
-
-3. **Producir review:**
-   - Escribir en `docs/superpowers/retrospectives/YYYY-MM-review.md`
-   - Usar template de `docs/superpowers/templates/retrospective-review-template.md`
-
-4. **Actuar:**
-   - Actualizar `docs/knowledge/` con nuevos patrones descubiertos
-   - Proponer actualizaciones a CLAUDE.md (presentar al usuario para aprobación)
-   - Ajustar factores de calibración de estimaciones
-   - Commit y push de todos los cambios
-
-#### Red Flags
-
-- Producir review sin datos suficientes (menos de 3 execution logs)
-- No actuar sobre los hallazgos (review sin acciones = review inútil)
-- Modificar CLAUDE.md sin aprobación del usuario
+### Skills 7-15 (referencia completa en `docs/knowledge/superpowers-skills.md`)
+
+| Skill | Trigger |
+|-------|---------|
+| 7: TDD | Antes de implementar cualquier feature o bugfix |
+| 8: Systematic Debugging | Al encontrar bug, test failure, o comportamiento inesperado |
+| 9: Verification | Antes de declarar trabajo completado |
+| 10: Receiving Code Review | Al recibir feedback de code review |
+| 11: Requesting Code Review | Al completar feature o antes de merge |
+| 12: Finishing Branch | Al completar implementación |
+| 13: Git Worktrees | Para aislar feature work |
+| 14: Writing Skills | Al crear o editar skills |
+| 15: Learning Review | Reviews periódicos de feedback |

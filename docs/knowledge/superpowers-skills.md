@@ -312,6 +312,13 @@ Write the test first. Watch it fail. Write minimal code to pass.
 NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST
 ```
 
+#### Exploration Spike Exception
+
+Spikes de exploración (probar una API, verificar un approach, entender comportamiento) están exentos del Iron Law. **Pero:**
+- El código del spike se ELIMINA antes de implementar con TDD
+- No se commitea código de spike (o se commitea en branch desechable)
+- Al terminar el spike, empezar TDD desde cero
+
 Write code before the test? Delete it. Start over.
 
 **No exceptions:**
@@ -776,3 +783,28 @@ La API de Claude rechaza peticiones con HTTP 400 y mensaje `tool_use ids must be
 5. **Leer TodoWrite** — si había una lista de tareas, verificar cuáles están completadas y cuáles pendientes
 
 **Regla:** Ante este error, NUNCA asumir que el trabajo previo se guardó. Verificar con `git log` y `git status` antes de continuar. Hacer commits más frecuentes es la mejor protección.
+
+---
+
+## Subagent Output Limits (mandatory)
+
+Los subagentes (Agent tool) tienen un límite de lectura de 25,000 tokens en el entorno web. Si el output de un subagente excede este límite, el agente padre no puede leer el resultado y el trabajo se pierde.
+
+### Reglas para subagentes
+
+1. **Límite absoluto:** El output final de cualquier subagente no debe exceder **300 líneas** o **15,000 tokens** (lo que se alcance primero)
+2. **Preferir escribir a archivo:** Si el análisis produce contenido extenso, el subagente debe escribirlo a un archivo en el repo (e.g., `docs/superpowers/agent-outputs/`) y retornar solo un resumen de ~50-100 líneas con la ruta al archivo
+3. **Nunca incluir código fuente completo en el output:** Referenciar archivos y líneas en vez de copiar bloques de código
+4. **Resúmenes ejecutivos:** Todo output de subagente debe empezar con un resumen de 5-10 líneas con los hallazgos clave
+
+### Reglas para el agente principal (al despachar subagentes)
+
+1. **Incluir en CADA prompt de subagente:** "Tu output final no debe exceder 200 líneas. Si necesitas documentar más, escribe a un archivo y retorna la ruta."
+2. **Para agentes Explore:** Pedir hallazgos específicos, no dumps de código
+3. **Para agentes Plan:** Pedir plan conciso con file paths y pasos, sin código completo inline
+
+### Anti-patterns
+
+- Subagente que retorna el contenido completo de múltiples archivos → referenciar paths y líneas
+- Subagente que lista todos los resultados de grep/glob → filtrar y resumir
+- Plan de 500+ líneas con código completo inline → extraer código a archivos, plan solo con referencias
