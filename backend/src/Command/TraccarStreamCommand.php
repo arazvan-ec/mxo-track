@@ -8,7 +8,7 @@ use App\Entity\Vehicle;
 use App\Entity\VehicleCheckpoint;
 use App\Service\TraccarIngestionService;
 use App\Tracking\DevicePosition;
-use App\Tracking\GpsDeviceProviderInterface;
+use App\Tracking\GpsPositionProviderInterface;
 use App\Service\TraccarWebSocketClient;
 use DateInterval;
 use DateTimeImmutable;
@@ -26,7 +26,7 @@ class TraccarStreamCommand extends Command
 
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
-        private readonly GpsDeviceProviderInterface $gpsProvider,
+        private readonly GpsPositionProviderInterface $gpsProvider,
         private readonly TraccarIngestionService $ingestionService,
         private readonly TraccarWebSocketClient $webSocketClient,
     ) {

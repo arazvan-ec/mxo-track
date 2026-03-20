@@ -6,11 +6,11 @@ namespace App\Tests\Unit\EventListener\Domain;
 
 use App\Domain\Event\DeviationDetected;
 use App\Entity\Customer;
-use App\Entity\RealtimeEvent;
 use App\Entity\Route;
 use App\EventListener\Domain\DeviationAlertListener;
+use App\Realtime\RealtimePublisherInterface;
+use App\Realtime\SseMessage;
 use App\Repository\RouteRepository;
-use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -19,18 +19,18 @@ use PHPUnit\Framework\TestCase;
 final class DeviationAlertListenerTest extends TestCase
 {
     private RouteRepository $routeRepo;
-    private EntityManagerInterface $em;
+    private RealtimePublisherInterface $publisher;
     private DeviationAlertListener $listener;
 
     protected function setUp(): void
     {
         $this->routeRepo = $this->createMock(RouteRepository::class);
-        $this->em = $this->createMock(EntityManagerInterface::class);
-        $this->listener = new DeviationAlertListener($this->routeRepo, $this->em);
+        $this->publisher = $this->createMock(RealtimePublisherInterface::class);
+        $this->listener = new DeviationAlertListener($this->routeRepo, $this->publisher);
     }
 
     #[Test]
-    public function persistsRealtimeEventOnDeviation(): void
+    public function publishesRealtimeEventOnDeviation(): void
     {
         $customer = new Customer('Test Co');
         $route = new Route('Ruta Norte');
@@ -39,15 +39,13 @@ final class DeviationAlertListenerTest extends TestCase
 
         $this->routeRepo->method('findOneByPublicId')->willReturn($route);
 
-        $this->em->expects(self::once())
-            ->method('persist')
-            ->with(self::callback(function (RealtimeEvent $e): bool {
-                return $e->getEventType() === 'deviation_detected'
-                    && str_contains($e->getData()['message'], 'Ruta Norte')
-                    && $e->getData()['distance_meters'] === 800.0;
+        $this->publisher->expects(self::once())
+            ->method('publish')
+            ->with(self::callback(function (SseMessage $msg): bool {
+                return $msg->type === 'deviation_detected'
+                    && str_contains($msg->data['message'], 'Ruta Norte')
+                    && $msg->data['distance_meters'] === 800.0;
             }));
-
-        $this->em->expects(self::once())->method('flush');
 
         $event = new DeviationDetected(
             routePublicId: $route->getPublicIdString(),
@@ -66,7 +64,7 @@ final class DeviationAlertListenerTest extends TestCase
     {
         $this->routeRepo->method('findOneByPublicId')->willReturn(null);
 
-        $this->em->expects(self::never())->method('persist');
+        $this->publisher->expects(self::never())->method('publish');
 
         $event = new DeviationDetected(
             routePublicId: 'nonexistent',
@@ -89,7 +87,7 @@ final class DeviationAlertListenerTest extends TestCase
 
         $this->routeRepo->method('findOneByPublicId')->willReturn($route);
 
-        $this->em->expects(self::never())->method('persist');
+        $this->publisher->expects(self::never())->method('publish');
 
         $event = new DeviationDetected(
             routePublicId: $route->getPublicIdString(),

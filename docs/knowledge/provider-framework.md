@@ -52,17 +52,28 @@ Si no hay CustomerIntegration configurada → usa el provider default (env var).
 |----------|---------------|
 | `RoutingEngineInterface` | `calculateRoute(Coordinate $from, Coordinate $to): RouteResult` |
 | `RouteOptimizerInterface` | `optimize(array $shipments, array $vehicles, ?Coordinate $depot): OptimizationResult` |
-| `GpsDeviceProviderInterface` | `getDevices()`, `createDevice()`, `getPositions()`, `login()`, `getSessionCookie()` |
-| `RealtimePublisherInterface` | `publish(string $topic, array $data): void` |
+| `GpsPositionProviderInterface` | `getPositions()`, `isAvailable()` |
+| `GpsDeviceManagerInterface` | `login()`, `getSessionCookie()`, `getDevices()`, `createDevice()` |
+| `RealtimePublisherInterface` | `publish(SseMessage $message): void`, `publishBatch(array $messages): void` |
+
+### GPS Provider Split (ISP/LSP)
+
+`GpsDeviceProviderInterface` was split into two cohesive interfaces:
+- `GpsPositionProviderInterface`: Implemented by ALL GPS providers (Traccar, Webhook, Null). Methods: `getPositions()`, `isAvailable()`.
+- `GpsDeviceManagerInterface`: Implemented ONLY by Traccar (pull-based device management). Methods: `login()`, `getSessionCookie()`, `getDevices()`, `createDevice()`.
+
+`WebhookGpsProvider` only implements `GpsPositionProviderInterface` — no more stubs.
 
 ### TenantAware Proxies
 
-Cada interfaz tiene un proxy que implementa la misma interfaz:
+Proxy per interfaz para resolución per-tenant:
 
 - `TenantAwareRoutingEngine` → `RoutingEngineInterface`
 - `TenantAwareRouteOptimizer` → `RouteOptimizerInterface`
-- `TenantAwareGpsDeviceProvider` → `GpsDeviceProviderInterface`
+- `TenantAwareGpsPositionProvider` → `GpsPositionProviderInterface`
 - `TenantAwareRealtimePublisher` → `RealtimePublisherInterface`
+
+`GpsDeviceManagerInterface` no tiene proxy — se resuelve directamente a `TraccarGpsProvider` ya que device management es inherentemente Traccar-específico.
 
 Los proxies están registrados como alias en `services.yaml`.
 
@@ -122,8 +133,8 @@ Almacena la configuración de providers por tenant:
 
 ## Deuda Técnica
 
-- **GpsDeviceProviderInterface**: `login()` y `getSessionCookie()` son Traccar-específicos. Webhook usa stubs (no-op).
-- **Mercure listeners**: `MercurePositionListener` y `MercureRouteProgressListener` usan `HubInterface` directamente en vez de `RealtimePublisherInterface`.
+- ~~**GpsDeviceProviderInterface**: `login()` y `getSessionCookie()` son Traccar-específicos. Webhook usa stubs (no-op).~~ **RESUELTO:** Split en `GpsPositionProviderInterface` + `GpsDeviceManagerInterface`.
+- ~~**Mercure listeners**: Servicios usaban `HubInterface` directamente en vez de `RealtimePublisherInterface`.~~ **RESUELTO:** Todos los servicios migrados a `RealtimePublisherInterface`. `HubInterface` solo en `MercurePublisher` y `MercureFactory` (infraestructura).
 - **Sin encriptación**: API keys en `CustomerIntegration.config` almacenadas en JSON plano.
 - **Sin circuit breaker**: No hay mecanismo automático si un provider externo falla.
 
@@ -131,3 +142,4 @@ Almacena la configuración de providers por tenant:
 
 - 2026-03-11: Creación inicial
 - 2026-03-11: Eliminado Haversine provider, Google Directions como default
+- 2026-03-19: GPS interface split (ISP/LSP fix) + Mercure abstraction cleanup

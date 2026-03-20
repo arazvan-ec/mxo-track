@@ -15,8 +15,8 @@ use App\Tracking\DevicePosition;
 use DateTimeImmutable;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\Mercure\HubInterface;
-use Symfony\Component\Mercure\Update;
+use App\Realtime\RealtimePublisherInterface;
+use App\Realtime\SseMessage;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 use Throwable;
 
@@ -24,7 +24,7 @@ final class TraccarIngestionService
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
-        private readonly HubInterface $hub,
+        private readonly RealtimePublisherInterface $publisher,
         private readonly EventDispatcherInterface $eventDispatcher,
     ) {
     }
@@ -91,9 +91,8 @@ final class TraccarIngestionService
             }
 
             try {
-                $this->hub->publish(new Update(
-                    sprintf('/vehicles/%s/position', $vehicle->getPublicIdString()),
-                    json_encode([
+                $this->publisher->publish(new SseMessage(
+                    data: [
                         'vehicleId' => $vehicle->getPublicIdString(),
                         'lat' => $lat,
                         'lng' => $lng,
@@ -102,7 +101,8 @@ final class TraccarIngestionService
                         'accuracy' => $accuracy,
                         'deviceTime' => $deviceTime->format(DATE_ATOM),
                         'receivedAt' => $serverTime->format(DATE_ATOM),
-                    ], JSON_THROW_ON_ERROR),
+                    ],
+                    topics: [sprintf('/vehicles/%s/position', $vehicle->getPublicIdString())],
                 ));
             } catch (Throwable) {
                 // no romper ingesta por fallo temporal de Mercure

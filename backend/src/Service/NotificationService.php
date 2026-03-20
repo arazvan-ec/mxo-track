@@ -9,15 +9,15 @@ use App\Entity\Notification;
 use App\Entity\User;
 use App\Repository\NotificationRepository;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\Mercure\HubInterface;
-use Symfony\Component\Mercure\Update;
+use App\Realtime\RealtimePublisherInterface;
+use App\Realtime\SseMessage;
 
 final class NotificationService
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly NotificationRepository $notificationRepository,
-        private readonly HubInterface $hub,
+        private readonly RealtimePublisherInterface $publisher,
     ) {
     }
 
@@ -71,17 +71,16 @@ final class NotificationService
     {
         try {
             $unreadCount = $this->notificationRepository->countUnreadForUser($user);
-            $topic = sprintf('/users/%s/notifications', $user->getId());
 
-            $this->hub->publish(new Update(
-                $topic,
-                (string) json_encode([
+            $this->publisher->publish(new SseMessage(
+                data: [
                     'type' => 'notification_count',
                     'unread_count' => $unreadCount,
-                ], JSON_THROW_ON_ERROR),
+                ],
+                topics: [sprintf('/users/%s/notifications', $user->getId())],
             ));
         } catch (\Throwable) {
-            // Mercure publish failure should not break the notification flow
+            // Publish failure should not break the notification flow
         }
     }
 }

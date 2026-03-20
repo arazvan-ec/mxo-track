@@ -18,24 +18,24 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\Mercure\HubInterface;
-use Symfony\Component\Mercure\Update;
+use App\Realtime\RealtimePublisherInterface;
+use App\Realtime\SseMessage;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 #[CoversClass(TraccarIngestionService::class)]
 final class TraccarIngestionServiceTest extends TestCase
 {
     private EntityManagerInterface&MockObject $entityManager;
-    private HubInterface&MockObject $hub;
+    private RealtimePublisherInterface&MockObject $publisher;
     private EventDispatcherInterface&MockObject $eventDispatcher;
     private TraccarIngestionService $service;
 
     protected function setUp(): void
     {
         $this->entityManager = $this->createMock(EntityManagerInterface::class);
-        $this->hub = $this->createMock(HubInterface::class);
+        $this->publisher = $this->createMock(RealtimePublisherInterface::class);
         $this->eventDispatcher = $this->createMock(EventDispatcherInterface::class);
-        $this->service = new TraccarIngestionService($this->entityManager, $this->hub, $this->eventDispatcher);
+        $this->service = new TraccarIngestionService($this->entityManager, $this->publisher, $this->eventDispatcher);
     }
 
     #[Test]
@@ -81,9 +81,9 @@ final class TraccarIngestionServiceTest extends TestCase
         $this->entityManager->expects(self::once())
             ->method('flush');
 
-        $this->hub->expects(self::once())
+        $this->publisher->expects(self::once())
             ->method('publish')
-            ->with(self::isInstanceOf(Update::class));
+            ->with(self::isInstanceOf(SseMessage::class));
 
         $positions = [
             new DevicePosition(
@@ -322,9 +322,9 @@ final class TraccarIngestionServiceTest extends TestCase
         $this->entityManager->method('persist');
         $this->entityManager->method('flush');
 
-        // Mercure hub throws an exception
-        $this->hub->method('publish')
-            ->willThrowException(new \RuntimeException('Mercure hub unavailable'));
+        // Publisher throws an exception
+        $this->publisher->method('publish')
+            ->willThrowException(new \RuntimeException('Publisher unavailable'));
 
         $positions = [
             new DevicePosition(

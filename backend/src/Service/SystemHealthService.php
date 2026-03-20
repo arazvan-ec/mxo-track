@@ -6,7 +6,7 @@ namespace App\Service;
 
 use App\Routing\Coordinate;
 use App\Routing\OsrmRoutingEngine;
-use App\Tracking\GpsDeviceProviderInterface;
+use App\Tracking\GpsPositionProviderInterface;
 use Doctrine\DBAL\Connection;
 use Predis\Client as RedisClient;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
@@ -15,7 +15,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 final class SystemHealthService
 {
     public function __construct(
-        private readonly GpsDeviceProviderInterface $gpsProvider,
+        private readonly GpsPositionProviderInterface $gpsProvider,
         private readonly HttpClientInterface $httpClient,
         private readonly Connection $connection,
         private readonly RedisClient $redis,

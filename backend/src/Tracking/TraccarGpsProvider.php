@@ -8,7 +8,7 @@ use Psr\Log\LoggerInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
-final class TraccarGpsProvider implements GpsDeviceProviderInterface
+final class TraccarGpsProvider implements GpsPositionProviderInterface, GpsDeviceManagerInterface
 {
     private ?string $cookie = null;
 
