@@ -39,6 +39,68 @@ final class RoutePerformanceMetricRepository extends ServiceEntityRepository
     }
 
     /**
+     * Get aggregate metrics scoped to a specific customer.
+     *
+     * @return array{total_km_saved: ?string, total_time_saved_minutes: ?int, avg_delivery_success_rate: ?string, avg_savings_percent: ?string, routes_with_metrics: int}
+     */
+    public function getCustomerAggregateMetrics(Customer $customer, \DateTimeImmutable $since): array
+    {
+        $result = $this->createQueryBuilder('m')
+            ->select(
+                'SUM(m.kmSaved) as total_km_saved',
+                'SUM(m.timeSavedMinutes) as total_time_saved_minutes',
+                'AVG(m.deliverySuccessRate) as avg_delivery_success_rate',
+                'AVG(m.planAccuracyPercent) as avg_savings_percent',
+                'COUNT(m.id) as routes_with_metrics',
+            )
+            ->where('m.customer = :customer')
+            ->andWhere('m.createdAt >= :since')
+            ->setParameter('customer', $customer)
+            ->setParameter('since', $since)
+            ->getQuery()
+            ->getSingleResult();
+
+        return [
+            'total_km_saved' => $result['total_km_saved'],
+            'total_time_saved_minutes' => $result['total_time_saved_minutes'] !== null ? (int) $result['total_time_saved_minutes'] : null,
+            'avg_delivery_success_rate' => $result['avg_delivery_success_rate'],
+            'avg_savings_percent' => $result['avg_savings_percent'],
+            'routes_with_metrics' => (int) $result['routes_with_metrics'],
+        ];
+    }
+
+    /**
+     * Get aggregate metrics for a customer within a specific date range (for billing).
+     *
+     * @return array{total_km_saved: ?string, total_time_saved_minutes: ?int, avg_savings_percent: ?string, routes_with_metrics: int}
+     */
+    public function getCustomerPeriodAggregates(Customer $customer, \DateTimeInterface $from, \DateTimeInterface $to): array
+    {
+        $result = $this->createQueryBuilder('m')
+            ->select(
+                'SUM(m.kmSaved) as total_km_saved',
+                'SUM(m.timeSavedMinutes) as total_time_saved_minutes',
+                'AVG(m.planAccuracyPercent) as avg_savings_percent',
+                'COUNT(m.id) as routes_with_metrics',
+            )
+            ->where('m.customer = :customer')
+            ->andWhere('m.createdAt >= :from')
+            ->andWhere('m.createdAt <= :to')
+            ->setParameter('customer', $customer)
+            ->setParameter('from', $from)
+            ->setParameter('to', $to)
+            ->getQuery()
+            ->getSingleResult();
+
+        return [
+            'total_km_saved' => $result['total_km_saved'],
+            'total_time_saved_minutes' => $result['total_time_saved_minutes'] !== null ? (int) $result['total_time_saved_minutes'] : null,
+            'avg_savings_percent' => $result['avg_savings_percent'],
+            'routes_with_metrics' => (int) $result['routes_with_metrics'],
+        ];
+    }
+
+    /**
      * Get aggregate metrics for a period, optionally filtered by optimizer.
      *
      * @return array{avg_delivery_rate: ?string, avg_km_saved: ?string, total_routes: int, avg_plan_accuracy: ?string}
