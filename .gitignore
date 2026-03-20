@@ -61,3 +61,4 @@ docker/osrm/data/*
 !docker/osrm/data/.gitkeep
 .claude/worktrees/
 .claude/active-spec
+.claude/session-state.json
