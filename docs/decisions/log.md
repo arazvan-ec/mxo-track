@@ -46,6 +46,20 @@ Registro de decisiones de diseño significativas. Cada entrada captura el contex
 - **Alternativas descartadas:** (A) Dos componentes separados — YAGNI, más indirección. (B) CSS-only responsive — backdrop necesita lógica JS condicional.
 - **Resultado:** Build OK, 0 errores. Nav sidebar inline en desktop, overlay preservado en mobile.
 
+### [2026-03-19] User.php SRP — decisión consciente de no refactorizar
+
+- **Problema:** User.php mezcla 5 responsabilidades: identidad (email), autenticación (passwordHash), autorización (roles), multi-tenancy (customer relationship), y lifecycle (timestamps). Esto viola Single Responsibility Principle.
+- **Decisión:** NO refactorizar. User está en contexto pragmático (Identity/Auth). El costo de separar responsabilidades (rompe Symfony Security integration, requiere Identity value object, auth adapter, tenant resolver) supera el beneficio. La clase tiene 111 líneas — es compacta y estable.
+- **Alternativas descartadas:** (A) Extraer UserIdentity + UserAuth + TenantMembership — over-engineering para una clase estable de 111 líneas. (B) Migrar a DDD POPO — rompe UserInterface/PasswordAuthenticatedUserInterface de Symfony.
+- **Resultado:** Documentado como deuda técnica aceptada. Trigger para revisitar: si User.php supera 500 líneas o necesita una 6ta responsabilidad.
+
+### [2026-03-19] Provider framework codegen — trigger no alcanzado
+
+- **Problema:** El backlog arquitectónico define trigger de codegen/proxy genérico cuando >6 proxies TenantAware existen.
+- **Decisión:** No implementar codegen. Actualmente hay 5 proxies TenantAware (GpsProvider, RealtimePublisher, RouteOptimizer, RoutingEngine, SmsTransport). El trigger (>6) no se ha alcanzado.
+- **Alternativas descartadas:** Implementar codegen proactivamente — YAGNI, solo hay 5 proxies y el boilerplate es manejable.
+- **Resultado:** Re-evaluar cuando Fase 7 (user-configurable providers) añada proxies adicionales. Si el total supera 6, diseñar proxy genérico o codegen.
+
 ### [2026-03-20] Process enforcement — 3 puntos de control mecánicos
 
 - **Problema:** CLAUDE.md tiene 15 reglas mandatorias de proceso. Solo 2 tenían enforcement mecánico (spec+plan via full-flow-gate.sh). Session B saltó brainstorming, learning loop, execution log y retrospectiva sin que nada lo bloqueara.
