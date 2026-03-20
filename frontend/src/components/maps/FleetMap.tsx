@@ -82,6 +82,7 @@ export const FleetMap = forwardRef<FleetMapHandle, Props>(function FleetMap(
             sequence={stop.sequence}
             status={stop.status}
             address={stop.address}
+            routeColor={activeStops.color ?? '#3B82F6'}
           />
         ) : null,
       )}

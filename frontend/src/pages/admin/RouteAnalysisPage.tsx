@@ -283,7 +283,7 @@ export function RouteAnalysisPage() {
         )}
 
         {/* Stop markers */}
-        <StopMarkersLayer stops={mappedStops} keyPrefix="analysis-" />
+        <StopMarkersLayer stops={mappedStops} keyPrefix="analysis-" routeColor="#3b82f6" />
       </MapCanvas>
     </DualMenuShell>
   );

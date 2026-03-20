@@ -8,10 +8,15 @@ interface Props {
   status: string;
   address: string;
   onClick?: () => void;
+  /** Override color for PENDING stops to match route color */
+  routeColor?: string;
 }
 
-export function StopMarker({ lng, lat, sequence, status, address, onClick }: Props) {
-  const color = STOP_STATUS_COLORS[status] ?? STOP_STATUS_COLORS.pending;
+export function StopMarker({ lng, lat, sequence, status, address, onClick, routeColor }: Props) {
+  // Use route color for PENDING stops; delivered/exception/skipped keep their status color
+  const color = (status === 'PENDING' || status === 'pending') && routeColor
+    ? routeColor
+    : STOP_STATUS_COLORS[status] ?? STOP_STATUS_COLORS.pending;
 
   return (
     <Marker longitude={lng} latitude={lat} onClick={onClick} anchor="center">

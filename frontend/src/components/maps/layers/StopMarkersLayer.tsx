@@ -12,13 +12,15 @@ interface Props {
   stops: StopData[];
   keyPrefix?: string;
   onStopClick?: (sequence: number) => void;
+  /** Color PENDING stop markers to match their route */
+  routeColor?: string;
 }
 
 /**
  * Renders N stop markers on the map.
  * Generic layer — works with any data source that provides StopData.
  */
-export function StopMarkersLayer({ stops, keyPrefix = '', onStopClick }: Props) {
+export function StopMarkersLayer({ stops, keyPrefix = '', onStopClick, routeColor }: Props) {
   return (
     <>
       {stops.map((stop) =>
@@ -31,6 +33,7 @@ export function StopMarkersLayer({ stops, keyPrefix = '', onStopClick }: Props) 
             status={stop.status}
             address={stop.address}
             onClick={() => onStopClick?.(stop.sequence)}
+            routeColor={routeColor}
           />
         ) : null,
       )}
