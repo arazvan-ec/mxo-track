@@ -1,5 +1,18 @@
 {
   "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/user/mxo-track/.claude/hooks/session-start.sh",
+            "timeout": 5,
+            "statusMessage": "Initializing session state..."
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Edit|Write",
@@ -16,7 +29,22 @@
     "PostToolUse": [
       {
         "matcher": "Write|Edit",
-        "command": "bash -c 'FILE=\"$CLAUDE_TOOL_INPUT_FILE_PATH\"; if [[ \"$FILE\" == /root/.claude/plans/* ]]; then BASENAME=$(basename \"$FILE\"); DATE=$(date +%Y-%m-%d); DEST_DIR=\"/home/user/mxo-track/docs/superpowers/plans/conversation\"; mkdir -p \"$DEST_DIR\"; DEST=\"$DEST_DIR/${DATE}-${BASENAME}\"; cp \"$FILE\" \"$DEST\" && cd /home/user/mxo-track && git add \"$DEST\" && git commit -m \"docs: persist conversation plan ${DATE}-${BASENAME}\" && git push; fi'"
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'FILE=\"$CLAUDE_TOOL_INPUT_FILE_PATH\"; if [[ \"$FILE\" == /root/.claude/plans/* ]]; then BASENAME=$(basename \"$FILE\"); DATE=$(date +%Y-%m-%d); DEST_DIR=\"/home/user/mxo-track/docs/superpowers/plans/conversation\"; mkdir -p \"$DEST_DIR\"; DEST=\"$DEST_DIR/${DATE}-${BASENAME}\"; cp \"$FILE\" \"$DEST\" && cd /home/user/mxo-track && git add \"$DEST\" && git commit -m \"docs: persist conversation plan ${DATE}-${BASENAME}\" && git push; fi'"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/user/mxo-track/.claude/hooks/post-commit-reminder.sh",
+            "timeout": 5
+          }
+        ]
       }
     ]
   },
