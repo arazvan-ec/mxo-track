@@ -12,7 +12,74 @@ set -euo pipefail
 
 REPO="/home/user/mxo-track"
 STATE_FILE="$REPO/.claude/session-state.json"
+CONTEXT_FILE="$REPO/.claude/session-context.md"
 TODAY=$(date +%Y-%m-%d)
+
+# --- Generate session context (always, on every start/resume) ---
+{
+  echo "# Session Context"
+  echo ""
+  echo "> Auto-generated at $(date '+%Y-%m-%d %H:%M'). Read this first for recent context."
+  echo ""
+
+  # Recent commits
+  echo "## Recent Commits"
+  echo ""
+  echo '```'
+  cd "$REPO" && git log --oneline -15 2>/dev/null || echo "(no git history)"
+  echo '```'
+  echo ""
+
+  # Working tree status
+  echo "## Working Tree Status"
+  echo ""
+  echo '```'
+  cd "$REPO" && git status --short 2>/dev/null || echo "(no git repo)"
+  echo '```'
+  echo ""
+
+  # Active branches
+  echo "## Active Branches"
+  echo ""
+  echo '```'
+  cd "$REPO" && git branch -v --sort=-committerdate 2>/dev/null | head -10 || echo "(none)"
+  echo '```'
+  echo ""
+
+  # Recent decisions (last 5 entries from log.md)
+  DECISIONS_LOG="$REPO/docs/decisions/log.md"
+  if [ -f "$DECISIONS_LOG" ]; then
+    echo "## Recent Decisions"
+    echo ""
+    # Extract last 5 ### headers with their content (up to 30 lines)
+    grep -n "^### " "$DECISIONS_LOG" 2>/dev/null | tail -5 | while IFS=: read -r lineno _rest; do
+      sed -n "${lineno},$((lineno+5))p" "$DECISIONS_LOG"
+      echo ""
+    done
+  fi
+
+  # Latest execution log
+  EXEC_LOGS_DIR="$REPO/docs/superpowers/execution-logs"
+  if [ -d "$EXEC_LOGS_DIR" ]; then
+    LATEST_LOG=$(ls -t "$EXEC_LOGS_DIR"/*.md 2>/dev/null | head -1)
+    if [ -n "$LATEST_LOG" ]; then
+      echo "## Latest Execution Log"
+      echo ""
+      echo "File: \`$(basename "$LATEST_LOG")\`"
+      echo ""
+      head -20 "$LATEST_LOG" 2>/dev/null
+      echo ""
+      echo "_(truncated — read full file for details)_"
+    fi
+  fi
+} > "$CONTEXT_FILE" 2>/dev/null || true
+
+# --- Output context so Claude sees it directly (no Read needed) ---
+if [ -f "$CONTEXT_FILE" ]; then
+  cat "$CONTEXT_FILE"
+fi
+
+# --- Session state management ---
 
 # Only reset if the session date has changed (new day) or file doesn't exist
 if [ -f "$STATE_FILE" ]; then
