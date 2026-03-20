@@ -334,6 +334,7 @@ class RoutePlannerController extends AbstractController
         $originPublicId = $payload['origin_public_id'] ?? null;
         $maxStopsPerRoute = (int) ($payload['max_stops_per_route'] ?? 30);
         $optimizerName = $payload['optimizer_name'] ?? null;
+        $calibratedServiceTimes = $payload['calibrated_service_times'] ?? null;
 
         if (\count($shipmentIds) === 0) {
             return new JsonResponse(['error' => 'Se requiere al menos un envio.'], 400);
@@ -349,6 +350,7 @@ class RoutePlannerController extends AbstractController
             originPublicId: $originPublicId !== '' ? $originPublicId : null,
             maxStopsPerRoute: $maxStopsPerRoute,
             optimizerName: \is_string($optimizerName) && $optimizerName !== '' ? $optimizerName : null,
+            serviceTimeOverrides: \is_array($calibratedServiceTimes) ? $calibratedServiceTimes : null,
         );
 
         try {

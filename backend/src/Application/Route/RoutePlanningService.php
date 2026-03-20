@@ -149,6 +149,7 @@ final readonly class RoutePlanningService
             $origin,
             $input->maxStopsPerRoute,
             $optimizerOverride,
+            $input->serviceTimeOverrides,
         );
 
         $this->em->flush();
