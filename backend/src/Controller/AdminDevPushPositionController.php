@@ -10,15 +10,15 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Mercure\HubInterface;
-use Symfony\Component\Mercure\Update;
+use App\Realtime\RealtimePublisherInterface;
+use App\Realtime\SseMessage;
 use Symfony\Component\Routing\Annotation\Route;
 
 #[Route('/admin/dev')]
 final class AdminDevPushPositionController extends AbstractController
 {
     #[Route('/push-position', name: 'admin_dev_push_position', methods: ['POST'])]
-    public function __invoke(Request $request, HubInterface $hub): JsonResponse
+    public function __invoke(Request $request, RealtimePublisherInterface $publisher): JsonResponse
     {
         $this->denyAccessUnlessGranted('ROLE_ADMIN');
 
@@ -69,7 +69,7 @@ final class AdminDevPushPositionController extends AbstractController
         ];
 
         $topic = sprintf('/vehicles/%s/position', $vehicleId);
-        $hub->publish(new Update($topic, json_encode($payload, JSON_THROW_ON_ERROR)));
+        $publisher->publish(new SseMessage(data: $payload, topics: [$topic]));
 
         return $this->json([
             'ok' => true,
