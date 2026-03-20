@@ -29,7 +29,7 @@ class CustomerIntegration implements CustomerScopedEntityInterface
     #[ORM\Column(length: 50)]
     private string $providerType;
 
-    #[ORM\Column(type: Types::JSON)]
+    #[ORM\Column(type: 'encrypted_json')]
     private array $config;
 
     #[ORM\Column]

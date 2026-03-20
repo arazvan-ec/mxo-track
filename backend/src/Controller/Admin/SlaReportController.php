@@ -12,6 +12,8 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
+use Dompdf\Dompdf;
+use Dompdf\Options;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[Route('/admin/reports/sla')]
@@ -68,12 +70,6 @@ class SlaReportController extends AbstractController
         ]);
     }
 
-    /**
-     * Export SLA report as a printable HTML page (PDF-ready).
-     *
-     * TODO: Integrate DomPDF to return actual PDF response once the library is installed via composer.
-     * For now, renders an HTML view suitable for printing / saving as PDF from the browser.
-     */
     #[Route('/export', name: 'admin_reports_sla_export', methods: ['GET'])]
     public function export(Request $request): Response
     {
@@ -89,11 +85,25 @@ class SlaReportController extends AbstractController
 
         $sla = $this->slaMetricsService->calculateSla($customer, $from, $to);
 
-        return $this->render('admin/reports/sla_export.html.twig', [
+        $html = $this->renderView('admin/reports/sla_export.html.twig', [
             'sla' => $sla,
             'customer_name' => $customer?->getName() ?? 'Todos los clientes',
             'from' => $from,
             'to' => $to,
+        ]);
+
+        $options = new Options();
+        $options->setDefaultFont('Helvetica');
+        $options->setIsRemoteEnabled(false);
+
+        $dompdf = new Dompdf($options);
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+
+        return new Response($dompdf->output(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="sla-report.pdf"',
         ]);
     }
 
