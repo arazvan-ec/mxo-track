@@ -47,6 +47,12 @@
         "hooks": [
           {
             "type": "command",
+            "command": "/home/user/mxo-track/.claude/hooks/commit-msg-lint.sh",
+            "timeout": 5,
+            "statusMessage": "Checking commit message format..."
+          },
+          {
+            "type": "command",
             "command": "/home/user/mxo-track/.claude/hooks/post-commit-reminder.sh",
             "timeout": 5
           },

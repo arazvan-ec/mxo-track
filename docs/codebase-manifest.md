@@ -3,14 +3,14 @@
 > **Auto-generated** by `make manifest` (`backend/bin/generate-manifest.sh`).
 > Do not edit manually — regenerate with `make manifest`.
 
-**Generated:** 2026-03-20 02:14
+**Generated:** 2026-03-20 12:44
 **Regenerate:** `make manifest`
 
 ## Project Overview
 
 | Area | Path | Files | Tech |
 |------|------|------:|------|
-| Backend | `backend/` | 498 PHP | Symfony 7.4, PHP 8.4 |
+| Backend | `backend/` | 501 PHP | Symfony 7.4, PHP 8.4 |
 | Frontend | `frontend/` | 59 JS/TS | React |
 | ML Service | `ml-service/` | 17 Python | FastAPI |
 | Docker/Infra | `docker/` + `scripts/` | 9 + 5 | Docker, OSRM, VROOM, Traccar |
@@ -30,14 +30,14 @@
 | **Enums total** | **21** |
 | Controllers | 61 |
 | Application Services (src/Application/) | 23 |
-| Domain/Infra Services (src/Service/) | 72 |
+| Domain/Infra Services (src/Service/) | 73 |
 | Repositories | 18 |
 | Console Commands | 18 |
 | DTOs | 17 |
 | Event Listeners | 11 |
 | Messenger Messages | 4 |
 | Message Handlers | 4 |
-| Tests | 117 |
+| Tests | 125 |
 | Migrations | 33 |
 
 ## Entity List

@@ -10,6 +10,11 @@
 # 5. The spec file it references actually exists
 # 6. A plan file for today exists in docs/superpowers/plans/
 #
+# Self-gating (full-flow only):
+# 7. Nivel 1: Spec ≥500 bytes + keywords reales; Plan ≥300 bytes + estructura
+# 8. Nivel 2: brainstorm_user_turns ≥ 2 (ida y vuelta real con usuario)
+# 9. Nivel 3: Archivo editado debe estar mencionado en el plan
+#
 # Bypasses:
 # - Files outside frontend/src and backend/src (docs, tests, config, migrations, etc.)
 # - flow_type "micro" or "light" skip checks 4-6 (no spec/plan needed)
@@ -106,8 +111,75 @@ fi
 
 # ── Check 6: a plan file for today exists ──
 
-if ! ls "$PLANS_DIR"/${TODAY}-*.md 1>/dev/null 2>&1; then
+# Prefer active_plan from session state; fall back to any plan for today
+ACTIVE_PLAN=$(jq -r '.active_plan // empty' "$STATE_FILE" 2>/dev/null || true)
+PLAN_FILE=""
+
+if [ -n "$ACTIVE_PLAN" ]; then
+  if [ -f "$REPO/$ACTIVE_PLAN" ]; then
+    PLAN_FILE="$REPO/$ACTIVE_PLAN"
+  elif [ -f "$ACTIVE_PLAN" ]; then
+    PLAN_FILE="$ACTIVE_PLAN"
+  fi
+fi
+
+# Fallback: find any plan for today
+if [ -z "$PLAN_FILE" ]; then
+  for f in "$PLANS_DIR"/${TODAY}-*.md; do
+    if [ -f "$f" ]; then
+      PLAN_FILE="$f"
+      break
+    fi
+  done
+fi
+
+if [ -z "$PLAN_FILE" ]; then
   deny "FULL-FLOW GATE: Spec registered but no plan found for today ($TODAY) in docs/superpowers/plans/. Write a plan (Skill 3) before implementing."
+fi
+
+# ── Self-gating Nivel 1: Evidencia verificable en spec y plan ──
+
+if [ "$FLOW_TYPE" = "full" ]; then
+  # Spec must have real content (≥500 bytes) and brainstorming keywords
+  SPEC_FULL_PATH="$REPO/$SPEC_PATH"
+  [ ! -f "$SPEC_FULL_PATH" ] && SPEC_FULL_PATH="$SPEC_PATH"
+
+  SPEC_SIZE=$(wc -c < "$SPEC_FULL_PATH" 2>/dev/null || echo 0)
+  if [ "$SPEC_SIZE" -lt 500 ]; then
+    deny "SELF-GATE Nivel 1: Spec '$SPEC_PATH' tiene solo ${SPEC_SIZE} bytes (minimo 500). Un brainstorming real produce un spec mas sustancial."
+  fi
+
+  if ! grep -qiE '(Approach|Alternativa|Trade-off|Problema|Ventaja|Desventaja|Opcion)' "$SPEC_FULL_PATH" 2>/dev/null; then
+    deny "SELF-GATE Nivel 1: Spec '$SPEC_PATH' no contiene keywords de brainstorming real (Approach|Alternativa|Trade-off|Problema|Ventaja|Desventaja|Opcion). Asegurate de documentar alternativas evaluadas."
+  fi
+
+  # Plan must have real content (≥300 bytes) and structural keywords
+  PLAN_SIZE=$(wc -c < "$PLAN_FILE" 2>/dev/null || echo 0)
+  if [ "$PLAN_SIZE" -lt 300 ]; then
+    deny "SELF-GATE Nivel 1: Plan '$(basename "$PLAN_FILE")' tiene solo ${PLAN_SIZE} bytes (minimo 300). Un plan real tiene tareas con archivos y pasos."
+  fi
+
+  if ! grep -qiE '(Task|Step|File|Archivo|Crear|Modificar|Actualizar)' "$PLAN_FILE" 2>/dev/null; then
+    deny "SELF-GATE Nivel 1: Plan '$(basename "$PLAN_FILE")' no contiene estructura minima (Task|Step|File|Archivo). Escribe un plan con tareas concretas."
+  fi
+fi
+
+# ── Self-gating Nivel 2: Turnos de conversacion durante brainstorming ──
+
+if [ "$FLOW_TYPE" = "full" ]; then
+  BRAINSTORM_TURNS=$(jq -r '.brainstorm_user_turns // 0' "$STATE_FILE" 2>/dev/null || echo 0)
+  if [ "$BRAINSTORM_TURNS" -lt 2 ]; then
+    deny "SELF-GATE Nivel 2: Brainstorming tuvo solo ${BRAINSTORM_TURNS} turnos de conversacion. Minimo 2 turnos de ida y vuelta con el usuario (proponer approaches -> usuario elige -> refinar)."
+  fi
+fi
+
+# ── Self-gating Nivel 3: Coherencia plan<->edit ──
+
+if [ "$FLOW_TYPE" = "full" ] && [ -n "$PLAN_FILE" ] && [ -n "$FILE_PATH" ]; then
+  EDIT_BASENAME=$(basename "$FILE_PATH")
+  if ! grep -qiF "$EDIT_BASENAME" "$PLAN_FILE" 2>/dev/null; then
+    deny "SELF-GATE Nivel 3: Archivo '${EDIT_BASENAME}' no esta mencionado en el plan '$(basename "$PLAN_FILE")'. Actualiza el plan antes de editar archivos no planificados."
+  fi
 fi
 
 # All checks passed
