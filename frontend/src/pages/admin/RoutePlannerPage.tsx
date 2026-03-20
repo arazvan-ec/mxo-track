@@ -11,6 +11,7 @@ import {
   usePlannerImportShipments,
   usePlannerVehicles,
   usePlannerLocations,
+  usePlannerOptimizers,
   useClusterMutation,
   usePreviewMutation,
   useConfirmMutation,
@@ -51,6 +52,7 @@ export function RoutePlannerPage() {
   const [selectedVehicleIds, setSelectedVehicleIds] = useState<Set<string>>(new Set());
   const [originPublicId, setOriginPublicId] = useState('');
   const [maxStopsPerRoute, setMaxStopsPerRoute] = useState(30);
+  const [optimizerName, setOptimizerName] = useState<string>('');
 
   // Step 3 state
   const [previewRoutes, setPreviewRoutes] = useState<PlannerPreviewRoute[]>([]);
@@ -63,6 +65,7 @@ export function RoutePlannerPage() {
   const importShipmentsQuery = usePlannerImportShipments(importId);
   const vehiclesQuery = usePlannerVehicles();
   const locationsQuery = usePlannerLocations(customerId || undefined);
+  const optimizersQuery = usePlannerOptimizers();
 
   // Mutations
   const clusterMutation = useClusterMutation();
@@ -75,6 +78,7 @@ export function RoutePlannerPage() {
     : (shipmentsQuery.data ?? []);
   const vehicles = vehiclesQuery.data ?? [];
   const locations = locationsQuery.data ?? [];
+  const optimizers = optimizersQuery.data ?? [];
 
   // Auto-load shipments from import when import_id is in URL
   const importAutoLoaded = useRef(false);
@@ -185,6 +189,7 @@ export function RoutePlannerPage() {
         vehicle_ids: Array.from(selectedVehicleIds),
         origin_public_id: originPublicId || null,
         max_stops_per_route: maxStopsPerRoute,
+        optimizer_name: optimizerName || null,
       },
       {
         onSuccess: (data) => {
@@ -209,7 +214,7 @@ export function RoutePlannerPage() {
         },
       },
     );
-  }, [selectedShipmentIds, selectedVehicleIds, originPublicId, maxStopsPerRoute, previewMutation]);
+  }, [selectedShipmentIds, selectedVehicleIds, originPublicId, maxStopsPerRoute, optimizerName, previewMutation]);
 
   const loadAllDriverSuggestions = useCallback(async (routes: PlannerPreviewRoute[]) => {
     setLoadingDrivers(true);
@@ -341,11 +346,14 @@ export function RoutePlannerPage() {
               locations={locations}
               originPublicId={originPublicId}
               maxStopsPerRoute={maxStopsPerRoute}
+              optimizers={optimizers}
+              optimizerName={optimizerName}
               isGenerating={previewMutation.isPending}
               onToggleVehicle={handleToggleVehicle}
               onToggleAll={handleToggleAllVehicles}
               onOriginChange={setOriginPublicId}
               onMaxStopsChange={setMaxStopsPerRoute}
+              onOptimizerChange={setOptimizerName}
               onBack={() => setStep(1)}
               onGenerate={handleGeneratePreview}
             />
@@ -689,11 +697,14 @@ interface Step2Props {
   locations: PlannerLocation[];
   originPublicId: string;
   maxStopsPerRoute: number;
+  optimizers: Array<{ name: string; label: string }>;
+  optimizerName: string;
   isGenerating: boolean;
   onToggleVehicle: (id: string) => void;
   onToggleAll: (checked: boolean) => void;
   onOriginChange: (v: string) => void;
   onMaxStopsChange: (v: number) => void;
+  onOptimizerChange: (v: string) => void;
   onBack: () => void;
   onGenerate: () => void;
 }
@@ -705,11 +716,14 @@ function Step2Panel({
   locations,
   originPublicId,
   maxStopsPerRoute,
+  optimizers,
+  optimizerName,
   isGenerating,
   onToggleVehicle,
   onToggleAll,
   onOriginChange,
   onMaxStopsChange,
+  onOptimizerChange,
   onBack,
   onGenerate,
 }: Step2Props) {
@@ -797,6 +811,23 @@ function Step2Panel({
                 className="w-full bg-slate-800/80 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500/50"
               />
             </div>
+            {optimizers.length > 0 && (
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1">Optimizer</label>
+                <select
+                  value={optimizerName}
+                  onChange={(e) => onOptimizerChange(e.target.value)}
+                  className="w-full bg-slate-800/80 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500/50"
+                >
+                  <option value="">Automatic (recommended)</option>
+                  {optimizers.map((opt) => (
+                    <option key={opt.name} value={opt.name}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
         </>
       )}

@@ -50,6 +50,13 @@ export function usePlannerImportShipments(importId?: string) {
   });
 }
 
+export function usePlannerOptimizers() {
+  return useQuery({
+    queryKey: ['planner-optimizers'],
+    queryFn: () => api.get<Array<{ name: string; label: string }>>('/admin/route-planner/optimizers'),
+  });
+}
+
 export function useClusterMutation() {
   return useMutation({
     mutationFn: (payload: { shipment_ids: string[]; num_clusters: number }) =>
@@ -67,6 +74,7 @@ export function usePreviewMutation() {
       vehicle_ids: string[];
       origin_public_id: string | null;
       max_stops_per_route: number;
+      optimizer_name?: string | null;
     }) => api.post<PlannerPreviewResponse>('/admin/route-planner/preview', payload),
   });
 }
