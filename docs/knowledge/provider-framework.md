@@ -134,7 +134,7 @@ Almacena la configuración de providers por tenant:
 ## Deuda Técnica
 
 - ~~**GpsDeviceProviderInterface**: `login()` y `getSessionCookie()` son Traccar-específicos. Webhook usa stubs (no-op).~~ **RESUELTO:** Split en `GpsPositionProviderInterface` + `GpsDeviceManagerInterface`.
-- **Mercure listeners**: `MercurePositionListener` y `MercureRouteProgressListener` usan `HubInterface` directamente en vez de `RealtimePublisherInterface`.
+- ~~**Mercure listeners**: Servicios usaban `HubInterface` directamente en vez de `RealtimePublisherInterface`.~~ **RESUELTO:** Todos los servicios migrados a `RealtimePublisherInterface`. `HubInterface` solo en `MercurePublisher` y `MercureFactory` (infraestructura).
 - **Sin encriptación**: API keys en `CustomerIntegration.config` almacenadas en JSON plano.
 - **Sin circuit breaker**: No hay mecanismo automático si un provider externo falla.
 
@@ -142,3 +142,4 @@ Almacena la configuración de providers por tenant:
 
 - 2026-03-11: Creación inicial
 - 2026-03-11: Eliminado Haversine provider, Google Directions como default
+- 2026-03-19: GPS interface split (ISP/LSP fix) + Mercure abstraction cleanup
