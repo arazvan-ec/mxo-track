@@ -43,8 +43,11 @@
   2. Prop threading was the right call — minimal changes, easy to understand
 - **What didn't:**
   1. Skipped the full-flow process initially, requiring correction mid-task
+  2. Initially skipped spec reviewer and code quality reviewer subagents — caught during self-audit
 - **Lessons for future:**
   1. Always follow the hooks/flow process from the start, even for "simple" UI changes — the hooks exist to enforce discipline
   2. Read session-state.json and understand what gates will trigger before attempting edits
+  3. Don't skip reviewer subagents — spec reviewer caught 3 documentation gaps that improve spec quality
+  4. Self-audit against the full-flow checklist before declaring "done"
 - **Business context tags:** fleet, route-visualization, UI
 - **Decision log entry needed?** no — straightforward UI prop threading, no architectural decisions
