@@ -29,10 +29,17 @@ Make multi-route maps visually distinguishable by:
 ### 2. Directional arrows on polylines
 
 - Add a MapLibre `symbol` layer on top of each route polyline with arrow icons (`▶`) placed along the line
-- Use `symbol-placement: 'line'` with spacing to show direction of travel
+- Use `symbol-placement: 'line'` with `symbol-spacing: 100` (100px between arrows — balances visibility without clutter)
 - Arrow color matches route color
+- `text-halo-color: rgba(0,0,0,0.7)` with 1px halo for contrast against light map backgrounds
+- Arrows enabled by default on solid polylines, disabled on dashed lines (`showArrows` prop defaults to `!dashed`)
 
-### 3. Pages affected
+### 3. Edge cases
+
+- If `routeColor` is `undefined` or not provided, stop markers fall back to status color (existing behavior preserved)
+- Single-route views pass `route.color` directly; if a route has no color, the fallback chain handles it gracefully
+
+### 4. Pages affected
 
 - `TestRoutingPage` — multi-route, pass route color to stop markers
 - `RoutePlannerPage` — multi-route preview, pass route color to stop markers
