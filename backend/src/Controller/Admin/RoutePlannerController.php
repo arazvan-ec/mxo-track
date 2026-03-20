@@ -19,6 +19,7 @@ use App\Provider\ServiceType;
 use App\Repository\RouteRepository;
 use App\Service\AddressRiskService;
 use App\Service\DriverScoringService;
+use App\Service\ServiceTimeCalibrationService;
 use App\Service\ShipmentClusteringService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -63,6 +64,23 @@ class RoutePlannerController extends AbstractController
         );
 
         return new JsonResponse(array_values($data));
+    }
+
+    /**
+     * Return calibrated service times per address based on historical deliveries.
+     */
+    #[SymfonyRoute('/calibrations', name: 'admin_route_planner_calibrations', methods: ['GET'])]
+    public function calibrations(Request $request, ServiceTimeCalibrationService $calibrationService): JsonResponse
+    {
+        $customerId = $request->query->getInt('customer_id', 0);
+
+        if ($customerId === 0) {
+            return new JsonResponse(['error' => 'Se requiere el parametro customer_id.'], 400);
+        }
+
+        $calibrations = $calibrationService->getCalibratedServiceTimes($customerId);
+
+        return new JsonResponse($calibrations);
     }
 
     /**
