@@ -45,3 +45,10 @@ Registro de decisiones de diseño significativas. Cada entrada captura el contex
 - **Decisión:** Prop `mode` en NavigationSidebar (`'overlay' | 'inline'`). `DualMenuShell` usa `useIsDesktop()` hook (matchMedia 1024px) para elegir modo. Desktop = inline, mobile = overlay.
 - **Alternativas descartadas:** (A) Dos componentes separados — YAGNI, más indirección. (B) CSS-only responsive — backdrop necesita lógica JS condicional.
 - **Resultado:** Build OK, 0 errores. Nav sidebar inline en desktop, overlay preservado en mobile.
+
+### [2026-03-20] Process enforcement — 3 puntos de control mecánicos
+
+- **Problema:** CLAUDE.md tiene 15 reglas mandatorias de proceso. Solo 2 tenían enforcement mecánico (spec+plan via full-flow-gate.sh). Session B saltó brainstorming, learning loop, execution log y retrospectiva sin que nada lo bloqueara.
+- **Decisión:** Approach C — 3 puntos de control: (1) SessionStart hook que inicializa session-state.json requiriendo clasificación de flujo, (2) full-flow-gate.sh mejorado que verifica learning_loop_done y brainstorm_done además de spec+plan, (3) `make preflight` que valida lint/tests/manifest/execution-log/session-state antes de push. PostToolUse reminder para execution logs en commits feat:/fix:.
+- **Alternativas descartadas:** (A) Un hook por gap — 10+ hooks, frágil y difícil de mantener. (B) Solo preflight centralizado — no previene trabajo sin flujo en tiempo real, solo valida al final.
+- **Resultado:** 5/5 preflight checks pasan. Gate bloquea correctamente en cada escenario (flow_not_declared, learning_loop_missing, brainstorm_missing). Micro/light flows bypasean spec/plan requirements. Non-src files siempre pasan.
