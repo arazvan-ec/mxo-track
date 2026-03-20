@@ -6,7 +6,7 @@ namespace App\Tests\Unit\Entity;
 
 use App\Entity\Customer;
 use App\Entity\RecipientAction;
-use App\Entity\Shipment;
+use App\Domain\Shipment\Model\Shipment;
 use App\Enum\RecipientActionType;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;

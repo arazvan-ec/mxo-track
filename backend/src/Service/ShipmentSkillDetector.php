@@ -6,7 +6,7 @@ namespace App\Service;
 
 use App\Ai\LlmClientInterface;
 use App\Ai\LlmRequest;
-use App\Entity\Shipment;
+use App\Domain\Shipment\Model\Shipment;
 use App\Enum\VehicleSkill;
 use Psr\Log\LoggerInterface;
 

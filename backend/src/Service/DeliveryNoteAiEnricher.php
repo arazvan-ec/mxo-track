@@ -8,7 +8,7 @@ use App\Ai\LlmClientInterface;
 use App\Ai\LlmRequest;
 use App\Domain\Route\Model\Route;
 use App\Domain\Route\Model\RouteStop;
-use App\Entity\ShipmentEvent;
+use App\Domain\Shipment\Model\ShipmentEvent;
 use App\Enum\ShipmentEventType;
 use App\Repository\DriverFeedbackRepository;
 use Doctrine\ORM\EntityManagerInterface;

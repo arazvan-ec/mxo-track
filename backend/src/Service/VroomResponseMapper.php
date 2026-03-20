@@ -8,7 +8,7 @@ use App\Entity\Customer;
 use App\Entity\CustomerLocation;
 use App\Domain\Route\Model\Route;
 use App\Domain\Route\Model\RouteStop;
-use App\Entity\Shipment;
+use App\Domain\Shipment\Model\Shipment;
 use App\Entity\Vehicle;
 use Doctrine\ORM\EntityManagerInterface;
 

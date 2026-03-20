@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Application\Tracking;
 
-use App\Entity\Shipment;
-use App\Entity\ShipmentEvent;
+use App\Domain\Shipment\Model\Shipment;
+use App\Domain\Shipment\Model\ShipmentEvent;
 
 final readonly class TrackingInfo
 {

@@ -6,7 +6,7 @@ namespace App\Tests\Unit\Command;
 
 use App\Command\ScheduleNotificationsCommand;
 use App\Entity\Customer;
-use App\Entity\Shipment;
+use App\Domain\Shipment\Model\Shipment;
 use App\Enum\NotificationTriggerType;
 use App\Notification\NotificationDispatcher;
 use App\Repository\NotificationLogRepository;

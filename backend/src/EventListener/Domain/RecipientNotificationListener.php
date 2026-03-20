@@ -6,7 +6,7 @@ namespace App\EventListener\Domain;
 
 use App\Domain\Event\StopDelivered;
 use App\Domain\Event\StopExceptionReported;
-use App\Entity\Shipment;
+use App\Domain\Shipment\Model\Shipment;
 use App\Enum\NotificationTriggerType;
 use App\Notification\NotificationDispatcher;
 use App\Repository\ShipmentRepository;

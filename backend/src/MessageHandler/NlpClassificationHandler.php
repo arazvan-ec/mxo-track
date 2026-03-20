@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
-use App\Entity\ShipmentEvent;
+use App\Domain\Shipment\Model\ShipmentEvent;
 use App\Message\NlpClassificationMessage;
 use App\Service\ExceptionClassifierService;
 use Doctrine\ORM\EntityManagerInterface;

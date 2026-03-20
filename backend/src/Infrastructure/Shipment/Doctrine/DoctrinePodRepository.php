@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Shipment\Doctrine;
 
 use App\Domain\Shipment\Repository\PodRepositoryInterface;
-use App\Entity\Pod;
+use App\Domain\Shipment\Model\Pod;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Uid\Ulid;
 

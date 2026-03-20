@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Notification;
 
 use App\Entity\Customer;
-use App\Entity\Shipment;
+use App\Domain\Shipment\Model\Shipment;
 use App\Enum\NotificationChannel;
 use App\Enum\NotificationTriggerType;
 use App\Notification\NotificationCommand;

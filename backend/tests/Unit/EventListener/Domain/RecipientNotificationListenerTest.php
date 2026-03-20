@@ -8,7 +8,7 @@ use App\Domain\Event\StopDelivered;
 use App\Domain\Event\StopExceptionReported;
 use App\Entity\Customer;
 use App\Domain\Route\Model\Route;
-use App\Entity\Shipment;
+use App\Domain\Shipment\Model\Shipment;
 use App\Enum\ExceptionCode;
 use App\Enum\NotificationTriggerType;
 use App\EventListener\Domain\RecipientNotificationListener;

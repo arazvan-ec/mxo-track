@@ -7,7 +7,7 @@ namespace App\EventSubscriber;
 use App\Entity\AuditLog;
 use App\Entity\Customer;
 use App\Domain\Route\Model\Route;
-use App\Entity\Shipment;
+use App\Domain\Shipment\Model\Shipment;
 use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Attribute\AsDoctrineListener;
 use Doctrine\ORM\EntityManagerInterface;

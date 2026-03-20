@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Admin;
 
 use App\Entity\Customer;
-use App\Entity\Shipment;
+use App\Domain\Shipment\Model\Shipment;
 use App\Form\ShipmentType;
 use App\Repository\ShipmentRepository;
 use Doctrine\ORM\EntityManagerInterface;

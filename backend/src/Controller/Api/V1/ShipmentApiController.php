@@ -6,8 +6,8 @@ namespace App\Controller\Api\V1;
 
 use App\Dto\Api\CreateShipmentRequest;
 use App\Dto\Api\ShipmentResponse;
-use App\Entity\Shipment;
-use App\Entity\ShipmentEvent;
+use App\Domain\Shipment\Model\Shipment;
+use App\Domain\Shipment\Model\ShipmentEvent;
 use App\Enum\ShipmentEventType;
 use App\Http\ApiErrorResponder;
 use App\Repository\ShipmentRepository;

@@ -6,9 +6,9 @@ namespace App\Service;
 
 use App\Dto\CsvQualityReport;
 use App\Entity\Customer;
-use App\Entity\Parcel;
-use App\Entity\Shipment;
-use App\Entity\ShipmentEvent;
+use App\Domain\Shipment\Model\Parcel;
+use App\Domain\Shipment\Model\Shipment;
+use App\Domain\Shipment\Model\ShipmentEvent;
 use App\Enum\ServiceType;
 use App\Enum\ShipmentEventType;
 use App\Enum\ShipmentPriority;

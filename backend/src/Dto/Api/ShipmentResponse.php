@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Dto\Api;
 
-use App\Entity\Shipment;
+use App\Domain\Shipment\Model\Shipment;
 
 final readonly class ShipmentResponse
 {

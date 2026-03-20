@@ -7,7 +7,7 @@ namespace App\Tests\Unit\Entity;
 use App\Entity\Customer;
 use App\Entity\CustomerScopedEntityInterface;
 use App\Entity\NotificationLog;
-use App\Entity\Shipment;
+use App\Domain\Shipment\Model\Shipment;
 use App\Enum\NotificationChannel;
 use App\Enum\NotificationLogStatus;
 use App\Enum\NotificationTriggerType;

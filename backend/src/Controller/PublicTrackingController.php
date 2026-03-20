@@ -7,7 +7,7 @@ namespace App\Controller;
 use App\Application\Tracking\PublicTrackingService;
 use App\Entity\DeliverySlot;
 use App\Entity\RecipientAction;
-use App\Entity\ShipmentEvent;
+use App\Domain\Shipment\Model\ShipmentEvent;
 use App\Enum\RecipientActionType;
 use App\Enum\ShipmentEventType;
 use App\Domain\Route\Model\RouteStop;

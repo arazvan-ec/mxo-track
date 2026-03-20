@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Shipment\Doctrine;
 
 use App\Domain\Shipment\Repository\ShipmentRepositoryInterface;
-use App\Entity\Shipment;
+use App\Domain\Shipment\Model\Shipment;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Uid\Ulid;
 

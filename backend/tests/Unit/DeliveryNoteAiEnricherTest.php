@@ -8,7 +8,7 @@ use App\Ai\LlmClientInterface;
 use App\Ai\LlmResponse;
 use App\Domain\Route\Model\Route;
 use App\Domain\Route\Model\RouteStop;
-use App\Entity\ShipmentEvent;
+use App\Domain\Shipment\Model\ShipmentEvent;
 use App\Repository\DriverFeedbackRepository;
 use App\Service\DeliveryNoteAiEnricher;
 use App\Service\RateLimitedApiClient;

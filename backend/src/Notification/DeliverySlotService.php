@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Notification;
 
 use App\Entity\DeliverySlot;
-use App\Entity\Shipment;
+use App\Domain\Shipment\Model\Shipment;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 

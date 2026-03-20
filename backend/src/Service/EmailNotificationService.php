@@ -6,7 +6,7 @@ namespace App\Service;
 
 use App\Domain\Route\Model\Route;
 use App\Domain\Route\Model\RouteStop;
-use App\Entity\Shipment;
+use App\Domain\Shipment\Model\Shipment;
 use App\Entity\User;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Mailer\MailerInterface;
