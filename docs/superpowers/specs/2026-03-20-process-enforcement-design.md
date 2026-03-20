@@ -148,9 +148,9 @@ fi
 **Qué resuelve:** Claude no puede crear stubs vacíos y pasar el gate.
 **Qué NO resuelve:** Claude podría escribir contenido basura de 500+ bytes (pero esto ya es mucho más esfuerzo que saltarse el proceso, así que el incentivo se invierte).
 
-#### Nivel 2 — Validación temporal anti-rush
+#### Nivel 2 — Conteo de turnos de conversación
 
-Verifica que pasó tiempo suficiente entre pasos — no se puede hacer brainstorming + spec + plan + code en 30 segundos.
+Verifica que hubo interacción real con el usuario durante brainstorming — no se puede hacer brainstorming sin ida y vuelta. El tiempo es un proxy malo: penaliza al rápido legítimo y no detecta al lento fraudulento. Lo que importa es que haya habido turnos reales de conversación.
 
 **Cambios en `session-state.json` schema:**
 
@@ -159,33 +159,29 @@ Verifica que pasó tiempo suficiente entre pasos — no se puede hacer brainstor
   "session_date": "2026-03-20",
   "flow_type": null,
   "flow_declared": false,
-  "flow_declared_at": null,
   "learning_loop_done": false,
-  "learning_loop_done_at": null,
   "brainstorm_done": false,
-  "brainstorm_done_at": null,
+  "brainstorm_user_turns": 0,
   "active_spec": null,
   "active_plan": null,
   "execution_log": null
 }
 ```
 
+**Instrucción para Claude:** Durante la fase de brainstorming (entre `brainstorm_started: true` y `brainstorm_done: true`), Claude debe incrementar `brainstorm_user_turns` cada vez que el usuario responde.
+
 **Cambios en `full-flow-gate.sh`:**
 
 ```bash
-# Brainstorm debe haberse completado hace >120 segundos
-BRAINSTORM_TS=$(jq -r '.brainstorm_done_at // empty' "$STATE_FILE")
-if [ -n "$BRAINSTORM_TS" ]; then
-  BRAINSTORM_EPOCH=$(date -d "$BRAINSTORM_TS" +%s 2>/dev/null || echo 0)
-  NOW=$(date +%s)
-  ELAPSED=$(( NOW - BRAINSTORM_EPOCH ))
-  if [ "$ELAPSED" -lt 120 ]; then
-    deny "SELF-GATE: Brainstorm completed only ${ELAPSED}s ago. Minimum 2 minutes between brainstorm completion and code edit (ensures real deliberation)."
-  fi
+# Brainstorm debe tener ≥2 turnos de conversación con el usuario
+BRAINSTORM_TURNS=$(jq -r '.brainstorm_user_turns // 0' "$STATE_FILE")
+if [ "$BRAINSTORM_TURNS" -lt 2 ]; then
+  deny "SELF-GATE: Brainstorming tuvo solo ${BRAINSTORM_TURNS} turnos de conversación. Mínimo 2 turnos de ida y vuelta con el usuario (proponer approaches → usuario elige → refinar)."
 fi
 ```
 
-**Qué resuelve:** Claude no puede rushear todos los flags en un solo turno.
+**Qué resuelve:** Claude no puede auto-completar brainstorming sin participación real del usuario. Un brainstorming legítimo tiene mínimo 2 turnos (proponer → elegir → refinar).
+**Ventaja sobre temporal:** No penaliza brainstormings rápidos pero reales (3 turnos en 45 segundos sigue siendo válido).
 
 #### Nivel 3 — Coherencia plan↔edit
 
@@ -219,8 +215,8 @@ Hash de cada artefacto para detectar modificaciones post-aprobación. **Descarta
 
 | Archivo | Cambio |
 |---------|--------|
-| `.claude/hooks/full-flow-gate.sh` | Añadir checks de evidencia (tamaño, secciones), anti-rush (timestamps), y coherencia plan↔edit |
-| `.claude/hooks/session-start.sh` | Añadir campos `*_at` (timestamps) al schema de session-state.json |
+| `.claude/hooks/full-flow-gate.sh` | Añadir checks de evidencia (tamaño, secciones), turnos de conversación, y coherencia plan↔edit |
+| `.claude/hooks/session-start.sh` | Añadir campo `brainstorm_user_turns` al schema de session-state.json |
 
 ### Impacto esperado
 

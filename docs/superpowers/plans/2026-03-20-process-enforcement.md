@@ -48,17 +48,17 @@ Mejorar `full-flow-gate.sh` para verificar que los artefactos de brainstorming y
 
 **Archivo:** `.claude/hooks/full-flow-gate.sh` — añadir después de Check 5 (spec exists) y Check 6 (plan exists)
 
-## Task 9: Self-gating — Validación temporal anti-rush (Nivel 2)
+## Task 9: Self-gating — Conteo de turnos de conversación (Nivel 2)
 
-Añadir timestamps a `session-state.json` y verificar tiempos mínimos entre pasos:
+Verificar que hubo interacción real con el usuario durante brainstorming, contando turnos en lugar de tiempo transcurrido. El tiempo es un proxy malo — penaliza al rápido legítimo y no detecta al lento fraudulento. Lo que importa es que haya habido ida y vuelta real.
 
-1. **Actualizar `session-start.sh`:** Añadir campos `flow_declared_at`, `learning_loop_done_at`, `brainstorm_done_at` (inicializados a `null`)
-2. **Actualizar `full-flow-gate.sh`:** Verificar que `brainstorm_done_at` sea ≥120 segundos antes del momento actual. Si Claude completó el brainstorming hace menos de 2 minutos, denegar.
-3. **Documentar en CLAUDE.md o instrucciones:** Claude debe escribir timestamps ISO 8601 al marcar cada fase como completada
+1. **Actualizar `session-start.sh`:** Añadir campo `brainstorm_user_turns` (inicializado a `0`) al `session-state.json`
+2. **Documentar en CLAUDE.md:** Claude debe incrementar `brainstorm_user_turns` en `session-state.json` cada vez que el usuario responde durante la fase de brainstorming (entre `brainstorm_started: true` y `brainstorm_done: true`)
+3. **Actualizar `full-flow-gate.sh`:** Verificar que `brainstorm_user_turns >= 2` antes de permitir edición en full-flow. Un brainstorming real tiene mínimo 2 turnos de ida y vuelta (proponer approaches → usuario elige → refinar). Si `brainstorm_user_turns < 2`, denegar con mensaje: "Brainstorming requiere al menos 2 turnos de conversación con el usuario"
 
 **Archivos:**
-- `.claude/hooks/session-start.sh` — añadir campos timestamp al JSON
-- `.claude/hooks/full-flow-gate.sh` — añadir check temporal
+- `.claude/hooks/session-start.sh` — añadir campo `brainstorm_user_turns` al JSON
+- `.claude/hooks/full-flow-gate.sh` — añadir check de turnos mínimos
 
 ## Task 10: Self-gating — Coherencia plan↔edit (Nivel 3)
 
@@ -75,6 +75,6 @@ Verificar que cada archivo editado esté mencionado en el plan activo:
 Verificar los 3 niveles de self-gating:
 
 1. **Test Nivel 1:** Crear spec vacío (< 500 bytes) → gate deniega. Crear spec con contenido real → gate permite.
-2. **Test Nivel 2:** Marcar `brainstorm_done_at` a "ahora" → gate deniega (< 120s). Marcar a hace 3 minutos → gate permite.
+2. **Test Nivel 2:** Marcar `brainstorm_user_turns` a `1` → gate deniega (< 2 turnos). Marcar a `3` → gate permite.
 3. **Test Nivel 3:** Intentar editar archivo no mencionado en plan → gate deniega. Añadir archivo al plan → gate permite.
 4. **Test integración:** Flujo completo desde session-start hasta edit exitoso con los 3 niveles
