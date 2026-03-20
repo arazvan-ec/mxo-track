@@ -6,8 +6,8 @@ namespace App\Tests\Unit;
 
 use App\Ai\LlmClientInterface;
 use App\Ai\LlmResponse;
-use App\Entity\Route;
-use App\Entity\RouteStop;
+use App\Domain\Route\Model\Route;
+use App\Domain\Route\Model\RouteStop;
 use App\Entity\ShipmentEvent;
 use App\Repository\DriverFeedbackRepository;
 use App\Service\DeliveryNoteAiEnricher;

@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Infrastructure\Route\Doctrine;
 
 use App\Domain\Route\Repository\RouteEventRepositoryInterface;
-use App\Entity\Route;
-use App\Entity\RouteEvent;
+use App\Domain\Route\Model\Route;
+use App\Domain\Route\Model\RouteEvent;
 use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class DoctrineRouteEventRepository implements RouteEventRepositoryInterface

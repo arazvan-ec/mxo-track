@@ -65,7 +65,7 @@ final class DeliveryRatingService
         $qb->select('AVG(r.score)')
             ->from(DeliveryRating::class, 'r')
             ->join('r.shipment', 's')
-            ->join(\App\Entity\RouteStop::class, 'rs', 'WITH', 'rs.shipment = s')
+            ->join(\App\Domain\Route\Model\RouteStop::class, 'rs', 'WITH', 'rs.shipment = s')
             ->join('rs.route', 'rt')
             ->where('rt.driver = :driverId')
             ->setParameter('driverId', $driverId);

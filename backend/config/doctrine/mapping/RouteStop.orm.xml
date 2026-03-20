@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://doctrine-project.org/schemas/orm/doctrine-mapping
+                  https://www.doctrine-project.org/schemas/orm/doctrine-mapping.xsd">
+
+    <entity name="App\Domain\Route\Model\RouteStop" table="route_stop">
+        <unique-constraints>
+            <unique-constraint name="uniq_route_stop_public_id" columns="public_id"/>
+        </unique-constraints>
+
+        <lifecycle-callbacks>
+            <lifecycle-callback type="prePersist" method="initializePublicId"/>
+        </lifecycle-callbacks>
+
+        <id name="id" type="bigint" column="id">
+            <generator strategy="IDENTITY"/>
+        </id>
+
+        <field name="publicId" type="ulid" column="public_id" unique="true"/>
+        <field name="sequence" type="integer" column="sequence"/>
+        <field name="address" type="string" length="255" column="address"/>
+        <field name="latitude" type="float" column="latitude" nullable="true"/>
+        <field name="longitude" type="float" column="longitude" nullable="true"/>
+        <field name="recipientName" type="string" length="150" column="recipient_name" nullable="true"/>
+        <field name="recipientPhone" type="string" length="30" column="recipient_phone" nullable="true"/>
+        <field name="notes" type="text" column="notes" nullable="true"/>
+        <field name="status" type="string" length="20" column="status" enum-type="App\Enum\RouteStopStatus"/>
+        <field name="deliveredAt" type="datetime_immutable" column="delivered_at" nullable="true"/>
+        <field name="exceptionCode" type="string" length="30" column="exception_code" enum-type="App\Enum\ExceptionCode" nullable="true"/>
+        <field name="exceptionNotes" type="text" column="exception_notes" nullable="true"/>
+        <field name="aiNotes" type="text" column="ai_notes" nullable="true"/>
+        <field name="isOrigin" type="boolean" column="is_origin"/>
+        <field name="deliveryWindowStart" type="time_immutable" column="delivery_window_start" nullable="true"/>
+        <field name="deliveryWindowEnd" type="time_immutable" column="delivery_window_end" nullable="true"/>
+
+        <many-to-one field="route" target-entity="App\Domain\Route\Model\Route">
+            <join-column name="route_id" nullable="false" on-delete="CASCADE"/>
+        </many-to-one>
+
+        <many-to-one field="shipment" target-entity="App\Entity\Shipment">
+            <join-column name="shipment_id" nullable="true" on-delete="SET NULL"/>
+        </many-to-one>
+    </entity>
+
+</doctrine-mapping>

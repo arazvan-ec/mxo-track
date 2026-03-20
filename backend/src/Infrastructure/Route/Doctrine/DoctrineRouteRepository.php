@@ -6,7 +6,7 @@ namespace App\Infrastructure\Route\Doctrine;
 
 use App\Domain\Route\Repository\RouteRepositoryInterface;
 use App\Entity\Customer;
-use App\Entity\Route;
+use App\Domain\Route\Model\Route;
 use App\Entity\User;
 use App\Enum\RouteStatus;
 use Doctrine\ORM\EntityManagerInterface;

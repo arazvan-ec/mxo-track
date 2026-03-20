@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\MapView\Controller;
 
-use App\Entity\RouteStop;
+use App\Domain\Route\Model\RouteStop;
 use App\Enum\ExceptionCode;
 use App\Enum\RouteStopStatus;
 use Doctrine\ORM\EntityManagerInterface;

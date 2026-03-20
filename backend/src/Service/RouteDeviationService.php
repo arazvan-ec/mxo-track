@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Dto\DeviationCheckResult;
-use App\Entity\Route;
+use App\Domain\Route\Model\Route;
 use App\Domain\Route\Repository\RouteSnapshotRepositoryInterface;
 use App\Routing\PolylineDecoder;
 

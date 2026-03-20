@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\EventSubscriber;
 
 use App\Domain\Event\VehiclePositionReceived;
-use App\Entity\Route;
-use App\Entity\RouteStop;
+use App\Domain\Route\Model\Route;
+use App\Domain\Route\Model\RouteStop;
 use App\Entity\Vehicle;
 use App\Enum\NotificationChannel;
 use App\Enum\NotificationTriggerType;

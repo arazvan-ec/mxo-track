@@ -7,7 +7,7 @@ namespace App\Infrastructure\Route\Projection;
 use App\Domain\Route\Repository\RouteEventRepositoryInterface;
 use App\Domain\Route\Repository\RouteRepositoryInterface;
 use App\Domain\Route\Repository\RouteStopRepositoryInterface;
-use App\Entity\Route;
+use App\Domain\Route\Model\Route;
 use App\Enum\RouteStopStatus;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;

@@ -9,7 +9,7 @@ use App\Domain\Event\StopExceptionReported;
 use App\Dto\Driver\DeliverStopInput;
 use App\Dto\Driver\ExceptionStopInput;
 use App\Entity\Pod;
-use App\Entity\RouteStop;
+use App\Domain\Route\Model\RouteStop;
 use App\Entity\Shipment;
 use App\Entity\ShipmentEvent;
 use App\Entity\User;

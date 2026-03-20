@@ -6,7 +6,7 @@ namespace App\EventListener\Domain;
 
 use App\Domain\Event\StopDelivered;
 use App\Domain\Event\StopExceptionReported;
-use App\Entity\Route;
+use App\Domain\Route\Model\Route;
 use App\Repository\RouteRepository;
 use App\Service\WebhookDispatcher;
 use App\Service\WebhookNotificationService;

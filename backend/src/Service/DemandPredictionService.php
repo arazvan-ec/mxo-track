@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Dto\DemandPrediction;
-use App\Entity\RouteStop;
+use App\Domain\Route\Model\RouteStop;
 use App\Enum\RouteStatus;
 use App\Enum\RouteStopStatus;
 use Doctrine\ORM\EntityManagerInterface;

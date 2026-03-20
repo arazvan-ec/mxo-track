@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Domain\Event\VehiclePositionReceived;
-use App\Entity\Route;
+use App\Domain\Route\Model\Route;
 use App\Entity\Vehicle;
 use App\Entity\VehicleCheckpoint;
 use App\Entity\VehicleLastPosition;

@@ -6,7 +6,7 @@ namespace App\Tests\Unit\EventListener\Domain;
 
 use App\Domain\Event\DeviationDetected;
 use App\Entity\Customer;
-use App\Entity\Route;
+use App\Domain\Route\Model\Route;
 use App\EventListener\Domain\DeviationAlertListener;
 use App\Realtime\RealtimePublisherInterface;
 use App\Realtime\SseMessage;

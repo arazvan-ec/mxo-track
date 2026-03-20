@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller\Api;
 
-use App\Entity\Route as RouteEntity;
+use App\Domain\Route\Model\Route as RouteEntity;
 use App\Http\ApiErrorResponder;
 use App\Repository\RouteRepository;
 use App\Service\RouteAnalysisService;

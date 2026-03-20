@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Domain\Route\Model\Route;
 use App\Entity\Concerns\PublicIdTrait;
 use App\Enum\OptimizationOperation;
 use App\Repository\RouteOptimizationLogRepository;

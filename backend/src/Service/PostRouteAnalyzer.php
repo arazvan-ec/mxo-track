@@ -6,8 +6,8 @@ namespace App\Service;
 
 use App\Ai\LlmClientInterface;
 use App\Ai\LlmRequest;
-use App\Entity\Route;
-use App\Entity\RouteStop;
+use App\Domain\Route\Model\Route;
+use App\Domain\Route\Model\RouteStop;
 use App\Enum\RouteStopStatus;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;

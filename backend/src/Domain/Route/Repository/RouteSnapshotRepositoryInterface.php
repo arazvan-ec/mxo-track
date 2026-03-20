@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Route\Repository;
 
 use App\Domain\Route\Model\RouteSnapshot;
-use App\Entity\Route;
+use App\Domain\Route\Model\Route;
 
 interface RouteSnapshotRepositoryInterface
 {

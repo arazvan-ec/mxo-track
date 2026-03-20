@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
-use App\Entity\Route;
+use App\Domain\Route\Model\Route;
 use App\Entity\RouteOptimizationLog;
 use App\Enum\OptimizationOperation;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;

@@ -7,7 +7,7 @@ namespace App\Tests\Unit\EventListener\Domain;
 use App\Domain\Event\StopDelivered;
 use App\Domain\Event\StopExceptionReported;
 use App\Entity\Customer;
-use App\Entity\Route;
+use App\Domain\Route\Model\Route;
 use App\Entity\Shipment;
 use App\Enum\ExceptionCode;
 use App\Enum\NotificationTriggerType;

@@ -6,8 +6,8 @@ namespace App\Tests\Unit\Notification\Message;
 
 use App\Entity\Customer;
 use App\Entity\RecipientNotification;
-use App\Entity\Route;
-use App\Entity\RouteStop;
+use App\Domain\Route\Model\Route;
+use App\Domain\Route\Model\RouteStop;
 use App\Entity\Shipment;
 use App\Notification\Message\SendRecipientNotificationHandler;
 use App\Notification\Message\SendRecipientNotificationMessage;

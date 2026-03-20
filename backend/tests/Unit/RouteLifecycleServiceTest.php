@@ -8,7 +8,7 @@ use App\Application\Route\InspectionNotCompletedException;
 use App\Application\Route\RouteLifecycleService;
 use App\Application\Route\RouteNotFoundException;
 use App\Application\Route\RouteNotOwnedException;
-use App\Entity\Route;
+use App\Domain\Route\Model\Route;
 use App\Entity\User;
 use App\Entity\VehicleInspection;
 use App\Enum\RouteStatus;

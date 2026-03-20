@@ -6,7 +6,7 @@ namespace App\Notification\Message;
 
 use App\Entity\Customer;
 use App\Entity\RecipientNotification;
-use App\Entity\RouteStop;
+use App\Domain\Route\Model\RouteStop;
 use App\Entity\Shipment;
 use App\Notification\DeliveryApproachingNotification;
 use App\Notification\DeliveryCompletedNotification;

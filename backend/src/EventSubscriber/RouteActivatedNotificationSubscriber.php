@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\EventSubscriber;
 
 use App\Domain\Event\RouteStarted;
-use App\Entity\Route;
+use App\Domain\Route\Model\Route;
 use App\Notification\RecipientNotificationService;
 use App\Repository\RouteRepository;
 use Psr\Log\LoggerInterface;

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Service;
 
-use App\Entity\Route;
+use App\Domain\Route\Model\Route;
 use App\Domain\Route\Model\RouteSnapshot;
 use App\Domain\Route\Repository\RouteSnapshotRepositoryInterface;
 use App\Service\RouteDeviationService;

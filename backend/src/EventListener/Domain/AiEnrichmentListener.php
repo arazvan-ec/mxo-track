@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\EventListener\Domain;
 
 use App\Domain\Event\RouteStarted;
-use App\Entity\Route;
+use App\Domain\Route\Model\Route;
 use App\Message\EnrichRouteNotesMessage;
 use App\Repository\RouteRepository;
 use Psr\Log\LoggerInterface;

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Application\Tracking;
 
 use App\Domain\Route\Model\RouteSnapshot;
-use App\Entity\RouteStop;
+use App\Domain\Route\Model\RouteStop;
 use App\Entity\ShipmentEvent;
 use App\Entity\VehicleLastPosition;
 use App\Repository\ShipmentRepository;

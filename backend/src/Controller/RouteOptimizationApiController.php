@@ -7,7 +7,7 @@ namespace App\Controller;
 use App\Application\Route\BuildRoutesInput;
 use App\Application\Route\RouteNotFoundException;
 use App\Application\Route\RoutePlanningService;
-use App\Entity\Route as RouteEntity;
+use App\Domain\Route\Model\Route as RouteEntity;
 use App\Enum\RouteStatus;
 use App\Http\ApiErrorResponder;
 use App\Repository\RouteRepository;

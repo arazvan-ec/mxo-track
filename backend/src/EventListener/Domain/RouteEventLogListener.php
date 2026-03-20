@@ -21,7 +21,7 @@ use App\Domain\Event\StopsReordered;
 use App\Domain\Route\Repository\RouteEventRepositoryInterface;
 use App\Domain\Route\Repository\RouteRepositoryInterface;
 use App\Domain\Route\Repository\RouteStopRepositoryInterface;
-use App\Entity\RouteEvent;
+use App\Domain\Route\Model\RouteEvent;
 use App\Enum\RouteEventType;
 use App\Enum\RouteStopStatus;
 use App\Repository\UserRepository;
@@ -361,7 +361,7 @@ final readonly class RouteEventLogListener
         $this->eventRepo->flush();
     }
 
-    private function buildSnapshotMetrics(\App\Entity\Route $route): array
+    private function buildSnapshotMetrics(\App\Domain\Route\Model\Route $route): array
     {
         $stops = $this->stopRepo->findByRoute($route);
 

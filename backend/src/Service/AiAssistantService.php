@@ -6,8 +6,8 @@ namespace App\Service;
 
 use App\Ai\LlmClientInterface;
 use App\Ai\ToolDefinition;
-use App\Entity\Route;
-use App\Entity\RouteStop;
+use App\Domain\Route\Model\Route;
+use App\Domain\Route\Model\RouteStop;
 use App\Entity\User;
 use App\Repository\RouteRepository;
 use Doctrine\ORM\EntityManagerInterface;

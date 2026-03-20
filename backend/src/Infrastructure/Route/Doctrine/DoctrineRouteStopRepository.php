@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Infrastructure\Route\Doctrine;
 
 use App\Domain\Route\Repository\RouteStopRepositoryInterface;
-use App\Entity\Route;
-use App\Entity\RouteStop;
+use App\Domain\Route\Model\Route;
+use App\Domain\Route\Model\RouteStop;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Uid\Ulid;
 

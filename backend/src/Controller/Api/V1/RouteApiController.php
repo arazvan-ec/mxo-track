@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Controller\Api\V1;
 
-use App\Entity\Route as RouteEntity;
-use App\Entity\RouteStop;
+use App\Domain\Route\Model\Route as RouteEntity;
+use App\Domain\Route\Model\RouteStop;
 use App\Http\ApiErrorResponder;
 use App\Repository\RouteRepository;
 use Doctrine\ORM\EntityManagerInterface;

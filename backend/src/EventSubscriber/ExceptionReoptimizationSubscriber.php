@@ -6,7 +6,7 @@ namespace App\EventSubscriber;
 
 use App\Domain\Event\RouteReoptimized;
 use App\Domain\Event\StopExceptionReported;
-use App\Entity\Route;
+use App\Domain\Route\Model\Route;
 use App\Entity\VehicleLastPosition;
 use App\Enum\RouteStatus;
 use App\Repository\RouteRepository;

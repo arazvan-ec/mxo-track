@@ -2,48 +2,26 @@
 
 declare(strict_types=1);
 
-namespace App\Entity;
+namespace App\Domain\Route\Model;
 
+use App\Entity\User;
 use App\Enum\RouteEventType;
-use App\Repository\RouteEventRepository;
 use DateTimeImmutable;
-use Doctrine\ORM\Mapping as ORM;
 
-#[ORM\Entity(repositoryClass: RouteEventRepository::class)]
-#[ORM\Table(name: 'route_event')]
-#[ORM\Index(name: 'idx_route_event_route_occurred', columns: ['route_id', 'occurred_at'])]
-#[ORM\Index(name: 'idx_route_event_type_occurred', columns: ['event_type', 'occurred_at'])]
+/**
+ * RouteEvent entity — domain POPO (immutable after construction).
+ * Persistence handled via external XML mapping (no ORM attributes).
+ */
 class RouteEvent
 {
-    #[ORM\Id]
-    #[ORM\GeneratedValue(strategy: 'IDENTITY')]
-    #[ORM\Column(type: 'bigint')]
     private ?int $id = null;
-
-    #[ORM\ManyToOne(targetEntity: Route::class)]
-    #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private Route $route;
-
-    #[ORM\Column(length: 40, enumType: RouteEventType::class)]
     private RouteEventType $eventType;
-
-    #[ORM\Column(length: 20)]
     private string $actorType;
-
-    #[ORM\ManyToOne(targetEntity: User::class)]
-    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
-    private ?User $actorUser = null;
-
-    #[ORM\Column(type: 'json')]
-    private array $payload = [];
-
-    #[ORM\Column(type: 'json', nullable: true)]
-    private ?array $snapshotMetrics = null;
-
-    #[ORM\Column]
+    private ?User $actorUser;
+    private array $payload;
+    private ?array $snapshotMetrics;
     private DateTimeImmutable $occurredAt;
-
-    #[ORM\Column]
     private DateTimeImmutable $createdAt;
 
     public function __construct(
