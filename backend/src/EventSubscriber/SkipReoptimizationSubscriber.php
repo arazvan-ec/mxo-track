@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\EventSubscriber;
 
 use App\Domain\Event\RouteReoptimized;
-use App\Domain\Event\StopExceptionReported;
+use App\Domain\Event\StopSkipped;
 use App\Domain\Route\Model\Route;
 use App\Entity\VehicleLastPosition;
 use App\Enum\RouteStatus;
@@ -17,10 +17,10 @@ use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 /**
- * Automatically re-optimizes pending stops when a shipment exception is reported
+ * Automatically re-optimizes pending stops when a stop is skipped
  * on a route that has auto-reoptimization enabled.
  */
-final readonly class ExceptionReoptimizationSubscriber
+final readonly class SkipReoptimizationSubscriber
 {
     public function __construct(
         private RouteRepository $routeRepo,
@@ -31,7 +31,7 @@ final readonly class ExceptionReoptimizationSubscriber
     ) {}
 
     #[AsEventListener]
-    public function onStopExceptionReported(StopExceptionReported $event): void
+    public function onStopSkipped(StopSkipped $event): void
     {
         $route = $this->routeRepo->findOneByPublicId($event->routePublicId);
         if (!$route instanceof Route) {
@@ -46,7 +46,6 @@ final readonly class ExceptionReoptimizationSubscriber
             return;
         }
 
-        // Determine current driver position from vehicle's last known position
         $currentLat = null;
         $currentLng = null;
         $vehicle = $route->getVehicle();
@@ -75,19 +74,16 @@ final readonly class ExceptionReoptimizationSubscriber
                 distanceKm: $distanceAfter,
                 durationMinutes: $result['durationMinutes'],
                 pendingStopsCount: \count($result['optimized']),
-                trigger: 'exception',
+                trigger: 'skip',
             ));
 
-            $this->logger->info('Auto-reoptimized route after exception.', [
+            $this->logger->info('Auto-reoptimized route after stop skip.', [
                 'route_public_id' => $event->routePublicId,
                 'stop_public_id' => $event->stopPublicId,
-                'reason' => $event->reason->value,
                 'stops_reordered' => \count($result['optimized']),
-                'distance_before' => $distanceBefore,
-                'distance_after' => $distanceAfter,
             ]);
         } catch (\Throwable $e) {
-            $this->logger->error('Auto-reoptimization failed after exception.', [
+            $this->logger->error('Auto-reoptimization failed after stop skip.', [
                 'route_public_id' => $event->routePublicId,
                 'stop_public_id' => $event->stopPublicId,
                 'error' => $e->getMessage(),

@@ -14,9 +14,12 @@ use App\Domain\Route\Model\RouteStop;
 use App\Domain\Shipment\Model\Shipment;
 use App\Entity\User;
 use App\Entity\Vehicle;
+use App\Provider\ProviderFactoryRegistry;
+use App\Provider\ServiceType;
 use App\Repository\RouteRepository;
 use App\Service\AddressRiskService;
 use App\Service\DriverScoringService;
+use App\Service\ServiceTimeCalibrationService;
 use App\Service\ShipmentClusteringService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -44,6 +47,40 @@ class RoutePlannerController extends AbstractController
     public function index(): Response
     {
         return $this->redirect('/app/admin/route-planner');
+    }
+
+    /**
+     * Return available route optimizer providers.
+     */
+    #[SymfonyRoute('/optimizers', name: 'admin_route_planner_optimizers', methods: ['GET'])]
+    public function optimizers(ProviderFactoryRegistry $registry): JsonResponse
+    {
+        $allProviders = $registry->getAvailableProviders();
+        $optimizerNames = $allProviders[ServiceType::RouteOptimizer->value] ?? [];
+
+        $data = array_map(
+            static fn(string $name) => ['name' => $name, 'label' => ucfirst($name)],
+            $optimizerNames,
+        );
+
+        return new JsonResponse(array_values($data));
+    }
+
+    /**
+     * Return calibrated service times per address based on historical deliveries.
+     */
+    #[SymfonyRoute('/calibrations', name: 'admin_route_planner_calibrations', methods: ['GET'])]
+    public function calibrations(Request $request, ServiceTimeCalibrationService $calibrationService): JsonResponse
+    {
+        $customerId = $request->query->getInt('customer_id', 0);
+
+        if ($customerId === 0) {
+            return new JsonResponse(['error' => 'Se requiere el parametro customer_id.'], 400);
+        }
+
+        $calibrations = $calibrationService->getCalibratedServiceTimes($customerId);
+
+        return new JsonResponse($calibrations);
     }
 
     /**
@@ -296,6 +333,8 @@ class RoutePlannerController extends AbstractController
         $vehicleIds = $payload['vehicle_ids'] ?? [];
         $originPublicId = $payload['origin_public_id'] ?? null;
         $maxStopsPerRoute = (int) ($payload['max_stops_per_route'] ?? 30);
+        $optimizerName = $payload['optimizer_name'] ?? null;
+        $calibratedServiceTimes = $payload['calibrated_service_times'] ?? null;
 
         if (\count($shipmentIds) === 0) {
             return new JsonResponse(['error' => 'Se requiere al menos un envio.'], 400);
@@ -310,6 +349,8 @@ class RoutePlannerController extends AbstractController
             vehiclePublicIds: $vehicleIds,
             originPublicId: $originPublicId !== '' ? $originPublicId : null,
             maxStopsPerRoute: $maxStopsPerRoute,
+            optimizerName: \is_string($optimizerName) && $optimizerName !== '' ? $optimizerName : null,
+            serviceTimeOverrides: \is_array($calibratedServiceTimes) ? $calibratedServiceTimes : null,
         );
 
         try {

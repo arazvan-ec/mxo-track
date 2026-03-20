@@ -18,5 +18,8 @@ final readonly class BuildRoutesInput
         public ?string $originPublicId = null,
         public int $maxStopsPerRoute = 30,
         public ?array $clusterHints = null,
+        public ?string $optimizerName = null,
+        /** @var array<string, int>|null Map of address → calibrated service time in seconds */
+        public ?array $serviceTimeOverrides = null,
     ) {}
 }
