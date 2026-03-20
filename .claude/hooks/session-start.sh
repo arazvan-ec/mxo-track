@@ -100,7 +100,8 @@ cat > "$STATE_FILE" <<EOJSON
   "brainstorm_done": false,
   "active_spec": null,
   "active_plan": null,
-  "execution_log": null
+  "execution_log": null,
+  "tdd_bypass": false
 }
 EOJSON
 
