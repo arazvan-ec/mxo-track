@@ -8,6 +8,7 @@ import { RoutePolylineLayer } from '@/components/maps/layers/RoutePolylineLayer'
 import { DualMenuShell } from '@/components/layout/DualMenuShell';
 import {
   usePlannerShipments,
+  usePlannerImportShipments,
   usePlannerVehicles,
   usePlannerLocations,
   useClusterMutation,
@@ -36,6 +37,10 @@ export function RoutePlannerPage() {
   const [step, setStep] = useState<Step>(1);
   const mapRef = useRef<MapCanvasHandle>(null);
 
+  // Read import_id from URL params
+  const urlParams = useMemo(() => new URLSearchParams(window.location.search), []);
+  const importId = urlParams.get('import_id') ?? undefined;
+
   // Step 1 state
   const [customerId, setCustomerId] = useState('');
   const [selectedShipmentIds, setSelectedShipmentIds] = useState<Set<string>>(new Set());
@@ -55,6 +60,7 @@ export function RoutePlannerPage() {
 
   // Queries
   const shipmentsQuery = usePlannerShipments(customerId || undefined);
+  const importShipmentsQuery = usePlannerImportShipments(importId);
   const vehiclesQuery = usePlannerVehicles();
   const locationsQuery = usePlannerLocations(customerId || undefined);
 
@@ -63,9 +69,25 @@ export function RoutePlannerPage() {
   const previewMutation = usePreviewMutation();
   const confirmMutation = useConfirmMutation();
 
-  const shipments = shipmentsQuery.data ?? [];
+  // When import_id is provided, use import shipments; otherwise use regular shipments
+  const shipments = importId
+    ? (importShipmentsQuery.data ?? [])
+    : (shipmentsQuery.data ?? []);
   const vehicles = vehiclesQuery.data ?? [];
   const locations = locationsQuery.data ?? [];
+
+  // Auto-load shipments from import when import_id is in URL
+  const importAutoLoaded = useRef(false);
+  useEffect(() => {
+    if (importId && !importAutoLoaded.current) {
+      importAutoLoaded.current = true;
+      importShipmentsQuery.refetch().then((result) => {
+        if (result.data) {
+          setSelectedShipmentIds(new Set(result.data.map((s) => s.publicId)));
+        }
+      });
+    }
+  }, [importId]);
 
   // Fit map bounds when shipments load
   useEffect(() => {
@@ -82,13 +104,14 @@ export function RoutePlannerPage() {
   // -- Step 1 handlers --
 
   const handleLoadShipments = useCallback(() => {
-    shipmentsQuery.refetch().then((result) => {
+    const query = importId ? importShipmentsQuery : shipmentsQuery;
+    query.refetch().then((result) => {
       if (result.data) {
         setSelectedShipmentIds(new Set(result.data.map((s) => s.publicId)));
         setClusters([]);
       }
     });
-  }, [shipmentsQuery]);
+  }, [importId, importShipmentsQuery, shipmentsQuery]);
 
   const handleToggleShipment = useCallback((publicId: string) => {
     setSelectedShipmentIds((prev) => {
@@ -274,6 +297,15 @@ export function RoutePlannerPage() {
           </div>
         </div>
 
+        {/* Import mode banner */}
+        {importId && (
+          <div className="mb-2 rounded-lg bg-emerald-900/40 border border-emerald-700/40 px-3 py-2">
+            <p className="text-xs font-medium text-emerald-300">
+              Modo importacion CSV — envios pre-seleccionados
+            </p>
+          </div>
+        )}
+
         {/* Step indicator */}
         <StepIndicator currentStep={step} />
       </div>
@@ -286,7 +318,7 @@ export function RoutePlannerPage() {
               onCustomerIdChange={setCustomerId}
               shipments={shipments}
               selectedShipmentIds={selectedShipmentIds}
-              isLoading={shipmentsQuery.isFetching}
+              isLoading={importId ? importShipmentsQuery.isFetching : shipmentsQuery.isFetching}
               clusters={clusters}
               numClusters={numClusters}
               isClustering={clusterMutation.isPending}
