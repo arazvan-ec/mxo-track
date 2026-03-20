@@ -80,3 +80,31 @@ Registro de decisiones de diseño significativas. Cada entrada captura el contex
 - **Decisión:** Migración mecánica: reemplazar `HubInterface` + `Update` por `RealtimePublisherInterface` + `SseMessage` en `TraccarIngestionService`, `NotificationService`, `RouteOptimizationApiController`, `AdminDevPushPositionController`. `DeviationAlertListener` evaluado y excluido (persiste `RealtimeEvent` en BD, no publica SSE).
 - **Alternativas descartadas:** Ninguna — la abstracción ya existía, solo faltaba conectar los consumers.
 - **Resultado:** 0 regresiones. Solo `MercurePublisher` (infrastructure adapter) retiene dependencia directa de `HubInterface`, que es el lugar correcto.
+
+### [2026-03-20] Repository interfaces en Domain layer para Route Planning
+
+- **Problema:** 7 servicios del contexto Route Planning dependían de `EntityManagerInterface` y repositories concretos (`RouteRepository`, `RouteStopRepository`), violando DIP y haciendo imposible unit testing sin base de datos.
+- **Decisión:** Crear `RouteRepositoryInterface`, `RouteStopRepositoryInterface`, `RouteEventRepositoryInterface` en `src/Domain/Route/Repository/`. Implementaciones Doctrine en `src/Infrastructure/Route/Doctrine/`. Seguir el patrón existente de `RouteSnapshotRepositoryInterface`. Application services retienen `EntityManagerInterface` solo para `flush()` y queries de entidades fuera del bounded context.
+- **Alternativas descartadas:** (A) Mover todo a interfaces incluyendo flush — rompe control transaccional. (B) Extraer solo los métodos usados inline (`$em->createQueryBuilder()`) sin interfaces formales — no escala.
+- **Resultado:** 7 servicios migrados (RouteOptimizationService, RouteSnapshotManager, RouteBuilder, RoutePlanningService, DeliveryService, RouteLifecycleService, RouteEventLogListener). 5 inline QueryBuilder calls eliminados. Tests actualizados sin regresiones.
+
+### [2026-03-20] Event-first pattern con collect+dispatch (no full event sourcing)
+
+- **Problema:** El patrón actual era state-first, events-second (`$route->start()` → dispatch `RouteStarted`). 6 de 15 RouteEventType cases no tenían domain event POPO ni dispatch. El objetivo era invertir a events-first.
+- **Decisión:** Patrón collect+dispatch: `Route::apply(RouteEvent)` reconstruye estado desde eventos, `Route::rebuildFromEvents(array $events)` permite reconstrucción completa. Los servicios registran eventos via `$route->recordEvent()` y los liberan con `$route->releaseEvents()` post-flush. NO es full event sourcing (no hay event store separado, RouteEvent sigue siendo la tabla existente).
+- **Alternativas descartadas:** (A) Full event sourcing con event store — over-engineering para el volumen actual. (B) Solo completar dispatches faltantes sin invertir el flujo — no permite reconstrucción de estado. (C) Adoptar library externa (Broadway, Prooph) — dependencia innecesaria, RouteEvent ya tiene la estructura.
+- **Resultado:** `Route::apply()` + `rebuildFromEvents()` implementados. 3 domain events nuevos (RouteReoptimized, StopsReordered, StopSkipped). RouteEventLogListener extendido con 3 handlers. Tests cubren reconstrucción de estado.
+
+### [2026-03-20] Projection tables como read-model para Route state
+
+- **Problema:** Queries de estado de ruta (cuántas paradas entregadas, excepciones, distancia) requerían joins complejos o cálculos en memoria. `buildSnapshotMetrics()` en RouteEventLogListener recalculaba métricas en cada evento.
+- **Decisión:** 3 tablas de projection: `route_current_state` (estado denormalizado de ruta), `stop_current_status` (estado por parada), `route_timeline` (timeline de eventos). Actualizadas por event listeners separados (`RouteProjectionListener`, `StopProjectionListener`). `ProjectionRebuilder` + CLI command para backfill.
+- **Alternativas descartadas:** (A) Vista materializada en PostgreSQL — menos flexible, no permite lógica de negocio en la proyección. (B) Single projector class — viola SRP.
+- **Resultado:** Migration creada, listeners implementados, rebuild command disponible. Read models listos para ser consumidos por controllers/API.
+
+### [2026-03-20] POPO migration: Route/RouteStop/RouteEvent a Domain\Route\Model con XML mapping
+
+- **Problema:** Entidades críticas en `src/Entity/` con ORM attributes mezclaban dominio con infraestructura. No podían ser unit-tested como POPOs puros.
+- **Decisión:** Mover a `src/Domain/Route/Model/` con XML mapping externo en `config/doctrine/mapping/`. Aprovechar que `doctrine.yaml` ya tiene mapping configurado para `App\Domain\Route\Model` (usado por RouteSnapshot). ULID generado en constructor (reemplaza `#[ORM\PrePersist]` de PublicIdTrait). Entidades que referencian Route/RouteStop desde fuera del bounded context usan `use App\Domain\Route\Model\Route`.
+- **Alternativas descartadas:** (A) Mantener en `App\Entity\` y solo strip ORM attributes — conflicto de mapping type (attribute vs xml) en mismo prefix. (B) Migrar solo Route sin RouteStop/RouteEvent — deja el bounded context partido.
+- **Resultado:** 3 entidades migradas, 80+ archivos de imports actualizados, XML mappings creados, 0 nuevos test failures. `doctrine:schema:validate` pendiente de verificación con DB.
