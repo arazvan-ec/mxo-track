@@ -98,6 +98,7 @@ cat > "$STATE_FILE" <<EOJSON
   "flow_declared": false,
   "learning_loop_done": false,
   "brainstorm_done": false,
+  "brainstorm_user_turns": 0,
   "active_spec": null,
   "active_plan": null,
   "execution_log": null,
