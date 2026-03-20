@@ -22,6 +22,12 @@
             "command": "/home/user/mxo-track/.claude/hooks/full-flow-gate.sh",
             "timeout": 5,
             "statusMessage": "Checking Full-flow compliance..."
+          },
+          {
+            "type": "command",
+            "command": "/home/user/mxo-track/.claude/hooks/tdd-gate.sh",
+            "timeout": 5,
+            "statusMessage": "Checking TDD compliance..."
           }
         ]
       }
