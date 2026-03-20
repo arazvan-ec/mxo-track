@@ -14,6 +14,8 @@ use App\Domain\Route\Model\RouteStop;
 use App\Domain\Shipment\Model\Shipment;
 use App\Entity\User;
 use App\Entity\Vehicle;
+use App\Provider\ProviderFactoryRegistry;
+use App\Provider\ServiceType;
 use App\Repository\RouteRepository;
 use App\Service\AddressRiskService;
 use App\Service\DriverScoringService;
@@ -44,6 +46,23 @@ class RoutePlannerController extends AbstractController
     public function index(): Response
     {
         return $this->redirect('/app/admin/route-planner');
+    }
+
+    /**
+     * Return available route optimizer providers.
+     */
+    #[SymfonyRoute('/optimizers', name: 'admin_route_planner_optimizers', methods: ['GET'])]
+    public function optimizers(ProviderFactoryRegistry $registry): JsonResponse
+    {
+        $allProviders = $registry->getAvailableProviders();
+        $optimizerNames = $allProviders[ServiceType::RouteOptimizer->value] ?? [];
+
+        $data = array_map(
+            static fn(string $name) => ['name' => $name, 'label' => ucfirst($name)],
+            $optimizerNames,
+        );
+
+        return new JsonResponse(array_values($data));
     }
 
     /**
