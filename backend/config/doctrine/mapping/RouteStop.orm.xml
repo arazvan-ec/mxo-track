@@ -38,7 +38,7 @@
             <join-column name="route_id" nullable="false" on-delete="CASCADE"/>
         </many-to-one>
 
-        <many-to-one field="shipment" target-entity="App\Entity\Shipment">
+        <many-to-one field="shipment" target-entity="App\Domain\Shipment\Model\Shipment">
             <join-column name="shipment_id" nullable="true" on-delete="SET NULL"/>
         </many-to-one>
     </entity>
