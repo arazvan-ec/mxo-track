@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://doctrine-project.org/schemas/orm/doctrine-mapping
+                  https://www.doctrine-project.org/schemas/orm/doctrine-mapping.xsd">
+
+    <entity name="App\Domain\Shipment\Model\Shipment" table="shipment">
+        <unique-constraints>
+            <unique-constraint name="uniq_shipment_public_id" columns="public_id"/>
+            <unique-constraint name="uniq_shipment_tracking_token" columns="tracking_token"/>
+        </unique-constraints>
+        <indexes>
+            <index name="idx_shipment_deleted_at" columns="deleted_at"/>
+        </indexes>
+
+        <lifecycle-callbacks>
+            <lifecycle-callback type="prePersist" method="initializePublicId"/>
+        </lifecycle-callbacks>
+
+        <id name="id" type="bigint" column="id">
+            <generator strategy="IDENTITY"/>
+        </id>
+
+        <field name="publicId" type="ulid" column="public_id" unique="true"/>
+        <field name="reference" type="string" length="80" unique="true"/>
+        <field name="recipientName" type="string" column="recipient_name" length="150" nullable="true"/>
+        <field name="recipientPhone" type="string" column="recipient_phone" length="30" nullable="true"/>
+        <field name="address" type="string" length="255" nullable="true"/>
+        <field name="latitude" type="float" nullable="true"/>
+        <field name="longitude" type="float" nullable="true"/>
+        <field name="notes" type="text" nullable="true"/>
+        <field name="description" type="text" nullable="true"/>
+        <field name="serviceType" type="string" column="service_type" length="30" enum-type="App\Enum\ServiceType"/>
+        <field name="totalWeightKg" type="decimal" column="total_weight_kg" precision="10" scale="2" nullable="true"/>
+        <field name="totalVolumeM3" type="decimal" column="total_volume_m3" precision="10" scale="4" nullable="true"/>
+        <field name="totalParcels" type="integer" column="total_parcels"/>
+        <field name="estimatedDeliveryDate" type="datetime_immutable" column="estimated_delivery_date" nullable="true"/>
+        <field name="preferredWindowStart" type="time_immutable" column="preferred_window_start" nullable="true"/>
+        <field name="preferredWindowEnd" type="time_immutable" column="preferred_window_end" nullable="true"/>
+        <field name="serviceTimeSeconds" type="integer" column="service_time_seconds" nullable="true"/>
+        <field name="priority" type="smallint" enum-type="App\Enum\ShipmentPriority"/>
+        <field name="trackingToken" type="string" column="tracking_token" length="20" nullable="true" unique="true"/>
+        <field name="requiredSkills" type="json" column="required_skills" nullable="true"/>
+        <field name="createdAt" type="datetime_immutable" column="created_at"/>
+        <field name="deletedAt" type="datetime_immutable" column="deleted_at" nullable="true"/>
+
+        <many-to-one field="customer" target-entity="App\Entity\Customer">
+            <join-column name="customer_id" nullable="false"/>
+        </many-to-one>
+
+        <one-to-many field="parcels" target-entity="App\Domain\Shipment\Model\Parcel" mapped-by="shipment" orphan-removal="true">
+            <cascade>
+                <cascade-persist/>
+                <cascade-remove/>
+            </cascade>
+        </one-to-many>
+    </entity>
+
+</doctrine-mapping>
