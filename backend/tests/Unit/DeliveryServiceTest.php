@@ -18,7 +18,7 @@ use App\Entity\Shipment;
 use App\Entity\ShipmentEvent;
 use App\Entity\User;
 use App\Domain\Route\Repository\RouteStopRepositoryInterface;
-use App\Repository\ShipmentRepository;
+use App\Domain\Shipment\Repository\ShipmentRepositoryInterface;
 use App\Service\AuditLogger;
 use App\Service\DeliveryEvidenceFactory;
 use App\Service\DriverActionService;
@@ -43,7 +43,7 @@ final class DeliveryServiceTest extends TestCase
     private EventDispatcherInterface&MockObject $eventDispatcher;
     private MessageBusInterface&MockObject $messageBus;
     private RouteStopRepositoryInterface&MockObject $stopRepo;
-    private ShipmentRepository&MockObject $shipmentRepo;
+    private ShipmentRepositoryInterface&MockObject $shipmentRepo;
     private DeliveryService $service;
 
     protected function setUp(): void
@@ -55,7 +55,7 @@ final class DeliveryServiceTest extends TestCase
         $this->eventDispatcher = $this->createMock(EventDispatcherInterface::class);
         $this->messageBus = $this->createMock(MessageBusInterface::class);
         $this->stopRepo = $this->createMock(RouteStopRepositoryInterface::class);
-        $this->shipmentRepo = $this->createMock(ShipmentRepository::class);
+        $this->shipmentRepo = $this->createMock(ShipmentRepositoryInterface::class);
 
         $this->service = new DeliveryService(
             $this->em,
