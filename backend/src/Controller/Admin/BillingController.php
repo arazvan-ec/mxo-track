@@ -65,7 +65,7 @@ final class BillingController extends AbstractController
 
         return new StreamedResponse(function () use ($customers, $from, $to) {
             $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['Cliente', 'Envios', 'Entregados', 'Excepciones', 'Facturables']);
+            fputcsv($handle, ['Cliente', 'Envios', 'Entregados', 'Excepciones', 'Facturables', 'Km Ahorrados', 'Tiempo Ahorrado (min)', 'Ahorro %', 'Rutas con Metricas']);
 
             foreach ($customers as $customer) {
                 $s = $this->billingService->getCustomerSummary($customer, $from, $to);
@@ -75,6 +75,10 @@ final class BillingController extends AbstractController
                     $s['total_delivered'],
                     $s['total_exceptions'],
                     $s['billable_deliveries'],
+                    $s['total_km_saved'] ?? '',
+                    $s['total_time_saved_minutes'] ?? '',
+                    $s['avg_savings_percent'] ?? '',
+                    $s['routes_with_metrics'],
                 ]);
             }
 
