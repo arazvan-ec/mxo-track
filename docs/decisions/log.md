@@ -52,3 +52,17 @@ Registro de decisiones de diseño significativas. Cada entrada captura el contex
 - **Decisión:** Approach C — 3 puntos de control: (1) SessionStart hook que inicializa session-state.json requiriendo clasificación de flujo, (2) full-flow-gate.sh mejorado que verifica learning_loop_done y brainstorm_done además de spec+plan, (3) `make preflight` que valida lint/tests/manifest/execution-log/session-state antes de push. PostToolUse reminder para execution logs en commits feat:/fix:.
 - **Alternativas descartadas:** (A) Un hook por gap — 10+ hooks, frágil y difícil de mantener. (B) Solo preflight centralizado — no previene trabajo sin flujo en tiempo real, solo valida al final.
 - **Resultado:** 5/5 preflight checks pasan. Gate bloquea correctamente en cada escenario (flow_not_declared, learning_loop_missing, brainstorm_missing). Micro/light flows bypasean spec/plan requirements. Non-src files siempre pasan.
+
+### [2026-03-20] GPS Provider ISP split — GpsDeviceProviderInterface → 2 interfaces
+
+- **Problema:** `GpsDeviceProviderInterface` (6 métodos) violaba ISP y LSP. `WebhookGpsProvider` y `NullGpsProvider` tenían stubs para `login()`, `getSessionCookie()`, `getDevices()`, `createDevice()` — métodos que no soportan genuinamente. El backlog [2026-03-11] lo documentaba como deuda técnica.
+- **Decisión:** Split en `GpsPositionProviderInterface` (2 métodos: `getPositions()`, `isAvailable()`) y `GpsDeviceManagerInterface` (4 métodos: `login()`, `getSessionCookie()`, `getDevices()`, `createDevice()`). `TraccarGpsProvider` implementa ambas. `WebhookGpsProvider` y `NullGpsProvider` solo implementan `GpsPositionProviderInterface`. TenantAwareGpsProvider renombrado a `TenantAwareGpsPositionProvider` (solo proxya posiciones).
+- **Alternativas descartadas:** (A) Default methods en interface — viola LSP igualmente, los stubs siguen ahí. (B) Adapter pattern wrapping webhook — indirección innecesaria, el problema es la interface, no la implementación.
+- **Resultado:** 0 regresiones. 152 tests relacionados pasan. WebhookGpsProvider pasó de 6 métodos (4 stubs) a 2 métodos genuinos. Contract tests documentan las expectativas de cada interface.
+
+### [2026-03-20] Mercure abstraction — HubInterface → RealtimePublisherInterface en consumers
+
+- **Problema:** 4 archivos usaban `HubInterface` directamente en lugar de `RealtimePublisherInterface`, la abstracción que ya existía con implementaciones Mercure/HttpPolling/Null y proxy TenantAware. Esto impedía cambiar de proveedor realtime por tenant.
+- **Decisión:** Migración mecánica: reemplazar `HubInterface` + `Update` por `RealtimePublisherInterface` + `SseMessage` en `TraccarIngestionService`, `NotificationService`, `RouteOptimizationApiController`, `AdminDevPushPositionController`. `DeviationAlertListener` evaluado y excluido (persiste `RealtimeEvent` en BD, no publica SSE).
+- **Alternativas descartadas:** Ninguna — la abstracción ya existía, solo faltaba conectar los consumers.
+- **Resultado:** 0 regresiones. Solo `MercurePublisher` (infrastructure adapter) retiene dependencia directa de `HubInterface`, que es el lugar correcto.
