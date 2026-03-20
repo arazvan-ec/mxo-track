@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Customer;
 
 use App\Entity\Customer;
+use App\Entity\RoutePerformanceMetric;
 use App\Domain\Route\Model\Route;
 use App\Domain\Route\Model\RouteStop;
 use App\Enum\RouteStatus;
@@ -97,9 +98,19 @@ class CustomerRouteController extends AbstractController
             }
         }
 
+        // Performance metrics per route
+        $routeMetrics = [];
+        if (\count($routes) > 0) {
+            $metrics = $this->em->getRepository(RoutePerformanceMetric::class)->findBy(['route' => $routes]);
+            foreach ($metrics as $m) {
+                $routeMetrics[$m->getRoute()->getId()] = $m;
+            }
+        }
+
         return $this->render('customer/route/index.html.twig', [
             'routes' => $routes,
             'stopCounts' => $stopCounts,
+            'routeMetrics' => $routeMetrics,
             'page' => $page,
             'totalPages' => $totalPages,
             'currentStatus' => $currentStatus,
