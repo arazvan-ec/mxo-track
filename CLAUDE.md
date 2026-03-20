@@ -402,6 +402,19 @@ Aplica cuando la interacción produce hallazgos sustantivos sobre el codebase (c
 | "Saltemos brainstorming, la solución es obvia" | Las soluciones "obvias" que saltan brainstorming son las que pierden edge cases. |
 | "Nadie va a leer la retrospectiva" | Las futuras instancias de Claude sí la leerán. Ese es el learning loop. |
 
+## On-Demand Session Context (mandatory)
+
+**El SessionStart hook solo resetea session-state.json. No genera contexto.** Claude consulta contexto bajo demanda según estas reglas:
+
+| Cuándo | Qué consultar |
+|--------|---------------|
+| Primera interacción de la sesión | `git log --oneline -10`, `git status`, `git branch -v` |
+| Antes de cualquier code change (ya en full-flow) | `docs/decisions/log.md` (Learning Loop) |
+| No sé en qué branch estoy | `git branch -v` |
+| Tarea toca un subsistema específico | Knowledge module correspondiente (tabla en "Knowledge Modules") |
+
+**Regla:** No depender de contexto pre-generado. Si necesitas saber algo, consúltalo.
+
 ## Feedback Capture (mandatory)
 
 **Toda interacción no-trivial produce datos de feedback estructurados. Esto es lo que cierra el learning loop.**
