@@ -8,6 +8,20 @@ Registro de decisiones de diseño significativas. Cada entrada captura el contex
 
 ---
 
+### [2026-03-20] Service Time Calibration via SQL Window Functions
+
+- **Problema:** Necesidad de calcular tiempos de servicio históricos por dirección para calibrar el optimizador. RouteStop tiene `deliveredAt` pero no `arrivedAt`.
+- **Decisión:** `ServiceTimeCalibrationService` usa DBAL Connection con SQL CTE + `LAG()` window function para calcular deltas entre `deliveredAt` consecutivos por ruta. Para la primera parada, usa `route.startAt` como referencia. Filtra outliers (>1h) y requiere mínimo de muestras.
+- **Alternativas descartadas:** (A) Cargar entidades en memoria con Doctrine → no escala con miles de rutas. (B) Agregar `arrivedAt` a RouteStop → requiere GPS geofencing, over-engineering para MVP.
+- **Resultado:** Query eficiente en BD, resultados precisos. Ruta de escalación: agregar `arrivedAt` en Phase 2 con geofencing.
+
+### [2026-03-20] Delay-based reoptimization con cooldown
+
+- **Problema:** Auto-reoptimizar cuando una ruta acumula retraso significativo.
+- **Decisión:** `DelayReoptimizationSubscriber` escucha `StopDelivered`, calcula retraso como `elapsed - estimatedDuration`, dispara reoptimización si excede threshold (30min) con cooldown de 10min entre reoptimizaciones. Usa `RouteEventRepositoryInterface::findLastByTypeForRoute()`.
+- **Alternativas descartadas:** (A) Comparar ETA por parada individual → requiere ETAs que no existen aún. (B) Cron periódico → latencia innecesaria, el evento de entrega es el momento natural.
+- **Resultado:** Patrón consistente con `ExceptionReoptimizationSubscriber` y `SkipReoptimizationSubscriber`. Cooldown previene cascadas.
+
 ### [2026-03-17] React SPA + MapView DDD Bounded Context
 
 - **Problema:** Frontend de 73 Twig templates con JS inline duplicado. 6 Mercure listeners dispersos con violación de D (SOLID) y publicación duplicada.
