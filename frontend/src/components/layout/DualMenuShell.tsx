@@ -58,6 +58,7 @@ export function DualMenuShell({
 
       {/* ── Unified top bar ──────────────────────────────────────────── */}
       <TopBar
+        compact={true}
         onMenuClick={() => setNavOpen(true)}
         extraControls={dataSidebarToggle}
       />

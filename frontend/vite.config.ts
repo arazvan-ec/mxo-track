@@ -18,11 +18,15 @@ export default defineConfig({
       input: {
         main: path.resolve(__dirname, 'index.html'),
         'sidebar-widget': path.resolve(__dirname, 'sidebar-widget.html'),
+        'topbar-widget': path.resolve(__dirname, 'topbar-widget.html'),
       },
       output: {
         entryFileNames: (chunkInfo) => {
           if (chunkInfo.name === 'sidebar-widget') {
             return 'assets/sidebar-widget.js';
+          }
+          if (chunkInfo.name === 'topbar-widget') {
+            return 'assets/topbar-widget.js';
           }
           return 'assets/[name]-[hash].js';
         },

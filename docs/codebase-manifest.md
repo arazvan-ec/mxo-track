@@ -3,16 +3,15 @@
 > **Auto-generated** by `make manifest` (`backend/bin/generate-manifest.sh`).
 > Do not edit manually — regenerate with `make manifest`.
 
-**Generated:** 2026-03-22 22:01
-**Generated:** 2026-03-22 21:34
+**Generated:** 2026-03-22 23:00
 **Regenerate:** `make manifest`
 
 ## Project Overview
 
 | Area | Path | Files | Tech |
 |------|------|------:|------|
-| Backend | `backend/` | 501 PHP | Symfony 7.4, PHP 8.4 |
-| Frontend | `frontend/` | 59 JS/TS | React |
+| Backend | `backend/` | 502 PHP | Symfony 7.4, PHP 8.4 |
+| Frontend | `frontend/` | 66 JS/TS | React |
 | ML Service | `ml-service/` | 17 Python | FastAPI |
 | Docker/Infra | `docker/` + `scripts/` | 9 + 5 | Docker, OSRM, VROOM, Traccar |
 | OpenSpec | `openspec/` | 28 specs | YAML specs |
@@ -29,7 +28,7 @@
 | Enums — core (src/Enum/) | 17 |
 | Enums — provider | 4 |
 | **Enums total** | **21** |
-| Controllers | 61 |
+| Controllers | 62 |
 | Application Services (src/Application/) | 23 |
 | Domain/Infra Services (src/Service/) | 73 |
 | Repositories | 18 |
@@ -208,7 +207,7 @@ View
 
 | Category | Count |
 |----------|------:|
-| JS/TS files total | 59 |
+| JS/TS files total | 66 |
 | Pages | 9 |
 
 ### Directory Tree
@@ -416,6 +415,7 @@ Controller endpoints (auto-extracted from `#[Route]` attributes):
 | GET | `/admin/health/live` | AdminController | healthLive |
 | GET | `/admin/health` | AdminController | health |
 | GET | `/admin` | AdminController | dashboard |
+| GET | `/api/csrf-token/{intention}` | CsrfTokenController | __invoke |
 | GET | `/api/fleet/map-data` | FleetMapDataController | __invoke |
 | GET | `/api/me` | MeController | __invoke |
 | GET | `/api/mercure-token` | MercureTokenController | __invoke |

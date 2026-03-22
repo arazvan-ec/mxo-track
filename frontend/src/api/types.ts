@@ -6,6 +6,7 @@ export interface MeResponse {
   role: string;
   customerId?: string;
   customerName?: string;
+  locale?: string;
 }
 
 // Match MapViewData.toArray() — src/View/MapViewData.php

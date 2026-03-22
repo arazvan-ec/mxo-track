@@ -7,6 +7,7 @@ namespace App\Controller\Api;
 use App\Entity\User;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
@@ -14,7 +15,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 class MeController extends AbstractController
 {
     #[Route('/api/me', name: 'api_me', methods: ['GET'])]
-    public function __invoke(): JsonResponse
+    public function __invoke(Request $request): JsonResponse
     {
         /** @var User $user */
         $user = $this->getUser();
@@ -25,6 +26,7 @@ class MeController extends AbstractController
             'role' => $user->getRoles()[0] ?? 'ROLE_USER',
             'customerId' => $user->getCustomer()?->getPublicIdString(),
             'customerName' => $user->getCustomer()?->getName(),
+            'locale' => $request->getLocale(),
         ]);
     }
 }
