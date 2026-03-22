@@ -8,6 +8,13 @@ Registro de decisiones de diseño significativas. Cada entrada captura el contex
 
 ---
 
+### [2026-03-22] Unify app layouts: React TopBar widget replaces Twig Alpine.js top bar
+
+- **Problema:** Top bar duplicado — Twig pages tenían search, notifications, language switcher y user dropdown via Alpine.js (~160 líneas), mientras SPA pages usaban un TopBar React con las mismas features. Dos implementaciones del mismo UI.
+- **Decisión:** Crear `topbar-widget.tsx` (mismo patrón que `sidebar-widget.tsx`) que monta el componente React `TopBar` en páginas Twig. Eliminar todo el HTML inline del top bar y las funciones Alpine.js `searchAutocomplete()` y `notificationBell()` de `base.html.twig`. El widget también incluye `NavigationSidebar` overlay, consolidando sidebar-widget en una sola carga.
+- **Alternativas descartadas:** (A) TopBar solo para SPA — no elimina duplicación con Twig. (C) Alpine.js en SPA pages — mezcla frameworks innecesariamente.
+- **Resultado:** Build OK. `topbar-widget.js` (0.56 kB) + TopBar chunk (10.09 kB). -236 líneas, +62 líneas. Zero duplicación de top bar.
+
 ### [2026-03-20] Service Time Calibration via SQL Window Functions
 
 - **Problema:** Necesidad de calcular tiempos de servicio históricos por dirección para calibrar el optimizador. RouteStop tiene `deliveredAt` pero no `arrivedAt`.
