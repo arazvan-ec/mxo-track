@@ -50,18 +50,24 @@
 {% block body %}
 <div class="min-h-full">
 
-  {# ── Sidebar (always visible: icons on mobile, full on desktop) ── #}
-  <div class="fixed inset-y-0 z-30 flex w-16 lg:w-64 flex-col">
-    <div class="flex grow flex-col overflow-y-auto bg-slate-800 border-r border-slate-700">
-      {% include '_sidebar_content.html.twig' %}
-    </div>
-  </div>
+  {# ── React sidebar widget (unified menu) ─────────────────────────── #}
+  <div id="react-sidebar-root"></div>
+  <script type="module" src="/app/assets/sidebar-widget.js"></script>
 
   {# ── Main content area ──────────────────────────────────────────── #}
-  <div class="pl-16 lg:pl-64">
+  <div>
 
     {# ── Top bar ─────────────────────────────────────────────────── #}
     <div class="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">
+
+      {# Hamburger button — opens React NavigationSidebar #}
+      <button type="button" onclick="window.__mxoSidebarOpen && window.__mxoSidebarOpen()"
+              class="-m-2.5 p-2.5 text-gray-500 hover:text-gray-900 transition-colors">
+        <span class="sr-only">Abrir menu</span>
+        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/>
+        </svg>
+      </button>
 
       <div class="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
         {# Search bar #}

@@ -14,6 +14,20 @@ export default defineConfig({
   build: {
     outDir: '../backend/public/app',
     emptyOutDir: true,
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, 'index.html'),
+        'sidebar-widget': path.resolve(__dirname, 'sidebar-widget.html'),
+      },
+      output: {
+        entryFileNames: (chunkInfo) => {
+          if (chunkInfo.name === 'sidebar-widget') {
+            return 'assets/sidebar-widget.js';
+          }
+          return 'assets/[name]-[hash].js';
+        },
+      },
+    },
   },
   server: {
     port: 5173,
