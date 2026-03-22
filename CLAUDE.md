@@ -307,10 +307,52 @@ fix: correct ETA calculation when stop is skipped
 | Detalle de una entidad específica | `docs/knowledge/domain-model.md` |
 | Inventario completo de features | `docs/FEATURES.md` |
 | Arquitectura, bounded contexts | `docs/knowledge/architecture-ddd.md` |
+| Cómo fluye un proceso end-to-end (shipment, ruta, tracking) | `docs/knowledge/domain-model.md` → End-to-End Flows |
+| Qué providers/factories existen para un servicio | `docs/knowledge/provider-framework.md`; factories en `docs/codebase-manifest.md` → Factory Registry |
+| Cómo se hace deploy, env vars, Docker | `docs/knowledge/deployment.md` |
+| Cómo funcionan los tests, patterns, fixtures | `docs/knowledge/testing.md` |
+| Cómo funciona Mercure/SSE/realtime | `docs/knowledge/realtime.md` |
+| Cómo funciona el GPS/Traccar | `docs/knowledge/gps-tracking.md` |
+| Cómo funciona la optimización de rutas | `docs/knowledge/route-optimization.md` |
+| Roles, auth, seguridad, CSRF | `docs/knowledge/security.md` |
+| Templates Twig, layout, sidebar, componentes UI | `docs/knowledge/ui-frontend.md` |
+| Qué endpoints tiene un controller específico | `docs/codebase-manifest.md` → Route Map |
+| Qué servicios implementan una interface | `docs/codebase-manifest.md` → Service Map |
+| Qué factories existen y qué crean | `docs/codebase-manifest.md` → Factory Registry |
+| Desglose de tests por tipo (unit/functional/domain) | `docs/codebase-manifest.md` → Test Breakdown |
+| Qué templates Twig hay por sección | `docs/codebase-manifest.md` → Twig Template Map |
 
 ### Cuándo regenerar
 
 Ejecutar `make manifest` y commitear el resultado **siempre** como último paso antes de push o al finalizar una rama. Sin condiciones — es barato (~1 segundo) y garantiza que el manifest esté siempre fresco.
+
+### Exploración en capas (cuando el gate no tiene respuesta)
+
+Cuando necesites entender algo que no está en el manifest ni en knowledge modules, explora en capas — cada capa más costosa que la anterior. **PARA cuando tengas suficiente información.**
+
+**Capa 1: Manifest + Knowledge (0 tool calls adicionales)**
+- Lee `docs/codebase-manifest.md` → Service Map, Route Map, Entity Relationships, Factory Registry, Template Map
+- Lee el knowledge module relevante (tabla de Knowledge Modules abajo)
+- Si esto responde tu pregunta → **PARA**
+
+**Capa 2: Búsqueda dirigida (1-3 tool calls)**
+- Grep por clase/función/ruta específica
+- Glob para encontrar archivos por patrón
+- Read del archivo más relevante identificado en Capa 1
+- Si esto responde tu pregunta → **PARA**
+
+**Capa 3: Exploración con agente (subagente Explore)**
+- Solo si Capa 1 y 2 no fueron suficientes
+- Dar al agente contexto de lo que YA encontraste en capas anteriores
+- Pedir hallazgos específicos, no dumps de código
+
+### Anti-patterns de exploración
+
+- Lanzar agente Explore sin haber consultado manifest/knowledge primero
+- Grep masivo (`grep -r "class"`) cuando el manifest tiene Service Map
+- Leer archivos completos cuando solo necesitas una sección específica
+- Explorar la misma área que ya está documentada en un knowledge module
+- Explorar para contar/listar cuando el manifest ya tiene esa información
 
 ## Principio de Escalabilidad en Decisiones (mandatory)
 
@@ -535,11 +577,20 @@ Antes de trabajar en un subsistema, **LEE el módulo relevante** en `docs/knowle
 | Roles, multi-tenancy, CSRF, seguridad | `docs/knowledge/security.md` |
 | Skills de Superpowers (completo) | `docs/knowledge/superpowers-skills.md` |
 | Feedback, execution logs, learning loop, retrospectives | `docs/knowledge/feedback-learning.md` |
+| Templates Twig, Alpine.js, Tailwind, componentes UI | `docs/knowledge/ui-frontend.md` |
 | Índice completo de módulos | `docs/knowledge/index.md` |
 | Requisitos de negocio, gaps, decisiones | `docs/analysis/2026-03-15-business-requirements-audit.md` |
 | Análisis previos del codebase | `docs/analysis/` |
 
 **Regla:** No duplicar info entre CLAUDE.md y los módulos. Al modificar un subsistema, actualizar el módulo correspondiente.
+
+### Freshness Protocol
+
+- **Módulos verificados (fecha < 14 días):** Usar directamente sin spot-check
+- **Módulos no verificados (`--`) o > 14 días:** Spot-check 2-3 claims clave contra el código antes de confiar. Si incorrectos → actualizar módulo, commitear, actualizar fecha en `docs/knowledge/index.md`
+- **Al terminar cualquier tarea que tocó un subsistema:** Actualizar el knowledge module correspondiente si cambió algo relevante. Incluir en el mismo commit o en commit separado `docs: update {module} knowledge module`
+- **Nunca dejar un módulo stale si ya descubriste la discrepancia** — actualizar es parte del trabajo, no una tarea separada
+- **Visibilidad rápida:** `docs/codebase-manifest.md` → Knowledge Module Status muestra freshness de todos los módulos de un vistazo
 
 ## Regla de Gobernanza de CLAUDE.md
 
@@ -966,6 +1017,24 @@ La API de Claude rechaza peticiones con HTTP 400 y mensaje `tool_use ids must be
 5. **Leer TodoWrite** — si había una lista de tareas, verificar cuáles están completadas y cuáles pendientes
 
 **Regla:** Ante este error, NUNCA asumir que el trabajo previo se guardó. Verificar con `git log` y `git status` antes de continuar. Hacer commits más frecuentes es la mejor protección.
+
+---
+
+### Problema conocido: Error "assistant message prefill" (API 400)
+
+La API de Claude rechaza peticiones con HTTP 400 y mensaje `This model does not support assistant message prefill` cuando el cliente intenta pre-llenar la respuesta del asistente con un modelo que no lo soporta. Es un **bug del cliente** (Claude Code / Agent SDK), no del flujo de trabajo.
+
+**Causas principales:**
+- El cliente construye mal la petición API (envía mensaje assistant como último mensaje)
+- Conversaciones largas donde la compresión de contexto corrompe la estructura de mensajes
+- Sesiones reanudadas con historial malformado
+
+**Síntomas:**
+- Error 400: `This model does not support assistant message prefill`
+- La sesión se interrumpe abruptamente
+- Idéntico comportamiento al error de tool_use ids duplicados
+
+**Mitigación y recuperación:** Idénticas al error "tool_use ids must be unique" (ver arriba). Las mismas 4 reglas de mitigación y 5 pasos de recuperación aplican. La mejor protección sigue siendo: **commits frecuentes + tareas atómicas + TodoWrite actualizado**.
 
 ---
 

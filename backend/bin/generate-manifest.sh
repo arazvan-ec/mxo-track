@@ -334,6 +334,113 @@ done > "$TMPROUTES" || true
 sort -t'|' -k3,3 "$TMPROUTES" >> "$OUTPUT"
 rm -f "$TMPROUTES"
 
+# --- Twig Template Map ---
+TEMPLATES="$PROJECT_ROOT/backend/templates"
+
+cat >> "$OUTPUT" <<EOF
+
+---
+
+## Twig Template Map
+
+| Directory | Count | Purpose |
+|-----------|------:|---------|
+EOF
+
+for d in $(find "$TEMPLATES" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort); do
+    dirname=$(basename "$d")
+    count=$(find "$d" -name "*.html.twig" 2>/dev/null | wc -l | tr -d ' ')
+    case "$dirname" in
+        admin)      purpose="Admin panel pages (CRUD, dashboards)" ;;
+        customer)   purpose="Customer portal pages" ;;
+        driver)     purpose="Driver portal pages" ;;
+        operator)   purpose="Operator portal pages" ;;
+        components) purpose="Reusable UI components (partials)" ;;
+        email)      purpose="Email templates" ;;
+        security)   purpose="Login, registration, auth pages" ;;
+        tracking)   purpose="Public tracking pages" ;;
+        export)     purpose="Export/download templates" ;;
+        notification) purpose="Notification templates" ;;
+        search)     purpose="Search-related templates" ;;
+        *)          purpose="" ;;
+    esac
+    echo "| \`$dirname/\` | $count | $purpose |"
+done >> "$OUTPUT"
+
+# Count root-level templates
+ROOT_TWIG=$(find "$TEMPLATES" -maxdepth 1 -name "*.html.twig" 2>/dev/null | wc -l | tr -d ' ')
+echo "| _(root)_ | $ROOT_TWIG | Base layout, sidebar |" >> "$OUTPUT"
+
+# --- Factory Registry ---
+cat >> "$OUTPUT" <<EOF
+
+---
+
+## Factory Registry
+
+Provider factories (critical for Constructor Signature Changes pattern):
+
+| Factory | Interface | Path |
+|---------|-----------|------|
+EOF
+
+find "$SRC/Provider" -name "*Factory.php" 2>/dev/null | sort | while read -r f; do
+    factory=$(basename "$f" .php)
+    relpath=$(echo "$f" | sed "s|$SRC/||")
+    iface=$(grep -oP 'implements\s+\K\w+' "$f" 2>/dev/null | head -1) || true
+    echo "| $factory | ${iface:-—} | \`$relpath\` |"
+done >> "$OUTPUT"
+
+# --- Test Breakdown ---
+TESTS_UNIT=$(count_files "$TESTS/Unit" "*.php")
+TESTS_FUNCTIONAL=$(count_files "$TESTS/Functional" "*.php")
+TESTS_DOMAIN=$(count_files "$TESTS/Domain" "*.php")
+TESTS_FACTORY=$(count_files "$TESTS/Factory" "*.php")
+
+cat >> "$OUTPUT" <<EOF
+
+---
+
+## Test Breakdown
+
+| Type | Count |
+|------|------:|
+| Unit | $TESTS_UNIT |
+| Functional | $TESTS_FUNCTIONAL |
+| Domain | $TESTS_DOMAIN |
+| Factory (test factories) | $TESTS_FACTORY |
+| **Total** | **$TESTS_COUNT** |
+EOF
+
+# --- Knowledge Module Status ---
+INDEX_FILE="$PROJECT_ROOT/docs/knowledge/index.md"
+
+cat >> "$OUTPUT" <<EOF
+
+---
+
+## Knowledge Module Status
+
+Freshness of knowledge modules (parsed from \`docs/knowledge/index.md\`):
+
+| Module | Last Verified | Fresh? |
+|--------|--------------|--------|
+EOF
+
+if [ -f "$INDEX_FILE" ]; then
+    # Parse table rows from index.md (skip header rows)
+    grep -P '^\|.*\.md\`' "$INDEX_FILE" 2>/dev/null | while IFS='|' read -r _ module file verified desc when _; do
+        module=$(echo "$module" | sed 's/^ *//;s/ *$//')
+        verified=$(echo "$verified" | sed 's/^ *//;s/ *$//')
+        if [ "$verified" = "--" ]; then
+            fresh="Not verified"
+        else
+            fresh="$verified"
+        fi
+        echo "| $module | $verified | $fresh |"
+    done >> "$OUTPUT"
+fi
+
 cat >> "$OUTPUT" <<EOF
 
 ---
