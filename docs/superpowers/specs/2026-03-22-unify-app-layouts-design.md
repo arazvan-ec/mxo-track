@@ -1,42 +1,83 @@
-# Spec: Unify App Layouts — Top Bar & Hamburger Menu
+# Spec: Unify App Layouts — Single React TopBar Widget
 
 **Date:** 2026-03-22
 **Status:** Approved
 **Bounded context:** Pragmático (UI/Frontend)
 
-## Problem
+## Problema
 
-The app has two different top bars:
-1. **Twig pages** (43 pages via `base.html.twig`): hamburger + search + language switcher + notifications + user dropdown
-2. **React SPA pages** (10 pages via `DualMenuShell`): hamburger + data toggle + basic user avatar only
+El top bar está duplicado: Twig (`base.html.twig`) tiene su versión HTML con search, notifications, language switcher y user dropdown. Las páginas React SPA (`DualMenuShell`) tienen una versión reducida con solo hamburger + user avatar. Esto causa UX inconsistente y duplicación de código.
 
-This creates an inconsistent UX — users lose search, notifications, and language switcher when navigating to SPA pages.
+## Approach elegido: React TopBar Widget (Approach B)
 
-## Design
+Un único componente React `TopBar` sirve como source of truth tanto para páginas Twig como para páginas SPA.
 
-### Approach: Extract shared TopBar React component
+### Alternativas descartadas
 
-Create a `TopBar.tsx` component that mirrors the Twig top bar with all elements:
-- Hamburger button (opens NavigationSidebar overlay)
-- Search bar (calls `/api/search`)
-- Language switcher (posts to `/locale/{locale}`)
-- Notification bell with live count (via `/api/notifications/unread-count` + Mercure SSE)
-- User dropdown menu
+- **(A) Shared React TopBar solo para SPA:** Duplica lógica entre Twig HTML y React. Más simple pero no elimina duplicación.
+- **(C) Alpine.js en SPA:** Mezcla frameworks (Alpine + React) en la misma vista. Inconsistente con la dirección del proyecto.
 
-### Changes
+### Trade-offs del approach elegido
 
-1. **New:** `frontend/src/components/layout/TopBar.tsx` — shared top bar component
-2. **Update:** `DualMenuShell.tsx` — replace inline top bar with `<TopBar>`, pass data sidebar toggle as `extraControls`
-3. **Remove:** `AppShell.tsx` and `Sidebar.tsx` — unused components (no routes use them)
+- **Ventaja:** Zero duplicación — un solo componente para todas las vistas
+- **Ventaja:** Mantenimiento en un solo lugar — cambios al top bar aplican everywhere
+- **Desventaja:** Requiere un nuevo widget entry point (como sidebar-widget)
+- **Desventaja:** CSRF token para locale se inyecta como data attribute (puede expirar en sesiones muy largas)
 
-### Trade-offs
+## Diseño técnico
 
-- **Chosen:** Single TopBar component used by DualMenuShell → consistent with Twig pages
-- **Rejected:** Rendering Twig top bar over SPA pages → too complex, hydration issues
-- **Rejected:** Moving everything to React SPA → too large scope, 43 Twig pages still needed
+### Componentes
+
+1. **`TopBar.tsx`** — Componente React con:
+   - Hamburger button (abre NavigationSidebar overlay via `window.__mxoSidebarOpen`)
+   - Search bar con autocompletado (`/api/search`)
+   - Language switcher (POST a `/locale/{locale}` con CSRF token)
+   - Notification bell con live count (`/api/notifications/unread-count` + Mercure SSE)
+   - User dropdown (email + logout, via `/api/me`)
+   - Prop `extraControls` para controles page-specific (e.g. data sidebar toggle)
+
+2. **`topbar-widget.tsx`** — Entry point standalone:
+   - Monta `TopBar` en `#react-topbar-root`
+   - Lee data attributes del mount div: `data-csrf-locale`, `data-mercure-url`
+   - Expone `window.__mxoSidebarOpen` al hamburger del TopBar
+
+3. **`DualMenuShell.tsx`** — Actualización:
+   - Importa `TopBar` directamente (no usa widget)
+   - Pasa data sidebar toggle como `extraControls` prop
+
+4. **`base.html.twig`** — Actualización:
+   - Elimina todo el top bar HTML inline (search, lang, notifications, user dropdown, Alpine.js functions)
+   - Añade `<div id="react-topbar-root" data-csrf-locale="..." data-mercure-url="..."></div>`
+   - Añade `<script type="module" src="/app/assets/topbar-widget.js"></script>`
+
+### Datos inyectados desde Twig
+
+| Dato | Mecanismo | Fuente |
+|------|-----------|--------|
+| Mercure URL | `data-mercure-url` en mount div | `{{ mercure_public_url }}` |
+| CSRF locale token | `data-csrf-locale` en mount div | `{{ csrf_token('locale') }}` |
+| User info | API call `/api/me` | React hook `useMe()` |
+| Locale actual | `document.documentElement.lang` | `<html lang="{{ app.request.locale }}">` |
+| Search results | API call `/api/search?q=...` | Existing endpoint |
+| Notification count | API call `/api/notifications/unread-count` | Existing endpoint |
+| Mercure SSE token | API call `/api/mercure-token` | Existing endpoint |
+
+### Limpieza
+
+- Eliminar `AppShell.tsx` (sin rutas que lo usen)
+- Eliminar `Sidebar.tsx` (sin rutas que lo usen)
+- Eliminar funciones Alpine.js `searchAutocomplete()` y `notificationBell()` de `base.html.twig`
+- Actualizar router.tsx (quitar import de AppShell)
+
+## Opción futura
+
+Si `window.__mxo*` globals exceden 2-3, migrar a un event bus ligero (ya documentado en ui-frontend.md).
 
 ## Success Criteria
 
-- SPA pages show the same top bar elements as Twig pages
-- Hamburger menu works identically in both contexts
-- Search, notifications, language switcher functional in SPA pages
+- Top bar idéntico visual y funcionalmente en Twig y SPA pages
+- Search con autocompletado funcional
+- Notifications con live count via Mercure
+- Language switch funcional
+- Zero código duplicado de top bar
+- AppShell y Sidebar eliminados sin regresiones
