@@ -1,6 +1,6 @@
 # UI & Frontend
 
-**Última actualización:** 2026-03-22
+**Última actualización:** 2026-03-22 (updated: React sidebar widget pattern)
 **Estado:** Vigente
 
 ## Tech Stack
@@ -22,10 +22,13 @@
 - Includes sidebar, topbar, flash messages
 - Twig blocks: `title`, `styles`, `body`, `body_attrs`
 
-**`backend/templates/_sidebar_content.html.twig`** — Navigation sidebar (~566 lines)
-- Role-based rendering: `is_granted('ROLE_ADMIN')`, `ROLE_CUSTOMER`, `ROLE_DRIVER`
-- 6 admin sections: main, operations, resources, advanced, system
-- Mobile responsive: icons only on mobile (`hidden lg:block`), full text on desktop (`w-16 lg:w-64`)
+**Navigation Sidebar** — Unified React `NavigationSidebar` widget (replaces old Twig `_sidebar_content.html.twig`)
+- **Single source of truth:** `frontend/src/components/layout/NavigationSidebar.tsx` renders all menu items for all roles
+- **Mounted in Twig via widget:** `frontend/src/sidebar-widget.tsx` → standalone entry point, loaded in `base.html.twig` as `<script src="sidebar-widget.js">`
+- **Twig integration:** Hamburger button in topbar calls `window.__mxoSidebarOpen()` to open React overlay drawer
+- **SPA integration:** Same `NavigationSidebar` used inside `DualMenuShell` for React SPA pages
+- Role-based rendering handled inside React component (reads user role from context)
+- Old `_sidebar_content.html.twig` still exists but is **no longer included** in `base.html.twig` (candidate for deletion)
 
 ## Template Organization
 
@@ -81,10 +84,13 @@ Pattern: `x-data="{ open: false }"` + `x-show` + `x-transition` for dropdowns/mo
 |-----------|---------|
 | `pages/` | Page-level components (admin, customer, driver) |
 | `components/` | Reusable React components (fleet, layout, maps, panels) |
+| `components/layout/` | Layout shells: `NavigationSidebar`, `DualMenuShell`, `TopBar` |
 | `api/` | API client + hooks |
 | `hooks/` | Custom React hooks |
 | `assets/` | Static assets |
 | `router.tsx` | Route definitions |
+| `sidebar-widget.tsx` | Standalone entry point — mounts `NavigationSidebar` in Twig pages |
+| `sidebar-widget.css` | Minimal styles for widget container + hamburger button |
 
 ## Common Patterns
 
@@ -92,7 +98,7 @@ Pattern: `x-data="{ open: false }"` + `x-show` + `x-transition` for dropdowns/mo
 1. Create controller in `src/Controller/Admin/`
 2. Create template in `templates/admin/{section}/`
 3. Extend `base.html.twig` with `{% extends 'base.html.twig' %}`
-4. Add nav item in `_sidebar_content.html.twig`
+4. Add nav item in `NavigationSidebar.tsx` (React component — single source of truth for all navigation)
 
 **Adding a reusable component:**
 1. Create `templates/components/_name.html.twig`
@@ -103,3 +109,22 @@ Pattern: `x-data="{ open: false }"` + `x-show` + `x-transition` for dropdowns/mo
 - Simple toggle/dropdown → Alpine.js `x-data`
 - Form CSRF → Stimulus `csrf_protection_controller`
 - Real-time updates → Mercure SSE (see `docs/knowledge/realtime.md`)
+- Complex interactive widget in Twig → React widget pattern (see below)
+
+**Mounting a React widget in Twig pages (pattern):**
+
+Use when a React component needs to render inside Twig-served pages (not just the SPA).
+
+1. Create standalone entry point: `frontend/src/{widget-name}.tsx`
+   - Import the React component, create a mount div, render with `createRoot`
+   - Expose a global function on `window` for Twig to trigger (e.g., `window.__mxoWidgetOpen`)
+2. Create minimal CSS: `frontend/src/{widget-name}.css` (only what the widget container needs)
+3. Add HTML entry: `frontend/{widget-name}.html` (Vite needs an HTML entry per page)
+4. Register in `frontend/vite.config.ts` → `build.rollupOptions.input` with fixed filename via `entryFileNames`
+5. Include in `base.html.twig`: `<script src="{{ asset('app/assets/{widget-name}.js') }}"></script>`
+6. Trigger from Twig: `<button onclick="window.__mxo{WidgetName}()">`
+
+**Key decisions:**
+- Fixed entry filename (no hash) simplifies Twig `<script>` tag — no manifest.json parsing needed
+- Chunked dependencies retain hash-based cache busting (only the tiny entry loses it, acceptable for <1 kB)
+- If `window.__mxo*` globals exceed 2-3, consider replacing with a lightweight event bus
