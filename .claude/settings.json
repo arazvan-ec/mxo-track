@@ -19,15 +19,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/user/mxo-track/.claude/hooks/full-flow-gate.sh",
+            "command": "/home/user/mxo-track/.claude/hooks/workflow-engine.sh",
             "timeout": 5,
-            "statusMessage": "Checking Full-flow compliance..."
-          },
-          {
-            "type": "command",
-            "command": "/home/user/mxo-track/.claude/hooks/tdd-gate.sh",
-            "timeout": 5,
-            "statusMessage": "Checking TDD compliance..."
+            "statusMessage": "Checking workflow compliance..."
           }
         ]
       }
@@ -47,20 +41,15 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/user/mxo-track/.claude/hooks/commit-msg-lint.sh",
+            "command": "/home/user/mxo-track/.claude/hooks/post-commit-validator.sh",
             "timeout": 5,
-            "statusMessage": "Checking commit message format..."
+            "statusMessage": "Validating commit..."
           },
           {
             "type": "command",
-            "command": "/home/user/mxo-track/.claude/hooks/post-commit-reminder.sh",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "/home/user/mxo-track/.claude/hooks/manifest-auto-run.sh",
+            "command": "/home/user/mxo-track/.claude/hooks/post-push-validator.sh",
             "timeout": 30,
-            "statusMessage": "Updating codebase manifest..."
+            "statusMessage": "Post-push tasks..."
           }
         ]
       }

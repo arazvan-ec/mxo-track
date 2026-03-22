@@ -24,14 +24,30 @@ cat > "$STATE_FILE" <<EOJSON
 {
   "session_date": "$TODAY",
   "flow_type": null,
-  "flow_declared": false,
-  "learning_loop_done": false,
-  "brainstorm_done": false,
-  "brainstorm_user_turns": 0,
-  "active_spec": null,
-  "active_plan": null,
-  "execution_log": null,
-  "tdd_bypass": false
+  "current_phase": null,
+  "interaction_classification": null,
+  "phase_history": [],
+  "evidence": {
+    "decisions_read": false,
+    "logs_scanned": false,
+    "user_turns": 0,
+    "alternatives_proposed": false,
+    "user_approved": false,
+    "spec_path": null,
+    "plan_path": null,
+    "tests_written": 0,
+    "tests_passed": null,
+    "lint_clean": null,
+    "execution_log_path": null,
+    "branch_strategy": null
+  },
+  "deviation": {
+    "active": false,
+    "reason": null,
+    "skipped_phases": [],
+    "return_to_phase": null,
+    "acknowledged_by_user": false
+  }
 }
 EOJSON
 
