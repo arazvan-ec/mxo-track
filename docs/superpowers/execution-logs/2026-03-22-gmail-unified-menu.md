@@ -41,10 +41,18 @@
   1. Vite multi-page build with fixed entry file name worked cleanly
   2. NavigationSidebar already had overlay mode — zero changes needed to the React component
   3. `window.__mxoSidebarOpen` bridge between Twig and React is simple and reliable
+  4. Reusing existing component instead of building new — zero duplication
 - **What didn't:**
-  1. Nothing significant — straightforward implementation
+  1. Initial flow compliance: missed formal Skill 2 invocation and Skill 12 — caught and corrected
 - **Lessons for future:**
   1. When Twig and React coexist, a widget approach (separate entry point) is cleaner than trying to embed React in Twig templates
   2. Fixed entry file names via `rollupOptions.output.entryFileNames` simplify Twig integration (no manifest.json parsing needed)
+  3. If more React widgets are needed in Twig, replicate this pattern: separate HTML entry + standalone .tsx + fixed filename in rollupOptions
+  4. If `window.__mxo*` globals proliferate beyond 2-3, consider a lightweight event bus instead
+- **Design retrospective (Skill 12 Step 5):**
+  - No patterns feel forced or over-engineered — minimal approach (50 LOC entry point, 1 global function)
+  - Fixed entry filename loses cache busting on the tiny entry (0.53 kB), but chunked dependencies retain hash-based busting — acceptable trade-off
+  - `_sidebar_content.html.twig` remains in repo but is no longer included — could be deleted in a follow-up cleanup commit
+  - Pre-existing test failures on master (6 errors, 5 failures) — unrelated to this change, confirmed by running tests on both branches
 - **Business context tags:** ui, navigation, frontend
 - **Decision log entry needed?** yes — added [2026-03-22] unified React sidebar
