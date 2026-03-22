@@ -1020,6 +1020,24 @@ La API de Claude rechaza peticiones con HTTP 400 y mensaje `tool_use ids must be
 
 ---
 
+### Problema conocido: Error "assistant message prefill" (API 400)
+
+La API de Claude rechaza peticiones con HTTP 400 y mensaje `This model does not support assistant message prefill` cuando el cliente intenta pre-llenar la respuesta del asistente con un modelo que no lo soporta. Es un **bug del cliente** (Claude Code / Agent SDK), no del flujo de trabajo.
+
+**Causas principales:**
+- El cliente construye mal la petición API (envía mensaje assistant como último mensaje)
+- Conversaciones largas donde la compresión de contexto corrompe la estructura de mensajes
+- Sesiones reanudadas con historial malformado
+
+**Síntomas:**
+- Error 400: `This model does not support assistant message prefill`
+- La sesión se interrumpe abruptamente
+- Idéntico comportamiento al error de tool_use ids duplicados
+
+**Mitigación y recuperación:** Idénticas al error "tool_use ids must be unique" (ver arriba). Las mismas 4 reglas de mitigación y 5 pasos de recuperación aplican. La mejor protección sigue siendo: **commits frecuentes + tareas atómicas + TodoWrite actualizado**.
+
+---
+
 ### Subagent Output Limits (mandatory)
 
 Los subagentes (Agent tool) tienen un límite de lectura de 25,000 tokens en el entorno web. Si el output de un subagente excede este límite, el agente padre no puede leer el resultado y el trabajo se pierde.
