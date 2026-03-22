@@ -28,6 +28,7 @@
 | Security | `security.md` | -- | Roles, multi-tenancy, CSRF, rate limiting, audit | Seguridad, autenticación, autorización |
 | Superpowers Skills | `superpowers-skills.md` | -- | Skills completas: TDD, brainstorming, debugging, verification, etc. | Aplicar cualquier skill de desarrollo |
 | Feedback & Learning | `feedback-learning.md` | -- | Sistema de captura de datos, execution logs, retrospectives, learning loop, métricas de negocio | Feedback, execution logs, learning loop, retrospectives |
+| UI & Frontend | `ui-frontend.md` | 2026-03-22 | Templates Twig, Alpine.js, Tailwind, componentes, React frontend, layout architecture | Trabajar con templates, UI, sidebar, frontend |
 
 ## Cómo Usar
 

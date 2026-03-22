@@ -3,7 +3,7 @@
 > **Auto-generated** by `make manifest` (`backend/bin/generate-manifest.sh`).
 > Do not edit manually — regenerate with `make manifest`.
 
-**Generated:** 2026-03-20 13:19
+**Generated:** 2026-03-22 20:19
 **Regenerate:** `make manifest`
 
 ## Project Overview
@@ -522,6 +522,81 @@ Controller endpoints (auto-extracted from `#[Route]` attributes):
 | GET | `` | VehicleAdminController | index |
 | GET | `` | ZonePerformanceController | index |
 | POST | `` | DriverPushSubscriptionController | subscribe |
+
+---
+
+## Twig Template Map
+
+| Directory | Count | Purpose |
+|-----------|------:|---------|
+| `admin/` | 37 | Admin panel pages (CRUD, dashboards) |
+| `components/` | 4 | Reusable UI components (partials) |
+| `customer/` | 5 | Customer portal pages |
+| `driver/` | 1 | Driver portal pages |
+| `email/` | 3 | Email templates |
+| `export/` | 1 | Export/download templates |
+| `notification/` | 1 | Notification templates |
+| `operator/` | 1 | Operator portal pages |
+| `search/` | 1 | Search-related templates |
+| `security/` | 1 | Login, registration, auth pages |
+| `tracking/` | 3 | Public tracking pages |
+| _(root)_ | 2 | Base layout, sidebar |
+
+---
+
+## Factory Registry
+
+Provider factories (critical for Constructor Signature Changes pattern):
+
+| Factory | Interface | Path |
+|---------|-----------|------|
+| NullSmsTransportFactory | ProviderFactoryInterface | `Provider/Factory/NullSmsTransportFactory.php` |
+| TwilioSmsTransportFactory | ProviderFactoryInterface | `Provider/Factory/TwilioSmsTransportFactory.php` |
+| TraccarFactory | ProviderFactoryInterface | `Provider/Gps/TraccarFactory.php` |
+| WebhookGpsFactory | ProviderFactoryInterface | `Provider/Gps/WebhookGpsFactory.php` |
+| HttpPollingFactory | ProviderFactoryInterface | `Provider/Realtime/HttpPollingFactory.php` |
+| MercureFactory | ProviderFactoryInterface | `Provider/Realtime/MercureFactory.php` |
+| GreedyOptimizerFactory | ProviderFactoryInterface | `Provider/RouteOptimizer/GreedyOptimizerFactory.php` |
+| VroomFactory | ProviderFactoryInterface | `Provider/RouteOptimizer/VroomFactory.php` |
+| GoogleDirectionsFactory | ProviderFactoryInterface | `Provider/Routing/GoogleDirectionsFactory.php` |
+| OsrmFactory | ProviderFactoryInterface | `Provider/Routing/OsrmFactory.php` |
+
+---
+
+## Test Breakdown
+
+| Type | Count |
+|------|------:|
+| Unit | 109 |
+| Functional | 8 |
+| Domain | 6 |
+| Factory (test factories) | 1 |
+| **Total** | **125** |
+
+---
+
+## Knowledge Module Status
+
+Freshness of knowledge modules (parsed from `docs/knowledge/index.md`):
+
+| Module | Last Verified | Fresh? |
+|--------|--------------|--------|
+| Modelo de Dominio | 2026-03-19 | 2026-03-19 |
+| Provider Framework | -- | Not verified |
+| API Surface | -- | Not verified |
+| Deployment | -- | Not verified |
+| Testing | -- | Not verified |
+| Realtime | -- | Not verified |
+| GPS Tracking | -- | Not verified |
+| Notifications | -- | Not verified |
+| AI/ML | -- | Not verified |
+| Route Optimization | -- | Not verified |
+| Architecture DDD/SOLID | 2026-03-19 | 2026-03-19 |
+| Design Patterns | -- | Not verified |
+| Security | -- | Not verified |
+| Superpowers Skills | -- | Not verified |
+| Feedback & Learning | -- | Not verified |
+| UI & Frontend | 2026-03-22 | 2026-03-22 |
 
 ---
 
