@@ -22,20 +22,29 @@
 - **Risk assessment:** low — no backend logic changes, only frontend/template changes
 
 ### Phase: Implementation
-- **Actual time:** [pending]
-- **Blockers hit:** [pending]
-- **Plan deviations:** [pending]
-- **Debugging episodes:** [pending]
+- **Actual time:** ~15 minutes
+- **Blockers hit:**
+  - Full-flow gate required registering active-spec file — resolved by writing to `.claude/active-spec`
+  - `npm install` needed before build (node_modules not present) — resolved quickly
+- **Plan deviations:** none
+- **Debugging episodes:** none
 
 ### Phase: Verification
-- **Tests:** [pending]
-- **Lint:** [pending]
+- **Tests:** N/A (frontend-only, no PHPUnit tests affected)
+- **Lint:** clean (make lint: 0 errors)
+- **Build:** `npm run build` successful — sidebar-widget.js (0.53 kB), NavigationSidebar chunk (74 kB gzip)
 - **Coverage delta:** not measured (frontend-only change)
 
 ### Phase: Retrospective
-- **Estimate accuracy:** [pending]
-- **What worked:** [pending]
-- **What didn't:** [pending]
-- **Lessons for future:** [pending]
+- **Estimate accuracy:** accurate (estimated 30 min, actual ~15 min)
+- **What worked:**
+  1. Vite multi-page build with fixed entry file name worked cleanly
+  2. NavigationSidebar already had overlay mode — zero changes needed to the React component
+  3. `window.__mxoSidebarOpen` bridge between Twig and React is simple and reliable
+- **What didn't:**
+  1. Nothing significant — straightforward implementation
+- **Lessons for future:**
+  1. When Twig and React coexist, a widget approach (separate entry point) is cleaner than trying to embed React in Twig templates
+  2. Fixed entry file names via `rollupOptions.output.entryFileNames` simplify Twig integration (no manifest.json parsing needed)
 - **Business context tags:** ui, navigation, frontend
-- **Decision log entry needed?** yes — unified React menu replacing Twig sidebar
+- **Decision log entry needed?** yes — added [2026-03-22] unified React sidebar

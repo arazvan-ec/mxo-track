@@ -116,6 +116,13 @@ Registro de decisiones de diseño significativas. Cada entrada captura el contex
 - **Alternativas descartadas:** (A) Vista materializada en PostgreSQL — menos flexible, no permite lógica de negocio en la proyección. (B) Single projector class — viola SRP.
 - **Resultado:** Migration creada, listeners implementados, rebuild command disponible. Read models listos para ser consumidos por controllers/API.
 
+### [2026-03-22] Unified React sidebar — single source of truth for navigation menu
+
+- **Problema:** Dos sidebars duplicados: Twig (`_sidebar_content.html.twig` + Alpine.js) y React (`NavigationSidebar.tsx`). Los ítems del menú estaban duplicados y podían desincronizarse. En mobile, el sidebar Twig ocupaba 64px permanentemente (icons-only) en vez de un drawer overlay.
+- **Decisión:** Crear un React sidebar widget standalone (`sidebar-widget.tsx`) que monta `NavigationSidebar` dentro de las páginas Twig. Vite multi-page build genera un bundle separado con nombre fijo (`sidebar-widget.js`). El sidebar Twig se elimina de `base.html.twig` y un botón hamburger en el top bar llama a `window.__mxoSidebarOpen()` para abrir el drawer React overlay.
+- **Alternativas descartadas:** (A) Mover todas las páginas Twig a React SPA — migración demasiado grande, no justificada solo para unificar menú. (B) Mantener ambos sidebars y sincronizar ítems via JSON config compartido — añade complejidad sin eliminar duplicación real. (C) Reescribir el sidebar Twig para que replique el patrón React — sigue habiendo dos implementaciones.
+- **Resultado:** Build OK. `sidebar-widget.js` (0.53 kB) + chunk NavigationSidebar (74 kB gzip). Single source of truth en `NavigationSidebar.tsx`. Hamburger button en Twig top bar. Lint clean.
+
 ### [2026-03-20] POPO migration: Route/RouteStop/RouteEvent a Domain\Route\Model con XML mapping
 
 - **Problema:** Entidades críticas en `src/Entity/` con ORM attributes mezclaban dominio con infraestructura. No podían ser unit-tested como POPOs puros.
