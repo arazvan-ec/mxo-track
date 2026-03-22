@@ -13,12 +13,12 @@ interface DualMenuShellProps {
 }
 
 /**
- * Shell component that provides two inline, independently collapsible sidebars:
+ * Shell component with an overlay navigation sidebar and an inline data sidebar:
  *
- * 1. Navigation sidebar (left) — app-wide navigation links, with a collapse button
- * 2. Data sidebar (right of nav) — page-specific content (metrics, stops, filters, etc.)
+ * 1. Navigation sidebar — overlay (same pattern as Twig pages), triggered by hamburger
+ * 2. Data sidebar (inline, left) — page-specific content (metrics, stops, filters, etc.)
  *
- * When collapsed, a small expand button appears on the map so the user can re-open.
+ * When the data sidebar is collapsed, expand buttons appear on the map.
  */
 export function DualMenuShell({
   dataSidebar,
@@ -31,10 +31,10 @@ export function DualMenuShell({
 
   return (
     <div className="flex h-screen w-full bg-slate-900">
-      {/* Navigation sidebar — always inline */}
+      {/* Navigation sidebar — overlay (consistent with Twig pages) */}
       {navOpen && (
         <NavigationSidebar
-          mode="inline"
+          mode="overlay"
           onClose={() => setNavOpen(false)}
         />
       )}
@@ -44,9 +44,19 @@ export function DualMenuShell({
         <aside
           className={`${dataSidebarWidth} flex-shrink-0 flex flex-col overflow-hidden border-r border-slate-700 bg-slate-900 ${dataSidebarClassName}`}
         >
-          {/* Collapse header */}
-          <div className="flex items-center justify-between px-3 py-2 border-b border-slate-700/50 flex-shrink-0">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+          {/* Header with hamburger + collapse */}
+          <div className="flex items-center gap-2 px-3 py-2 border-b border-slate-700/50 flex-shrink-0">
+            <button
+              type="button"
+              onClick={() => setNavOpen(true)}
+              className="text-slate-400 hover:text-white transition-colors p-1 rounded hover:bg-slate-700"
+              title="Abrir navegacion"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+              </svg>
+            </button>
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 flex-1">
               Datos
             </span>
             <button
@@ -68,33 +78,45 @@ export function DualMenuShell({
 
       {/* Main area */}
       <div className="flex-1 relative overflow-hidden">
-        {/* Expand buttons for collapsed panels */}
-        {(!navOpen || (dataSidebar && !dataOpen)) && (
+        {/* Expand buttons when data sidebar is collapsed */}
+        {dataSidebar && !dataOpen && (
           <div className="absolute top-3 left-3 z-20 flex items-center gap-1.5">
-            {!navOpen && (
-              <button
-                type="button"
-                onClick={() => setNavOpen(true)}
-                className="flex items-center justify-center w-9 h-9 rounded-lg border bg-slate-800/90 border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
-                title="Abrir navegacion"
-              >
-                <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-                </svg>
-              </button>
-            )}
-            {dataSidebar && !dataOpen && (
-              <button
-                type="button"
-                onClick={() => setDataOpen(true)}
-                className="flex items-center justify-center w-9 h-9 rounded-lg border bg-slate-800/90 border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
-                title="Abrir panel de datos"
-              >
-                <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
-                </svg>
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => setNavOpen(true)}
+              className="flex items-center justify-center w-9 h-9 rounded-lg border bg-slate-800/90 border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
+              title="Abrir navegacion"
+            >
+              <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={() => setDataOpen(true)}
+              className="flex items-center justify-center w-9 h-9 rounded-lg border bg-slate-800/90 border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
+              title="Abrir panel de datos"
+            >
+              <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
+              </svg>
+            </button>
+          </div>
+        )}
+
+        {/* Hamburger on map when no data sidebar exists */}
+        {!dataSidebar && (
+          <div className="absolute top-3 left-3 z-20">
+            <button
+              type="button"
+              onClick={() => setNavOpen(true)}
+              className="flex items-center justify-center w-9 h-9 rounded-lg border bg-slate-800/90 border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
+              title="Abrir navegacion"
+            >
+              <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+              </svg>
+            </button>
           </div>
         )}
 
