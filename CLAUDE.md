@@ -381,13 +381,21 @@ Cuando necesites entender algo que no está en el manifest ni en knowledge modul
 
 ### Clasificación de interacción (PRIMER paso antes de cualquier respuesta)
 
-| Tipo | Señal | Flujo |
-|------|-------|-------|
-| **Informational** | "qué hace X?", "explica Y", "dónde está Z?" | Micro-flow |
-| **Documentation** | Editar docs, knowledge modules, specs | Light-flow |
-| **Bug fix** | Error, test failure, comportamiento inesperado | Debug-flow |
-| **Code change** | Feature nueva, refactor, enhancement | Full-flow |
-| **Exploration** | "audita X", "analiza Y", "cómo funciona Z?", análisis de codebase, architecture review | Explore-flow |
+| Tipo | Señal | Flujo | `flow_type` en session-state |
+|------|-------|-------|------------------------------|
+| **Informational** | "qué hace X?", "explica Y", "dónde está Z?" | Micro-flow | `micro` |
+| **Documentation** | Editar docs, knowledge modules, specs | Light-flow | `light` |
+| **Bug fix** | Error, test failure, comportamiento inesperado | Debug-flow | `debug` |
+| **Code change** | Feature nueva, refactor, enhancement | Full-flow | `full` |
+| **Exploration** | "audita X", "analiza Y", "cómo funciona Z?", análisis de codebase, architecture review | Explore-flow | `explore` |
+
+**Inmediatamente después de clasificar**, actualizar `session-state.json`:
+
+```bash
+jq '.flow_type = "<tipo>" | .current_phase = "<fase-inicial>"' .claude/session-state.json > /tmp/ss.json && mv /tmp/ss.json .claude/session-state.json
+```
+
+Fases iniciales por flow: `micro` → `null`, `light` → `null`, `debug` → `consult`, `full` → `consult`, `explore` → `null`.
 
 ### Micro-flow (preguntas informativas)
 
@@ -425,14 +433,24 @@ Aplica cuando la interacción produce hallazgos sustantivos sobre el codebase (c
 
 ### Full-flow (cambios de código)
 
+Cada paso actualiza `session-state.json` via `jq`. El workflow-engine.sh (PreToolUse hook en Edit/Write) **bloquea ediciones de código** si las fases previas no se completaron.
+
 1. **Consultar** — Leer decisiones pasadas, retrospectivas, métricas de negocio (ver Learning Loop)
+   → Actualizar: `current_phase = "consult"`, `evidence.decisions_read = true` y/o `evidence.logs_scanned = true`
 2. **Brainstorm** — Invocar Skill 2 (obligatorio, sin escape "es simple")
+   → Actualizar: `current_phase = "brainstorming"`, y durante la conversación incrementar `evidence.user_turns` por cada respuesta del usuario, luego `evidence.alternatives_proposed = true`, `evidence.user_approved = true`, `evidence.spec_path = "docs/superpowers/specs/..."` al guardar spec
 3. **Plan** — Invocar Skill 3 (escribir plan en `docs/superpowers/plans/`)
+   → Actualizar: `current_phase = "planning"`, `evidence.plan_path = "docs/superpowers/plans/..."`
 4. **Ejecutar** — Invocar Skill 4 o 5 (TDD obligatorio via Skill 7)
+   → Actualizar: `current_phase = "implementation"`, incrementar `evidence.tests_written` al crear tests
 5. **Verificar** — Invocar Skill 9 (evidencia antes de claims)
+   → Actualizar: `current_phase = "verification"`, `evidence.tests_passed = true`, `evidence.lint_clean = true`
 6. **Capturar** — Escribir execution log
+   → Actualizar: `current_phase = "capture"`, `evidence.execution_log_path = "docs/superpowers/execution-logs/..."`
 7. **Retrospectiva** — Escribir entrada de retrospectiva
+   → Actualizar: `current_phase = "retrospective"`
 8. **Finalizar** — Invocar Skill 12
+   → Actualizar: `current_phase = "finalize"`, `evidence.branch_strategy = "merge|pr|keep|discard"`
 
 ### Anti-racionalizaciones
 
@@ -443,6 +461,99 @@ Aplica cuando la interacción produce hallazgos sustantivos sobre el codebase (c
 | "El micro-flow es overkill para esta pregunta" | 10 segundos de consulta nunca son overkill. |
 | "Saltemos brainstorming, la solución es obvia" | Las soluciones "obvias" que saltan brainstorming son las que pierden edge cases. |
 | "Nadie va a leer la retrospectiva" | Las futuras instancias de Claude sí la leerán. Ese es el learning loop. |
+
+## Workflow Engine Integration (mandatory)
+
+**Los hooks en `.claude/hooks/` refuerzan mecánicamente el flujo descrito arriba.** Claude debe actualizar `.claude/session-state.json` para progresar por las fases; si no lo hace, los hooks bloquean ediciones de código.
+
+### Cómo funciona
+
+1. **SessionStart hook** (`session-start.sh`) — resetea `session-state.json` al inicio de cada día (misma sesión del día se preserva)
+2. **PreToolUse hook** (`workflow-engine.sh`) — antes de Edit/Write, verifica:
+   - `flow_type` está declarado (hard gate para archivos en `src/`, `tests/`)
+   - Para `full` flow: las fases previas están completadas con evidencia
+   - Para `micro|light|debug|explore`: no bloquea (pasa directo)
+3. **PostToolUse hooks** — validan commits (prefijos, longitud) y ejecutan `make manifest` post-push
+
+### session-state.json — Campos que Claude debe gestionar
+
+```jsonc
+{
+  "flow_type": "micro|light|debug|full|explore|null",  // Declarar al clasificar interacción
+  "current_phase": "consult|brainstorming|planning|implementation|verification|capture|retrospective|finalize|null",
+  "evidence": {
+    "decisions_read": false,        // true tras leer docs/decisions/log.md
+    "logs_scanned": false,          // true tras escanear execution-logs/
+    "user_turns": 0,                // +1 por cada respuesta del usuario en brainstorm
+    "alternatives_proposed": false,  // true tras proponer 2-3 approaches
+    "user_approved": false,          // true cuando usuario aprueba diseño
+    "spec_path": null,               // ruta al spec guardado
+    "plan_path": null,               // ruta al plan guardado
+    "tests_written": 0,             // +1 por cada test file creado
+    "tests_passed": null,           // true/false tras correr tests
+    "lint_clean": null,             // true/false tras correr linter
+    "execution_log_path": null,     // ruta al execution log
+    "branch_strategy": null          // merge|pr|keep|discard
+  },
+  "deviation": {
+    "active": false,                 // true si se saltó una fase con razón
+    "reason": null,
+    "skipped_phases": [],
+    "return_to_phase": null,
+    "acknowledged_by_user": false
+  }
+}
+```
+
+### Cómo actualizar session-state.json
+
+Usar `jq` para actualizaciones atómicas. Ejemplo al completar consult:
+
+```bash
+jq '.current_phase = "consult" | .evidence.decisions_read = true' .claude/session-state.json > /tmp/ss.json && mv /tmp/ss.json .claude/session-state.json
+```
+
+### Gates del workflow-engine por fase
+
+| Para editar... | Requiere fases completadas | Gate |
+|---------------|---------------------------|------|
+| `docs/superpowers/specs/*` | consult ✓ | HARD |
+| `docs/superpowers/plans/*` | consult ✓, brainstorming ✓ | HARD |
+| `src/*`, `tests/*` | consult ✓, brainstorming ✓, planning ✓ | HARD |
+| `docs/superpowers/execution-logs/*` | (self) | SOFT |
+| `docs/decisions/*` | (self) | SOFT |
+
+**HARD** = bloquea la edición (exit 2). **SOFT** = muestra warning pero permite continuar (exit 1).
+
+### Validators — Qué evidencia necesita cada fase
+
+| Fase | Evidencia requerida | Nivel |
+|------|-------------------|-------|
+| `consult` | `decisions_read` OR `logs_scanned` | SOFT |
+| `brainstorming` | `user_turns ≥ 3` + `alternatives_proposed` + `user_approved` + `spec_path` (archivo ≥500B con keywords) | HARD |
+| `planning` | `plan_path` (archivo ≥300B con keywords) | HARD |
+| `implementation` | plan existe (HARD) + `tests_written > 0` (SOFT warning) | MIXED |
+| `verification` | `tests_passed = true` + `lint_clean = true` | HARD |
+| `capture` | `execution_log_path` existe | SOFT |
+| `retrospective` | (siempre recuerda actualizar decision log) | SOFT |
+| `finalize` | `branch_strategy` declarado | SOFT |
+
+### Deviation mode
+
+Si necesitas saltarte una fase (urgencia, hotfix), activar deviation:
+
+```bash
+jq '.deviation.active = true | .deviation.reason = "hotfix: ..." | .deviation.skipped_phases = ["brainstorming","planning"]' .claude/session-state.json > /tmp/ss.json && mv /tmp/ss.json .claude/session-state.json
+```
+
+El engine mostrará warnings pero no bloqueará. **Requiere confirmación del usuario** antes de activar.
+
+### Anti-patterns
+
+- Editar `src/` sin haber declarado `flow_type` → bloqueado
+- Declarar `flow_type = "full"` pero no actualizar evidence → bloqueado al intentar editar código
+- Setear `evidence.user_approved = true` sin que el usuario realmente haya aprobado → viola el espíritu del proceso
+- Nunca editar `session-state.json` manualmente para "saltarse" gates sin deviation mode
 
 ## On-Demand Session Context (mandatory)
 
