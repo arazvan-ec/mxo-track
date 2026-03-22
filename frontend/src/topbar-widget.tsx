@@ -1,14 +1,9 @@
-import { useState, useEffect, StrictMode } from 'react';
+import { useState, StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { TopBar } from './components/layout/TopBar';
 import { NavigationSidebar } from './components/layout/NavigationSidebar';
 import './widget.css';
-
-declare global {
-  interface Window {
-    __mxoSidebarOpen?: () => void;
-  }
-}
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -20,29 +15,25 @@ const queryClient = new QueryClient({
   },
 });
 
-function SidebarWidget() {
-  const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    window.__mxoSidebarOpen = () => setOpen(true);
-    return () => {
-      delete window.__mxoSidebarOpen;
-    };
-  }, []);
-
-  if (!open) return null;
+function TopBarWidget() {
+  const [navOpen, setNavOpen] = useState(false);
 
   return (
-    <NavigationSidebar mode="overlay" onClose={() => setOpen(false)} />
+    <>
+      <TopBar onMenuClick={() => setNavOpen(true)} />
+      {navOpen && (
+        <NavigationSidebar mode="overlay" onClose={() => setNavOpen(false)} />
+      )}
+    </>
   );
 }
 
-const container = document.getElementById('react-sidebar-root');
+const container = document.getElementById('react-topbar-root');
 if (container) {
   createRoot(container).render(
     <StrictMode>
       <QueryClientProvider client={queryClient}>
-        <SidebarWidget />
+        <TopBarWidget />
       </QueryClientProvider>
     </StrictMode>,
   );
