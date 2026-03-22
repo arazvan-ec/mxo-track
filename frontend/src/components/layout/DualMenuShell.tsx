@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { NavigationSidebar } from './NavigationSidebar';
+import { TopBar } from './TopBar';
 
 interface DualMenuShellProps {
   /** The page-specific data sidebar content */
@@ -13,12 +14,11 @@ interface DualMenuShellProps {
 }
 
 /**
- * Shell component that provides two inline, independently collapsible sidebars:
+ * Shell that replicates the Twig base layout:
  *
- * 1. Navigation sidebar (left) — app-wide navigation links, with a collapse button
- * 2. Data sidebar (right of nav) — page-specific content (metrics, stops, filters, etc.)
- *
- * When collapsed, a small expand button appears on the map so the user can re-open.
+ * 1. Unified top bar (hamburger + search + lang + notifications + user) via TopBar
+ * 2. Below: optional inline data sidebar + main content
+ * 3. Navigation sidebar opens as overlay (same as Twig pages)
  */
 export function DualMenuShell({
   dataSidebar,
@@ -29,76 +29,56 @@ export function DualMenuShell({
   const [navOpen, setNavOpen] = useState(false);
   const [dataOpen, setDataOpen] = useState(true);
 
+  const dataSidebarToggle = dataSidebar ? (
+    <button
+      type="button"
+      onClick={() => setDataOpen((o) => !o)}
+      className={`-m-1.5 p-1.5 rounded-md transition-colors ${
+        dataOpen
+          ? 'text-blue-600 bg-blue-50 hover:bg-blue-100'
+          : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+      }`}
+      title={dataOpen ? 'Ocultar panel de datos' : 'Mostrar panel de datos'}
+    >
+      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
+      </svg>
+    </button>
+  ) : undefined;
+
   return (
-    <div className="flex h-screen w-full bg-slate-900">
-      {/* Navigation sidebar — always inline */}
+    <div className="flex flex-col h-screen w-full">
+      {/* Navigation sidebar — overlay (same as Twig pages) */}
       {navOpen && (
         <NavigationSidebar
-          mode="inline"
+          mode="overlay"
           onClose={() => setNavOpen(false)}
         />
       )}
 
-      {/* Data sidebar (collapsible, inline) */}
-      {dataSidebar && dataOpen && (
-        <aside
-          className={`${dataSidebarWidth} flex-shrink-0 flex flex-col overflow-hidden border-r border-slate-700 bg-slate-900 ${dataSidebarClassName}`}
-        >
-          {/* Collapse header */}
-          <div className="flex items-center justify-between px-3 py-2 border-b border-slate-700/50 flex-shrink-0">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-              Datos
-            </span>
-            <button
-              type="button"
-              onClick={() => setDataOpen(false)}
-              className="text-slate-400 hover:text-white transition-colors p-1 rounded hover:bg-slate-700"
-              title="Minimizar panel de datos"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M18.75 19.5l-7.5-7.5 7.5-7.5m-6 15L5.25 12l7.5-7.5" />
-              </svg>
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto">
-            {dataSidebar}
-          </div>
-        </aside>
-      )}
+      {/* ── Unified top bar ──────────────────────────────────────────── */}
+      <TopBar
+        onMenuClick={() => setNavOpen(true)}
+        extraControls={dataSidebarToggle}
+      />
 
-      {/* Main area */}
-      <div className="flex-1 relative overflow-hidden">
-        {/* Expand buttons for collapsed panels */}
-        {(!navOpen || (dataSidebar && !dataOpen)) && (
-          <div className="absolute top-3 left-3 z-20 flex items-center gap-1.5">
-            {!navOpen && (
-              <button
-                type="button"
-                onClick={() => setNavOpen(true)}
-                className="flex items-center justify-center w-9 h-9 rounded-lg border bg-slate-800/90 border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
-                title="Abrir navegacion"
-              >
-                <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-                </svg>
-              </button>
-            )}
-            {dataSidebar && !dataOpen && (
-              <button
-                type="button"
-                onClick={() => setDataOpen(true)}
-                className="flex items-center justify-center w-9 h-9 rounded-lg border bg-slate-800/90 border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
-                title="Abrir panel de datos"
-              >
-                <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
-                </svg>
-              </button>
-            )}
-          </div>
+      {/* ── Content area (sidebar + main) ──────────────────────────── */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Data sidebar (collapsible, inline) */}
+        {dataSidebar && dataOpen && (
+          <aside
+            className={`${dataSidebarWidth} flex-shrink-0 flex flex-col overflow-hidden border-r border-slate-700 bg-slate-900 ${dataSidebarClassName}`}
+          >
+            <div className="flex-1 overflow-y-auto">
+              {dataSidebar}
+            </div>
+          </aside>
         )}
 
-        {children}
+        {/* Main area */}
+        <div className="flex-1 relative overflow-hidden">
+          {children}
+        </div>
       </div>
     </div>
   );

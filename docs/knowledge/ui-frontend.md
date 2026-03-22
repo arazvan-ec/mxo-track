@@ -22,6 +22,11 @@
 - Includes sidebar, topbar, flash messages
 - Twig blocks: `title`, `styles`, `body`, `body_attrs`
 
+**Top Bar** — Unified across Twig and React SPA pages:
+- **Twig pages:** Top bar defined inline in `base.html.twig` with hamburger, search, language switcher, notifications, user dropdown
+- **React SPA pages:** `frontend/src/components/layout/TopBar.tsx` — shared React component matching the Twig top bar (search, language switcher, notifications with Mercure SSE, user dropdown)
+- `TopBar` accepts `extraControls` prop for page-specific buttons (e.g. data sidebar toggle in `DualMenuShell`)
+
 **Navigation Sidebar** — Unified React `NavigationSidebar` widget (replaces old Twig `_sidebar_content.html.twig`)
 - **Single source of truth:** `frontend/src/components/layout/NavigationSidebar.tsx` renders all menu items for all roles
 - **Mounted in Twig via widget:** `frontend/src/sidebar-widget.tsx` → standalone entry point, loaded in `base.html.twig` as `<script src="sidebar-widget.js">`
@@ -84,7 +89,7 @@ Pattern: `x-data="{ open: false }"` + `x-show` + `x-transition` for dropdowns/mo
 |-----------|---------|
 | `pages/` | Page-level components (admin, customer, driver) |
 | `components/` | Reusable React components (fleet, layout, maps, panels) |
-| `components/layout/` | Layout shells: `NavigationSidebar`, `DualMenuShell`, `TopBar` |
+| `components/layout/` | Layout shells: `NavigationSidebar`, `DualMenuShell`, `TopBar` (AppShell/Sidebar removed) |
 | `api/` | API client + hooks |
 | `hooks/` | Custom React hooks |
 | `assets/` | Static assets |
