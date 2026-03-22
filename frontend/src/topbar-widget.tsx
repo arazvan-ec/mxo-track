@@ -18,7 +18,7 @@ function TopBarWidget() {
   return (
     <TopBar
       compact={false}
-      onHamburgerClick={() => window.__mxoSidebarOpen?.()}
+      onMenuClick={() => window.__mxoSidebarOpen?.()}
     />
   );
 }

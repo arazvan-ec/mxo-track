@@ -5,16 +5,18 @@ import { UserDropdown } from './UserDropdown';
 
 interface TopBarProps {
   compact?: boolean;
-  onHamburgerClick: () => void;
+  onMenuClick: () => void;
+  /** Optional extra controls (e.g. data sidebar toggle) rendered after hamburger */
+  extraControls?: React.ReactNode;
 }
 
-export function TopBar({ compact = false, onHamburgerClick }: TopBarProps) {
+export function TopBar({ compact = false, onMenuClick, extraControls }: TopBarProps) {
   return (
     <div className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">
       {/* Hamburger button */}
       <button
         type="button"
-        onClick={onHamburgerClick}
+        onClick={onMenuClick}
         className="-m-2.5 p-2.5 text-gray-500 hover:text-gray-900 transition-colors"
       >
         <span className="sr-only">Abrir menu</span>
@@ -22,6 +24,8 @@ export function TopBar({ compact = false, onHamburgerClick }: TopBarProps) {
           <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
         </svg>
       </button>
+
+      {extraControls}
 
       <div className="flex flex-1 gap-x-4 self-stretch items-center lg:gap-x-6">
         {/* Search */}
