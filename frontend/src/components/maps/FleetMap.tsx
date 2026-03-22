@@ -16,10 +16,12 @@ interface Props {
   activeStops?: { routeId: string; stops: FleetStop[]; polyline?: string; color?: string } | null;
   trailCoordinates?: [number, number][];
   onVehicleClick?: (vehicleId: string) => void;
+  onStopClick?: (sequence: number) => void;
+  selectedStopSequence?: number | null;
 }
 
 export const FleetMap = forwardRef<FleetMapHandle, Props>(function FleetMap(
-  { vehicles, routes, activeStops, trailCoordinates, onVehicleClick },
+  { vehicles, routes, activeStops, trailCoordinates, onVehicleClick, onStopClick, selectedStopSequence },
   ref,
 ) {
   const canvasRef = useRef<MapCanvasHandle>(null);
@@ -83,6 +85,8 @@ export const FleetMap = forwardRef<FleetMapHandle, Props>(function FleetMap(
             status={stop.status}
             address={stop.address}
             routeColor={activeStops.color ?? '#3B82F6'}
+            onClick={() => onStopClick?.(stop.sequence)}
+            isSelected={stop.sequence === selectedStopSequence}
           />
         ) : null,
       )}

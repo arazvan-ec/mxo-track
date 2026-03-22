@@ -177,6 +177,7 @@ export function DriverRoutePage() {
           keyPrefix={`driver-${route.publicId}-`}
           onStopClick={handleStopClick}
           routeColor={route.color}
+          selectedSequence={selectedSequence ?? currentStop?.sequence}
         />
         {vehicleMarkers.length > 0 && <VehicleLayer vehicles={vehicleMarkers} />}
       </MapCanvas>
