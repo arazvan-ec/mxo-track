@@ -1464,7 +1464,7 @@ name: finishing-a-development-branch
 description: Use when implementation is complete and you need to decide how to integrate the work
 ```
 
-**Core principle:** Verify tests → Present options → Execute choice → Clean up.
+**Core principle:** Verify tests → Validate merge → Present options → Execute choice → Clean up.
 
 #### The Process
 
@@ -1472,7 +1472,27 @@ description: Use when implementation is complete and you need to decide how to i
 
 **Step 2: Determine Base Branch**
 
-**Step 3: Present Options**
+**Step 3: Validate Merge with Base Branch (MANDATORY)**
+
+Antes de presentar opciones, verificar que la rama puede mergearse limpiamente con la rama base:
+
+```bash
+git fetch origin <base-branch>
+git merge --no-commit --no-ff origin/<base-branch>
+# Inspeccionar resultado
+git merge --abort
+```
+
+- **Sin conflictos** → Continuar al Step 4.
+- **Con conflictos** → Reportar al usuario los archivos en conflicto. Resolver TODOS los conflictos antes de continuar. Proceso:
+  1. Listar archivos en conflicto
+  2. Para cada archivo: determinar si es auto-generated (`codebase-manifest.md` → tomar base y regenerar) o código real (resolver manualmente)
+  3. Ejecutar `git merge origin/<base-branch>`, resolver conflictos, commit del merge
+  4. Re-ejecutar tests para verificar que el merge no rompió nada
+  5. Solo entonces continuar al Step 4
+- **Nunca** crear un PR con conflictos pendientes contra la rama base
+
+**Step 4: Present Options**
 ```
 1. Merge back to <base-branch> locally
 2. Push and create a Pull Request
@@ -1480,13 +1500,13 @@ description: Use when implementation is complete and you need to decide how to i
 4. Discard this work
 ```
 
-**Step 4: Execute Choice**
+**Step 5: Execute Choice**
 - Option 1: Merge locally, verify tests on merged result, delete feature branch
 - Option 2: Push branch, create PR via `gh pr create`
 - Option 3: Keep as-is, report location
 - Option 4: Confirm with user before deleting (require typed "discard")
 
-**Step 5: Design Retrospective** (before cleanup — MANDATORY write to file)
+**Step 6: Design Retrospective** (before cleanup — MANDATORY write to file)
 - Revisar decisiones de diseño tomadas en la rama (consultar `docs/decisions/log.md` si se usó)
 - ¿Algún patrón se siente forzado o sobre-engineered? → Simplificar antes de merge
 - ¿Se descubrió algo que debería actualizar la documentación? → Actualizar knowledge modules
@@ -1495,12 +1515,13 @@ description: Use when implementation is complete and you need to decide how to i
 - **Añadir entrada a `docs/decisions/log.md`** si hubo decisiones de diseño no-triviales
 - **Commit y push** del execution log y decision log actualizados
 
-**Step 6: Cleanup Worktree** (for Options 1, 2, 4 only)
+**Step 7: Cleanup Worktree** (for Options 1, 2, 4 only)
 
 #### Red Flags
 
 - Never proceed with failing tests
 - Never merge without verifying tests on result
+- Never create a PR with unresolved conflicts against the base branch
 - Never delete work without confirmation
 - Never force-push without explicit request
 
