@@ -15,6 +15,7 @@ export function FleetMapPage() {
 
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
+  const [selectedStopSequence, setSelectedStopSequence] = useState<number | null>(null);
 
   // Trail for selected vehicle
   const { coordinates: trailCoordinates } = useVehicleTrail(selectedVehicleId);
@@ -35,9 +36,22 @@ export function FleetMapPage() {
       }) ?? null
     : null;
 
+  const handleStopClick = useCallback(
+    (sequence: number) => {
+      setSelectedStopSequence(sequence === selectedStopSequence ? null : sequence);
+
+      const stop = activeStops?.stops.find((s) => s.sequence === sequence);
+      if (stop?.lat && stop?.lng) {
+        mapRef.current?.flyTo(stop.lng, stop.lat, 16);
+      }
+    },
+    [activeStops, selectedStopSequence],
+  );
+
   const handleSelectVehicle = useCallback(
     (vehicle: FleetVehicle) => {
       setSelectedRouteId(null);
+      setSelectedStopSequence(null);
 
       if (selectedVehicleId === vehicle.public_id) {
         setSelectedVehicleId(null);
@@ -66,6 +80,7 @@ export function FleetMapPage() {
   const handleSelectRoute = useCallback(
     (route: FleetRoute) => {
       setSelectedVehicleId(null);
+      setSelectedStopSequence(null);
 
       if (selectedRouteId === route.publicId) {
         setSelectedRouteId(null);
@@ -130,6 +145,8 @@ export function FleetMapPage() {
         activeStops={activeStops}
         trailCoordinates={trailCoordinates}
         onVehicleClick={handleVehicleClick}
+        onStopClick={handleStopClick}
+        selectedStopSequence={selectedStopSequence}
       />
     </DualMenuShell>
   );

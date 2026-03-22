@@ -186,6 +186,7 @@ export function RouteDetailPage() {
             stops={mapStops}
             onStopClick={handleStopClick}
             routeColor={route.color}
+            selectedSequence={selectedStopSequence}
           />
 
           {/* Vehicle marker */}
