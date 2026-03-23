@@ -240,7 +240,7 @@ echo ""
 
 # No flow type → block src edits
 create_fresh_state
-expect_deny "1.1 No flow_type blocks src edits" "$SRC_FILE" "Declara el tipo de flujo"
+expect_deny "1.1 No flow_type blocks src edits" "$SRC_FILE" "Declara flow_type"
 
 # No flow type → allow doc edits
 create_fresh_state
@@ -251,23 +251,28 @@ rm -f "$STATE_FILE"
 expect_allow "1.3 No state file allows edits" "$SRC_FILE"
 
 echo ""
-echo "=== GATE 2: Flow type bypasses ==="
+echo "=== GATE 2: Flow type restrictions ==="
 echo ""
 
-# micro-flow skips all validation
+# micro-flow denies code edits (must reclassify)
 create_fresh_state
 set_flow "micro-flow"
-expect_allow "2.1 micro-flow skips validation" "$SRC_FILE"
+expect_deny "2.1 micro-flow denies src edits" "$SRC_FILE" "Reclasifica"
 
-# light-flow skips all validation
+# light-flow denies code edits (must reclassify)
 create_fresh_state
 set_flow "light-flow"
-expect_allow "2.2 light-flow skips validation" "$SRC_FILE"
+expect_deny "2.2 light-flow denies src edits" "$SRC_FILE" "Reclasifica"
 
-# explore-flow skips all validation
+# explore-flow denies code edits (must reclassify)
 create_fresh_state
 set_flow "explore-flow"
-expect_allow "2.3 explore-flow skips validation" "$SRC_FILE"
+expect_deny "2.3 explore-flow denies src edits" "$SRC_FILE" "Reclasifica"
+
+# micro-flow allows doc edits
+create_fresh_state
+set_flow "micro-flow"
+expect_allow "2.4 micro-flow allows doc edits" "$DOC_FILE"
 
 echo ""
 echo "=== GATE 3: Deviation warning ==="
@@ -345,10 +350,11 @@ echo ""
 echo "=== IMPLEMENTATION VALIDATOR (TDD) ==="
 echo ""
 
-# No tests written → warning (soft gate), still allowed
+# tests_written=0 but real test files exist in git history → allow
+# (The TDD gate only blocks when BOTH tests_written=0 AND no real test files in git)
 setup_full_flow_ready
 set_evidence "tests_written" "0"
-expect_deny "6.1 TDD hard gate: blocks without tests" "$SRC_FILE" "TDD"
+expect_allow "6.1 TDD gate: allows when real test files exist in git" "$SRC_FILE"
 
 # Contradiction: tests_passed=true with tests_written=0
 setup_full_flow_ready
@@ -364,10 +370,17 @@ echo ""
 setup_full_flow_ready
 expect_allow "7.1 Full flow: all gates pass" "$SRC_FILE"
 
-# debug-flow skips brainstorm/planning validators
+# debug-flow without evidence → denied by debug-validator (requires root_cause etc.)
 create_fresh_state
 set_flow "debug-flow"
-expect_allow "7.2 debug-flow: skips validators for src" "$SRC_FILE"
+expect_deny "7.2 debug-flow: blocks src without root cause" "$SRC_FILE" "root_cause"
+
+# debug-flow with all evidence → allow
+create_fresh_state
+set_flow "debug-flow"
+set_evidence "decisions_read" "true"
+jq '.evidence.root_cause_identified = true | .evidence.root_cause_description = "The bug is caused by missing null check in X method which returns undefined" | .evidence.pattern_wide_search_done = true | .evidence.pattern_wide_description = "Searched entire codebase for similar null check issues and found none"' "$STATE_FILE" > "$STATE_FILE.tmp" && mv "$STATE_FILE.tmp" "$STATE_FILE"
+expect_allow "7.2b debug-flow: allows src with full evidence" "$SRC_FILE"
 
 # "full" (without -flow suffix) also works — CLAUDE.md uses this form
 echo ""
@@ -385,15 +398,15 @@ setup_full_flow_ready
 jq '.flow_type = "full"' "$STATE_FILE" > "$STATE_FILE.tmp" && mv "$STATE_FILE.tmp" "$STATE_FILE"
 expect_allow "7.4 'full' without -flow: passes with all evidence" "$SRC_FILE"
 
-# "micro" (without -flow) skips validation
+# "micro" (without -flow) denies src edits (same as micro-flow)
 create_fresh_state
 set_flow "micro"
-expect_allow "7.5 'micro' without -flow: skips validation" "$SRC_FILE"
+expect_deny "7.5 'micro' without -flow: denies src edits" "$SRC_FILE" "Reclasifica"
 
-# "debug" (without -flow) skips validation
+# "debug" (without -flow) blocks src without evidence (same as debug-flow)
 create_fresh_state
 set_flow "debug"
-expect_allow "7.6 'debug' without -flow: skips validation" "$SRC_FILE"
+expect_deny "7.6 'debug' without -flow: blocks src without evidence" "$SRC_FILE" "root_cause"
 
 echo ""
 echo "=== SCOPE-CHANGE DETECTION ==="
