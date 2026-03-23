@@ -94,7 +94,7 @@ class DemoFixtureController extends AbstractController
             }
         } finally {
             // Always re-enable FK checks
-            $conn->executeStatement("SET session_replication_role = 'DEFAULT'");
+            $conn->executeStatement("RESET session_replication_role");
         }
     }
 }
