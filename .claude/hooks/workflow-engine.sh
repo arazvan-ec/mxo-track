@@ -50,7 +50,7 @@ DEVIATION_ACTIVE=$(jq -r '.deviation.active // false' "$STATE_FILE" 2>/dev/null 
 if [ "$FLOW_TYPE" = "null" ]; then
   case "$FILE_PATH" in
     */backend/src/*|*/frontend/src/*|*/backend/tests/*|*/frontend/tests/*)
-      deny "WORKFLOW ENGINE: Declara el tipo de flujo antes de modificar codigo. Escribe flow_type (micro-flow|light-flow|debug-flow|full-flow|explore-flow) en .claude/session-state.json"
+      deny "WORKFLOW ENGINE: Declara el tipo de flujo antes de modificar codigo. Escribe flow_type (micro|light|debug|full|explore) en .claude/session-state.json"
       ;;
   esac
   # Non-code files pass without flow declaration
@@ -65,7 +65,7 @@ fi
 
 # ── Flows that skip phase validation ──
 case "$FLOW_TYPE" in
-  micro-flow|light-flow|explore-flow|debug-flow) exit 0 ;;
+  micro|micro-flow|light|light-flow|explore|explore-flow|debug|debug-flow) exit 0 ;;
 esac
 
 # ── Gate 3: Determine required phase from file path ──

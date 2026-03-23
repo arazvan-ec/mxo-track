@@ -11,7 +11,7 @@ REPO="/home/user/mxo-track"
 FLOW_TYPE=$(jq -r '.flow_type // ""' "$STATE_FILE" 2>/dev/null || echo "")
 
 # For full-flow: require plan exists with tasks
-if [ "$FLOW_TYPE" = "full-flow" ]; then
+if [ "$FLOW_TYPE" = "full-flow" ] || [ "$FLOW_TYPE" = "full" ]; then
   PLAN_PATH=$(jq -r '.evidence.plan_path // ""' "$STATE_FILE" 2>/dev/null || echo "")
   PLAN_FULL=""
   if [ -n "$PLAN_PATH" ]; then

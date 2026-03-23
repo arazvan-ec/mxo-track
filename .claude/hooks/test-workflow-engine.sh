@@ -185,6 +185,16 @@ Ventaja: Better scalability. Desventaja: More files.
 We chose Approach B because it scales better for future requirements
 and allows proper unit testing without database dependencies.
 This provides enough content to pass the 500 byte minimum threshold easily.
+
+## Existing Functionality Inventory
+| # | Element | Location | Description |
+|---|---------|----------|-------------|
+| 1 | SomeController | src/Controller/ | Handles X |
+
+## Omission Decisions
+| Element | Decision | Justification |
+|---------|----------|---------------|
+| SomeController | Transform | Refactor to use new service layer |
 EOF
 }
 
@@ -355,6 +365,32 @@ expect_allow "7.1 Full flow: all gates pass" "$SRC_FILE"
 create_fresh_state
 set_flow "debug-flow"
 expect_allow "7.2 debug-flow: skips validators for src" "$SRC_FILE"
+
+# "full" (without -flow suffix) also works — CLAUDE.md uses this form
+echo ""
+echo "=== FLOW_TYPE VALUE COMPATIBILITY ==="
+echo ""
+
+# "full" triggers same gates as "full-flow" — blocked at brainstorm first
+create_fresh_state
+set_flow "full"
+set_evidence "decisions_read" "true"
+expect_deny "7.3 'full' without -flow: blocks src without brainstorm" "$SRC_FILE" "Brainstorming"
+
+# "full" with all evidence passes
+setup_full_flow_ready
+jq '.flow_type = "full"' "$STATE_FILE" > "$STATE_FILE.tmp" && mv "$STATE_FILE.tmp" "$STATE_FILE"
+expect_allow "7.4 'full' without -flow: passes with all evidence" "$SRC_FILE"
+
+# "micro" (without -flow) skips validation
+create_fresh_state
+set_flow "micro"
+expect_allow "7.5 'micro' without -flow: skips validation" "$SRC_FILE"
+
+# "debug" (without -flow) skips validation
+create_fresh_state
+set_flow "debug"
+expect_allow "7.6 'debug' without -flow: skips validation" "$SRC_FILE"
 
 echo ""
 echo "=== WORKFLOW STATUS GENERATION ==="
