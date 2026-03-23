@@ -65,3 +65,4 @@ docker/osrm/data/*
 .claude/session-state.json
 .claude/session-context.md
 .claude/workflow-status.md
+.claude/workflow-status-line.txt

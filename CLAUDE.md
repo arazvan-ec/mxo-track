@@ -655,6 +655,51 @@ Además, `session-state.json` preserva un campo `last_work_summary` que sobreviv
 
 **Regla:** El hook es el mecanismo principal. La consulta manual es un complemento, no el mecanismo primario.
 
+## Automatic Status Line (mandatory)
+
+**Every response to the user MUST start with the workflow status line.**
+
+The PostToolUse hook `workflow-status-line.sh` generates `.claude/workflow-status-line.txt` after every tool call. Claude must read it and display it as the FIRST line of every response.
+
+### Rules
+
+1. **Read** `.claude/workflow-status-line.txt` at the start of composing each response to the user
+2. **Display** the content as the FIRST line, verbatim
+3. **Two display levels:**
+   - **Full** (when phase changed since last response): show the complete line as-is
+   - **Compact** (same phase as last response): show only `📍 {flow} | {Phase} ({index}/{total})`
+4. **Never skip** — even for short answers, clarifying questions, or error messages
+5. **If file doesn't exist or is empty:** show `📍 status unavailable`
+6. **No flow declared:** show `📍 no flow declared` — this also serves as a reminder to classify the interaction
+
+### Format Examples
+
+Full (phase just changed):
+```
+📍 full | Brainstorming (2/8) | ✅ consult → 🔄 brainstorm | Pendiente: planning, implementation, verification, capture, retrospective, finalize
+```
+
+Compact (same phase as previous response):
+```
+📍 full | Brainstorming (2/8)
+```
+
+Other flows:
+```
+📍 micro | Responder
+📍 light | Documentar
+📍 explore | Investigar
+📍 debug | Root_cause (2/4) | ✅ consult → 🔄 root_cause | Pendiente: pattern_search, fix
+📍 no flow declared
+```
+
+### Anti-patterns
+
+- Showing status only sometimes → MUST be every response, no exceptions
+- Inventing the status line from memory instead of reading the file → MUST read `.claude/workflow-status-line.txt`
+- Putting the status line after text → MUST be the FIRST line
+- Skipping for "simple" responses → No exceptions, even one-word answers
+
 ## Feedback Capture (mandatory)
 
 **Toda interacción no-trivial produce datos de feedback estructurados. Esto es lo que cierra el learning loop.**

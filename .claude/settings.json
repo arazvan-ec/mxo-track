@@ -39,6 +39,17 @@
     ],
     "PostToolUse": [
       {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/user/mxo-track/.claude/hooks/workflow-status-line.sh",
+            "timeout": 2,
+            "statusMessage": "Updating status line..."
+          }
+        ]
+      },
+      {
         "matcher": "Write|Edit",
         "hooks": [
           {
