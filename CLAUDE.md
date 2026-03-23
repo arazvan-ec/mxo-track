@@ -667,6 +667,39 @@ When modifying a class constructor (adding/removing/changing parameters):
 
 **Why:** Symfony auto-wires most services, but Factories use `new` directly. Changing a constructor without updating its Factory causes runtime errors that tests may not catch if the Factory path isn't covered.
 
+## Anti-Omission Rule (mandatory)
+
+**Todo spec DEBE inventariar la funcionalidad existente afectada y documentar decisiones de omisión. Sin excepciones.**
+
+### Regla
+
+Todo spec de diseño (resultado del brainstorming) debe incluir:
+
+1. **Inventariar** — Enumerar la funcionalidad existente en el área afectada (endpoints, métodos, campos, comportamientos, UI elements). Si no existe funcionalidad previa, declarar explícitamente: "No existing functionality affected".
+2. **Decidir item por item** — Para CADA elemento inventariado: ¿se mantiene, se modifica, se omite? Documentar la decisión.
+3. **Documentar omisiones** — Toda omisión requiere justificación explícita. Si no hay omisiones, declarar: "No omissions — all inventory items addressed".
+4. **Nunca omitir por defecto** — Si un elemento no se menciona en las decisiones de omisión, se asume que debe incluirse. La omisión silenciosa es un defecto, no una decisión.
+
+### Anti-patterns
+
+- Crear funcionalidad nueva sin inventariar qué existe en el área afectada
+- "Solo incluí lo que me pareció relevante" — sin documentar qué se excluyó y por qué
+- Asumir que el usuario sabe qué se omitió — documentar explícitamente
+- Pensar "esto es nuevo, no hay nada que inventariar" sin verificar
+
+### Secciones obligatorias en todo spec
+
+```markdown
+## Existing Functionality Inventory
+[Lista de funcionalidad existente en el área afectada, o "No existing functionality affected"]
+
+## Omission Decisions
+| Element | Decision | Justification |
+|---------|----------|---------------|
+| [item]  | Include / Omit / Transform | [razón] |
+[O "No omissions — all inventory items addressed"]
+```
+
 ## Knowledge Modules (consultar bajo demanda)
 
 Antes de trabajar en un subsistema, **LEE el módulo relevante** en `docs/knowledge/`:
@@ -856,11 +889,17 @@ Every project goes through this process. A todo list, a single-function utility,
    - Si toca **ambos**: separar claramente qué partes van a cada layer. El contexto crítico no se relaja por conveniencia.
    - **Anti-racionalización:** "Sigo el patrón existente en src/Entity/" NO es razón para poner código nuevo de contexto crítico ahí. El patrón existente es deuda técnica documentada, no un ejemplo a seguir.
 2. **Explore project context** — check files, docs, recent commits
-3. **Offer visual companion** (if topic will involve visual questions)
-4. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria
-5. **Propose 2-3 approaches** — with trade-offs and your recommendation. If bounded context is critical, every approach MUST respect DDD placement rules from step 1.
-6. **Present design** — in sections scaled to their complexity, get user approval after each section
-7. **Write design doc** — save to `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md` and commit
+3. **Inventory existing functionality (Anti-Omission Gate)** — Always inventory the existing functionality in the area being changed:
+   - Enumerate existing elements in the affected area (endpoints, methods, fields, behaviors, UI elements)
+   - This inventory becomes the `## Existing Functionality Inventory` section of the spec
+   - Every element must have an explicit decision: Include / Omit / Transform with justification
+   - This becomes the `## Omission Decisions` section of the spec
+   - If no existing functionality is affected, declare: "No existing functionality affected" in the inventory section
+4. **Offer visual companion** (if topic will involve visual questions)
+5. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria
+6. **Propose 2-3 approaches** — with trade-offs and your recommendation. If bounded context is critical, every approach MUST respect DDD placement rules from step 1.
+7. **Present design** — in sections scaled to their complexity, get user approval after each section
+8. **Write design doc** — save to `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md` and commit
 8. **Transition to implementation** — invoke writing-plans skill to create implementation plan
 
 #### Key Principles

@@ -93,7 +93,7 @@ fi
 get_prerequisite_validators() {
   case "$1" in
     implementation)
-      echo "brainstorm planning implementation"
+      echo "brainstorm planning spec-compliance implementation"
       ;;
     brainstorming)
       echo "consult brainstorm"
