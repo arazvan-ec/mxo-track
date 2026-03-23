@@ -628,9 +628,13 @@ El engine mostrará warnings pero no bloqueará. **Requiere confirmación del us
 - Setear `evidence.user_approved = true` sin que el usuario realmente haya aprobado → viola el espíritu del proceso
 - Nunca editar `session-state.json` manualmente para "saltarse" gates sin deviation mode
 
-## On-Demand Session Context (mandatory)
+## Automatic Session Context (mandatory)
 
-**El SessionStart hook genera contexto automáticamente.** Al iniciar o reanudar sesión, `session-start.sh` muestra por stdout:
+**El SessionStart hook genera contexto automáticamente en cada inicio de sesión.** Esto es un mecanismo garantizado, no dependiente de que Claude recuerde consultar nada.
+
+### Qué provee el hook automáticamente (sin acción de Claude)
+
+Al iniciar o reanudar sesión, `session-start.sh` muestra por stdout:
 - Branch actual, fecha, estado resume/nuevo día
 - Info de sesión anterior (fecha, flow, fase) — desde `last_work_summary` en `session-state.json`
 - Últimos 10 commits
@@ -639,7 +643,9 @@ El engine mostrará warnings pero no bloqueará. **Requiere confirmación del us
 
 Además, `session-state.json` preserva un campo `last_work_summary` que sobrevive los resets diarios, con: `previous_date`, `previous_branch`, `previous_flow`, `previous_phase`, `recent_commits`, `merged_branches`, `last_execution_log`.
 
-**Consulta adicional bajo demanda** cuando el contexto del hook no es suficiente:
+**Claude DEBE leer este output antes de responder al primer mensaje del usuario.** El contexto ya está ahí — no hay excusa para perder continuidad entre sesiones.
+
+### Consulta manual (fallback, solo si el contexto automático no es suficiente)
 
 | Cuándo | Qué consultar |
 |--------|---------------|
@@ -647,7 +653,7 @@ Además, `session-state.json` preserva un campo `last_work_summary` que sobreviv
 | No sé en qué branch estoy | `git branch -v` |
 | Tarea toca un subsistema específico | Knowledge module correspondiente (tabla en "Knowledge Modules") |
 
-**Regla:** El hook provee contexto base. Para detalles específicos, consultar bajo demanda.
+**Regla:** El hook es el mecanismo principal. La consulta manual es un complemento, no el mecanismo primario.
 
 ## Feedback Capture (mandatory)
 
