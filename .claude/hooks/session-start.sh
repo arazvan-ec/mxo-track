@@ -41,7 +41,9 @@ cat > "$STATE_FILE" <<EOJSON
     "tests_passed": null,
     "lint_clean": null,
     "execution_log_path": null,
-    "branch_strategy": null
+    "branch_strategy": null,
+    "root_cause_identified": false,
+    "pattern_wide_search_done": false
   },
   "deviation": {
     "active": false,

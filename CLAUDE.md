@@ -493,10 +493,13 @@ Cada paso actualiza `session-state.json` via `jq`. El workflow-engine.sh (PreToo
 
 1. **SessionStart hook** (`session-start.sh`) — resetea `session-state.json` al inicio de cada día (misma sesión del día se preserva)
 2. **PreToolUse hook** (`workflow-engine.sh`) — antes de Edit/Write, verifica:
-   - `flow_type` está declarado (hard gate para archivos en `src/`, `tests/`)
+   - `flow_type` está declarado (HARD para `src/tests`, SOFT warning para cualquier otro archivo)
    - `interaction_id` coincide entre top-level y evidence (scope-change detection)
-   - Para `full` flow: las fases previas están completadas con evidencia
-   - Para `micro|light|debug|explore`: no bloquea (pasa directo)
+   - **Todos los flows tienen enforcement mecánico:**
+     - `micro|light|explore`: DENY en `src/`, `tests/`, `specs/`, `plans/` (deben reclasificarse)
+     - `debug`: HARD gate — requiere `root_cause_identified` + `pattern_wide_search_done` antes de editar código
+     - `full`: HARD gate — requiere fases completas (consult → brainstorm → plan → implement)
+   - Archivos excluidos: `.claude/hooks/*`, `.claude/session-state.json`, `vendor/`, `node_modules/`
 3. **PostToolUse hooks** — validan commits (prefijos, longitud) y ejecutan `make manifest` post-push
 
 ### session-state.json — Campos que Claude debe gestionar
@@ -519,7 +522,9 @@ Cada paso actualiza `session-state.json` via `jq`. El workflow-engine.sh (PreToo
     "tests_passed": null,           // true/false tras correr tests
     "lint_clean": null,             // true/false tras correr linter
     "execution_log_path": null,     // ruta al execution log
-    "branch_strategy": null          // merge|pr|keep|discard
+    "branch_strategy": null,         // merge|pr|keep|discard
+    "root_cause_identified": false,  // (debug-flow) true tras completar Skill 8 Phase 1
+    "pattern_wide_search_done": false // (debug-flow) true tras completar Skill 8 Phase 2.5
   },
   "deviation": {
     "active": false,                 // true si se saltó una fase con razón
@@ -539,7 +544,21 @@ Usar `jq` para actualizaciones atómicas. Ejemplo al completar consult:
 jq '.current_phase = "consult" | .evidence.decisions_read = true' .claude/session-state.json > /tmp/ss.json && mv /tmp/ss.json .claude/session-state.json
 ```
 
-### Gates del workflow-engine por fase
+### Gates del workflow-engine por flow y tipo de archivo
+
+**El workflow engine aplica enforcement mecánico a TODOS los flujos, no solo full-flow.**
+
+#### Qué puede editar cada flow
+
+| Flow | `src/`, `tests/` | `specs/`, `plans/` | `docs/`, config | otros |
+|------|-------------------|--------------------|--------------------|-------|
+| **micro** | DENY (reclasificar) | DENY (reclasificar) | pass | pass |
+| **light** | DENY (reclasificar) | DENY (reclasificar) | pass | pass |
+| **explore** | DENY (reclasificar) | DENY (reclasificar) | pass | pass |
+| **debug** | HARD (debug-validator) | pass | pass | pass |
+| **full** | HARD (full validators) | HARD (phase validators) | SOFT | SOFT |
+
+#### Gates para full-flow (por archivo)
 
 | Para editar... | Requiere fases completadas | Gate |
 |---------------|---------------------------|------|
@@ -549,13 +568,25 @@ jq '.current_phase = "consult" | .evidence.decisions_read = true' .claude/sessio
 | `docs/superpowers/execution-logs/*` | (self) | SOFT |
 | `docs/decisions/*` | (self) | SOFT |
 
-**HARD** = bloquea la edición (exit 2). **SOFT** = muestra warning pero permite continuar (exit 1).
+#### Gates para debug-flow (código)
+
+| Para editar `src/*` o `tests/*` | Requiere | Gate |
+|--------------------------------|----------|------|
+| Paso 1: Consultar | `decisions_read` OR `logs_scanned` | HARD |
+| Paso 2: Root Cause (Skill 8 Phase 1) | `root_cause_identified = true` | HARD |
+| Paso 3: Pattern-Wide (Skill 8 Phase 2.5) | `pattern_wide_search_done = true` | HARD |
+
+**HARD** = bloquea la edición (exit 2). **SOFT** = muestra warning pero permite continuar (exit 1). **DENY** = bloquea y pide reclasificar el flow.
+
+#### Archivos excluidos del engine
+
+Nunca se validan: `.claude/session-state.json`, `.claude/hooks/*`, `.claude/settings*`, `node_modules/`, `vendor/`, `.git/`.
 
 ### Validators — Qué evidencia necesita cada fase
 
 | Fase | Evidencia requerida | Nivel |
 |------|-------------------|-------|
-| `consult` | `decisions_read` OR `logs_scanned` | SOFT |
+| `consult` | `decisions_read` OR `logs_scanned` | HARD |
 | `brainstorming` | `user_turns ≥ 3` + `alternatives_proposed` + `user_approved` + `spec_path` (archivo ≥500B con keywords) | HARD |
 | `planning` | `plan_path` (archivo ≥300B con keywords) | HARD |
 | `implementation` | plan existe (HARD) + `tests_written > 0` (SOFT warning) | MIXED |
@@ -563,6 +594,7 @@ jq '.current_phase = "consult" | .evidence.decisions_read = true' .claude/sessio
 | `capture` | `execution_log_path` existe | SOFT |
 | `retrospective` | (siempre recuerda actualizar decision log) | SOFT |
 | `finalize` | `branch_strategy` declarado | SOFT |
+| `debug-code` | `decisions_read` OR `logs_scanned` + `root_cause_identified` + `pattern_wide_search_done` | HARD |
 
 ### Deviation mode
 
@@ -578,6 +610,9 @@ El engine mostrará warnings pero no bloqueará. **Requiere confirmación del us
 
 - Editar `src/` sin haber declarado `flow_type` → bloqueado
 - Declarar `flow_type = "full"` pero no actualizar evidence → bloqueado al intentar editar código
+- Declarar `flow_type = "debug"` e ir directo al fix sin root cause investigation → bloqueado
+- Declarar `flow_type = "micro"` para evitar gates y luego editar código → DENY
+- Setear `evidence.root_cause_identified = true` sin haber investigado realmente → viola el espíritu del proceso
 - Setear `evidence.user_approved = true` sin que el usuario realmente haya aprobado → viola el espíritu del proceso
 - Nunca editar `session-state.json` manualmente para "saltarse" gates sin deviation mode
 
