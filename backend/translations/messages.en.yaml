@@ -11,6 +11,21 @@ nav.map: Map
 nav.import_csv: Import CSV
 nav.billing: Billing
 nav.api_docs: API Docs
+nav.dashboard_live: Dashboard Live
+nav.shipments: Shipments
+nav.planner: Planner
+nav.route_templates: Route Templates
+nav.integrations: Integrations
+nav.sla: SLA & Compliance
+nav.exception_map: Exception Map
+nav.test_routing: Test Routing
+nav.debug_routing: Debug Routing
+nav.optimization_logs: Optimization Logs
+nav.ai_assistant: AI Assistant
+nav.search: Search
+nav.zone_trends: Zone Trends
+nav.fixtures: Fixtures
+nav.commit_story: Commit Story
 
 # Sidebar sections
 sidebar.main: Main
@@ -23,6 +38,8 @@ sidebar.driver: Driver
 # Sidebar labels
 sidebar.my_routes: My Routes
 sidebar.my_shipments: My Shipments
+sidebar.my_reports: My Reports
+sidebar.dev_tools: Dev Tools
 sidebar.role.admin: Administrator
 sidebar.role.operator: Operator
 sidebar.role.customer: Customer
