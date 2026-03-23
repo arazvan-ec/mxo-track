@@ -57,7 +57,7 @@ if [ "$FLOW_TYPE" = "null" ]; then
   exit 0
 fi
 
-# ── Gate 2: Deviation return enforcement ──
+# ── Gate 2: Deviation warning ──
 if [ "$DEVIATION_ACTIVE" = "true" ]; then
   RETURN_TO=$(jq -r '.deviation.return_to_phase // "unknown"' "$STATE_FILE" 2>/dev/null || echo "unknown")
   warn "WORKFLOW ENGINE: Deviation activa. Retoma fase: $RETURN_TO despues de la accion actual."
@@ -67,6 +67,18 @@ fi
 case "$FLOW_TYPE" in
   micro|micro-flow|light|light-flow|explore|explore-flow|debug|debug-flow) exit 0 ;;
 esac
+
+# ── Gate 3: Scope-change detection via interaction_id ──
+# If interaction_id (top-level) != evidence.interaction_id, evidence is stale
+CURRENT_INTERACTION=$(jq -r '.interaction_id // 0' "$STATE_FILE" 2>/dev/null || echo "0")
+EVIDENCE_INTERACTION=$(jq -r '.evidence.interaction_id // 0' "$STATE_FILE" 2>/dev/null || echo "0")
+if [ "$CURRENT_INTERACTION" != "$EVIDENCE_INTERACTION" ]; then
+  case "$FILE_PATH" in
+    */backend/src/*|*/frontend/src/*|*/backend/tests/*|*/frontend/tests/*)
+      deny "WORKFLOW ENGINE: Scope change detectado (interaction_id: $CURRENT_INTERACTION, evidence de interaction: $EVIDENCE_INTERACTION). La evidencia de fases previas no aplica a la nueva interaccion. Resetea evidence.interaction_id=$CURRENT_INTERACTION y completa las fases requeridas."
+      ;;
+  esac
+fi
 
 # ── Gate 3: Determine required phase from file path ──
 determine_required_phase() {

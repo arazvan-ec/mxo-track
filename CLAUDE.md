@@ -452,6 +452,27 @@ Cada paso actualiza `session-state.json` via `jq`. El workflow-engine.sh (PreToo
 8. **Finalizar** — Invocar Skill 12
    → Actualizar: `current_phase = "finalize"`, `evidence.branch_strategy = "merge|pr|keep|discard"`
 
+### Scope Change Detection (mandatory)
+
+**Cuando el usuario hace un NUEVO request que requiere cambios de código (no un follow-up de la tarea actual), los gates deben resetearse.**
+
+**Cómo detectar scope change:**
+- El request del usuario NO puede satisfacerse con el spec+plan actuales
+- El usuario pide algo que no está en el plan ("añade X", "también quiero Y", "falta Z")
+- El usuario cambia de tema ("ahora quiero trabajar en...")
+- El archivo a editar NO está en la lista de archivos del plan actual
+
+**Qué hacer al detectar scope change:**
+1. STOP — no implementar directamente
+2. Incrementar `interaction_id` en session-state: `jq '.interaction_id += 1' .claude/session-state.json`
+3. Actualizar `evidence.interaction_id` al nuevo valor al completar cada fase
+4. Re-clasificar la interacción (micro/light/debug/full/explore)
+5. Seguir el flujo correspondiente desde el inicio
+
+**Enforcement mecánico:** El workflow-engine compara `interaction_id` (top-level) con `evidence.interaction_id`. Si no coinciden, bloquea ediciones a `src/` y `tests/` hasta que la evidencia se actualice para la nueva interacción.
+
+**Anti-racionalización:** "Es solo un cambio pequeño al feature actual" → Si no está en el plan, es un nuevo scope. Incrementar interaction_id.
+
 ### Anti-racionalizaciones
 
 | Pensamiento | Realidad |
@@ -461,6 +482,7 @@ Cada paso actualiza `session-state.json` via `jq`. El workflow-engine.sh (PreToo
 | "El micro-flow es overkill para esta pregunta" | 10 segundos de consulta nunca son overkill. |
 | "Saltemos brainstorming, la solución es obvia" | Las soluciones "obvias" que saltan brainstorming son las que pierden edge cases. |
 | "Nadie va a leer la retrospectiva" | Las futuras instancias de Claude sí la leerán. Ese es el learning loop. |
+| "Es solo una extensión del feature actual" | Si no está en el plan, es scope change. Incrementar interaction_id. |
 
 ## Workflow Engine Integration (mandatory)
 
@@ -471,6 +493,7 @@ Cada paso actualiza `session-state.json` via `jq`. El workflow-engine.sh (PreToo
 1. **SessionStart hook** (`session-start.sh`) — resetea `session-state.json` al inicio de cada día (misma sesión del día se preserva)
 2. **PreToolUse hook** (`workflow-engine.sh`) — antes de Edit/Write, verifica:
    - `flow_type` está declarado (hard gate para archivos en `src/`, `tests/`)
+   - `interaction_id` coincide entre top-level y evidence (scope-change detection)
    - Para `full` flow: las fases previas están completadas con evidencia
    - Para `micro|light|debug|explore`: no bloquea (pasa directo)
 3. **PostToolUse hooks** — validan commits (prefijos, longitud) y ejecutan `make manifest` post-push
@@ -481,7 +504,9 @@ Cada paso actualiza `session-state.json` via `jq`. El workflow-engine.sh (PreToo
 {
   "flow_type": "micro|light|debug|full|explore|null",  // Declarar al clasificar interacción
   "current_phase": "consult|brainstorming|planning|implementation|verification|capture|retrospective|finalize|null",
+  "interaction_id": 0,              // Incrementar al detectar scope change (nueva interacción)
   "evidence": {
+    "interaction_id": 0,            // Debe coincidir con interaction_id top-level. Actualizar al completar cada fase.
     "decisions_read": false,        // true tras leer docs/decisions/log.md
     "logs_scanned": false,          // true tras escanear execution-logs/
     "user_turns": 0,                // +1 por cada respuesta del usuario en brainstorm

@@ -393,6 +393,25 @@ set_flow "debug"
 expect_allow "7.6 'debug' without -flow: skips validation" "$SRC_FILE"
 
 echo ""
+echo "=== SCOPE-CHANGE DETECTION ==="
+echo ""
+
+# Matching interaction_ids → allow
+setup_full_flow_ready
+jq '.interaction_id = 1 | .evidence.interaction_id = 1' "$STATE_FILE" > "$STATE_FILE.tmp" && mv "$STATE_FILE.tmp" "$STATE_FILE"
+expect_allow "7.7 Matching interaction_ids: allow" "$SRC_FILE"
+
+# Mismatched interaction_ids → block src edits
+setup_full_flow_ready
+jq '.interaction_id = 2 | .evidence.interaction_id = 1' "$STATE_FILE" > "$STATE_FILE.tmp" && mv "$STATE_FILE.tmp" "$STATE_FILE"
+expect_deny "7.8 Mismatched interaction_ids: block src" "$SRC_FILE" "Scope change"
+
+# Mismatched interaction_ids → allow doc edits (not gated)
+setup_full_flow_ready
+jq '.interaction_id = 2 | .evidence.interaction_id = 1' "$STATE_FILE" > "$STATE_FILE.tmp" && mv "$STATE_FILE.tmp" "$STATE_FILE"
+expect_allow "7.9 Mismatched interaction_ids: allow docs" "$DOC_FILE"
+
+echo ""
 echo "=== WORKFLOW STATUS GENERATION ==="
 echo ""
 
