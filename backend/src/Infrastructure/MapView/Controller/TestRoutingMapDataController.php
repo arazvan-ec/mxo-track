@@ -168,6 +168,11 @@ class TestRoutingMapDataController extends AbstractController
                 ? round(($distanceBeforeKm - $totalDistanceAfterKm) / $distanceBeforeKm * 100, 1)
                 : 0;
 
+            $durationBeforeMinutes = (int) round($routeBefore->totalDurationSeconds / 60);
+            $timeSavedPercent = $durationBeforeMinutes > 0
+                ? round(($durationBeforeMinutes - $totalDurationMinutes) / $durationBeforeMinutes * 100, 1)
+                : 0;
+
             $result = [
                 'origin' => [
                     'lat' => self::WAREHOUSE_LAT,
@@ -183,6 +188,8 @@ class TestRoutingMapDataController extends AbstractController
                     'distanceAfterKm' => $totalDistanceAfterKm,
                     'savedPercent' => $globalSavedPercent,
                     'totalDurationMinutes' => $totalDurationMinutes,
+                    'durationBeforeMinutes' => $durationBeforeMinutes,
+                    'timeSavedPercent' => $timeSavedPercent,
                     'stopCount' => \count(self::DELIVERIES),
                     'routeCount' => \count($routesData),
                 ],

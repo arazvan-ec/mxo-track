@@ -1,30 +1,77 @@
-import { useRef } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { useTestRoutingData } from '@/api/hooks/useTestRoutingData';
-import type {
-  TestRoutingRoute,
-  TestRoutingStop,
-} from '@/api/hooks/useTestRoutingData';
+import type { TestRoutingRoute, TestRoutingStop } from '@/api/hooks/useTestRoutingData';
 import { MapCanvas, type MapCanvasHandle } from '@/components/maps/MapCanvas';
 import { RoutePolylineLayer } from '@/components/maps/layers/RoutePolylineLayer';
 import { StopMarkersLayer } from '@/components/maps/layers/StopMarkersLayer';
 import { ROUTE_COLORS } from '@/components/maps/shared/colors';
-import { DualMenuShell } from '@/components/layout/DualMenuShell';
+import { BottomSheet, type BottomSheetState } from '@/components/bottom-sheet/BottomSheet';
+import { MetricPairs } from '@/components/metrics/MetricPairs';
+import { TopBar } from '@/components/layout/TopBar';
+import { NavigationSidebar } from '@/components/layout/NavigationSidebar';
+
+const SHEET_HEIGHTS: Record<BottomSheetState, number> = {
+  collapsed: 0.15,
+  half: 0.50,
+  full: 0.85,
+};
 
 export function TestRoutingPage() {
   const { data, isLoading, error } = useTestRoutingData();
   const mapRef = useRef<MapCanvasHandle>(null);
+  const [navOpen, setNavOpen] = useState(false);
+  const [sheetState, setSheetState] = useState<BottomSheetState>('collapsed');
+  const [highlightedRouteIdx, setHighlightedRouteIdx] = useState<number | null>(null);
+
+  // Compute all map points for fitBounds
+  const allPoints = data
+    ? [
+        { lat: data.origin.lat, lng: data.origin.lng },
+        ...data.allStopsBefore.map((s) => ({ lat: s.lat, lng: s.lng })),
+      ]
+    : [];
+
+  // FitBounds when sheet state changes
+  useEffect(() => {
+    if (!data || allPoints.length === 0) return;
+    const bottomPadding = window.innerHeight * SHEET_HEIGHTS[sheetState];
+    mapRef.current?.fitBounds(allPoints, {
+      padding: { top: 80, right: 80, bottom: bottomPadding + 20, left: 80 },
+    });
+  }, [sheetState]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleRouteSelect = useCallback(
+    (idx: number) => {
+      if (!data) return;
+      const newIdx = highlightedRouteIdx === idx ? null : idx;
+      setHighlightedRouteIdx(newIdx);
+      if (newIdx !== null) {
+        const points = data.routesData[newIdx].stopsAfter
+          .filter((s) => s.lat && s.lng)
+          .map((s) => ({ lat: s.lat, lng: s.lng }));
+        if (points.length > 0) {
+          mapRef.current?.fitBounds(points);
+        }
+      }
+    },
+    [data, highlightedRouteIdx],
+  );
+
+  const handleStopClick = useCallback(
+    (routeIdx: number) => {
+      setHighlightedRouteIdx(routeIdx);
+      if (sheetState === 'collapsed') setSheetState('half');
+    },
+    [sheetState],
+  );
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen bg-slate-900">
         <div className="text-center">
           <div className="animate-spin h-8 w-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-4" />
-          <p className="text-slate-400 text-sm">
-            Running route optimization...
-          </p>
-          <p className="text-slate-500 text-xs mt-1">
-            This may take a few seconds
-          </p>
+          <p className="text-slate-400 text-sm">Running route optimization...</p>
+          <p className="text-slate-500 text-xs mt-1">This may take a few seconds</p>
         </div>
       </div>
     );
@@ -43,239 +90,171 @@ export function TestRoutingPage() {
 
   if (!data) return null;
 
-  const { origin, allStopsBefore, routesData, metrics } = data;
-
-  // Compute map bounds from all stops
-  const allPoints = [
-    { lat: origin.lat, lng: origin.lng },
-    ...allStopsBefore.map((s) => ({ lat: s.lat, lng: s.lng })),
-  ];
-
-  const sidebar = (
-    <div className="p-4 space-y-4">
-      {/* Header */}
-      <div>
-        <h1 className="text-lg font-bold text-slate-100">
-          Test Routing: VROOM + OSRM
-        </h1>
-        <p className="text-xs text-slate-400 mt-1">
-          Comparison of original vs optimized routes
-        </p>
-      </div>
-
-      {/* Global Metrics */}
-      <div className="grid grid-cols-2 gap-2">
-        <MetricCard
-          label="Distance (original)"
-          value={`${metrics.distanceBeforeKm} km`}
-          color="text-red-400"
-        />
-        <MetricCard
-          label="Distance (optimized)"
-          value={`${metrics.distanceAfterKm} km`}
-          color="text-blue-400"
-        />
-        <MetricCard
-          label="Savings"
-          value={`${metrics.savedPercent}%`}
-          color="text-emerald-400"
-        />
-        <MetricCard
-          label="Total duration"
-          value={`${metrics.totalDurationMinutes} min`}
-          color="text-slate-200"
-        />
-        <MetricCard
-          label="Routes"
-          value={String(metrics.routeCount)}
-          color="text-slate-200"
-        />
-        <MetricCard
-          label="Total stops"
-          value={String(metrics.stopCount)}
-          color="text-slate-200"
-        />
-      </div>
-
-      {/* Original stop order */}
-      <div className="bg-slate-800 rounded-lg overflow-hidden">
-        <div className="px-3 py-2 border-b border-slate-700">
-          <h3 className="text-sm font-semibold text-red-400">
-            Original order (1 route, unoptimized)
-          </h3>
-        </div>
-        <div className="max-h-48 overflow-y-auto">
-          <StopTable stops={allStopsBefore} color="text-red-400" />
-        </div>
-      </div>
-
-      {/* Per-route cards */}
-      {routesData.map((route, idx) => (
-        <RouteCard
-          key={route.name}
-          route={route}
-          color={ROUTE_COLORS[idx % ROUTE_COLORS.length]}
-          onFocus={() => {
-            const points = route.stopsAfter
-              .filter((s) => s.lat && s.lng)
-              .map((s) => ({ lat: s.lat, lng: s.lng }));
-            if (points.length > 0) {
-              mapRef.current?.fitBounds(points);
-            }
-          }}
-        />
-      ))}
-    </div>
-  );
+  const { origin, routesData, metrics } = data;
+  const sheetHeightPx = window.innerHeight * SHEET_HEIGHTS[sheetState];
 
   return (
-    <DualMenuShell dataSidebar={sidebar} dataSidebarWidth="w-96">
-      {/* Map */}
-      <MapCanvas
-        ref={mapRef}
-        initialCenter={{ lat: origin.lat, lng: origin.lng }}
-        initialZoom={12}
-      >
-        {/* Original route (dashed red) */}
-        {data.polylineBefore && (
-          <RoutePolylineLayer
-            id="original"
-            polyline={data.polylineBefore}
-            color="#EF4444"
-            dashed
-          />
-        )}
+    <div className="flex flex-col h-screen w-full">
+      {/* Navigation sidebar — overlay */}
+      {navOpen && (
+        <NavigationSidebar mode="overlay" onClose={() => setNavOpen(false)} />
+      )}
 
-        {/* Optimized routes */}
-        {routesData.map((route, idx) => {
-          if (!route.polylineAfter) return null;
-          const color = ROUTE_COLORS[idx % ROUTE_COLORS.length];
-          return (
+      {/* Top bar */}
+      <TopBar compact onMenuClick={() => setNavOpen(true)} />
+
+      {/* Map area */}
+      <div className="flex-1 relative overflow-hidden">
+        <MapCanvas
+          ref={mapRef}
+          initialCenter={{ lat: origin.lat, lng: origin.lng }}
+          initialZoom={12}
+        >
+          {/* Original route (dashed red) */}
+          {data.polylineBefore && (
             <RoutePolylineLayer
-              key={route.name}
-              id={`opt-${idx}`}
-              polyline={route.polylineAfter}
-              color={color}
+              id="original"
+              polyline={data.polylineBefore}
+              color="#EF4444"
+              dashed
+              opacity={highlightedRouteIdx !== null ? 0.15 : 0.6}
             />
-          );
-        })}
+          )}
 
-        {/* Stop markers for optimized routes */}
-        {routesData.map((route, idx) => {
-          const routeColor = ROUTE_COLORS[idx % ROUTE_COLORS.length];
-          return (
-            <StopMarkersLayer
-              key={`stops-${idx}`}
-              keyPrefix={`route-${idx}-`}
-              routeColor={routeColor}
-              stops={route.stopsAfter.map((s) => ({
-                lat: s.lat,
-                lng: s.lng,
-                sequence: s.seq,
-                status: 'PENDING',
-                address: s.address,
-              }))}
-            />
-          );
-        })}
-      </MapCanvas>
+          {/* Optimized routes */}
+          {routesData.map((route, idx) => {
+            if (!route.polylineAfter) return null;
+            const color = ROUTE_COLORS[idx % ROUTE_COLORS.length];
+            return (
+              <RoutePolylineLayer
+                key={route.name}
+                id={`opt-${idx}`}
+                polyline={route.polylineAfter}
+                color={color}
+                opacity={
+                  highlightedRouteIdx === null
+                    ? 0.85
+                    : highlightedRouteIdx === idx
+                      ? 1
+                      : 0.3
+                }
+                lineWidth={highlightedRouteIdx === idx ? 6 : 4}
+              />
+            );
+          })}
 
-      {/* Fit bounds button */}
-      <button
-        type="button"
-        className="absolute top-4 right-4 bg-slate-800/90 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-slate-700 transition-colors border border-slate-600"
-        onClick={() => mapRef.current?.fitBounds(allPoints)}
-      >
-        Fit all
-      </button>
+          {/* Stop markers */}
+          {routesData.map((route, idx) => {
+            const routeColor = ROUTE_COLORS[idx % ROUTE_COLORS.length];
+            return (
+              <StopMarkersLayer
+                key={`stops-${idx}`}
+                keyPrefix={`route-${idx}-`}
+                routeColor={routeColor}
+                stops={route.stopsAfter.map((s) => ({
+                  lat: s.lat,
+                  lng: s.lng,
+                  sequence: s.seq,
+                  status: 'PENDING',
+                  address: s.address,
+                }))}
+                onStopClick={() => handleStopClick(idx)}
+              />
+            );
+          })}
+        </MapCanvas>
 
-      {/* Legend */}
-      <div className="absolute bottom-4 left-4 bg-slate-800/90 border border-slate-700 rounded-lg px-3 py-2 space-y-1.5">
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-0.5 border-t-2 border-dashed border-red-500" />
-          <span className="text-xs text-slate-300">Original</span>
-        </div>
-        {routesData.map((route, idx) => (
-          <div key={route.name} className="flex items-center gap-2">
-            <div
-              className="w-6 h-0.5 rounded"
-              style={{
-                backgroundColor:
-                  ROUTE_COLORS[idx % ROUTE_COLORS.length],
-              }}
-            />
-            <span className="text-xs text-slate-300">{route.name}</span>
+        {/* Fit all button */}
+        <button
+          type="button"
+          className="absolute top-4 right-4 bg-slate-800/90 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-slate-700 transition-colors border border-slate-600 z-10"
+          onClick={() => mapRef.current?.fitBounds(allPoints)}
+        >
+          Fit all
+        </button>
+
+        {/* Legend — positioned above bottom sheet */}
+        <div
+          className="absolute left-4 bg-slate-800/90 border border-slate-700 rounded-lg px-3 py-2 space-y-1.5 z-10 transition-all duration-300"
+          style={{ bottom: sheetHeightPx + 16 }}
+        >
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-0.5 border-t-2 border-dashed border-red-500" />
+            <span className="text-xs text-slate-300">Original</span>
           </div>
-        ))}
-      </div>
-    </DualMenuShell>
-  );
-}
+          {routesData.map((route, idx) => (
+            <div key={route.name} className="flex items-center gap-2">
+              <div
+                className="w-6 h-0.5 rounded"
+                style={{
+                  backgroundColor: ROUTE_COLORS[idx % ROUTE_COLORS.length],
+                }}
+              />
+              <span className="text-xs text-slate-300">{route.name}</span>
+            </div>
+          ))}
+        </div>
 
-function MetricCard({
-  label,
-  value,
-  color,
-}: {
-  label: string;
-  value: string;
-  color: string;
-}) {
-  return (
-    <div className="bg-slate-800 rounded-lg p-3">
-      <p className="text-xs text-slate-400">{label}</p>
-      <p className={`text-lg font-bold ${color}`}>{value}</p>
+        {/* Bottom Sheet */}
+        <BottomSheet
+          state={sheetState}
+          onStateChange={setSheetState}
+          title="Test Routing Results"
+        >
+          <MetricPairs
+            metrics={metrics}
+            expanded={sheetState !== 'collapsed'}
+          />
+
+          {sheetState !== 'collapsed' && (
+            <div className="px-4 pb-4 space-y-3">
+              {routesData.map((route, idx) => (
+                <RouteCard
+                  key={route.name}
+                  route={route}
+                  color={ROUTE_COLORS[idx % ROUTE_COLORS.length]}
+                  highlighted={highlightedRouteIdx === idx}
+                  onSelect={() => handleRouteSelect(idx)}
+                />
+              ))}
+            </div>
+          )}
+        </BottomSheet>
+      </div>
     </div>
   );
 }
 
-function StopTable({
-  stops,
-  color,
-}: {
-  stops: TestRoutingStop[];
-  color: string;
-}) {
-  return (
-    <table className="w-full text-xs">
-      <thead className="text-[10px] text-slate-500 uppercase bg-slate-800/50 sticky top-0">
-        <tr>
-          <th className="py-1.5 px-3 text-left">#</th>
-          <th className="py-1.5 px-3 text-left">Recipient</th>
-          <th className="py-1.5 px-3 text-left">Address</th>
-        </tr>
-      </thead>
-      <tbody className="divide-y divide-slate-700/50">
-        {stops.map((stop) => (
-          <tr key={stop.seq}>
-            <td className={`py-1 px-3 font-medium ${color}`}>{stop.seq}</td>
-            <td className="py-1 px-3 text-slate-200">{stop.recipient}</td>
-            <td className="py-1 px-3 text-slate-400 truncate max-w-[140px]">
-              {stop.address}
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-}
+/* ── Route Card ─────────────────────────────────────────────── */
 
 function RouteCard({
   route,
   color,
-  onFocus,
+  highlighted,
+  onSelect,
 }: {
   route: TestRoutingRoute;
   color: string;
-  onFocus: () => void;
+  highlighted: boolean;
+  onSelect: () => void;
 }) {
   return (
-    <div className="bg-slate-800 rounded-lg overflow-hidden">
-      {/* Header */}
-      <div className="px-3 py-2 border-b border-slate-700 flex items-center justify-between">
+    <div
+      className={`bg-slate-800 rounded-lg overflow-hidden transition-all duration-200 ${
+        highlighted
+          ? 'ring-2 ring-blue-500/60 shadow-lg shadow-blue-500/10'
+          : 'ring-1 ring-slate-700'
+      }`}
+    >
+      {/* Header — clickable */}
+      <button
+        type="button"
+        className="w-full px-3 py-2 border-b border-slate-700 flex items-center justify-between hover:bg-slate-700/50 transition-colors"
+        onClick={onSelect}
+      >
         <div className="flex items-center gap-2">
           <div
-            className="w-3 h-3 rounded-full"
+            className="w-3 h-3 rounded-full flex-shrink-0"
             style={{ backgroundColor: color }}
           />
           <h3 className="text-sm font-semibold text-slate-100">
@@ -283,46 +262,24 @@ function RouteCard({
           </h3>
           <span className="text-xs text-slate-400">{route.vehicle}</span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-400">
-            {route.stopCount} stops
-          </span>
-          <button
-            type="button"
-            className="text-xs text-blue-400 hover:text-blue-300"
-            onClick={onFocus}
-          >
-            Focus
-          </button>
-        </div>
-      </div>
+        <span className="text-xs text-slate-400">
+          {route.stopCount} stops
+        </span>
+      </button>
 
       {/* Route metrics */}
       <div className="grid grid-cols-4 gap-1 px-2 py-2">
-        <div className="text-center p-1.5 rounded bg-slate-700/50">
-          <p className="text-[10px] text-slate-500">Before</p>
-          <p className="text-xs font-bold text-slate-200">
-            {route.distanceBeforeKm} km
-          </p>
-        </div>
-        <div className="text-center p-1.5 rounded bg-slate-700/50">
-          <p className="text-[10px] text-slate-500">After</p>
-          <p className="text-xs font-bold text-slate-200">
-            {route.distanceAfterKm} km
-          </p>
-        </div>
-        <div className="text-center p-1.5 rounded bg-slate-700/50">
-          <p className="text-[10px] text-slate-500">Saved</p>
-          <p className="text-xs font-bold text-emerald-400">
-            {route.savedPercent}%
-          </p>
-        </div>
-        <div className="text-center p-1.5 rounded bg-slate-700/50">
-          <p className="text-[10px] text-slate-500">Time</p>
-          <p className="text-xs font-bold text-slate-200">
-            {route.timing?.totalTimeMinutes ?? route.durationMinutes} min
-          </p>
-        </div>
+        <MiniMetric label="Before" value={`${route.distanceBeforeKm} km`} />
+        <MiniMetric label="After" value={`${route.distanceAfterKm} km`} />
+        <MiniMetric
+          label="Saved"
+          value={`${route.savedPercent}%`}
+          className="text-emerald-400"
+        />
+        <MiniMetric
+          label="Time"
+          value={`${route.timing?.totalTimeMinutes ?? route.durationMinutes} min`}
+        />
       </div>
 
       {/* Side-by-side stop comparison */}
@@ -344,10 +301,27 @@ function RouteCard({
             </h4>
           </div>
           <div className="max-h-32 overflow-y-auto">
-            <MiniStopList stops={route.stopsAfter} color={`text-[${color}]`} colorHex={color} />
+            <MiniStopList stops={route.stopsAfter} colorHex={color} />
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function MiniMetric({
+  label,
+  value,
+  className = 'text-slate-200',
+}: {
+  label: string;
+  value: string;
+  className?: string;
+}) {
+  return (
+    <div className="text-center p-1.5 rounded bg-slate-700/50">
+      <p className="text-[10px] text-slate-500">{label}</p>
+      <p className={`text-xs font-bold ${className}`}>{value}</p>
     </div>
   );
 }
@@ -358,7 +332,7 @@ function MiniStopList({
   colorHex,
 }: {
   stops: TestRoutingStop[];
-  color: string;
+  color?: string;
   colorHex?: string;
 }) {
   return (
@@ -366,7 +340,7 @@ function MiniStopList({
       {stops.map((stop) => (
         <div key={stop.seq} className="px-2 py-0.5 flex gap-1 items-baseline">
           <span
-            className={`text-[10px] font-bold flex-shrink-0 ${colorHex ? '' : color}`}
+            className={`text-[10px] font-bold flex-shrink-0 ${colorHex ? '' : color ?? ''}`}
             style={colorHex ? { color: colorHex } : undefined}
           >
             {stop.seq}

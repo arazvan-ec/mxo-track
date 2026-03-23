@@ -35,6 +35,8 @@ export interface TestRoutingMetrics {
   distanceAfterKm: number;
   savedPercent: number;
   totalDurationMinutes: number;
+  durationBeforeMinutes: number;
+  timeSavedPercent: number;
   stopCount: number;
   routeCount: number;
 }

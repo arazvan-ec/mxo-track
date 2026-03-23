@@ -8,6 +8,13 @@ Registro de decisiones de diseño significativas. Cada entrada captura el contex
 
 ---
 
+### [2026-03-23] Bottom Sheet pattern for map+data views
+
+- **Problema:** TestRoutingPage usaba sidebar para métricas y route cards, dejando poco espacio al mapa.
+- **Decisión:** Reemplazar `DualMenuShell` con Bottom Sheet estilo Google Maps (3 estados: collapsed/half/full). Métricas agrupadas en "Metric Pairs" (3 pares lógicos: scope/distance/time con hero+delta). Map↔panel sincronizado bidireccionalmente.
+- **Alternativas descartadas:** (A) Split pane horizontal — no resuelve el problema de espacio. (B) Floating panels — más complejo, menos familiar.
+- **Resultado:** Implementado. El BottomSheet y MetricPairs son componentes reutilizables para otras vistas de mapa. MapCanvas.fitBounds extendido para soportar padding asimétrico (necesario para ajustar viewport al espacio visible sobre el sheet).
+
 ### [2026-03-20] Service Time Calibration via SQL Window Functions
 
 - **Problema:** Necesidad de calcular tiempos de servicio históricos por dirección para calibrar el optimizador. RouteStop tiene `deliveredAt` pero no `arrivedAt`.
