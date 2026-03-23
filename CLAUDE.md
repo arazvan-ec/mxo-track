@@ -550,10 +550,19 @@ Cada paso actualiza `session-state.json` via `jq`. El workflow-engine.sh (PreToo
 
 ### Cómo actualizar session-state.json
 
-Usar `jq` para actualizaciones atómicas. Ejemplo al completar consult:
+Usar `jq` para actualizaciones atómicas. **Al transicionar de fase, SIEMPRE append la fase anterior a `phase_history`:**
 
 ```bash
-jq '.current_phase = "consult" | .evidence.decisions_read = true' .claude/session-state.json > /tmp/ss.json && mv /tmp/ss.json .claude/session-state.json
+# Ejemplo: transicionar de consult a brainstorming
+jq '.phase_history += ["consult"] | .current_phase = "brainstorming"' .claude/session-state.json > /tmp/ss.json && mv /tmp/ss.json .claude/session-state.json
+```
+
+**El pre-push gate verifica que `phase_history` contenga las fases obligatorias (verification, capture, finalize) antes de permitir push a paths protegidos.** Si no se pobla `phase_history`, el push será bloqueado.
+
+Ejemplo simple (sin transición de fase):
+
+```bash
+jq '.evidence.decisions_read = true' .claude/session-state.json > /tmp/ss.json && mv /tmp/ss.json .claude/session-state.json
 ```
 
 ### Gates del workflow-engine por flow y tipo de archivo
