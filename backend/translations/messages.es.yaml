@@ -11,6 +11,13 @@ nav.map: Mapa
 nav.import_csv: Import CSV
 nav.billing: Facturacion
 nav.api_docs: API Docs
+nav.dashboard_live: Dashboard Live
+nav.shipments: Envios
+nav.planner: Planificador
+nav.route_templates: Plantillas de Ruta
+nav.integrations: Integraciones
+nav.sla: SLA & Cumplimiento
+nav.exception_map: Mapa Excepciones
 
 # Sidebar sections
 sidebar.main: Principal
@@ -23,6 +30,7 @@ sidebar.driver: Conductor
 # Sidebar labels
 sidebar.my_routes: Mis Rutas
 sidebar.my_shipments: Mis Envios
+sidebar.my_reports: Mis Reportes
 sidebar.role.admin: Administrador
 sidebar.role.operator: Operador
 sidebar.role.customer: Cliente
