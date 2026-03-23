@@ -348,10 +348,13 @@ echo ""
 # No tests written → warning (soft gate), still allowed
 setup_full_flow_ready
 set_evidence "tests_written" "0"
-# Note: This will warn but not block since TDD is soft gate
-# The engine may warn or allow depending on working tree state
-echo "SKIP: 6.1 TDD soft gate (depends on working tree state)"
-PASS=$((PASS + 1))
+expect_deny "6.1 TDD hard gate: blocks without tests" "$SRC_FILE" "TDD"
+
+# Contradiction: tests_passed=true with tests_written=0
+setup_full_flow_ready
+set_evidence "tests_passed" "true"
+set_evidence "tests_written" "0"
+expect_deny "6.2 Contradiction: tests_passed=true but tests_written=0" "$SRC_FILE" "Contradiccion"
 
 echo ""
 echo "=== FULL FLOW END-TO-END ==="

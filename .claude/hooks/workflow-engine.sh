@@ -31,9 +31,13 @@ deny() {
   exit 0
 }
 
-warn() {
+emit_warn() {
   local msg="$1"
   echo "{\"systemMessage\":\"$msg\"}"
+}
+
+warn() {
+  emit_warn "$1"
   exit 0
 }
 
@@ -131,6 +135,8 @@ get_prerequisite_validators() {
 VALIDATORS=$(get_prerequisite_validators "$REQUIRED_PHASE")
 
 # ── Gate 4: Run validators in order ──
+# Soft gates (exit 1) accumulate warnings but don't abort — hard gates (exit 2) still checked
+ACCUMULATED_WARNINGS=""
 for validator_name in $VALIDATORS; do
   VALIDATOR_SCRIPT="$VALIDATORS_DIR/${validator_name}-validator.sh"
 
@@ -145,16 +151,20 @@ for validator_name in $VALIDATORS; do
   set -e
 
   if [ "$EXIT_CODE" -eq 2 ]; then
-    # Hard gate — block
-    # Escape newlines and quotes for JSON
+    # Hard gate — block immediately
     ESCAPED_RESULT=$(echo "$RESULT" | tr '\n' ' ' | sed 's/"/\\"/g')
     deny "WORKFLOW ENGINE ($validator_name): $ESCAPED_RESULT"
   elif [ "$EXIT_CODE" -eq 1 ]; then
-    # Soft gate — warn but continue
+    # Soft gate — accumulate warning, continue to next validator
     ESCAPED_RESULT=$(echo "$RESULT" | tr '\n' ' ' | sed 's/"/\\"/g')
-    warn "WORKFLOW ENGINE ($validator_name): $ESCAPED_RESULT"
+    ACCUMULATED_WARNINGS="${ACCUMULATED_WARNINGS}WORKFLOW ENGINE ($validator_name): $ESCAPED_RESULT "
   fi
   # Exit code 0 = pass, continue to next validator
 done
+
+# Emit accumulated warnings (if any) after all validators pass
+if [ -n "$ACCUMULATED_WARNINGS" ]; then
+  emit_warn "$ACCUMULATED_WARNINGS"
+fi
 
 exit 0
