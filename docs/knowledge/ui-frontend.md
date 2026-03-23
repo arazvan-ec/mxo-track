@@ -93,6 +93,8 @@ Pattern: `x-data="{ open: false }"` + `x-show` + `x-transition` for dropdowns/mo
 | `pages/` | Page-level components (admin, customer, driver) |
 | `components/` | Reusable React components (fleet, layout, maps, panels) |
 | `components/layout/` | Layout shells: `NavigationSidebar`, `DualMenuShell`, `TopBar` (AppShell/Sidebar removed) |
+| `components/bottom-sheet/` | `BottomSheet` — draggable panel (collapsed/half/full states) + `useBottomSheet` hook. Used by `TestRoutingPage` |
+| `components/metrics/` | `MetricPairs` — 3 logical metric groups (scope/distance/time) with hero+delta display |
 | `api/` | API client + hooks |
 | `hooks/` | Custom React hooks |
 | `assets/` | Static assets |
