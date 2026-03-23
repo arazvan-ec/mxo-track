@@ -4,7 +4,7 @@ import { useBottomSheet, type BottomSheetState } from './useBottomSheet';
 interface BottomSheetProps {
   state: BottomSheetState;
   onStateChange: (s: BottomSheetState) => void;
-  title: string;
+  title: ReactNode;
   children: ReactNode;
 }
 
