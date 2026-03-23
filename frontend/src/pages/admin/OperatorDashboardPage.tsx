@@ -1,16 +1,20 @@
-import { useRef, useMemo } from 'react';
+import { useRef, useMemo, useState } from 'react';
 import { useFleetMapData } from '@/api/hooks/useFleetMapData';
 import { useFleetKpi } from '@/api/hooks/useFleetKpi';
 import { MapCanvas, type MapCanvasHandle } from '@/components/maps/MapCanvas';
 import { VehicleLayer, type VehicleData } from '@/components/maps/layers/VehicleLayer';
 import type { FleetVehicle, FleetRoute } from '@/api/types';
-import { DualMenuShell } from '@/components/layout/DualMenuShell';
+import { BottomSheet, type BottomSheetState } from '@/components/bottom-sheet/BottomSheet';
+import { TopBar } from '@/components/layout/TopBar';
+import { NavigationSidebar } from '@/components/layout/NavigationSidebar';
 
 export function OperatorDashboardPage() {
   const { vehicles, routes, isLoading, error, sseConnected } =
     useFleetMapData();
   const { data: kpi } = useFleetKpi();
   const mapRef = useRef<MapCanvasHandle>(null);
+  const [navOpen, setNavOpen] = useState(false);
+  const [sheetState, setSheetState] = useState<BottomSheetState>('collapsed');
 
   // Transform fleet vehicles to VehicleData for VehicleLayer
   const vehicleMarkers: VehicleData[] = useMemo(
@@ -69,74 +73,77 @@ export function OperatorDashboardPage() {
     (r) => r.status === 'ACTIVE' || r.status === 'PLANNED',
   );
 
-  const sidebar = (
-    <div className="flex flex-col h-full">
-      {/* KPI section */}
-      <div className="p-3 border-b border-slate-700 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="relative flex h-2 w-2">
-            <span
-              className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 ${
-                sseConnected ? 'bg-emerald-400' : 'bg-red-400'
-              }`}
-            />
-            <span
-              className={`relative inline-flex h-2 w-2 rounded-full ${
-                sseConnected ? 'bg-emerald-500' : 'bg-red-500'
-              }`}
-            />
-          </span>
-          <span className="text-xs font-medium text-slate-400">
-            {sseConnected ? 'Live' : 'Disconnected'}
-          </span>
-        </div>
-        <div className="flex items-center gap-4">
-          <KpiItem label="Active Routes" value={kpi?.active_routes ?? 0} color="text-indigo-400" />
-          <KpiItem label="Vehicles" value={kpi?.total_vehicles ?? 0} color="text-violet-400" />
-          <KpiItem label="Pending" value={kpi?.pending_stops ?? 0} color="text-amber-400" />
-        </div>
-      </div>
+  return (
+    <div className="flex flex-col h-screen w-full">
+      {navOpen && <NavigationSidebar mode="overlay" onClose={() => setNavOpen(false)} />}
+      <TopBar compact onMenuClick={() => setNavOpen(true)} />
+      <div className="flex-1 relative overflow-hidden">
+        <MapCanvas
+          ref={mapRef}
+          initialCenter={initialCenter}
+          initialZoom={6}
+        >
+          <VehicleLayer vehicles={vehicleMarkers} />
+        </MapCanvas>
+        <BottomSheet state={sheetState} onStateChange={setSheetState} title="Operations Dashboard">
+          <div className="px-4 pb-4 space-y-4">
+            {/* SSE connected indicator + KPI section */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span
+                    className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 ${
+                      sseConnected ? 'bg-emerald-400' : 'bg-red-400'
+                    }`}
+                  />
+                  <span
+                    className={`relative inline-flex h-2 w-2 rounded-full ${
+                      sseConnected ? 'bg-emerald-500' : 'bg-red-500'
+                    }`}
+                  />
+                </span>
+                <span className="text-xs font-medium text-slate-400">
+                  {sseConnected ? 'Live' : 'Disconnected'}
+                </span>
+              </div>
+              <div className="flex items-center gap-4">
+                <KpiItem label="Active Routes" value={kpi?.active_routes ?? 0} color="text-indigo-400" />
+                <KpiItem label="Vehicles" value={kpi?.total_vehicles ?? 0} color="text-violet-400" />
+                <KpiItem label="Pending" value={kpi?.pending_stops ?? 0} color="text-amber-400" />
+              </div>
+            </div>
 
-      {/* Active routes */}
-      <div className="flex-1 overflow-y-auto p-2 space-y-2">
-        <div className="flex items-center justify-between px-2 py-1">
-          <h2 className="text-sm font-semibold text-slate-100">Active Routes</h2>
-          <span className="text-xs text-slate-400">{activeRoutes.length} routes</span>
-        </div>
-        {activeRoutes.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-xs text-slate-500">No active routes</p>
+            {/* Active routes */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-slate-100">Active Routes</h2>
+                <span className="text-xs text-slate-400">{activeRoutes.length} routes</span>
+              </div>
+              {activeRoutes.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-xs text-slate-500">No active routes</p>
+                </div>
+              ) : (
+                activeRoutes.map((route) => (
+                  <RouteListItem
+                    key={route.publicId}
+                    route={route}
+                    onFocus={() => {
+                      const pts = route.stops
+                        .filter((s) => s.lat && s.lng)
+                        .map((s) => ({ lat: s.lat, lng: s.lng }));
+                      if (pts.length > 0) {
+                        mapRef.current?.fitBounds(pts);
+                      }
+                    }}
+                  />
+                ))
+              )}
+            </div>
           </div>
-        ) : (
-          activeRoutes.map((route) => (
-            <RouteListItem
-              key={route.publicId}
-              route={route}
-              onFocus={() => {
-                const pts = route.stops
-                  .filter((s) => s.lat && s.lng)
-                  .map((s) => ({ lat: s.lat, lng: s.lng }));
-                if (pts.length > 0) {
-                  mapRef.current?.fitBounds(pts);
-                }
-              }}
-            />
-          ))
-        )}
+        </BottomSheet>
       </div>
     </div>
-  );
-
-  return (
-    <DualMenuShell dataSidebar={sidebar} dataSidebarWidth="w-80">
-      <MapCanvas
-        ref={mapRef}
-        initialCenter={initialCenter}
-        initialZoom={6}
-      >
-        <VehicleLayer vehicles={vehicleMarkers} />
-      </MapCanvas>
-    </DualMenuShell>
   );
 }
 
