@@ -3,14 +3,14 @@
 > **Auto-generated** by `make manifest` (`backend/bin/generate-manifest.sh`).
 > Do not edit manually — regenerate with `make manifest`.
 
-**Generated:** 2026-03-23 01:39
+**Generated:** 2026-03-23 01:43
 **Regenerate:** `make manifest`
 
 ## Project Overview
 
 | Area | Path | Files | Tech |
 |------|------|------:|------|
-| Backend | `backend/` | 502 PHP | Symfony 7.4, PHP 8.4 |
+| Backend | `backend/` | 503 PHP | Symfony 7.4, PHP 8.4 |
 | Frontend | `frontend/` | 66 JS/TS | React |
 | ML Service | `ml-service/` | 17 Python | FastAPI |
 | Docker/Infra | `docker/` + `scripts/` | 9 + 5 | Docker, OSRM, VROOM, Traccar |
@@ -28,7 +28,7 @@
 | Enums — core (src/Enum/) | 17 |
 | Enums — provider | 4 |
 | **Enums total** | **21** |
-| Controllers | 62 |
+| Controllers | 63 |
 | Application Services (src/Application/) | 23 |
 | Domain/Infra Services (src/Service/) | 73 |
 | Repositories | 18 |
@@ -37,7 +37,7 @@
 | Event Listeners | 11 |
 | Messenger Messages | 4 |
 | Message Handlers | 4 |
-| Tests | 125 |
+| Tests | 126 |
 | Migrations | 33 |
 
 ## Entity List
@@ -419,6 +419,7 @@ Controller endpoints (auto-extracted from `#[Route]` attributes):
 | GET | `/api/fleet/map-data` | FleetMapDataController | __invoke |
 | GET | `/api/me` | MeController | __invoke |
 | GET | `/api/mercure-token` | MercureTokenController | __invoke |
+| GET | `/api/navigation` | NavigationController | __invoke |
 | GET | `/api/notification-preferences/logs` | NotificationPreferenceController | logs |
 | DELETE | `/api/notification-preferences/{publicId}` | NotificationPreferenceController | delete |
 | GET | `/api/notification-preferences` | NotificationPreferenceController | list |
@@ -568,11 +569,11 @@ Provider factories (critical for Constructor Signature Changes pattern):
 
 | Type | Count |
 |------|------:|
-| Unit | 109 |
+| Unit | 110 |
 | Functional | 8 |
 | Domain | 6 |
 | Factory (test factories) | 1 |
-| **Total** | **125** |
+| **Total** | **126** |
 
 ---
 
