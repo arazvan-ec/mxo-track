@@ -3,7 +3,7 @@
 > **Auto-generated** by `make manifest` (`backend/bin/generate-manifest.sh`).
 > Do not edit manually — regenerate with `make manifest`.
 
-**Generated:** 2026-03-23 23:22
+**Generated:** 2026-03-23 23:23
 **Regenerate:** `make manifest`
 
 ## Project Overview
@@ -126,159 +126,21 @@
 
 ### Provider
 
-| GET | `/` | DashboardController | index |
-| GET | `/admin/health/live` | AdminController | healthLive |
-| GET | `/admin/health` | AdminController | health |
-| GET | `/admin` | AdminController | dashboard |
-| DELETE | `/api/admin/page-layouts/{publicId}` | PageLayoutApiController | delete |
-| GET | `/api/admin/page-layouts/{publicId}` | PageLayoutApiController | get |
-| PUT | `/api/admin/page-layouts/{publicId}` | PageLayoutApiController | update |
-| GET | `/api/admin/page-layouts` | PageLayoutApiController | list |
-| POST | `/api/admin/page-layouts` | PageLayoutApiController | create |
-| PATCH | `/api/admin/widgets/{publicId}` | WidgetDefinitionApiController | patch |
-| GET | `/api/admin/widgets` | WidgetDefinitionApiController | list |
-| GET | `/api/csrf-token/{intention}` | CsrfTokenController | __invoke |
-| GET | `/api/fleet/map-data` | FleetMapDataController | __invoke |
-| GET | `/api/me` | MeController | __invoke |
-| GET | `/api/mercure-token` | MercureTokenController | __invoke |
-| GET | `/api/navigation` | NavigationController | __invoke |
-| GET | `/api/notification-preferences/logs` | NotificationPreferenceController | logs |
-| DELETE | `/api/notification-preferences/{publicId}` | NotificationPreferenceController | delete |
-| GET | `/api/notification-preferences` | NotificationPreferenceController | list |
-| POST | `/api/notification-preferences` | NotificationPreferenceController | create |
-| GET | `/api/notifications/unread-count` | NotificationController | unreadCount |
-| GET | `/api/page-layouts/{pageKey}` | PageLayoutResolverController | __invoke |
-| GET | `/api/routes/{publicId}/analysis` | RouteAnalysisController | analysis |
-| GET | `/api/routes/{publicId}/etas` | RouteEtaApiController | etas |
-| GET | `/api/search` | SearchController | apiSearch |
-| GET | `/api/v1/routes/{publicId}` | RouteApiController | detail |
-| GET | `/api/v1/routes` | RouteApiController | list |
-| GET | `/api/v1/shipments/{publicId}/tracking` | ShipmentApiController | tracking |
-| GET | `/api/v1/shipments/{publicId}` | ShipmentApiController | detail |
-| GET | `/api/v1/shipments` | ShipmentApiController | list |
-| POST | `/api/v1/shipments` | ShipmentApiController | create |
-| DELETE | `/api/v1/webhooks/{publicId}` | WebhookApiController | delete |
-| GET | `/api/v1/webhooks` | WebhookApiController | list |
-| POST | `/api/v1/webhooks` | WebhookApiController | create |
-| GET | `/api/vehicles/{publicId}/last-position` | VehicleApiController | lastPosition |
-| GET | `/api/vehicles/{publicId}/positions.csv` | VehicleApiController | positionsExportCsv |
-| GET | `/api/vehicles/{publicId}/positions` | VehicleApiController | positions |
-| GET | `/api/vehicles` | VehicleApiController | list |
-| GET | `/branches` | CommitStoryController | branches |
-| POST | `/create` | ApiKeyAdminController | create |
-| GET | `/customer` | AccountingExportController | export |
-| GET | `/customers` | ReportController | customers |
-| GET | `/dashboard/kpis` | OperatorDashboardController | kpis |
-| GET | `/dashboard/live` | OperatorDashboardController | live |
-| GET | `/data` | ExceptionMapController | data |
-| GET | `/data` | SlaReportController | data |
-| GET | `/data` | ZonePerformanceController | data |
-| GET | `/deliveries` | ReportController | deliveries |
-| GET | `/drivers` | ReportController | drivers |
-| GET | `/events` | EventPollingController | poll |
-| GET | `/export.csv` | BillingController | exportCsv |
-| GET | `/export.csv` | CustomerReportController | export |
-| GET | `/export/deliveries.csv` | ReportController | exportDeliveries |
-| GET | `/export/drivers.csv` | ReportController | exportDrivers |
-| GET | `/export` | SlaReportController | export |
-| POST | `/load` | DemoFixtureController | load |
-| POST | `/locale/{locale}` | LocaleController | switchLocale |
-| GET | `/login` | SecurityController | login |
-| GET | `/logout` | SecurityController | logout |
-| POST | `/message` | AiAssistantController | message |
-| POST | `/notifications/{publicId}/read` | NotificationController | markAsRead |
-| GET | `/notifications` | NotificationController | index |
-| POST | `/push-position` | AdminDevPushPositionController | __invoke |
-| GET | `/routes/{routePublicId}/briefing` | DriverApiController | briefing |
-| GET | `/routes/{routePublicId}/etas` | DriverApiController | etas |
-| POST | `/routes/{routePublicId}/finish` | DriverApiController | finish |
-| GET | `/routes/{routePublicId}/inspection` | DriverApiController | getInspection |
-| POST | `/routes/{routePublicId}/inspection` | DriverApiController | submitInspection |
-| POST | `/routes/{routePublicId}/start` | DriverApiController | start |
-| POST | `/routes/{routePublicId}/stops/{stopPublicId}/feedback` | DriverApiController | stopFeedback |
-| GET | `/routes/{routePublicId}/stops` | DriverApiController | stops |
-| GET | `/routes` | DriverApiController | routes |
-| GET | `/routing` | DebugRoutingController | diagnostics |
-| GET | `/search` | SearchController | index |
-| POST | `/stops/{stopPublicId}/deliver` | DriverApiController | deliver |
-| POST | `/stops/{stopPublicId}/exception` | DriverApiController | exception |
-| GET | `/stops/{stopPublicId}/pod/download` | DriverApiController | podDownload |
-| GET | `/stops/{stopPublicId}/pod` | DriverApiController | podMetadata |
-| GET | `/top-addresses` | ExceptionMapController | topAddresses |
-| POST | `/track/{trackingToken}/alternative` | PublicTrackingController | alternative |
-| POST | `/track/{trackingToken}/confirm-presence` | PublicTrackingController | confirmPresence |
-| GET | `/track/{trackingToken}/rate` | PublicTrackingController | ratePage |
-| POST | `/track/{trackingToken}/rate` | PublicTrackingController | rate |
-| GET | `/track/{trackingToken}/reschedule` | PublicTrackingController | reschedule |
-| POST | `/track/{trackingToken}/reschedule` | PublicTrackingController | rescheduleSubmit |
-| GET | `/track/{trackingToken}` | PublicTrackingController | track |
-| GET | `/vapid-key` | DriverPushSubscriptionController | vapidKey |
-| GET | `/{publicId}/availability` | DriverAvailabilityController | show |
-| POST | `/{publicId}/availability` | DriverAvailabilityController | save |
-| POST | `/{publicId}/delete` | ApiKeyAdminController | delete |
-| POST | `/{publicId}/delete` | CustomerAdminController | delete |
-| POST | `/{publicId}/delete` | CustomerIntegrationAdminController | delete |
-| POST | `/{publicId}/delete` | CustomerLocationAdminController | delete |
-| POST | `/{publicId}/delete` | DriverAdminController | delete |
-| POST | `/{publicId}/delete` | ShipmentAdminController | delete |
-| POST | `/{publicId}/delete` | UserAdminController | delete |
-| POST | `/{publicId}/delete` | VehicleAdminController | delete |
-| GET | `/{publicId}/events` | RouteEventApiController | events |
-| POST | `/{publicId}/toggle` | ApiKeyAdminController | toggle |
-| GET | `/{publicId}` | CustomerShipmentController | show |
-| DELETE | `` | DriverPushSubscriptionController | unsubscribe |
-| GET | `` | AiAssistantController | index |
-| GET | `` | ApiKeyAdminController | index |
-| GET | `` | BillingController | index |
-| GET | `` | CommitStoryController | index |
-| GET | `` | CustomerAdminController | index |
-| GET | `` | CustomerIntegrationAdminController | index |
-| GET | `` | CustomerLocationAdminController | index |
-| GET | `` | CustomerReportController | index |
-| GET | `` | CustomerShipmentController | index |
-| GET | `` | DemoFixtureController | index |
-| GET | `` | DriverAdminController | index |
-| GET | `` | ExceptionMapController | index |
-| GET | `` | OperatorDashboardController | dashboard |
-| GET | `` | ReportController | index |
-| GET | `` | ShipmentAdminController | index |
-| GET | `` | SlaReportController | index |
-| GET | `` | UserAdminController | index |
-| GET | `` | VehicleAdminController | index |
-| GET | `` | ZonePerformanceController | index |
-| POST | `` | DriverPushSubscriptionController | subscribe |
 - SmsNotifierProviderType (`Provider/Enum/SmsNotifierProviderType.php`)
-
----
-
-## Twig Template Map
-
-| Directory | Count | Purpose |
-|-----------|------:|---------|
 - GpsProviderType (`Provider/Gps/GpsProviderType.php`)
 - RealtimeProviderType (`Provider/Realtime/RealtimeProviderType.php`)
-| `admin/` | 37 | Admin panel pages (CRUD, dashboards) |
 - ServiceType (`Provider/ServiceType.php`)
-| `components/` | 4 | Reusable UI components (partials) |
 
 ## Bounded Contexts (src/Domain/)
 
-| `customer/` | 5 | Customer portal pages |
 - **Event/** — 
-| `driver/` | 1 | Driver portal pages |
-| `email/` | 3 | Email templates |
-| `export/` | 1 | Export/download templates |
 - **MapView/** — Model,Projection,Publisher
-| `notification/` | 1 | Notification templates |
 - **Route/** — Model,Repository,Service
-| `operator/` | 1 | Operator portal pages |
-| `search/` | 1 | Search-related templates |
 - **Shipment/** — Model,Repository
 
 ## Backend Directory Tree (2 levels)
 
 ```
-| `security/` | 1 | Login, registration, auth pages |
 Ai
 Application
 Application/Delivery
@@ -343,7 +205,6 @@ Service
 Tracking
 Validator
 View
-| `tracking/` | 3 | Public tracking pages |
 ```
 
 ---
@@ -358,16 +219,6 @@ View
 ### Directory Tree
 
 ```
-| _(root)_ | 1 | Base layout, sidebar |
-
----
-
-## Factory Registry
-
-Provider factories (critical for Constructor Signature Changes pattern):
-
-| Factory | Interface | Path |
-|---------|-----------|------|
 api
 api/hooks
 assets
@@ -411,7 +262,6 @@ app/routers
 
 ### Docker configs (`docker/`)
 
-| NullSmsTransportFactory | ProviderFactoryInterface | `Provider/Factory/NullSmsTransportFactory.php` |
 - `nginx-railway.conf`
 - `osrm/data/.gitkeep`
 - `osrm/prepare-map.sh`
@@ -443,7 +293,6 @@ app/routers
 
 ### Spec files
 
-| TwilioSmsTransportFactory | ProviderFactoryInterface | `Provider/Factory/TwilioSmsTransportFactory.php` |
 - `specs/api-architecture-diagnostic.yaml`
 - `specs/api-consumers/traccar.yaml`
 - `specs/api-contracts/admin-web.yaml`
@@ -481,67 +330,6 @@ Services with the interfaces they implement (auto-extracted from source):
 
 | Service | Implements | Path |
 |---------|-----------|------|
-| TraccarFactory | ProviderFactoryInterface | `Provider/Gps/TraccarFactory.php` |
-| WebhookGpsFactory | ProviderFactoryInterface | `Provider/Gps/WebhookGpsFactory.php` |
-| HttpPollingFactory | ProviderFactoryInterface | `Provider/Realtime/HttpPollingFactory.php` |
-| MercureFactory | ProviderFactoryInterface | `Provider/Realtime/MercureFactory.php` |
-| GreedyOptimizerFactory | ProviderFactoryInterface | `Provider/RouteOptimizer/GreedyOptimizerFactory.php` |
-| VroomFactory | ProviderFactoryInterface | `Provider/RouteOptimizer/VroomFactory.php` |
-| GoogleDirectionsFactory | ProviderFactoryInterface | `Provider/Routing/GoogleDirectionsFactory.php` |
-| OsrmFactory | ProviderFactoryInterface | `Provider/Routing/OsrmFactory.php` |
-
----
-
-## Test Breakdown
-
-| Type | Count |
-|------|------:|
-| Unit | 112 |
-| Functional | 8 |
-| Domain | 6 |
-| Factory (test factories) | 1 |
-| **Total** | **128** |
-
----
-
-## Knowledge Module Status
-
-Freshness of knowledge modules (parsed from `docs/knowledge/index.md`):
-
-| Module | Last Verified | Fresh? |
-|--------|--------------|--------|
-| Modelo de Dominio | 2026-03-19 | 2026-03-19 |
-| Provider Framework | -- | Not verified |
-| API Surface | -- | Not verified |
-| Deployment | -- | Not verified |
-| Testing | -- | Not verified |
-| Realtime | -- | Not verified |
-| GPS Tracking | -- | Not verified |
-| Notifications | -- | Not verified |
-| AI/ML | -- | Not verified |
-| Route Optimization | -- | Not verified |
-| Architecture DDD/SOLID | 2026-03-19 | 2026-03-19 |
-| Design Patterns | -- | Not verified |
-| Security | -- | Not verified |
-| Superpowers Skills | -- | Not verified |
-| Feedback & Learning | -- | Not verified |
-| UI & Frontend | 2026-03-22 | 2026-03-22 |
-
----
-
-## Deep Reference
-
-| Topic | Document |
-|-------|----------|
-| Entity details, relations, traits | `docs/knowledge/domain-model.md` |
-| Full feature inventory | `docs/FEATURES.md` |
-| Architecture, bounded contexts | `docs/knowledge/architecture-ddd.md` |
-| API endpoints, controllers | `docs/knowledge/api-surface.md` |
-| Design patterns in use | `docs/knowledge/design-patterns.md` |
-| All knowledge modules | `docs/knowledge/index.md` |
-| Deployment, Docker, Railway | `docs/knowledge/deployment.md` |
-| GPS tracking, Traccar | `docs/knowledge/gps-tracking.md` |
-| Route optimization, VROOM/OSRM | `docs/knowledge/route-optimization.md` |
 | CachedProviderResolver | ProviderResolverInterface | `Provider/CachedProviderResolver.php` |
 | DatabasePodStorage | PodStorageInterface | `Service/DatabasePodStorage.php` |
 | DeviationDetected | MapProjectableEventInterface | `Domain/Event/DeviationDetected.php` |
