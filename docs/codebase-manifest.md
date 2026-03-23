@@ -126,303 +126,6 @@
 
 ### Provider
 
-- SmsNotifierProviderType (`Provider/Enum/SmsNotifierProviderType.php`)
-- GpsProviderType (`Provider/Gps/GpsProviderType.php`)
-- RealtimeProviderType (`Provider/Realtime/RealtimeProviderType.php`)
-- ServiceType (`Provider/ServiceType.php`)
-
-## Bounded Contexts (src/Domain/)
-
-- **Event/** — 
-- **MapView/** — Model,Projection,Publisher
-- **Route/** — Model,Repository,Service
-- **Shipment/** — Model,Repository
-
-## Backend Directory Tree (2 levels)
-
-```
-Ai
-Application
-Application/Delivery
-Application/Fleet
-Application/Route
-Application/Tracking
-Command
-Controller
-Controller/Admin
-Controller/Api
-Controller/Customer
-Controller/Operator
-DataFixtures
-DataFixtures/data
-Doctrine
-Doctrine/Dql
-Doctrine/Types
-Domain
-Domain/Event
-Domain/MapView
-Domain/Route
-Domain/Shipment
-Dto
-Dto/Api
-Dto/Driver
-Entity
-Entity/Concerns
-Enum
-EventListener
-EventListener/Domain
-EventSubscriber
-Form
-Geocoding
-Http
-Infrastructure
-Infrastructure/MapView
-Infrastructure/Route
-Infrastructure/Security
-Infrastructure/Shipment
-Logging
-Message
-MessageHandler
-Notification
-Notification/Gate
-Notification/Message
-Notification/Transport
-Prediction
-Provider
-Provider/Enum
-Provider/Factory
-Provider/Gps
-Provider/Realtime
-Provider/RouteOptimizer
-Provider/Routing
-Realtime
-Repository
-RouteOptimization
-Routing
-Security
-Security/Voter
-Service
-Tracking
-Validator
-View
-```
-
----
-
-## Frontend
-
-| Category | Count |
-|----------|------:|
-| JS/TS files total | 82 |
-| Pages | 11 |
-
-### Directory Tree
-
-```
-api
-api/hooks
-assets
-components
-components/bottom-sheet
-components/fleet
-components/layout
-components/maps
-components/metrics
-components/panels
-hooks
-pages
-pages/admin
-pages/customer
-pages/driver
-types
-widgets
-```
-
----
-
-## ML Service
-
-| Category | Count |
-|----------|------:|
-| Python files | 17 |
-| API Routers | 7 |
-| Models | 7 |
-
-### Directory Tree
-
-```
-app
-app/models
-app/routers
-```
-
----
-
-## Docker & Infrastructure
-
-### Docker configs (`docker/`)
-
-- `nginx-railway.conf`
-- `osrm/data/.gitkeep`
-- `osrm/prepare-map.sh`
-- `php/Dockerfile`
-- `traccar-local/traccar.xml`
-- `traccar-railway/traccar.xml`
-- `vroom/config-railway.yml`
-- `vroom/config.yml`
-- `vroom/entrypoint.sh`
-
-### Scripts (`scripts/`)
-
-- `osrm-start.sh`
-- `railway-setup-vars.sh`
-- `railway-start.sh`
-- `railway-worker-start.sh`
-- `traccar-start.sh`
-
----
-
-## OpenSpec
-
-| Category | Count |
-|----------|------:|
-| Total spec files | 28 |
-| Entity specs | 12 |
-| Business rules | 5 |
-| API contracts | 5 |
-
-### Spec files
-
-- `specs/api-architecture-diagnostic.yaml`
-- `specs/api-consumers/traccar.yaml`
-- `specs/api-contracts/admin-web.yaml`
-- `specs/api-contracts/driver-api.yaml`
-- `specs/api-contracts/mercure-token-api.yaml`
-- `specs/api-contracts/shipment-api.yaml`
-- `specs/api-contracts/vehicle-api.yaml`
-- `specs/architectural-constraints/layer-dependencies.yaml`
-- `specs/architecture-profile.yaml`
-- `specs/business-rules/delivery.yaml`
-- `specs/business-rules/multi-tenant.yaml`
-- `specs/business-rules/security.yaml`
-- `specs/business-rules/shipment.yaml`
-- `specs/business-rules/vehicle-tracking.yaml`
-- `specs/constitution.md`
-- `specs/entities/audit-log.yaml`
-- `specs/entities/customer.yaml`
-- `specs/entities/driver-action.yaml`
-- `specs/entities/pod.yaml`
-- `specs/entities/route-stop.yaml`
-- `specs/entities/route.yaml`
-- `specs/entities/shipment-event.yaml`
-- `specs/entities/shipment.yaml`
-- `specs/entities/user.yaml`
-- `specs/entities/vehicle-last-position.yaml`
-- `specs/entities/vehicle-position.yaml`
-- `specs/entities/vehicle.yaml`
-- `specs/spec-manifest.yaml`
-
----
-
-## Service Map
-
-Services with the interfaces they implement (auto-extracted from source):
-
-| Service | Implements | Path |
-|---------|-----------|------|
-| CachedProviderResolver | ProviderResolverInterface | `Provider/CachedProviderResolver.php` |
-| DatabasePodStorage | PodStorageInterface | `Service/DatabasePodStorage.php` |
-| DeviationDetected | MapProjectableEventInterface | `Domain/Event/DeviationDetected.php` |
-| DeviationEnded | MapProjectableEventInterface | `Domain/Event/DeviationEnded.php` |
-| DoctrinePodRepository | PodRepositoryInterface | `Infrastructure/Shipment/Doctrine/DoctrinePodRepository.php` |
-| DoctrineRouteEventRepository | RouteEventRepositoryInterface | `Infrastructure/Route/Doctrine/DoctrineRouteEventRepository.php` |
-| DoctrineRouteRepository | RouteRepositoryInterface | `Infrastructure/Route/Doctrine/DoctrineRouteRepository.php` |
-| DoctrineRouteSnapshotRepository | RouteSnapshotRepositoryInterface | `Infrastructure/Route/Doctrine/DoctrineRouteSnapshotRepository.php` |
-| DoctrineRouteStopRepository | RouteStopRepositoryInterface | `Infrastructure/Route/Doctrine/DoctrineRouteStopRepository.php` |
-| DoctrineShipmentRepository | ShipmentRepositoryInterface | `Infrastructure/Shipment/Doctrine/DoctrineShipmentRepository.php` |
-| EtaChanged | MapProjectableEventInterface | `Domain/Event/EtaChanged.php` |
-| GoogleDirectionsEngine | RoutingEngineInterface | `Provider/Routing/GoogleDirectionsEngine.php` |
-| GoogleDirectionsFactory | ProviderFactoryInterface | `Provider/Routing/GoogleDirectionsFactory.php` |
-| GreedyOptimizer | RouteOptimizerInterface | `Provider/RouteOptimizer/GreedyOptimizer.php` |
-| GreedyOptimizerFactory | ProviderFactoryInterface | `Provider/RouteOptimizer/GreedyOptimizerFactory.php` |
-| HttpPollingFactory | ProviderFactoryInterface | `Provider/Realtime/HttpPollingFactory.php` |
-| HttpPollingPublisher | RealtimePublisherInterface | `Provider/Realtime/HttpPollingPublisher.php` |
-| MapEventProjector | MapProjectorInterface | `Infrastructure/MapView/Projection/MapEventProjector.php` |
-| MercureFactory | ProviderFactoryInterface | `Provider/Realtime/MercureFactory.php` |
-| MercureMapPublisher | MapPublisherInterface | `Infrastructure/MapView/Publisher/MercureMapPublisher.php` |
-| NullRouteOptimizer | RouteOptimizerInterface | `RouteOptimization/NullRouteOptimizer.php` |
-| NullSmsTransportFactory | ProviderFactoryInterface | `Provider/Factory/NullSmsTransportFactory.php` |
-| OsrmFactory | ProviderFactoryInterface | `Provider/Routing/OsrmFactory.php` |
-| ProviderResolver | ProviderResolverInterface | `Provider/ProviderResolver.php` |
-| Route | SoftDeletableInterface | `Domain/Route/Model/Route.php` |
-| RouteAssigned | MapProjectableEventInterface | `Domain/Event/RouteAssigned.php` |
-| RouteCancelled | MapProjectableEventInterface | `Domain/Event/RouteCancelled.php` |
-| RouteCompleted | MapProjectableEventInterface | `Domain/Event/RouteCompleted.php` |
-| RouteOptimized | MapProjectableEventInterface | `Domain/Event/RouteOptimized.php` |
-| RouteReoptimized | MapProjectableEventInterface | `Domain/Event/RouteReoptimized.php` |
-| RouteStarted | MapProjectableEventInterface | `Domain/Event/RouteStarted.php` |
-| Shipment | CustomerScopedEntityInterface, SoftDeletableInterface | `Domain/Shipment/Model/Shipment.php` |
-| StopDelivered | MapProjectableEventInterface | `Domain/Event/StopDelivered.php` |
-| StopExceptionReported | MapProjectableEventInterface | `Domain/Event/StopExceptionReported.php` |
-| StopSkipped | MapProjectableEventInterface | `Domain/Event/StopSkipped.php` |
-| StopsReordered | MapProjectableEventInterface | `Domain/Event/StopsReordered.php` |
-| TenantAwareGpsPositionProvider | GpsPositionProviderInterface | `Provider/Gps/TenantAwareGpsPositionProvider.php` |
-| TenantAwareRealtimePublisher | RealtimePublisherInterface | `Provider/Realtime/TenantAwareRealtimePublisher.php` |
-| TenantAwareRouteOptimizer | RouteOptimizerInterface | `Provider/RouteOptimizer/TenantAwareRouteOptimizer.php` |
-| TenantAwareRoutingEngine | RoutingEngineInterface | `Provider/Routing/TenantAwareRoutingEngine.php` |
-| TraccarFactory | ProviderFactoryInterface | `Provider/Gps/TraccarFactory.php` |
-| TwilioSmsTransportFactory | ProviderFactoryInterface | `Provider/Factory/TwilioSmsTransportFactory.php` |
-| VroomFactory | ProviderFactoryInterface | `Provider/RouteOptimizer/VroomFactory.php` |
-| VroomRouteOptimizer | RouteOptimizerInterface | `RouteOptimization/VroomRouteOptimizer.php` |
-| WebhookGpsFactory | ProviderFactoryInterface | `Provider/Gps/WebhookGpsFactory.php` |
-| WebhookGpsProvider | GpsPositionProviderInterface | `Provider/Gps/WebhookGpsProvider.php` |
-
----
-
-## Entity Relationships
-
-Key Doctrine relationships (auto-extracted from entity attributes):
-
-- **ApiKey** → Customer
-- **AuditLog** → User
-- **CsvImportRun** → Customer
-- **CustomerIntegration** → Customer
-- **CustomerLocation** → Customer
-- **CustomerVehicle** → Customer, Vehicle
-- **DeliveryRating** → Shipment
-- **DeliverySlot** → Shipment
-- **DeliveryZone** → Customer
-- **DriverAction** → RouteStop, User
-- **DriverAvailability** → User
-- **DriverFeedback** → RouteStop, User
-- **Notification** → User
-- **NotificationLog** → Customer, Shipment
-- **NotificationPreference** → Customer
-- **OptimizationStrategyComparison** → Customer, Route
-- **PageLayout** → Customer, PageLayoutWidget
-- **PageLayoutWidget** → PageLayout, WidgetDefinition
-- **PushSubscription** → User
-- **RealtimeEvent** → Customer
-- **RecipientAction** → Shipment
-- **RecipientNotification** → Shipment
-- **RouteOptimizationLog** → Customer, Route
-- **RoutePerformanceMetric** → Customer, Route
-- **RoutePlanTemplate** → Customer
-- **User** → Customer
-- **VehicleCheckpoint** → Vehicle
-- **VehicleInspection** → Route, User
-- **VehicleLastPosition** → Vehicle
-- **VehiclePosition** → Route, Vehicle
-- **WebhookEndpoint** → Customer
-
----
-
-## Route Map (API Endpoints)
-
-Controller endpoints (auto-extracted from `#[Route]` attributes):
-
-| Method | Path | Controller | Action |
-|--------|------|-----------|--------|
 | GET | `/` | DashboardController | index |
 | GET | `/admin/health/live` | AdminController | healthLive |
 | GET | `/admin/health` | AdminController | health |
@@ -544,6 +247,7 @@ Controller endpoints (auto-extracted from `#[Route]` attributes):
 | GET | `` | VehicleAdminController | index |
 | GET | `` | ZonePerformanceController | index |
 | POST | `` | DriverPushSubscriptionController | subscribe |
+- SmsNotifierProviderType (`Provider/Enum/SmsNotifierProviderType.php`)
 
 ---
 
@@ -551,17 +255,109 @@ Controller endpoints (auto-extracted from `#[Route]` attributes):
 
 | Directory | Count | Purpose |
 |-----------|------:|---------|
+- GpsProviderType (`Provider/Gps/GpsProviderType.php`)
+- RealtimeProviderType (`Provider/Realtime/RealtimeProviderType.php`)
 | `admin/` | 37 | Admin panel pages (CRUD, dashboards) |
+- ServiceType (`Provider/ServiceType.php`)
 | `components/` | 4 | Reusable UI components (partials) |
+
+## Bounded Contexts (src/Domain/)
+
 | `customer/` | 5 | Customer portal pages |
+- **Event/** — 
 | `driver/` | 1 | Driver portal pages |
 | `email/` | 3 | Email templates |
 | `export/` | 1 | Export/download templates |
+- **MapView/** — Model,Projection,Publisher
 | `notification/` | 1 | Notification templates |
+- **Route/** — Model,Repository,Service
 | `operator/` | 1 | Operator portal pages |
 | `search/` | 1 | Search-related templates |
+- **Shipment/** — Model,Repository
+
+## Backend Directory Tree (2 levels)
+
+```
 | `security/` | 1 | Login, registration, auth pages |
+Ai
+Application
+Application/Delivery
+Application/Fleet
+Application/Route
+Application/Tracking
+Command
+Controller
+Controller/Admin
+Controller/Api
+Controller/Customer
+Controller/Operator
+DataFixtures
+DataFixtures/data
+Doctrine
+Doctrine/Dql
+Doctrine/Types
+Domain
+Domain/Event
+Domain/MapView
+Domain/Route
+Domain/Shipment
+Dto
+Dto/Api
+Dto/Driver
+Entity
+Entity/Concerns
+Enum
+EventListener
+EventListener/Domain
+EventSubscriber
+Form
+Geocoding
+Http
+Infrastructure
+Infrastructure/MapView
+Infrastructure/Route
+Infrastructure/Security
+Infrastructure/Shipment
+Logging
+Message
+MessageHandler
+Notification
+Notification/Gate
+Notification/Message
+Notification/Transport
+Prediction
+Provider
+Provider/Enum
+Provider/Factory
+Provider/Gps
+Provider/Realtime
+Provider/RouteOptimizer
+Provider/Routing
+Realtime
+Repository
+RouteOptimization
+Routing
+Security
+Security/Voter
+Service
+Tracking
+Validator
+View
 | `tracking/` | 3 | Public tracking pages |
+```
+
+---
+
+## Frontend
+
+| Category | Count |
+|----------|------:|
+| JS/TS files total | 82 |
+| Pages | 11 |
+
+### Directory Tree
+
+```
 | _(root)_ | 1 | Base layout, sidebar |
 
 ---
@@ -572,8 +368,119 @@ Provider factories (critical for Constructor Signature Changes pattern):
 
 | Factory | Interface | Path |
 |---------|-----------|------|
+api
+api/hooks
+assets
+components
+components/bottom-sheet
+components/fleet
+components/layout
+components/maps
+components/metrics
+components/panels
+hooks
+pages
+pages/admin
+pages/customer
+pages/driver
+types
+widgets
+```
+
+---
+
+## ML Service
+
+| Category | Count |
+|----------|------:|
+| Python files | 17 |
+| API Routers | 7 |
+| Models | 7 |
+
+### Directory Tree
+
+```
+app
+app/models
+app/routers
+```
+
+---
+
+## Docker & Infrastructure
+
+### Docker configs (`docker/`)
+
 | NullSmsTransportFactory | ProviderFactoryInterface | `Provider/Factory/NullSmsTransportFactory.php` |
+- `nginx-railway.conf`
+- `osrm/data/.gitkeep`
+- `osrm/prepare-map.sh`
+- `php/Dockerfile`
+- `traccar-local/traccar.xml`
+- `traccar-railway/traccar.xml`
+- `vroom/config-railway.yml`
+- `vroom/config.yml`
+- `vroom/entrypoint.sh`
+
+### Scripts (`scripts/`)
+
+- `osrm-start.sh`
+- `railway-setup-vars.sh`
+- `railway-start.sh`
+- `railway-worker-start.sh`
+- `traccar-start.sh`
+
+---
+
+## OpenSpec
+
+| Category | Count |
+|----------|------:|
+| Total spec files | 28 |
+| Entity specs | 12 |
+| Business rules | 5 |
+| API contracts | 5 |
+
+### Spec files
+
 | TwilioSmsTransportFactory | ProviderFactoryInterface | `Provider/Factory/TwilioSmsTransportFactory.php` |
+- `specs/api-architecture-diagnostic.yaml`
+- `specs/api-consumers/traccar.yaml`
+- `specs/api-contracts/admin-web.yaml`
+- `specs/api-contracts/driver-api.yaml`
+- `specs/api-contracts/mercure-token-api.yaml`
+- `specs/api-contracts/shipment-api.yaml`
+- `specs/api-contracts/vehicle-api.yaml`
+- `specs/architectural-constraints/layer-dependencies.yaml`
+- `specs/architecture-profile.yaml`
+- `specs/business-rules/delivery.yaml`
+- `specs/business-rules/multi-tenant.yaml`
+- `specs/business-rules/security.yaml`
+- `specs/business-rules/shipment.yaml`
+- `specs/business-rules/vehicle-tracking.yaml`
+- `specs/constitution.md`
+- `specs/entities/audit-log.yaml`
+- `specs/entities/customer.yaml`
+- `specs/entities/driver-action.yaml`
+- `specs/entities/pod.yaml`
+- `specs/entities/route-stop.yaml`
+- `specs/entities/route.yaml`
+- `specs/entities/shipment-event.yaml`
+- `specs/entities/shipment.yaml`
+- `specs/entities/user.yaml`
+- `specs/entities/vehicle-last-position.yaml`
+- `specs/entities/vehicle-position.yaml`
+- `specs/entities/vehicle.yaml`
+- `specs/spec-manifest.yaml`
+
+---
+
+## Service Map
+
+Services with the interfaces they implement (auto-extracted from source):
+
+| Service | Implements | Path |
+|---------|-----------|------|
 | TraccarFactory | ProviderFactoryInterface | `Provider/Gps/TraccarFactory.php` |
 | WebhookGpsFactory | ProviderFactoryInterface | `Provider/Gps/WebhookGpsFactory.php` |
 | HttpPollingFactory | ProviderFactoryInterface | `Provider/Realtime/HttpPollingFactory.php` |
