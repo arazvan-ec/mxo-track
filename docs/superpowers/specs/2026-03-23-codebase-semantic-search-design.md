@@ -324,3 +324,34 @@ const SCOPE_PATTERNS = {
 - Multi-project support (single project: mxo-track)
 - Authentication/authorization for the MCP server
 - Caching of embedding API responses (chunks are stored, no need to re-embed unchanged)
+
+---
+
+## Alternatives Evaluated
+
+### Approach A: Standalone MCP server en `/tools/codebase-search/` (ELEGIDO)
+- **Ventaja:** Aislado del frontend y backend, deploy independiente, no contamina dependencias
+- **Desventaja:** Otro `node_modules/` en el repo
+- **Trade-off:** Aislamiento > conveniencia de compartir dependencias
+
+### Approach B: Dentro del frontend existente (`/frontend/src/mcp/`)
+- **Ventaja:** Reutiliza `package.json` y toolchain TS existente
+- **Desventaja:** Acopla herramienta de desarrollo con app de producción, dependencias nativas (hnswlib) contaminan el bundle
+- **Descartado:** Mezcla concerns de producción con tooling de desarrollo
+
+### Approach C: Monorepo con npm workspaces
+- **Ventaja:** Gestión unificada de dependencias
+- **Desventaja:** Over-engineering para un solo tool, complica el setup del frontend
+- **Descartado:** Complejidad injustificada para el problema actual
+
+### Otras decisiones de diseño
+
+| Problema | Opcion elegida | Alternativa descartada | Razón |
+|----------|---------------|----------------------|-------|
+| Embeddings model | OpenAI `text-embedding-3-small` | Local `all-MiniLM-L6-v2` | ~15-20% mejor calidad en code search, costo mínimo ($0.01 full index) |
+| Embeddings model | OpenAI `text-embedding-3-small` | `voyage-code-3` | Similar calidad, OpenAI SDK más maduro, menor costo |
+| Vector search | HNSW (hnswlib-node) | Brute force cosine | User preference; aunque brute force suficiente para <5K chunks |
+| Storage | JSON flat file + interfaz abstracta | SQLite / Redis | Simplicidad, sin dependencias extra, interfaz permite swap futuro |
+| AST parsing | tree-sitter | Regex-based | Mejor precisión en boundaries de clases/métodos, soporte multi-lenguaje |
+| Chunking | Por clase/función | Por archivo | Más preciso para búsqueda semántica, mejor ranking |
+| MCP transport | stdio | HTTP/SSE | Claude Code usa stdio para MCP servers locales |
