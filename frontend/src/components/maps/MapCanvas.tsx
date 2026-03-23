@@ -30,7 +30,10 @@ function getDarkStyle() {
 
 export interface MapCanvasHandle {
   flyTo(lng: number, lat: number, zoom?: number): void;
-  fitBounds(points: Array<{ lat: number; lng: number }>): void;
+  fitBounds(
+    points: Array<{ lat: number; lng: number }>,
+    options?: { padding?: number | { top: number; right: number; bottom: number; left: number } },
+  ): void;
   getMapRef(): MapRef | null;
 }
 
@@ -79,11 +82,14 @@ export const MapCanvas = forwardRef<MapCanvasHandle, Props>(function MapCanvas(
     flyTo(lng, lat, zoom = 15) {
       mapRef.current?.flyTo({ center: [lng, lat], zoom, duration: 1000 });
     },
-    fitBounds(points) {
+    fitBounds(points, options) {
       if (!mapRef.current || points.length === 0) return;
       const bounds = new maplibregl.LngLatBounds();
       points.forEach((p) => bounds.extend([p.lng, p.lat]));
-      mapRef.current.fitBounds(bounds, { padding: 80, duration: 1000 });
+      mapRef.current.fitBounds(bounds, {
+        padding: options?.padding ?? 80,
+        duration: 1000,
+      });
     },
     getMapRef() {
       return mapRef.current;

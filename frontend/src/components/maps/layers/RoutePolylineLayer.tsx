@@ -8,9 +8,13 @@ interface Props {
   dashed?: boolean;
   /** Show directional arrows along the route (default: true for solid lines) */
   showArrows?: boolean;
+  /** Override line opacity (default: 0.6 for dashed, 0.85 for solid) */
+  opacity?: number;
+  /** Override line width (default: 3 for dashed, 4 for solid) */
+  lineWidth?: number;
 }
 
-export function RoutePolylineLayer({ id, polyline, color, dashed, showArrows }: Props) {
+export function RoutePolylineLayer({ id, polyline, color, dashed, showArrows, opacity, lineWidth }: Props) {
   const geojson = polylineToGeoJSON(polyline);
   const arrows = showArrows ?? !dashed;
 
@@ -21,8 +25,8 @@ export function RoutePolylineLayer({ id, polyline, color, dashed, showArrows }: 
         type="line"
         paint={{
           'line-color': color,
-          'line-width': dashed ? 3 : 4,
-          'line-opacity': dashed ? 0.6 : 0.85,
+          'line-width': lineWidth ?? (dashed ? 3 : 4),
+          'line-opacity': opacity ?? (dashed ? 0.6 : 0.85),
           ...(dashed ? { 'line-dasharray': [4, 3] } : {}),
         }}
         layout={{
