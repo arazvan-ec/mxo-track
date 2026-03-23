@@ -47,14 +47,12 @@ else
     ERRORS="${ERRORS}- Spec no contiene keywords de brainstorming (Approach|Alternativa|Trade-off|Problema|Ventaja|Desventaja|Opcion)\n"
   fi
 
-  # Anti-Omission Gate: If spec describes replication/migration, require inventory sections
-  if grep -qiE '(replica|migra|reemplaza|porta|convierte|reconstruye|reescribe|sustituye|replaces|migrates|rebuilds|rewrites|existing functionality)' "$SPEC_FULL" 2>/dev/null; then
-    if ! grep -qE '## Existing Functionality Inventory' "$SPEC_FULL" 2>/dev/null; then
-      ERRORS="${ERRORS}- ANTI-OMISION: Spec describe replicacion/migracion pero falta seccion '## Existing Functionality Inventory'\n"
-    fi
-    if ! grep -qE '## Omission Decisions' "$SPEC_FULL" 2>/dev/null; then
-      ERRORS="${ERRORS}- ANTI-OMISION: Spec describe replicacion/migracion pero falta seccion '## Omission Decisions'\n"
-    fi
+  # Anti-Omission Gate: Every spec must inventory existing functionality
+  if ! grep -qE '## Existing Functionality Inventory' "$SPEC_FULL" 2>/dev/null; then
+    ERRORS="${ERRORS}- ANTI-OMISION: Falta seccion '## Existing Functionality Inventory' (si no hay funcionalidad existente afectada, declarar 'No existing functionality affected')\n"
+  fi
+  if ! grep -qE '## Omission Decisions' "$SPEC_FULL" 2>/dev/null; then
+    ERRORS="${ERRORS}- ANTI-OMISION: Falta seccion '## Omission Decisions' (si no hay omisiones, declarar 'No omissions — all inventory items addressed')\n"
   fi
 fi
 
