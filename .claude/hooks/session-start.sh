@@ -25,9 +25,11 @@ cat > "$STATE_FILE" <<EOJSON
   "session_date": "$TODAY",
   "flow_type": null,
   "current_phase": null,
+  "interaction_id": 0,
   "interaction_classification": null,
   "phase_history": [],
   "evidence": {
+    "interaction_id": 0,
     "decisions_read": false,
     "logs_scanned": false,
     "user_turns": 0,

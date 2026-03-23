@@ -18,6 +18,14 @@ nav.route_templates: Plantillas de Ruta
 nav.integrations: Integraciones
 nav.sla: SLA & Cumplimiento
 nav.exception_map: Mapa Excepciones
+nav.test_routing: Test Routing
+nav.debug_routing: Debug Routing
+nav.optimization_logs: Logs Optimizacion
+nav.ai_assistant: Asistente AI
+nav.search: Buscar
+nav.zone_trends: Tendencias por Zona
+nav.fixtures: Fixtures
+nav.commit_story: Commit Story
 
 # Sidebar sections
 sidebar.main: Principal
@@ -31,6 +39,7 @@ sidebar.driver: Conductor
 sidebar.my_routes: Mis Rutas
 sidebar.my_shipments: Mis Envios
 sidebar.my_reports: Mis Reportes
+sidebar.dev_tools: Herramientas Dev
 sidebar.role.admin: Administrador
 sidebar.role.operator: Operador
 sidebar.role.customer: Cliente

@@ -185,6 +185,16 @@ Ventaja: Better scalability. Desventaja: More files.
 We chose Approach B because it scales better for future requirements
 and allows proper unit testing without database dependencies.
 This provides enough content to pass the 500 byte minimum threshold easily.
+
+## Existing Functionality Inventory
+| # | Element | Location | Description |
+|---|---------|----------|-------------|
+| 1 | SomeController | src/Controller/ | Handles X |
+
+## Omission Decisions
+| Element | Decision | Justification |
+|---------|----------|---------------|
+| SomeController | Transform | Refactor to use new service layer |
 EOF
 }
 
@@ -338,10 +348,13 @@ echo ""
 # No tests written → warning (soft gate), still allowed
 setup_full_flow_ready
 set_evidence "tests_written" "0"
-# Note: This will warn but not block since TDD is soft gate
-# The engine may warn or allow depending on working tree state
-echo "SKIP: 6.1 TDD soft gate (depends on working tree state)"
-PASS=$((PASS + 1))
+expect_deny "6.1 TDD hard gate: blocks without tests" "$SRC_FILE" "TDD"
+
+# Contradiction: tests_passed=true with tests_written=0
+setup_full_flow_ready
+set_evidence "tests_passed" "true"
+set_evidence "tests_written" "0"
+expect_deny "6.2 Contradiction: tests_passed=true but tests_written=0" "$SRC_FILE" "Contradiccion"
 
 echo ""
 echo "=== FULL FLOW END-TO-END ==="
@@ -355,6 +368,51 @@ expect_allow "7.1 Full flow: all gates pass" "$SRC_FILE"
 create_fresh_state
 set_flow "debug-flow"
 expect_allow "7.2 debug-flow: skips validators for src" "$SRC_FILE"
+
+# "full" (without -flow suffix) also works — CLAUDE.md uses this form
+echo ""
+echo "=== FLOW_TYPE VALUE COMPATIBILITY ==="
+echo ""
+
+# "full" triggers same gates as "full-flow" — blocked at brainstorm first
+create_fresh_state
+set_flow "full"
+set_evidence "decisions_read" "true"
+expect_deny "7.3 'full' without -flow: blocks src without brainstorm" "$SRC_FILE" "Brainstorming"
+
+# "full" with all evidence passes
+setup_full_flow_ready
+jq '.flow_type = "full"' "$STATE_FILE" > "$STATE_FILE.tmp" && mv "$STATE_FILE.tmp" "$STATE_FILE"
+expect_allow "7.4 'full' without -flow: passes with all evidence" "$SRC_FILE"
+
+# "micro" (without -flow) skips validation
+create_fresh_state
+set_flow "micro"
+expect_allow "7.5 'micro' without -flow: skips validation" "$SRC_FILE"
+
+# "debug" (without -flow) skips validation
+create_fresh_state
+set_flow "debug"
+expect_allow "7.6 'debug' without -flow: skips validation" "$SRC_FILE"
+
+echo ""
+echo "=== SCOPE-CHANGE DETECTION ==="
+echo ""
+
+# Matching interaction_ids → allow
+setup_full_flow_ready
+jq '.interaction_id = 1 | .evidence.interaction_id = 1' "$STATE_FILE" > "$STATE_FILE.tmp" && mv "$STATE_FILE.tmp" "$STATE_FILE"
+expect_allow "7.7 Matching interaction_ids: allow" "$SRC_FILE"
+
+# Mismatched interaction_ids → block src edits
+setup_full_flow_ready
+jq '.interaction_id = 2 | .evidence.interaction_id = 1' "$STATE_FILE" > "$STATE_FILE.tmp" && mv "$STATE_FILE.tmp" "$STATE_FILE"
+expect_deny "7.8 Mismatched interaction_ids: block src" "$SRC_FILE" "Scope change"
+
+# Mismatched interaction_ids → allow doc edits (not gated)
+setup_full_flow_ready
+jq '.interaction_id = 2 | .evidence.interaction_id = 1' "$STATE_FILE" > "$STATE_FILE.tmp" && mv "$STATE_FILE.tmp" "$STATE_FILE"
+expect_allow "7.9 Mismatched interaction_ids: allow docs" "$DOC_FILE"
 
 echo ""
 echo "=== WORKFLOW STATUS GENERATION ==="

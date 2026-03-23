@@ -31,9 +31,13 @@ deny() {
   exit 0
 }
 
-warn() {
+emit_warn() {
   local msg="$1"
   echo "{\"systemMessage\":\"$msg\"}"
+}
+
+warn() {
+  emit_warn "$1"
   exit 0
 }
 
@@ -50,14 +54,14 @@ DEVIATION_ACTIVE=$(jq -r '.deviation.active // false' "$STATE_FILE" 2>/dev/null 
 if [ "$FLOW_TYPE" = "null" ]; then
   case "$FILE_PATH" in
     */backend/src/*|*/frontend/src/*|*/backend/tests/*|*/frontend/tests/*)
-      deny "WORKFLOW ENGINE: Declara el tipo de flujo antes de modificar codigo. Escribe flow_type (micro-flow|light-flow|debug-flow|full-flow|explore-flow) en .claude/session-state.json"
+      deny "WORKFLOW ENGINE: Declara el tipo de flujo antes de modificar codigo. Escribe flow_type (micro|light|debug|full|explore) en .claude/session-state.json"
       ;;
   esac
   # Non-code files pass without flow declaration
   exit 0
 fi
 
-# ── Gate 2: Deviation return enforcement ──
+# ── Gate 2: Deviation warning ──
 if [ "$DEVIATION_ACTIVE" = "true" ]; then
   RETURN_TO=$(jq -r '.deviation.return_to_phase // "unknown"' "$STATE_FILE" 2>/dev/null || echo "unknown")
   warn "WORKFLOW ENGINE: Deviation activa. Retoma fase: $RETURN_TO despues de la accion actual."
@@ -65,8 +69,20 @@ fi
 
 # ── Flows that skip phase validation ──
 case "$FLOW_TYPE" in
-  micro-flow|light-flow|explore-flow|debug-flow) exit 0 ;;
+  micro|micro-flow|light|light-flow|explore|explore-flow|debug|debug-flow) exit 0 ;;
 esac
+
+# ── Gate 3: Scope-change detection via interaction_id ──
+# If interaction_id (top-level) != evidence.interaction_id, evidence is stale
+CURRENT_INTERACTION=$(jq -r '.interaction_id // 0' "$STATE_FILE" 2>/dev/null || echo "0")
+EVIDENCE_INTERACTION=$(jq -r '.evidence.interaction_id // 0' "$STATE_FILE" 2>/dev/null || echo "0")
+if [ "$CURRENT_INTERACTION" != "$EVIDENCE_INTERACTION" ]; then
+  case "$FILE_PATH" in
+    */backend/src/*|*/frontend/src/*|*/backend/tests/*|*/frontend/tests/*)
+      deny "WORKFLOW ENGINE: Scope change detectado (interaction_id: $CURRENT_INTERACTION, evidence de interaction: $EVIDENCE_INTERACTION). La evidencia de fases previas no aplica a la nueva interaccion. Resetea evidence.interaction_id=$CURRENT_INTERACTION y completa las fases requeridas."
+      ;;
+  esac
+fi
 
 # ── Gate 3: Determine required phase from file path ──
 determine_required_phase() {
@@ -119,6 +135,8 @@ get_prerequisite_validators() {
 VALIDATORS=$(get_prerequisite_validators "$REQUIRED_PHASE")
 
 # ── Gate 4: Run validators in order ──
+# Soft gates (exit 1) accumulate warnings but don't abort — hard gates (exit 2) still checked
+ACCUMULATED_WARNINGS=""
 for validator_name in $VALIDATORS; do
   VALIDATOR_SCRIPT="$VALIDATORS_DIR/${validator_name}-validator.sh"
 
@@ -128,21 +146,25 @@ for validator_name in $VALIDATORS; do
 
   # Capture output and exit code separately (set +e to prevent script exit)
   set +e
-  RESULT=$("$VALIDATOR_SCRIPT" "$STATE_FILE" 2>&1)
+  RESULT=$("$VALIDATOR_SCRIPT" "$STATE_FILE" "$FILE_PATH" 2>&1)
   EXIT_CODE=$?
   set -e
 
   if [ "$EXIT_CODE" -eq 2 ]; then
-    # Hard gate — block
-    # Escape newlines and quotes for JSON
+    # Hard gate — block immediately
     ESCAPED_RESULT=$(echo "$RESULT" | tr '\n' ' ' | sed 's/"/\\"/g')
     deny "WORKFLOW ENGINE ($validator_name): $ESCAPED_RESULT"
   elif [ "$EXIT_CODE" -eq 1 ]; then
-    # Soft gate — warn but continue
+    # Soft gate — accumulate warning, continue to next validator
     ESCAPED_RESULT=$(echo "$RESULT" | tr '\n' ' ' | sed 's/"/\\"/g')
-    warn "WORKFLOW ENGINE ($validator_name): $ESCAPED_RESULT"
+    ACCUMULATED_WARNINGS="${ACCUMULATED_WARNINGS}WORKFLOW ENGINE ($validator_name): $ESCAPED_RESULT "
   fi
   # Exit code 0 = pass, continue to next validator
 done
+
+# Emit accumulated warnings (if any) after all validators pass
+if [ -n "$ACCUMULATED_WARNINGS" ]; then
+  emit_warn "$ACCUMULATED_WARNINGS"
+fi
 
 exit 0

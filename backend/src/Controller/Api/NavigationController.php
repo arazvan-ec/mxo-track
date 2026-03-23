@@ -40,7 +40,7 @@ class NavigationController extends AbstractController
         return $response;
     }
 
-    /** @return array<int, array{title: string, items: array<int, array{label: string, href: string, icon: string}>}> */
+    /** @return list<array{title: string, items: list<array{label: string, href: string, icon: string}>}> */
     private function getAdminSections(): array
     {
         return [
@@ -49,6 +49,8 @@ class NavigationController extends AbstractController
                 'items' => [
                     $this->item('nav.dashboard', '/admin', 'dashboard'),
                     $this->item('nav.dashboard_live', '/app/admin/operator-dashboard', 'dashboardLive'),
+                    $this->item('nav.notifications', '/notifications', 'notifications'),
+                    $this->item('nav.search', '/search', 'search'),
                 ],
             ],
             [
@@ -58,6 +60,7 @@ class NavigationController extends AbstractController
                     $this->item('nav.drivers', '/admin/drivers', 'driver'),
                     $this->item('nav.routes', '/admin/routes', 'route'),
                     $this->item('nav.shipments', '/admin/shipments', 'shipment'),
+                    $this->item('nav.import_csv', '/admin/shipments/import', 'import'),
                     $this->item('nav.planner', '/app/admin/route-planner', 'planner'),
                     $this->item('nav.route_templates', '/admin/route-templates', 'template'),
                     $this->item('nav.customers', '/admin/customers', 'customer'),
@@ -70,27 +73,41 @@ class NavigationController extends AbstractController
                     $this->item('nav.users', '/admin/users', 'users'),
                     $this->item('nav.reports', '/admin/reports', 'reports'),
                     $this->item('nav.sla', '/admin/reports/sla', 'sla'),
+                    $this->item('nav.zone_trends', '/admin/reports/zone-trends', 'reports'),
                     $this->item('nav.exception_map', '/app/admin/exception-map', 'map'),
                     $this->item('nav.billing', '/admin/billing', 'billing'),
+                    $this->item('nav.optimization_logs', '/admin/optimization-logs', 'optimization'),
+                    $this->item('nav.ai_assistant', '/admin/ai-assistant', 'ai'),
                 ],
             ],
             [
                 'title' => $this->t('sidebar.tracking'),
                 'items' => [
                     $this->item('nav.map', '/app/admin/fleet-map', 'map'),
+                    $this->item('nav.test_routing', '/admin/test-routing', 'route'),
+                    $this->item('nav.debug_routing', '/admin/debug/routing', 'route'),
+                ],
+            ],
+            [
+                'title' => $this->t('sidebar.dev_tools'),
+                'items' => [
+                    $this->item('nav.fixtures', '/admin/fixtures', 'template'),
+                    $this->item('nav.commit_story', '/admin/commit-story', 'template'),
                 ],
             ],
         ];
     }
 
-    /** @return array<int, array{title: string, items: array<int, array{label: string, href: string, icon: string}>}> */
+    /** @return list<array{title: string, items: list<array{label: string, href: string, icon: string}>}> */
     private function getCustomerSections(): array
     {
         return [
             [
                 'title' => $this->t('sidebar.main'),
                 'items' => [
-                    $this->item('nav.dashboard', '/customer', 'dashboard'),
+                    $this->item('nav.dashboard', '/customer/dashboard', 'dashboard'),
+                    $this->item('nav.notifications', '/notifications', 'notifications'),
+                    $this->item('nav.search', '/search', 'search'),
                 ],
             ],
             [
@@ -110,7 +127,7 @@ class NavigationController extends AbstractController
         ];
     }
 
-    /** @return array<int, array{title: string, items: array<int, array{label: string, href: string, icon: string}>}> */
+    /** @return list<array{title: string, items: list<array{label: string, href: string, icon: string}>}> */
     private function getDriverSections(): array
     {
         return [
@@ -118,6 +135,7 @@ class NavigationController extends AbstractController
                 'title' => $this->t('sidebar.driver'),
                 'items' => [
                     $this->item('sidebar.my_routes', '/driver/routes', 'route'),
+                    $this->item('nav.notifications', '/notifications', 'notifications'),
                 ],
             ],
         ];
