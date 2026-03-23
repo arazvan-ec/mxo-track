@@ -79,6 +79,8 @@ class NavigationController extends AbstractController
                     $this->item('nav.optimization_logs', '/admin/optimization-logs', 'optimization'),
                     $this->item('nav.ai_assistant', '/admin/ai-assistant', 'ai'),
                     $this->item('nav.api_keys', '/admin/api-keys', 'apiKey'),
+                    $this->item('nav.widget_gallery', '/app/admin/widgets', 'template'),
+                    $this->item('nav.page_layouts', '/app/admin/page-layouts', 'dashboard'),
                 ],
             ],
             [

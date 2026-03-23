@@ -143,3 +143,10 @@ Registro de decisiones de diseño significativas. Cada entrada captura el contex
 - **Decisión:** Mover a `src/Domain/Route/Model/` con XML mapping externo en `config/doctrine/mapping/`. Aprovechar que `doctrine.yaml` ya tiene mapping configurado para `App\Domain\Route\Model` (usado por RouteSnapshot). ULID generado en constructor (reemplaza `#[ORM\PrePersist]` de PublicIdTrait). Entidades que referencian Route/RouteStop desde fuera del bounded context usan `use App\Domain\Route\Model\Route`.
 - **Alternativas descartadas:** (A) Mantener en `App\Entity\` y solo strip ORM attributes — conflicto de mapping type (attribute vs xml) en mismo prefix. (B) Migrar solo Route sin RouteStop/RouteEvent — deja el bounded context partido.
 - **Resultado:** 3 entidades migradas, 80+ archivos de imports actualizados, XML mappings creados, 0 nuevos test failures. `doctrine:schema:validate` pendiente de verificación con DB.
+
+### [2026-03-23] Widget System Architecture — Entity Model vs JSON Config
+
+- **Problema:** Necesitábamos un sistema configurable de widgets para bottom sheets en 8 páginas map-based. Los admins necesitan definir qué widgets aparecen en cada estado (collapsed/half/full) por página, con defaults globales y overrides por customer.
+- **Decisión:** Full entity model (WidgetDefinition + PageLayout + PageLayoutWidget) con enums tipados (WidgetType, PageKey, SheetState). Frontend widget registry maps tipos a React components. Layout resolution: customer override → global fallback → empty.
+- **Alternativas descartadas:** (B) JSON config en entidades existentes — no escala, no tiene CRUD propio, difícil de validar. (C) Frontend-only config — no persiste, no multi-tenant, no admin UI.
+- **Resultado:** Implementado end-to-end. 3 entidades, 3 enums, 7 API endpoints, widget registry con 4 componentes implementados + 6 placeholders, admin UI (gallery + layout editor). TestRoutingPage migrada a dynamic layout. Pendiente: migrar las otras 7 páginas.
