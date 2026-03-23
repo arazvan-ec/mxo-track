@@ -3,7 +3,7 @@
 > **Auto-generated** by `make manifest` (`backend/bin/generate-manifest.sh`).
 > Do not edit manually — regenerate with `make manifest`.
 
-**Generated:** 2026-03-23 22:51
+**Generated:** 2026-03-23 22:56
 **Regenerate:** `make manifest`
 
 ## Project Overview
@@ -42,6 +42,12 @@
 
 ## Entity List
 
+- **RouteOptimizationLog** → Customer, Route
+- **RoutePerformanceMetric** → Customer, Route
+- **RoutePlanTemplate** → Customer
+- **User** → Customer
+- **VehicleCheckpoint** → Vehicle
+- **VehicleInspection** → Route, User
 - AddressRisk
 - ApiKey
 - AuditLog
@@ -82,10 +88,22 @@
 
 ## Domain Models
 
+- **VehicleLastPosition** → Vehicle
 - **MapView/** MapUpdate
+- **VehiclePosition** → Route, Vehicle
 - **MapView/** MapUpdateType
 - **MapView/** VehiclePosition
+- **WebhookEndpoint** → Customer
 - **Route/** Route
+
+---
+
+## Route Map (API Endpoints)
+
+Controller endpoints (auto-extracted from `#[Route]` attributes):
+
+| Method | Path | Controller | Action |
+|--------|------|-----------|--------|
 - **Route/** RouteEvent
 - **Route/** RouteMapMetrics
 - **Route/** RouteMapOptions
@@ -330,99 +348,6 @@ Services with the interfaces they implement (auto-extracted from source):
 
 | Service | Implements | Path |
 |---------|-----------|------|
-| CachedProviderResolver | ProviderResolverInterface | `Provider/CachedProviderResolver.php` |
-| DatabasePodStorage | PodStorageInterface | `Service/DatabasePodStorage.php` |
-| DeviationDetected | MapProjectableEventInterface | `Domain/Event/DeviationDetected.php` |
-| DeviationEnded | MapProjectableEventInterface | `Domain/Event/DeviationEnded.php` |
-| DoctrinePodRepository | PodRepositoryInterface | `Infrastructure/Shipment/Doctrine/DoctrinePodRepository.php` |
-| DoctrineRouteEventRepository | RouteEventRepositoryInterface | `Infrastructure/Route/Doctrine/DoctrineRouteEventRepository.php` |
-| DoctrineRouteRepository | RouteRepositoryInterface | `Infrastructure/Route/Doctrine/DoctrineRouteRepository.php` |
-| DoctrineRouteSnapshotRepository | RouteSnapshotRepositoryInterface | `Infrastructure/Route/Doctrine/DoctrineRouteSnapshotRepository.php` |
-| DoctrineRouteStopRepository | RouteStopRepositoryInterface | `Infrastructure/Route/Doctrine/DoctrineRouteStopRepository.php` |
-| DoctrineShipmentRepository | ShipmentRepositoryInterface | `Infrastructure/Shipment/Doctrine/DoctrineShipmentRepository.php` |
-| EtaChanged | MapProjectableEventInterface | `Domain/Event/EtaChanged.php` |
-| GoogleDirectionsEngine | RoutingEngineInterface | `Provider/Routing/GoogleDirectionsEngine.php` |
-| GoogleDirectionsFactory | ProviderFactoryInterface | `Provider/Routing/GoogleDirectionsFactory.php` |
-| GreedyOptimizer | RouteOptimizerInterface | `Provider/RouteOptimizer/GreedyOptimizer.php` |
-| GreedyOptimizerFactory | ProviderFactoryInterface | `Provider/RouteOptimizer/GreedyOptimizerFactory.php` |
-| HttpPollingFactory | ProviderFactoryInterface | `Provider/Realtime/HttpPollingFactory.php` |
-| HttpPollingPublisher | RealtimePublisherInterface | `Provider/Realtime/HttpPollingPublisher.php` |
-| MapEventProjector | MapProjectorInterface | `Infrastructure/MapView/Projection/MapEventProjector.php` |
-| MercureFactory | ProviderFactoryInterface | `Provider/Realtime/MercureFactory.php` |
-| MercureMapPublisher | MapPublisherInterface | `Infrastructure/MapView/Publisher/MercureMapPublisher.php` |
-| NullRouteOptimizer | RouteOptimizerInterface | `RouteOptimization/NullRouteOptimizer.php` |
-| NullSmsTransportFactory | ProviderFactoryInterface | `Provider/Factory/NullSmsTransportFactory.php` |
-| OsrmFactory | ProviderFactoryInterface | `Provider/Routing/OsrmFactory.php` |
-| ProviderResolver | ProviderResolverInterface | `Provider/ProviderResolver.php` |
-| Route | SoftDeletableInterface | `Domain/Route/Model/Route.php` |
-| RouteAssigned | MapProjectableEventInterface | `Domain/Event/RouteAssigned.php` |
-| RouteCancelled | MapProjectableEventInterface | `Domain/Event/RouteCancelled.php` |
-| RouteCompleted | MapProjectableEventInterface | `Domain/Event/RouteCompleted.php` |
-| RouteOptimized | MapProjectableEventInterface | `Domain/Event/RouteOptimized.php` |
-| RouteReoptimized | MapProjectableEventInterface | `Domain/Event/RouteReoptimized.php` |
-| RouteStarted | MapProjectableEventInterface | `Domain/Event/RouteStarted.php` |
-| Shipment | CustomerScopedEntityInterface, SoftDeletableInterface | `Domain/Shipment/Model/Shipment.php` |
-| StopDelivered | MapProjectableEventInterface | `Domain/Event/StopDelivered.php` |
-| StopExceptionReported | MapProjectableEventInterface | `Domain/Event/StopExceptionReported.php` |
-| StopSkipped | MapProjectableEventInterface | `Domain/Event/StopSkipped.php` |
-| StopsReordered | MapProjectableEventInterface | `Domain/Event/StopsReordered.php` |
-| TenantAwareGpsPositionProvider | GpsPositionProviderInterface | `Provider/Gps/TenantAwareGpsPositionProvider.php` |
-| TenantAwareRealtimePublisher | RealtimePublisherInterface | `Provider/Realtime/TenantAwareRealtimePublisher.php` |
-| TenantAwareRouteOptimizer | RouteOptimizerInterface | `Provider/RouteOptimizer/TenantAwareRouteOptimizer.php` |
-| TenantAwareRoutingEngine | RoutingEngineInterface | `Provider/Routing/TenantAwareRoutingEngine.php` |
-| TraccarFactory | ProviderFactoryInterface | `Provider/Gps/TraccarFactory.php` |
-| TwilioSmsTransportFactory | ProviderFactoryInterface | `Provider/Factory/TwilioSmsTransportFactory.php` |
-| VroomFactory | ProviderFactoryInterface | `Provider/RouteOptimizer/VroomFactory.php` |
-| VroomRouteOptimizer | RouteOptimizerInterface | `RouteOptimization/VroomRouteOptimizer.php` |
-| WebhookGpsFactory | ProviderFactoryInterface | `Provider/Gps/WebhookGpsFactory.php` |
-| WebhookGpsProvider | GpsPositionProviderInterface | `Provider/Gps/WebhookGpsProvider.php` |
-
----
-
-## Entity Relationships
-
-Key Doctrine relationships (auto-extracted from entity attributes):
-
-- **ApiKey** → Customer
-- **AuditLog** → User
-- **CsvImportRun** → Customer
-- **CustomerIntegration** → Customer
-- **CustomerLocation** → Customer
-- **CustomerVehicle** → Customer, Vehicle
-- **DeliveryRating** → Shipment
-- **DeliverySlot** → Shipment
-- **DeliveryZone** → Customer
-- **DriverAction** → RouteStop, User
-- **DriverAvailability** → User
-- **DriverFeedback** → RouteStop, User
-- **Notification** → User
-- **NotificationLog** → Customer, Shipment
-- **NotificationPreference** → Customer
-- **OptimizationStrategyComparison** → Customer, Route
-- **PageLayout** → Customer, PageLayoutWidget
-- **PageLayoutWidget** → PageLayout, WidgetDefinition
-- **PushSubscription** → User
-- **RealtimeEvent** → Customer
-- **RecipientAction** → Shipment
-- **RecipientNotification** → Shipment
-- **RouteOptimizationLog** → Customer, Route
-- **RoutePerformanceMetric** → Customer, Route
-- **RoutePlanTemplate** → Customer
-- **User** → Customer
-- **VehicleCheckpoint** → Vehicle
-- **VehicleInspection** → Route, User
-- **VehicleLastPosition** → Vehicle
-- **VehiclePosition** → Route, Vehicle
-- **WebhookEndpoint** → Customer
-
----
-
-## Route Map (API Endpoints)
-
-Controller endpoints (auto-extracted from `#[Route]` attributes):
-
-| Method | Path | Controller | Action |
-|--------|------|-----------|--------|
 | GET | `/` | DashboardController | index |
 | GET | `/admin/health/live` | AdminController | healthLive |
 | GET | `/admin/health` | AdminController | health |
