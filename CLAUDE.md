@@ -667,6 +667,44 @@ When modifying a class constructor (adding/removing/changing parameters):
 
 **Why:** Symfony auto-wires most services, but Factories use `new` directly. Changing a constructor without updating its Factory causes runtime errors that tests may not catch if the Factory path isn't covered.
 
+## Anti-Omission Rule (mandatory)
+
+**Cuando un cambio replica, migra, o reemplaza funcionalidad existente, ESTÁ PROHIBIDO omitir elementos sin decisión explícita documentada.**
+
+### Regla
+
+Al crear un componente nuevo que reemplaza o replica funcionalidad de otro existente (ej: sidebar React que replica sidebar Twig, nueva API que reemplaza endpoints legacy):
+
+1. **Inventariar** — Enumerar TODOS los elementos del componente original (menús, campos, endpoints, features, etc.)
+2. **Decidir item por item** — Para CADA elemento: ¿se incluye, se omite, o se transforma? Documentar la decisión.
+3. **Documentar omisiones** — Toda omisión requiere justificación explícita en el spec. "No se incluyó porque..." no es opcional.
+4. **Nunca omitir por defecto** — Si un elemento no se menciona en las decisiones de omisión, se asume que debe incluirse. La omisión silenciosa es un defecto, no una decisión.
+
+### Detección
+
+Keywords que activan esta regla: replica, migra, reemplaza, porta, convierte, reconstruye, reescribe, nuevo componente que sustituye.
+
+### Anti-patterns
+
+- Crear un sidebar nuevo sin listar todos los menús del sidebar existente
+- Migrar una API sin inventariar todos los endpoints originales
+- "Solo incluí lo que me pareció relevante" — sin documentar qué se excluyó y por qué
+- Asumir que el usuario sabe qué se omitió — documentar explícitamente
+
+### Secciones obligatorias en specs de replicación
+
+Cuando el spec describe replicación/migración, DEBE contener:
+
+```markdown
+## Existing Functionality Inventory
+[Lista completa de elementos del componente original]
+
+## Omission Decisions
+| Element | Decision | Justification |
+|---------|----------|---------------|
+| [item]  | Include / Omit / Transform | [razón] |
+```
+
 ## Knowledge Modules (consultar bajo demanda)
 
 Antes de trabajar en un subsistema, **LEE el módulo relevante** en `docs/knowledge/`:
@@ -856,11 +894,17 @@ Every project goes through this process. A todo list, a single-function utility,
    - Si toca **ambos**: separar claramente qué partes van a cada layer. El contexto crítico no se relaja por conveniencia.
    - **Anti-racionalización:** "Sigo el patrón existente en src/Entity/" NO es razón para poner código nuevo de contexto crítico ahí. El patrón existente es deuda técnica documentada, no un ejemplo a seguir.
 2. **Explore project context** — check files, docs, recent commits
-3. **Offer visual companion** (if topic will involve visual questions)
-4. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria
-5. **Propose 2-3 approaches** — with trade-offs and your recommendation. If bounded context is critical, every approach MUST respect DDD placement rules from step 1.
-6. **Present design** — in sections scaled to their complexity, get user approval after each section
-7. **Write design doc** — save to `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md` and commit
+3. **Inventory existing functionality (Anti-Omission Gate)** — If the work replaces, replicates, migrates, or rebuilds existing functionality:
+   - Enumerate ALL elements of the original component (menus, fields, endpoints, features, behaviors)
+   - This inventory becomes the `## Existing Functionality Inventory` section of the spec
+   - Every element must have an explicit decision: Include / Omit / Transform with justification
+   - This becomes the `## Omission Decisions` section of the spec
+   - **If not a replication/migration**, skip this step (declare: "No replication — inventory not needed")
+4. **Offer visual companion** (if topic will involve visual questions)
+5. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria
+6. **Propose 2-3 approaches** — with trade-offs and your recommendation. If bounded context is critical, every approach MUST respect DDD placement rules from step 1.
+7. **Present design** — in sections scaled to their complexity, get user approval after each section
+8. **Write design doc** — save to `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md` and commit
 8. **Transition to implementation** — invoke writing-plans skill to create implementation plan
 
 #### Key Principles
