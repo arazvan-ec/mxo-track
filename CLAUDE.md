@@ -427,9 +427,10 @@ Aplica cuando la interacción produce hallazgos sustantivos sobre el codebase (c
 
 1. **Consultar** — Buscar en `docs/superpowers/retrospectives/` bugs similares pasados
 2. **Systematic Debugging** — Invocar Skill 8 (obligatorio, sin atajos)
-3. **TDD** — Invocar Skill 7 (test que falla antes del fix)
-4. **Capturar** — Escribir execution log en `docs/superpowers/execution-logs/`
-5. **Retrospectiva** — Añadir entrada al log de retrospectiva
+3. **Pattern-Wide Investigation** — Después de identificar root cause, buscar el mismo patrón defectuoso en el resto del codebase (ver Skill 8, Phase 2.5). El fix debe cubrir TODAS las instancias, no solo la reportada.
+4. **TDD** — Invocar Skill 7 (test que falla antes del fix)
+5. **Capturar** — Escribir execution log en `docs/superpowers/execution-logs/`
+6. **Retrospectiva** — Añadir entrada al log de retrospectiva
 
 ### Full-flow (cambios de código)
 
@@ -1350,6 +1351,23 @@ NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST
 2. Compare against references COMPLETELY (don't skim)
 3. Identify ALL differences between working and broken
 4. Understand dependencies
+
+**Phase 2.5: Pattern-Wide Investigation (MANDATORY before implementing fix)**
+
+Después de identificar el root cause de UN bug, buscar el mismo patrón defectuoso en el resto del codebase. El fix debe cubrir TODAS las instancias, no solo la reportada.
+
+1. **Abstraer el patrón** — Formular el defecto como un patrón genérico buscable (ej: "controller con prefijo de clase sin método index que está enlazado en la navegación")
+2. **Buscar todas las instancias** — Grep/Glob por el patrón en todo el codebase. No solo en el mismo directorio, sino en cualquier lugar donde aplique.
+3. **Evaluar cada instancia** — No todas las coincidencias son bugs. Evaluar cuáles son defectuosas y cuáles son correctas (ej: un controller sin index route que tampoco está en la navegación no es un bug).
+4. **Incluir todas las instancias defectuosas en el fix** — Un solo commit/PR que arregle todas las ocurrencias. No arreglar una y dejar las demás para "después".
+5. **Considerar solución estructural** — Si el patrón es recurrente (3+ instancias), evaluar si existe una solución que prevenga el patrón en el futuro (ej: test automatizado, linter rule, architectural constraint).
+
+| Anti-racionalización | Realidad |
+|----------------------|----------|
+| "Solo me reportaron este bug" | Si el patrón existe en otros lugares, es cuestión de tiempo que falle ahí también |
+| "Los otros casos no están en la navegación" | Verifica antes de asumir — pero si realmente no son accesibles, documéntalo |
+| "Es mucho trabajo arreglar todos" | Es más trabajo debuggear el mismo patrón 5 veces en 5 sesiones distintas |
+| "Ya cumplo con arreglar lo reportado" | Arreglar lo reportado es lo mínimo. La excelencia es eliminar la clase de bug |
 
 **Phase 3: Hypothesis and Testing**
 1. Form SINGLE hypothesis: "I think X is the root cause because Y"
