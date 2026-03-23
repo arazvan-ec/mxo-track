@@ -22,6 +22,7 @@ nav.test_routing: Test Routing
 nav.debug_routing: Debug Routing
 nav.optimization_logs: Optimization Logs
 nav.ai_assistant: AI Assistant
+nav.api_keys: API Keys
 nav.search: Search
 nav.zone_trends: Zone Trends
 nav.fixtures: Fixtures

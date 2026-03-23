@@ -28,12 +28,15 @@
 - `TopBar` accepts `extraControls` prop for page-specific buttons (e.g. data sidebar toggle in `DualMenuShell`)
 
 **Navigation Sidebar** — Unified React `NavigationSidebar` widget (replaces old Twig `_sidebar_content.html.twig`)
-- **Single source of truth:** `frontend/src/components/layout/NavigationSidebar.tsx` renders all menu items for all roles
+- **Data source:** `NavigationController::getNavigation()` (`/api/navigation`) — returns sections, items, icons per role. Cached 1h (`Cache-Control: max-age=3600`)
+- **Renderer:** `frontend/src/components/layout/NavigationSidebar.tsx` renders all menu items for all roles
+- **Icons:** SVG icons defined in `NavigationSidebar.tsx` `icons` object — must match `icon` field from API response
 - **Mounted in Twig via widget:** `frontend/src/sidebar-widget.tsx` → standalone entry point, loaded in `base.html.twig` as `<script src="sidebar-widget.js">`
 - **Twig integration:** Hamburger button in topbar calls `window.__mxoSidebarOpen()` to open React overlay drawer
 - **SPA integration:** Same `NavigationSidebar` used inside `DualMenuShell` for React SPA pages
 - Role-based rendering handled inside React component (reads user role from context)
 - Old `_sidebar_content.html.twig` still exists but is **no longer included** in `base.html.twig` (candidate for deletion)
+- **To add a menu item:** 1) Add icon SVG in `NavigationSidebar.tsx` icons object, 2) Add `$this->item()` call in `NavigationController.php`, 3) Add translation key in `messages.{es,en}.yaml`
 
 ## Template Organization
 

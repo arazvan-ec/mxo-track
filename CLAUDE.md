@@ -605,7 +605,7 @@ Nunca se validan: `.claude/session-state.json`, `.claude/hooks/*`, `.claude/sett
 | `verification` | `tests_passed = true` + `lint_clean = true` | HARD |
 | `capture` | `execution_log_path` existe | SOFT |
 | `retrospective` | (siempre recuerda actualizar decision log) | SOFT |
-| `finalize` | `branch_strategy` declarado | SOFT |
+| `finalize` | `branch_strategy` declarado + knowledge module check (warns if `src/` changed but relevant `docs/knowledge/` not updated) | SOFT |
 | `debug-code` | `decisions_read` OR `logs_scanned` + `root_cause_identified` + `pattern_wide_search_done` | HARD |
 
 ### Deviation mode
