@@ -2,7 +2,7 @@
 
 **Type:** feature
 **Branch:** `claude/improve-admin-routing-view-3cOqm`
-**Spec:** `docs/superpowers/specs/2026-03-23-test-routing-bottom-sheet-design.md`
+**Spec:** `docs/superpowers/specs/admin-routing-view/2026-03-23-test-routing-bottom-sheet-design.md`
 **Plan:** `docs/superpowers/plans/2026-03-23-test-routing-bottom-sheet.md`
 
 ---

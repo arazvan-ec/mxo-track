@@ -27,6 +27,8 @@ nav.search: Search
 nav.zone_trends: Zone Trends
 nav.fixtures: Fixtures
 nav.commit_story: Commit Story
+nav.widget_gallery: Widget Gallery
+nav.page_layouts: Page Layouts
 
 # Sidebar sections
 sidebar.main: Main

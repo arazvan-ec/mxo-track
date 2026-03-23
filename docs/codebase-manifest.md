@@ -3,15 +3,15 @@
 > **Auto-generated** by `make manifest` (`backend/bin/generate-manifest.sh`).
 > Do not edit manually — regenerate with `make manifest`.
 
-**Generated:** 2026-03-23 21:12
+**Generated:** 2026-03-23 22:56
 **Regenerate:** `make manifest`
 
 ## Project Overview
 
 | Area | Path | Files | Tech |
 |------|------|------:|------|
-| Backend | `backend/` | 503 PHP | Symfony 7.4, PHP 8.4 |
-| Frontend | `frontend/` | 70 JS/TS | React |
+| Backend | `backend/` | 515 PHP | Symfony 7.4, PHP 8.4 |
+| Frontend | `frontend/` | 82 JS/TS | React |
 | ML Service | `ml-service/` | 17 Python | FastAPI |
 | Docker/Infra | `docker/` + `scripts/` | 9 + 5 | Docker, OSRM, VROOM, Traccar |
 | OpenSpec | `openspec/` | 28 specs | YAML specs |
@@ -23,22 +23,22 @@
 
 | Category | Count |
 |----------|------:|
-| Entities (src/Entity/) | 34 |
+| Entities (src/Entity/) | 37 |
 | Domain Models (src/Domain/*/Model/) | 16 |
-| Enums — core (src/Enum/) | 17 |
+| Enums — core (src/Enum/) | 20 |
 | Enums — provider | 4 |
-| **Enums total** | **21** |
-| Controllers | 63 |
+| **Enums total** | **24** |
+| Controllers | 66 |
 | Application Services (src/Application/) | 23 |
 | Domain/Infra Services (src/Service/) | 73 |
-| Repositories | 18 |
+| Repositories | 21 |
 | Console Commands | 18 |
 | DTOs | 17 |
 | Event Listeners | 11 |
 | Messenger Messages | 4 |
 | Message Handlers | 4 |
-| Tests | 126 |
-| Migrations | 33 |
+| Tests | 128 |
+| Migrations | 34 |
 
 ## Entity List
 
@@ -61,6 +61,8 @@
 - NotificationLog
 - NotificationPreference
 - OptimizationStrategyComparison
+- PageLayout
+- PageLayoutWidget
 - PushSubscription
 - RealtimeEvent
 - RecipientAction
@@ -76,6 +78,7 @@
 - VehicleLastPosition
 - VehiclePosition
 - WebhookEndpoint
+- WidgetDefinition
 
 ## Domain Models
 
@@ -107,16 +110,19 @@
 - NotificationTriggerType
 - OptimizationOperation
 - OptimizationStepCategory
+- PageKey
 - ParcelStatus
 - RecipientActionType
 - RouteEventType
 - RouteStatus
 - RouteStopStatus
 - ServiceType
+- SheetState
 - ShipmentEventType
 - ShipmentPriority
 - UserRole
 - VehicleSkill
+- WidgetType
 
 ### Provider
 
@@ -207,8 +213,8 @@ View
 
 | Category | Count |
 |----------|------:|
-| JS/TS files total | 70 |
-| Pages | 9 |
+| JS/TS files total | 82 |
+| Pages | 11 |
 
 ### Directory Tree
 
@@ -228,6 +234,8 @@ pages
 pages/admin
 pages/customer
 pages/driver
+types
+widgets
 ```
 
 ---
@@ -391,6 +399,8 @@ Key Doctrine relationships (auto-extracted from entity attributes):
 - **NotificationLog** → Customer, Shipment
 - **NotificationPreference** → Customer
 - **OptimizationStrategyComparison** → Customer, Route
+- **PageLayout** → Customer, PageLayoutWidget
+- **PageLayoutWidget** → PageLayout, WidgetDefinition
 - **PushSubscription** → User
 - **RealtimeEvent** → Customer
 - **RecipientAction** → Shipment
@@ -417,6 +427,13 @@ Controller endpoints (auto-extracted from `#[Route]` attributes):
 | GET | `/admin/health/live` | AdminController | healthLive |
 | GET | `/admin/health` | AdminController | health |
 | GET | `/admin` | AdminController | dashboard |
+| DELETE | `/api/admin/page-layouts/{publicId}` | PageLayoutApiController | delete |
+| GET | `/api/admin/page-layouts/{publicId}` | PageLayoutApiController | get |
+| PUT | `/api/admin/page-layouts/{publicId}` | PageLayoutApiController | update |
+| GET | `/api/admin/page-layouts` | PageLayoutApiController | list |
+| POST | `/api/admin/page-layouts` | PageLayoutApiController | create |
+| PATCH | `/api/admin/widgets/{publicId}` | WidgetDefinitionApiController | patch |
+| GET | `/api/admin/widgets` | WidgetDefinitionApiController | list |
 | GET | `/api/csrf-token/{intention}` | CsrfTokenController | __invoke |
 | GET | `/api/fleet/map-data` | FleetMapDataController | __invoke |
 | GET | `/api/me` | MeController | __invoke |
@@ -427,6 +444,7 @@ Controller endpoints (auto-extracted from `#[Route]` attributes):
 | GET | `/api/notification-preferences` | NotificationPreferenceController | list |
 | POST | `/api/notification-preferences` | NotificationPreferenceController | create |
 | GET | `/api/notifications/unread-count` | NotificationController | unreadCount |
+| GET | `/api/page-layouts/{pageKey}` | PageLayoutResolverController | __invoke |
 | GET | `/api/routes/{publicId}/analysis` | RouteAnalysisController | analysis |
 | GET | `/api/routes/{publicId}/etas` | RouteEtaApiController | etas |
 | GET | `/api/search` | SearchController | apiSearch |
@@ -571,11 +589,11 @@ Provider factories (critical for Constructor Signature Changes pattern):
 
 | Type | Count |
 |------|------:|
-| Unit | 110 |
+| Unit | 112 |
 | Functional | 8 |
 | Domain | 6 |
 | Factory (test factories) | 1 |
-| **Total** | **126** |
+| **Total** | **128** |
 
 ---
 
