@@ -1,3 +1,19 @@
+// Navigation — GET /api/navigation
+export interface NavItem {
+  label: string;
+  href: string;
+  icon: string;
+}
+
+export interface NavSection {
+  title: string;
+  items: NavItem[];
+}
+
+export interface NavigationResponse {
+  sections: NavSection[];
+}
+
 // Match backend DTOs
 
 export interface MeResponse {

@@ -3,15 +3,15 @@
 > **Auto-generated** by `make manifest` (`backend/bin/generate-manifest.sh`).
 > Do not edit manually — regenerate with `make manifest`.
 
-**Generated:** 2026-03-23 00:29
+**Generated:** 2026-03-23 00:42
 **Regenerate:** `make manifest`
 
 ## Project Overview
 
 | Area | Path | Files | Tech |
 |------|------|------:|------|
-| Backend | `backend/` | 502 PHP | Symfony 7.4, PHP 8.4 |
-| Frontend | `frontend/` | 66 JS/TS | React |
+| Backend | `backend/` | 503 PHP | Symfony 7.4, PHP 8.4 |
+| Frontend | `frontend/` | 67 JS/TS | React |
 | ML Service | `ml-service/` | 17 Python | FastAPI |
 | Docker/Infra | `docker/` + `scripts/` | 9 + 5 | Docker, OSRM, VROOM, Traccar |
 | OpenSpec | `openspec/` | 28 specs | YAML specs |
@@ -28,7 +28,7 @@
 | Enums — core (src/Enum/) | 17 |
 | Enums — provider | 4 |
 | **Enums total** | **21** |
-| Controllers | 62 |
+| Controllers | 63 |
 | Application Services (src/Application/) | 23 |
 | Domain/Infra Services (src/Service/) | 73 |
 | Repositories | 18 |
@@ -207,7 +207,7 @@ View
 
 | Category | Count |
 |----------|------:|
-| JS/TS files total | 66 |
+| JS/TS files total | 67 |
 | Pages | 9 |
 
 ### Directory Tree
@@ -419,6 +419,7 @@ Controller endpoints (auto-extracted from `#[Route]` attributes):
 | GET | `/api/fleet/map-data` | FleetMapDataController | __invoke |
 | GET | `/api/me` | MeController | __invoke |
 | GET | `/api/mercure-token` | MercureTokenController | __invoke |
+| GET | `/api/navigation` | NavigationController | __invoke |
 | GET | `/api/notification-preferences/logs` | NotificationPreferenceController | logs |
 | DELETE | `/api/notification-preferences/{publicId}` | NotificationPreferenceController | delete |
 | GET | `/api/notification-preferences` | NotificationPreferenceController | list |
@@ -541,7 +542,7 @@ Controller endpoints (auto-extracted from `#[Route]` attributes):
 | `search/` | 1 | Search-related templates |
 | `security/` | 1 | Login, registration, auth pages |
 | `tracking/` | 3 | Public tracking pages |
-| _(root)_ | 2 | Base layout, sidebar |
+| _(root)_ | 1 | Base layout, sidebar |
 
 ---
 

@@ -1,20 +1,10 @@
 import { useMe } from '@/api/hooks/useMe';
+import { useNavigation } from '@/api/hooks/useNavigation';
 
 interface Props {
   onClose: () => void;
   /** 'overlay' (default) = fixed + backdrop; 'inline' = static flex child */
   mode?: 'overlay' | 'inline';
-}
-
-interface NavItem {
-  label: string;
-  href: string;
-  icon: React.ReactNode;
-}
-
-interface NavSection {
-  title: string;
-  items: NavItem[];
 }
 
 /* ── SVG icon helpers (matching _sidebar_content.html.twig) ──────── */
@@ -103,97 +93,19 @@ const icons = {
   ),
 };
 
-/* ── Navigation definitions per role ─────────────────────────────── */
+/* ── Icon resolver ────────────────────────────────────────────────── */
 
-function getAdminNav(): NavSection[] {
-  return [
-    {
-      title: 'Principal',
-      items: [
-        { label: 'Dashboard', href: '/admin', icon: icons.dashboard },
-        { label: 'Dashboard Live', href: '/app/admin/operator-dashboard', icon: icons.dashboardLive },
-      ],
-    },
-    {
-      title: 'Operaciones',
-      items: [
-        { label: 'Vehiculos', href: '/admin/vehicles', icon: icons.vehicle },
-        { label: 'Transportistas', href: '/admin/drivers', icon: icons.driver },
-        { label: 'Rutas', href: '/admin/routes', icon: icons.route },
-        { label: 'Envios', href: '/admin/shipments', icon: icons.shipment },
-        { label: 'Planificador', href: '/app/admin/route-planner', icon: icons.planner },
-        { label: 'Plantillas de Ruta', href: '/admin/route-templates', icon: icons.template },
-        { label: 'Clientes', href: '/admin/customers', icon: icons.customer },
-        { label: 'Integraciones', href: '/admin/integrations', icon: icons.integration },
-      ],
-    },
-    {
-      title: 'Administracion',
-      items: [
-        { label: 'Usuarios', href: '/admin/users', icon: icons.users },
-        { label: 'Reportes', href: '/admin/reports', icon: icons.reports },
-        { label: 'SLA & Cumplimiento', href: '/admin/reports/sla', icon: icons.sla },
-        { label: 'Mapa Excepciones', href: '/app/admin/exception-map', icon: icons.map },
-        { label: 'Facturacion', href: '/admin/billing', icon: icons.billing },
-      ],
-    },
-    {
-      title: 'Seguimiento',
-      items: [
-        { label: 'Mapa', href: '/app/admin/fleet-map', icon: icons.map },
-      ],
-    },
-  ];
-}
-
-function getCustomerNav(): NavSection[] {
-  return [
-    {
-      title: 'Principal',
-      items: [
-        { label: 'Dashboard', href: '/customer', icon: icons.dashboard },
-      ],
-    },
-    {
-      title: 'Mis entregas',
-      items: [
-        { label: 'Mis Rutas', href: '/customer/routes', icon: icons.route },
-        { label: 'Mis Envios', href: '/customer/shipments', icon: icons.shipment },
-        { label: 'Mis Reportes', href: '/customer/reports', icon: icons.reports },
-      ],
-    },
-    {
-      title: 'Seguimiento',
-      items: [
-        { label: 'Mapa', href: '/app/admin/fleet-map', icon: icons.map },
-      ],
-    },
-  ];
-}
-
-function getDriverNav(): NavSection[] {
-  return [
-    {
-      title: 'Conductor',
-      items: [
-        { label: 'Mis Rutas', href: '/driver/routes', icon: icons.route },
-      ],
-    },
-  ];
-}
-
-function getNavSections(role: string | undefined): NavSection[] {
-  if (role === 'ROLE_ADMIN') return getAdminNav();
-  if (role === 'ROLE_CUSTOMER') return getCustomerNav();
-  if (role === 'ROLE_DRIVER') return getDriverNav();
-  return getAdminNav(); // fallback
+function resolveIcon(iconKey: string): React.ReactNode {
+  return icons[iconKey as keyof typeof icons] ?? icons.dashboard;
 }
 
 /* ── Component ───────────────────────────────────────────────────── */
 
 export function NavigationSidebar({ onClose, mode = 'overlay' }: Props) {
   const { data: me } = useMe();
-  const sections = getNavSections(me?.role);
+  const { data: nav } = useNavigation();
+  const sections = nav?.sections ?? [];
+  const currentPath = window.location.pathname;
   const inline = mode === 'inline';
 
   return (
@@ -248,17 +160,24 @@ export function NavigationSidebar({ onClose, mode = 'overlay' }: Props) {
                 {section.title}
               </span>
               <ul className="mt-1 space-y-0.5">
-                {section.items.map((item) => (
-                  <li key={item.href}>
-                    <a
-                      href={item.href}
-                      className="group flex items-center gap-x-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors text-slate-300 hover:bg-slate-700 hover:text-white"
-                    >
-                      {item.icon}
-                      {item.label}
-                    </a>
-                  </li>
-                ))}
+                {section.items.map((item) => {
+                  const isActive = currentPath === item.href;
+                  return (
+                    <li key={item.href}>
+                      <a
+                        href={item.href}
+                        className={`group flex items-center gap-x-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                          isActive
+                            ? 'bg-slate-900 text-white'
+                            : 'text-slate-300 hover:bg-slate-700 hover:text-white'
+                        }`}
+                      >
+                        {resolveIcon(item.icon)}
+                        {item.label}
+                      </a>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           ))}
