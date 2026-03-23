@@ -78,6 +78,7 @@ class NavigationController extends AbstractController
                 'title' => $this->t('sidebar.tracking'),
                 'items' => [
                     $this->item('nav.map', '/app/admin/fleet-map', 'map'),
+                    $this->item('nav.test_routing', '/admin/test-routing', 'route'),
                 ],
             ],
         ];

@@ -18,6 +18,7 @@ nav.route_templates: Plantillas de Ruta
 nav.integrations: Integraciones
 nav.sla: SLA & Cumplimiento
 nav.exception_map: Mapa Excepciones
+nav.test_routing: Test Routing
 
 # Sidebar sections
 sidebar.main: Principal
