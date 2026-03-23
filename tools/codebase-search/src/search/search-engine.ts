@@ -1,11 +1,14 @@
-import { HierarchicalNSW } from 'hnswlib-node';
+import hnswlib from 'hnswlib-node';
+const { HierarchicalNSW } = hnswlib;
+type HnswIndex = InstanceType<typeof HierarchicalNSW>;
+
 import type { StoredChunk } from '../storage/types.js';
 import type { SearchResult, SearchOptions } from './types.js';
 
 const SNIPPET_MAX_LENGTH = 200;
 
 export class SearchEngine {
-  private index: HierarchicalNSW | null = null;
+  private index: HnswIndex | null = null;
 
   buildIndex(chunks: StoredChunk[], dimensions: number): void {
     if (chunks.length === 0) {
