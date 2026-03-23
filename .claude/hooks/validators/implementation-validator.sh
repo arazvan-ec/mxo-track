@@ -50,9 +50,10 @@ case "$EDIT_FILE" in
   */tests/*|*Test.php|*.test.*|*.spec.*) IS_TEST_FILE=true ;;
 esac
 
-if [ "$IS_FULL" = true ] && [ "$TESTS_WRITTEN" -eq 0 ] && [ "$IS_TEST_FILE" = false ]; then
-  # Check working tree for test changes
+if [ "$IS_FULL" = true ] && [ "$IS_TEST_FILE" = false ]; then
   cd "$REPO"
+
+  # Gather test file evidence from working tree
   BACKEND_TESTS=$(
     git diff --name-only -- 'backend/tests/' 2>/dev/null
     git diff --cached --name-only -- 'backend/tests/' 2>/dev/null
@@ -64,9 +65,29 @@ if [ "$IS_FULL" = true ] && [ "$TESTS_WRITTEN" -eq 0 ] && [ "$IS_TEST_FILE" = fa
     git ls-files --others --exclude-standard -- 'frontend/src/' 2>/dev/null | grep -E '\.(test|spec)\.' || true
   )
 
-  if [ -z "$BACKEND_TESTS" ] && [ -z "$FRONTEND_TESTS" ]; then
+  # Also check recent commits on this branch for test files (last 20 commits)
+  COMMITTED_TESTS=$(
+    git log -20 --diff-filter=AM --name-only --pretty=format: -- 'backend/tests/' 2>/dev/null | grep -v '^$' || true
+    git log -20 --diff-filter=AM --name-only --pretty=format: -- 'frontend/src/' 2>/dev/null | grep -E '\.(test|spec)\.' | grep -v '^$' || true
+  )
+
+  HAS_REAL_TESTS=false
+  if [ -n "$BACKEND_TESTS" ] || [ -n "$FRONTEND_TESTS" ] || [ -n "$COMMITTED_TESTS" ]; then
+    HAS_REAL_TESTS=true
+  fi
+
+  # Gate A: tests_written == 0 AND no real tests → TDD violation
+  if [ "$TESTS_WRITTEN" -eq 0 ] && [ "$HAS_REAL_TESTS" = false ]; then
     echo "BLOCKED: TDD — No test changes detected for full-flow."
     echo "Write a failing test first (Skill 7). NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST."
+    exit 2
+  fi
+
+  # Gate B (ANTI-GAMING): tests_written > 0 BUT no real test files anywhere → contradiction
+  if [ "$TESTS_WRITTEN" -gt 0 ] && [ "$HAS_REAL_TESTS" = false ]; then
+    echo "BLOCKED: ANTI-GAMING — tests_written=$TESTS_WRITTEN pero no se encontraron archivos de test en git diff ni en commits recientes."
+    echo "Si realmente escribiste tests, deben estar en backend/tests/ o frontend/src/**/*.{test,spec}.*"
+    echo "Si no escribiste tests, corrige evidence.tests_written=0 y escribe tests primero (Skill 7)."
     exit 2
   fi
 fi
