@@ -75,6 +75,7 @@ export class SearchEngine {
 
   loadIndex(path: string, dimensions: number, maxElements: number): void {
     this.index = new HierarchicalNSW('cosine', dimensions);
-    this.index.readIndex(path, maxElements);
+    // hnswlib-node types expect boolean but actually accepts maxElements number
+    (this.index as any).readIndex(path, maxElements);
   }
 }
