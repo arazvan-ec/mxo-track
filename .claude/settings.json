@@ -24,9 +24,31 @@
             "statusMessage": "Checking workflow compliance..."
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/user/mxo-track/.claude/hooks/pre-push-gate.sh",
+            "timeout": 5,
+            "statusMessage": "Checking pre-push gates..."
+          }
+        ]
       }
     ],
     "PostToolUse": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/user/mxo-track/.claude/hooks/workflow-status-line.sh",
+            "timeout": 2,
+            "statusMessage": "Updating status line..."
+          }
+        ]
+      },
       {
         "matcher": "Write|Edit",
         "hooks": [

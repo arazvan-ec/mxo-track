@@ -69,6 +69,7 @@ export const FleetMap = forwardRef<FleetMapHandle, Props>(function FleetMap(
 
       {activeStops?.polyline && (
         <RoutePolylineLayer
+          key={activeStops.routeId}
           id={activeStops.routeId}
           polyline={activeStops.polyline}
           color={activeStops.color ?? '#3B82F6'}
