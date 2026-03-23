@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { MarkdownParser } from '../src/parser/markdown-parser.js';
+import { PhpParser } from '../src/parser/php-parser.js';
 
 describe('MarkdownParser', () => {
   const parser = new MarkdownParser();
@@ -91,5 +92,107 @@ Next content.
     const content = `## Test Section\n\nContent.`;
     const chunks = parser.parse('docs/knowledge/test.md', content);
     expect(chunks[0].filePath).toBe('docs/knowledge/test.md');
+  });
+});
+
+describe('PhpParser', () => {
+  const parser = new PhpParser();
+
+  it('should have .php extension', () => {
+    expect(parser.extensions).toContain('.php');
+  });
+
+  it('should extract class declaration as chunk', () => {
+    const content = `<?php
+
+namespace App\\Entity;
+
+class Vehicle {
+    private string $name;
+}
+`;
+    const chunks = parser.parse('src/Entity/Vehicle.php', content);
+    const classChunk = chunks.find(c => c.type === 'class');
+    expect(classChunk).toBeDefined();
+    expect(classChunk!.name).toBe('Vehicle');
+    expect(classChunk!.language).toBe('php');
+    expect(classChunk!.content).toContain('class Vehicle');
+  });
+
+  it('should extract each method as separate chunk with parentName', () => {
+    const content = `<?php
+
+class UserService {
+    public function create(): void {}
+    public function delete(): void {}
+}
+`;
+    const chunks = parser.parse('src/Service/UserService.php', content);
+    const methods = chunks.filter(c => c.type === 'method');
+    expect(methods).toHaveLength(2);
+
+    const createMethod = methods.find(c => c.name === 'create');
+    expect(createMethod).toBeDefined();
+    expect(createMethod!.parentName).toBe('UserService');
+
+    const deleteMethod = methods.find(c => c.name === 'delete');
+    expect(deleteMethod).toBeDefined();
+    expect(deleteMethod!.parentName).toBe('UserService');
+  });
+
+  it('should extract standalone functions', () => {
+    const content = `<?php
+
+function helperFunction(): string {
+    return 'hello';
+}
+`;
+    const chunks = parser.parse('src/helpers.php', content);
+    const func = chunks.find(c => c.type === 'function');
+    expect(func).toBeDefined();
+    expect(func!.name).toBe('helperFunction');
+    expect(func!.parentName).toBeUndefined();
+  });
+
+  it('should include namespace in metadata', () => {
+    const content = `<?php
+
+namespace App\\Service;
+
+class RouteService {}
+`;
+    const chunks = parser.parse('src/Service/RouteService.php', content);
+    const classChunk = chunks.find(c => c.type === 'class');
+    expect(classChunk).toBeDefined();
+    expect(classChunk!.metadata?.namespace).toBe('App\\Service');
+  });
+
+  it('should handle file with multiple classes', () => {
+    const content = `<?php
+
+class First {}
+class Second {}
+`;
+    const chunks = parser.parse('src/multi.php', content);
+    const classes = chunks.filter(c => c.type === 'class');
+    expect(classes).toHaveLength(2);
+    expect(classes.map(c => c.name).sort()).toEqual(['First', 'Second']);
+  });
+
+  it('should handle interfaces and traits', () => {
+    const content = `<?php
+
+interface Searchable {
+    public function search(): array;
+}
+
+trait Timestampable {
+    private \\DateTimeInterface $createdAt;
+}
+`;
+    const chunks = parser.parse('src/Contracts.php', content);
+    const classLike = chunks.filter(c => c.type === 'class');
+    expect(classLike).toHaveLength(2);
+    expect(classLike.map(c => c.name).sort()).toEqual(['Searchable', 'Timestampable']);
   });
 });
