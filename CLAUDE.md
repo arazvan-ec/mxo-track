@@ -427,9 +427,10 @@ Aplica cuando la interacción produce hallazgos sustantivos sobre el codebase (c
 
 1. **Consultar** — Buscar en `docs/superpowers/retrospectives/` bugs similares pasados
 2. **Systematic Debugging** — Invocar Skill 8 (obligatorio, sin atajos)
-3. **TDD** — Invocar Skill 7 (test que falla antes del fix)
-4. **Capturar** — Escribir execution log en `docs/superpowers/execution-logs/`
-5. **Retrospectiva** — Añadir entrada al log de retrospectiva
+3. **Pattern-Wide Investigation** — Después de identificar root cause, buscar el mismo patrón defectuoso en el resto del codebase (ver Skill 8, Phase 2.5). El fix debe cubrir TODAS las instancias, no solo la reportada.
+4. **TDD** — Invocar Skill 7 (test que falla antes del fix)
+5. **Capturar** — Escribir execution log en `docs/superpowers/execution-logs/`
+6. **Retrospectiva** — Añadir entrada al log de retrospectiva
 
 ### Full-flow (cambios de código)
 
@@ -492,10 +493,13 @@ Cada paso actualiza `session-state.json` via `jq`. El workflow-engine.sh (PreToo
 
 1. **SessionStart hook** (`session-start.sh`) — resetea `session-state.json` al inicio de cada día (misma sesión del día se preserva)
 2. **PreToolUse hook** (`workflow-engine.sh`) — antes de Edit/Write, verifica:
-   - `flow_type` está declarado (hard gate para archivos en `src/`, `tests/`)
+   - `flow_type` está declarado (HARD para `src/tests`, SOFT warning para cualquier otro archivo)
    - `interaction_id` coincide entre top-level y evidence (scope-change detection)
-   - Para `full` flow: las fases previas están completadas con evidencia
-   - Para `micro|light|debug|explore`: no bloquea (pasa directo)
+   - **Todos los flows tienen enforcement mecánico:**
+     - `micro|light|explore`: DENY en `src/`, `tests/`, `specs/`, `plans/` (deben reclasificarse)
+     - `debug`: HARD gate — requiere `root_cause_identified` + `pattern_wide_search_done` antes de editar código
+     - `full`: HARD gate — requiere fases completas (consult → brainstorm → plan → implement)
+   - Archivos excluidos: `.claude/hooks/*`, `.claude/session-state.json`, `vendor/`, `node_modules/`
 3. **PostToolUse hooks** — validan commits (prefijos, longitud) y ejecutan `make manifest` post-push
 
 ### session-state.json — Campos que Claude debe gestionar
@@ -505,6 +509,18 @@ Cada paso actualiza `session-state.json` via `jq`. El workflow-engine.sh (PreToo
   "flow_type": "micro|light|debug|full|explore|null",  // Declarar al clasificar interacción
   "current_phase": "consult|brainstorming|planning|implementation|verification|capture|retrospective|finalize|null",
   "interaction_id": 0,              // Incrementar al detectar scope change (nueva interacción)
+  "last_work_summary": {            // Preservado automáticamente por session-start.sh al resetear por nuevo día
+    "previous_date": "YYYY-MM-DD",  // Fecha de la sesión anterior
+    "previous_branch": "...",       // Branch en la que se trabajaba
+    "previous_flow": "full|debug|...", // Flow type de la sesión anterior
+    "previous_phase": "...",        // Última fase alcanzada
+    "recent_commits": ["..."],      // Últimos 10 commits al momento del reset
+    "merged_branches": ["..."],     // Branches claude/* mergeadas a main
+    "last_execution_log": {         // Último execution log: nombre + preview
+      "file": "...",
+      "preview": "..."
+    }
+  },
   "evidence": {
     "interaction_id": 0,            // Debe coincidir con interaction_id top-level. Actualizar al completar cada fase.
     "decisions_read": false,        // true tras leer docs/decisions/log.md
@@ -518,7 +534,9 @@ Cada paso actualiza `session-state.json` via `jq`. El workflow-engine.sh (PreToo
     "tests_passed": null,           // true/false tras correr tests
     "lint_clean": null,             // true/false tras correr linter
     "execution_log_path": null,     // ruta al execution log
-    "branch_strategy": null          // merge|pr|keep|discard
+    "branch_strategy": null,         // merge|pr|keep|discard
+    "root_cause_identified": false,  // (debug-flow) true tras completar Skill 8 Phase 1
+    "pattern_wide_search_done": false // (debug-flow) true tras completar Skill 8 Phase 2.5
   },
   "deviation": {
     "active": false,                 // true si se saltó una fase con razón
@@ -538,7 +556,21 @@ Usar `jq` para actualizaciones atómicas. Ejemplo al completar consult:
 jq '.current_phase = "consult" | .evidence.decisions_read = true' .claude/session-state.json > /tmp/ss.json && mv /tmp/ss.json .claude/session-state.json
 ```
 
-### Gates del workflow-engine por fase
+### Gates del workflow-engine por flow y tipo de archivo
+
+**El workflow engine aplica enforcement mecánico a TODOS los flujos, no solo full-flow.**
+
+#### Qué puede editar cada flow
+
+| Flow | `src/`, `tests/` | `specs/`, `plans/` | `docs/`, config | otros |
+|------|-------------------|--------------------|--------------------|-------|
+| **micro** | DENY (reclasificar) | DENY (reclasificar) | pass | pass |
+| **light** | DENY (reclasificar) | DENY (reclasificar) | pass | pass |
+| **explore** | DENY (reclasificar) | DENY (reclasificar) | pass | pass |
+| **debug** | HARD (debug-validator) | pass | pass | pass |
+| **full** | HARD (full validators) | HARD (phase validators) | SOFT | SOFT |
+
+#### Gates para full-flow (por archivo)
 
 | Para editar... | Requiere fases completadas | Gate |
 |---------------|---------------------------|------|
@@ -548,13 +580,25 @@ jq '.current_phase = "consult" | .evidence.decisions_read = true' .claude/sessio
 | `docs/superpowers/execution-logs/*` | (self) | SOFT |
 | `docs/decisions/*` | (self) | SOFT |
 
-**HARD** = bloquea la edición (exit 2). **SOFT** = muestra warning pero permite continuar (exit 1).
+#### Gates para debug-flow (código)
+
+| Para editar `src/*` o `tests/*` | Requiere | Gate |
+|--------------------------------|----------|------|
+| Paso 1: Consultar | `decisions_read` OR `logs_scanned` | HARD |
+| Paso 2: Root Cause (Skill 8 Phase 1) | `root_cause_identified = true` | HARD |
+| Paso 3: Pattern-Wide (Skill 8 Phase 2.5) | `pattern_wide_search_done = true` | HARD |
+
+**HARD** = bloquea la edición (exit 2). **SOFT** = muestra warning pero permite continuar (exit 1). **DENY** = bloquea y pide reclasificar el flow.
+
+#### Archivos excluidos del engine
+
+Nunca se validan: `.claude/session-state.json`, `.claude/hooks/*`, `.claude/settings*`, `node_modules/`, `vendor/`, `.git/`.
 
 ### Validators — Qué evidencia necesita cada fase
 
 | Fase | Evidencia requerida | Nivel |
 |------|-------------------|-------|
-| `consult` | `decisions_read` OR `logs_scanned` | SOFT |
+| `consult` | `decisions_read` OR `logs_scanned` | HARD |
 | `brainstorming` | `user_turns ≥ 3` + `alternatives_proposed` + `user_approved` + `spec_path` (archivo ≥500B con keywords) | HARD |
 | `planning` | `plan_path` (archivo ≥300B con keywords) | HARD |
 | `implementation` | plan existe (HARD) + `tests_written > 0` (SOFT warning) | MIXED |
@@ -562,6 +606,7 @@ jq '.current_phase = "consult" | .evidence.decisions_read = true' .claude/sessio
 | `capture` | `execution_log_path` existe | SOFT |
 | `retrospective` | (siempre recuerda actualizar decision log) | SOFT |
 | `finalize` | `branch_strategy` declarado | SOFT |
+| `debug-code` | `decisions_read` OR `logs_scanned` + `root_cause_identified` + `pattern_wide_search_done` | HARD |
 
 ### Deviation mode
 
@@ -577,21 +622,38 @@ El engine mostrará warnings pero no bloqueará. **Requiere confirmación del us
 
 - Editar `src/` sin haber declarado `flow_type` → bloqueado
 - Declarar `flow_type = "full"` pero no actualizar evidence → bloqueado al intentar editar código
+- Declarar `flow_type = "debug"` e ir directo al fix sin root cause investigation → bloqueado
+- Declarar `flow_type = "micro"` para evitar gates y luego editar código → DENY
+- Setear `evidence.root_cause_identified = true` sin haber investigado realmente → viola el espíritu del proceso
 - Setear `evidence.user_approved = true` sin que el usuario realmente haya aprobado → viola el espíritu del proceso
 - Nunca editar `session-state.json` manualmente para "saltarse" gates sin deviation mode
 
-## On-Demand Session Context (mandatory)
+## Automatic Session Context (mandatory)
 
-**El SessionStart hook solo resetea session-state.json. No genera contexto.** Claude consulta contexto bajo demanda según estas reglas:
+**El SessionStart hook genera contexto automáticamente en cada inicio de sesión.** Esto es un mecanismo garantizado, no dependiente de que Claude recuerde consultar nada.
+
+### Qué provee el hook automáticamente (sin acción de Claude)
+
+Al iniciar o reanudar sesión, `session-start.sh` muestra por stdout:
+- Branch actual, fecha, estado resume/nuevo día
+- Info de sesión anterior (fecha, flow, fase) — desde `last_work_summary` en `session-state.json`
+- Últimos 10 commits
+- Branches `claude/*` mergeadas a main
+- Preview del último execution log (primeras 6 líneas)
+
+Además, `session-state.json` preserva un campo `last_work_summary` que sobrevive los resets diarios, con: `previous_date`, `previous_branch`, `previous_flow`, `previous_phase`, `recent_commits`, `merged_branches`, `last_execution_log`.
+
+**Claude DEBE leer este output antes de responder al primer mensaje del usuario.** El contexto ya está ahí — no hay excusa para perder continuidad entre sesiones.
+
+### Consulta manual (fallback, solo si el contexto automático no es suficiente)
 
 | Cuándo | Qué consultar |
 |--------|---------------|
-| Primera interacción de la sesión | `git log --oneline -10`, `git status`, `git branch -v` |
 | Antes de cualquier code change (ya en full-flow) | `docs/decisions/log.md` (Learning Loop) |
 | No sé en qué branch estoy | `git branch -v` |
 | Tarea toca un subsistema específico | Knowledge module correspondiente (tabla en "Knowledge Modules") |
 
-**Regla:** No depender de contexto pre-generado. Si necesitas saber algo, consúltalo.
+**Regla:** El hook es el mecanismo principal. La consulta manual es un complemento, no el mecanismo primario.
 
 ## Feedback Capture (mandatory)
 
@@ -1350,6 +1412,23 @@ NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST
 2. Compare against references COMPLETELY (don't skim)
 3. Identify ALL differences between working and broken
 4. Understand dependencies
+
+**Phase 2.5: Pattern-Wide Investigation (MANDATORY before implementing fix)**
+
+Después de identificar el root cause de UN bug, buscar el mismo patrón defectuoso en el resto del codebase. El fix debe cubrir TODAS las instancias, no solo la reportada.
+
+1. **Abstraer el patrón** — Formular el defecto como un patrón genérico buscable (ej: "controller con prefijo de clase sin método index que está enlazado en la navegación")
+2. **Buscar todas las instancias** — Grep/Glob por el patrón en todo el codebase. No solo en el mismo directorio, sino en cualquier lugar donde aplique.
+3. **Evaluar cada instancia** — No todas las coincidencias son bugs. Evaluar cuáles son defectuosas y cuáles son correctas (ej: un controller sin index route que tampoco está en la navegación no es un bug).
+4. **Incluir todas las instancias defectuosas en el fix** — Un solo commit/PR que arregle todas las ocurrencias. No arreglar una y dejar las demás para "después".
+5. **Considerar solución estructural** — Si el patrón es recurrente (3+ instancias), evaluar si existe una solución que prevenga el patrón en el futuro (ej: test automatizado, linter rule, architectural constraint).
+
+| Anti-racionalización | Realidad |
+|----------------------|----------|
+| "Solo me reportaron este bug" | Si el patrón existe en otros lugares, es cuestión de tiempo que falle ahí también |
+| "Los otros casos no están en la navegación" | Verifica antes de asumir — pero si realmente no son accesibles, documéntalo |
+| "Es mucho trabajo arreglar todos" | Es más trabajo debuggear el mismo patrón 5 veces en 5 sesiones distintas |
+| "Ya cumplo con arreglar lo reportado" | Arreglar lo reportado es lo mínimo. La excelencia es eliminar la clase de bug |
 
 **Phase 3: Hypothesis and Testing**
 1. Form SINGLE hypothesis: "I think X is the root cause because Y"

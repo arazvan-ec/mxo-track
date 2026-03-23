@@ -54,6 +54,12 @@ class TestRoutingController extends AbstractController
     ) {
     }
 
+    #[SymfonyRoute('', name: 'admin_test_routing_index', methods: ['GET'])]
+    public function index(): Response
+    {
+        return $this->redirect('/app/admin/test-routing');
+    }
+
     #[SymfonyRoute('/osrm-check', name: 'admin_test_routing_osrm_check', methods: ['GET'])]
     public function osrmCheck(): JsonResponse
     {
