@@ -11,6 +11,7 @@ USER_TURNS=$(jq -r '.evidence.user_turns // 0' "$STATE_FILE" 2>/dev/null || echo
 ALTERNATIVES=$(jq -r '.evidence.alternatives_proposed // false' "$STATE_FILE" 2>/dev/null || echo "false")
 USER_APPROVED=$(jq -r '.evidence.user_approved // false' "$STATE_FILE" 2>/dev/null || echo "false")
 SPEC_PATH=$(jq -r '.evidence.spec_path // ""' "$STATE_FILE" 2>/dev/null || echo "")
+CURRENT_PHASE=$(jq -r '.current_phase // ""' "$STATE_FILE" 2>/dev/null || echo "")
 
 ERRORS=""
 
@@ -27,6 +28,8 @@ if [ "$USER_APPROVED" != "true" ]; then
 fi
 
 # Check spec file exists and has sufficient content
+# Exception: if current_phase is "brainstorming", the spec is being created right now.
+# In that case, only require spec_path is declared (not that the file exists).
 SPEC_FULL=""
 if [ -n "$SPEC_PATH" ]; then
   if [ -f "$REPO/$SPEC_PATH" ]; then
@@ -37,7 +40,12 @@ if [ -n "$SPEC_PATH" ]; then
 fi
 
 if [ -z "$SPEC_FULL" ] || [ ! -f "$SPEC_FULL" ]; then
-  ERRORS="${ERRORS}- No existe spec document (spec_path: $SPEC_PATH)\n"
+  if [ "$CURRENT_PHASE" = "brainstorming" ] && [ -n "$SPEC_PATH" ]; then
+    # Spec is being created — allow if spec_path is declared and other evidence is valid
+    :
+  else
+    ERRORS="${ERRORS}- No existe spec document (spec_path: $SPEC_PATH)\n"
+  fi
 else
   SIZE=$(wc -c < "$SPEC_FULL")
   if [ "$SIZE" -lt 500 ]; then
