@@ -5,6 +5,7 @@
 set -euo pipefail
 
 STATE_FILE="${1:-.claude/session-state.json}"
+EDIT_FILE="${2:-}"
 REPO="/home/user/mxo-track"
 
 FLOW_TYPE=$(jq -r '.flow_type // ""' "$STATE_FILE" 2>/dev/null || echo "")
@@ -43,7 +44,13 @@ if [ "$TESTS_PASSED" = "true" ] && [ "$TESTS_WRITTEN" -eq 0 ]; then
 fi
 
 # TDD check: require tests for full-flow (HARD gate)
-if [ "$IS_FULL" = true ] && [ "$TESTS_WRITTEN" -eq 0 ]; then
+# Skip TDD check if the file being edited IS a test file (we're writing the test!)
+IS_TEST_FILE=false
+case "$EDIT_FILE" in
+  */tests/*|*Test.php|*.test.*|*.spec.*) IS_TEST_FILE=true ;;
+esac
+
+if [ "$IS_FULL" = true ] && [ "$TESTS_WRITTEN" -eq 0 ] && [ "$IS_TEST_FILE" = false ]; then
   # Check working tree for test changes
   cd "$REPO"
   BACKEND_TESTS=$(

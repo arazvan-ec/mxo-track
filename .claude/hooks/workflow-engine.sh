@@ -146,7 +146,7 @@ for validator_name in $VALIDATORS; do
 
   # Capture output and exit code separately (set +e to prevent script exit)
   set +e
-  RESULT=$("$VALIDATOR_SCRIPT" "$STATE_FILE" 2>&1)
+  RESULT=$("$VALIDATOR_SCRIPT" "$STATE_FILE" "$FILE_PATH" 2>&1)
   EXIT_CODE=$?
   set -e
 
