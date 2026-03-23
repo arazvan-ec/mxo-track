@@ -3,14 +3,14 @@
 > **Auto-generated** by `make manifest` (`backend/bin/generate-manifest.sh`).
 > Do not edit manually — regenerate with `make manifest`.
 
-**Generated:** 2026-03-23 22:30
+**Generated:** 2026-03-23 22:41
 **Regenerate:** `make manifest`
 
 ## Project Overview
 
 | Area | Path | Files | Tech |
 |------|------|------:|------|
-| Backend | `backend/` | 503 PHP | Symfony 7.4, PHP 8.4 |
+| Backend | `backend/` | 512 PHP | Symfony 7.4, PHP 8.4 |
 | Frontend | `frontend/` | 70 JS/TS | React |
 | ML Service | `ml-service/` | 17 Python | FastAPI |
 | Docker/Infra | `docker/` + `scripts/` | 9 + 5 | Docker, OSRM, VROOM, Traccar |
@@ -23,22 +23,22 @@
 
 | Category | Count |
 |----------|------:|
-| Entities (src/Entity/) | 34 |
+| Entities (src/Entity/) | 37 |
 | Domain Models (src/Domain/*/Model/) | 16 |
-| Enums — core (src/Enum/) | 17 |
+| Enums — core (src/Enum/) | 20 |
 | Enums — provider | 4 |
-| **Enums total** | **21** |
+| **Enums total** | **24** |
 | Controllers | 63 |
 | Application Services (src/Application/) | 23 |
 | Domain/Infra Services (src/Service/) | 73 |
-| Repositories | 18 |
+| Repositories | 21 |
 | Console Commands | 18 |
 | DTOs | 17 |
 | Event Listeners | 11 |
 | Messenger Messages | 4 |
 | Message Handlers | 4 |
 | Tests | 126 |
-| Migrations | 33 |
+| Migrations | 34 |
 
 ## Entity List
 
@@ -61,6 +61,8 @@
 - NotificationLog
 - NotificationPreference
 - OptimizationStrategyComparison
+- PageLayout
+- PageLayoutWidget
 - PushSubscription
 - RealtimeEvent
 - RecipientAction
@@ -76,6 +78,7 @@
 - VehicleLastPosition
 - VehiclePosition
 - WebhookEndpoint
+- WidgetDefinition
 
 ## Domain Models
 
@@ -107,16 +110,19 @@
 - NotificationTriggerType
 - OptimizationOperation
 - OptimizationStepCategory
+- PageKey
 - ParcelStatus
 - RecipientActionType
 - RouteEventType
 - RouteStatus
 - RouteStopStatus
 - ServiceType
+- SheetState
 - ShipmentEventType
 - ShipmentPriority
 - UserRole
 - VehicleSkill
+- WidgetType
 
 ### Provider
 
@@ -391,6 +397,8 @@ Key Doctrine relationships (auto-extracted from entity attributes):
 - **NotificationLog** → Customer, Shipment
 - **NotificationPreference** → Customer
 - **OptimizationStrategyComparison** → Customer, Route
+- **PageLayout** → Customer, PageLayoutWidget
+- **PageLayoutWidget** → PageLayout, WidgetDefinition
 - **PushSubscription** → User
 - **RealtimeEvent** → Customer
 - **RecipientAction** → Shipment
