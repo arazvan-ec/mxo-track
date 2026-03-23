@@ -8,6 +8,13 @@ Registro de decisiones de diseño significativas. Cada entrada captura el contex
 
 ---
 
+### [2026-03-23] Completion gate via phase_history[] on pre-push
+
+- **Problema:** Claude podía pushear código sin completar capture/finalize/retrospective. Los validators solo corrían en Edit/Write, no en push.
+- **Decisión:** Approach C — pre-push gate que verifica phase_history[] + cross-valida evidencia real (archivos existen, tamaño ≥500B, campos válidos). Protected paths = todo excepto docs/ y .claude/.
+- **Alternativas descartadas:** (A) SOFT→HARD en validators existentes — no cubre push. (B) PostToolUse commit validator — más complejo, menos directo.
+- **Resultado:** Implementado. Gate bloquea push con HARD en verification/capture/finalize, SOFT en retrospective. Deviation mode preserva escape hatch.
+
 ### [2026-03-23] Bottom Sheet pattern for map+data views
 
 - **Problema:** TestRoutingPage usaba sidebar para métricas y route cards, dejando poco espacio al mapa.
