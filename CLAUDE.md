@@ -509,6 +509,18 @@ Cada paso actualiza `session-state.json` via `jq`. El workflow-engine.sh (PreToo
   "flow_type": "micro|light|debug|full|explore|null",  // Declarar al clasificar interacción
   "current_phase": "consult|brainstorming|planning|implementation|verification|capture|retrospective|finalize|null",
   "interaction_id": 0,              // Incrementar al detectar scope change (nueva interacción)
+  "last_work_summary": {            // Preservado automáticamente por session-start.sh al resetear por nuevo día
+    "previous_date": "YYYY-MM-DD",  // Fecha de la sesión anterior
+    "previous_branch": "...",       // Branch en la que se trabajaba
+    "previous_flow": "full|debug|...", // Flow type de la sesión anterior
+    "previous_phase": "...",        // Última fase alcanzada
+    "recent_commits": ["..."],      // Últimos 10 commits al momento del reset
+    "merged_branches": ["..."],     // Branches claude/* mergeadas a main
+    "last_execution_log": {         // Último execution log: nombre + preview
+      "file": "...",
+      "preview": "..."
+    }
+  },
   "evidence": {
     "interaction_id": 0,            // Debe coincidir con interaction_id top-level. Actualizar al completar cada fase.
     "decisions_read": false,        // true tras leer docs/decisions/log.md
@@ -618,16 +630,24 @@ El engine mostrará warnings pero no bloqueará. **Requiere confirmación del us
 
 ## On-Demand Session Context (mandatory)
 
-**El SessionStart hook solo resetea session-state.json. No genera contexto.** Claude consulta contexto bajo demanda según estas reglas:
+**El SessionStart hook genera contexto automáticamente.** Al iniciar o reanudar sesión, `session-start.sh` muestra por stdout:
+- Branch actual, fecha, estado resume/nuevo día
+- Info de sesión anterior (fecha, flow, fase) — desde `last_work_summary` en `session-state.json`
+- Últimos 10 commits
+- Branches `claude/*` mergeadas a main
+- Preview del último execution log (primeras 6 líneas)
+
+Además, `session-state.json` preserva un campo `last_work_summary` que sobrevive los resets diarios, con: `previous_date`, `previous_branch`, `previous_flow`, `previous_phase`, `recent_commits`, `merged_branches`, `last_execution_log`.
+
+**Consulta adicional bajo demanda** cuando el contexto del hook no es suficiente:
 
 | Cuándo | Qué consultar |
 |--------|---------------|
-| Primera interacción de la sesión | `git log --oneline -10`, `git status`, `git branch -v` |
 | Antes de cualquier code change (ya en full-flow) | `docs/decisions/log.md` (Learning Loop) |
 | No sé en qué branch estoy | `git branch -v` |
 | Tarea toca un subsistema específico | Knowledge module correspondiente (tabla en "Knowledge Modules") |
 
-**Regla:** No depender de contexto pre-generado. Si necesitas saber algo, consúltalo.
+**Regla:** El hook provee contexto base. Para detalles específicos, consultar bajo demanda.
 
 ## Feedback Capture (mandatory)
 
