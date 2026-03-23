@@ -3,7 +3,7 @@
 > **Auto-generated** by `make manifest` (`backend/bin/generate-manifest.sh`).
 > Do not edit manually — regenerate with `make manifest`.
 
-**Generated:** 2026-03-23 01:43
+**Generated:** 2026-03-23 01:46
 **Regenerate:** `make manifest`
 
 ## Project Overview
@@ -11,7 +11,7 @@
 | Area | Path | Files | Tech |
 |------|------|------:|------|
 | Backend | `backend/` | 503 PHP | Symfony 7.4, PHP 8.4 |
-| Frontend | `frontend/` | 66 JS/TS | React |
+| Frontend | `frontend/` | 67 JS/TS | React |
 | ML Service | `ml-service/` | 17 Python | FastAPI |
 | Docker/Infra | `docker/` + `scripts/` | 9 + 5 | Docker, OSRM, VROOM, Traccar |
 | OpenSpec | `openspec/` | 28 specs | YAML specs |
@@ -207,7 +207,7 @@ View
 
 | Category | Count |
 |----------|------:|
-| JS/TS files total | 66 |
+| JS/TS files total | 67 |
 | Pages | 9 |
 
 ### Directory Tree
@@ -542,7 +542,7 @@ Controller endpoints (auto-extracted from `#[Route]` attributes):
 | `search/` | 1 | Search-related templates |
 | `security/` | 1 | Login, registration, auth pages |
 | `tracking/` | 3 | Public tracking pages |
-| _(root)_ | 2 | Base layout, sidebar |
+| _(root)_ | 1 | Base layout, sidebar |
 
 ---
 
