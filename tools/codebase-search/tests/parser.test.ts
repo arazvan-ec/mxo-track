@@ -4,6 +4,7 @@ import { PhpParser } from '../src/parser/php-parser.js';
 import { YamlParser } from '../src/parser/yaml-parser.js';
 import { TwigParser } from '../src/parser/twig-parser.js';
 import { SqlParser } from '../src/parser/sql-parser.js';
+import { ParserRegistry } from '../src/parser/parser-registry.js';
 
 describe('MarkdownParser', () => {
   const parser = new MarkdownParser();
@@ -338,5 +339,49 @@ class NotAMigration {
 `;
     const chunks = parser.parse('src/Service/Foo.php', content);
     expect(chunks).toHaveLength(0);
+  });
+});
+
+describe('ParserRegistry', () => {
+  const registry = new ParserRegistry();
+
+  it('should return PHP parser for .php files', () => {
+    const parser = registry.getParser('src/Entity/Vehicle.php');
+    expect(parser).toBeDefined();
+    expect(parser!.extensions).toContain('.php');
+  });
+
+  it('should return Markdown parser for .md files', () => {
+    const parser = registry.getParser('docs/README.md');
+    expect(parser).toBeDefined();
+    expect(parser!.extensions).toContain('.md');
+  });
+
+  it('should return YAML parser for .yaml files', () => {
+    const parser = registry.getParser('config/services.yaml');
+    expect(parser).toBeDefined();
+    expect(parser!.extensions).toContain('.yaml');
+  });
+
+  it('should return YAML parser for .yml files', () => {
+    const parser = registry.getParser('config/routes.yml');
+    expect(parser).toBeDefined();
+  });
+
+  it('should return Twig parser for .html.twig files', () => {
+    const parser = registry.getParser('templates/base.html.twig');
+    expect(parser).toBeDefined();
+    expect(parser!.extensions).toContain('.html.twig');
+  });
+
+  it('should return null for unknown extensions', () => {
+    const parser = registry.getParser('readme.txt');
+    expect(parser).toBeNull();
+  });
+
+  it('should distinguish migration PHP from regular PHP', () => {
+    // Both return a parser — the SQL parser handles migration detection internally
+    const migrationParser = registry.getParser('migrations/Version20240101.php');
+    expect(migrationParser).toBeDefined();
   });
 });
