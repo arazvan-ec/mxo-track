@@ -4,8 +4,9 @@ import { useFleetKpi } from '@/api/hooks/useFleetKpi';
 import { useVehicleTrail } from '@/api/hooks/useVehicleTrail';
 import { FleetMap, type FleetMapHandle } from '@/components/maps/FleetMap';
 import { FleetSidebar } from '@/components/fleet/FleetSidebar';
-import { HeaderBar } from '@/components/fleet/HeaderBar';
-import { DualMenuShell } from '@/components/layout/DualMenuShell';
+import { BottomSheet, type BottomSheetState } from '@/components/bottom-sheet/BottomSheet';
+import { TopBar } from '@/components/layout/TopBar';
+import { NavigationSidebar } from '@/components/layout/NavigationSidebar';
 import type { FleetVehicle, FleetRoute, FleetStop } from '@/api/types';
 
 export function FleetMapPage() {
@@ -13,6 +14,8 @@ export function FleetMapPage() {
   const { data: kpi } = useFleetKpi();
   const mapRef = useRef<FleetMapHandle>(null);
 
+  const [navOpen, setNavOpen] = useState(false);
+  const [sheetState, setSheetState] = useState<BottomSheetState>('collapsed');
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
   const [selectedStopSequence, setSelectedStopSequence] = useState<number | null>(null);
@@ -122,33 +125,49 @@ export function FleetMapPage() {
     );
   }
 
-  const sidebar = (
-    <FleetSidebar
-      vehicles={vehicles}
-      routes={routes}
-      kpi={kpi}
-      selectedVehicleId={selectedVehicleId}
-      selectedRouteId={selectedRouteId}
-      onSelectVehicle={handleSelectVehicle}
-      onSelectRoute={handleSelectRoute}
-      selectedVehicleRoute={selectedVehicleRoute}
-    />
-  );
-
   return (
-    <DualMenuShell dataSidebar={sidebar} dataSidebarWidth="w-80">
-      <HeaderBar sseConnected={sseConnected} />
-      <FleetMap
-        ref={mapRef}
-        vehicles={vehicles}
-        routes={routes}
-        activeStops={activeStops}
-        trailCoordinates={trailCoordinates}
-        onVehicleClick={handleVehicleClick}
-        onStopClick={handleStopClick}
-        selectedStopSequence={selectedStopSequence}
-      />
-    </DualMenuShell>
+    <div className="flex flex-col h-screen w-full">
+      {navOpen && <NavigationSidebar mode="overlay" onClose={() => setNavOpen(false)} />}
+      <TopBar compact onMenuClick={() => setNavOpen(true)} />
+      <div className="flex-1 relative overflow-hidden">
+        <FleetMap
+          ref={mapRef}
+          vehicles={vehicles}
+          routes={routes}
+          activeStops={activeStops}
+          trailCoordinates={trailCoordinates}
+          onVehicleClick={handleVehicleClick}
+          onStopClick={handleStopClick}
+          selectedStopSequence={selectedStopSequence}
+        />
+        <BottomSheet
+          state={sheetState}
+          onStateChange={setSheetState}
+          title={
+            <span className="flex items-center gap-2">
+              Fleet Map
+              <span
+                className={`inline-block w-2 h-2 rounded-full ${sseConnected ? 'bg-green-400' : 'bg-red-400'}`}
+                title={sseConnected ? 'Live' : 'Disconnected'}
+              />
+            </span>
+          }
+        >
+          <div className="px-4 pb-4 space-y-4">
+            <FleetSidebar
+              vehicles={vehicles}
+              routes={routes}
+              kpi={kpi}
+              selectedVehicleId={selectedVehicleId}
+              selectedRouteId={selectedRouteId}
+              onSelectVehicle={handleSelectVehicle}
+              onSelectRoute={handleSelectRoute}
+              selectedVehicleRoute={selectedVehicleRoute}
+            />
+          </div>
+        </BottomSheet>
+      </div>
+    </div>
   );
 }
 

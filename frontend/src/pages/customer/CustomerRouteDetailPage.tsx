@@ -7,7 +7,9 @@ import { VehicleInfoPanel } from '@/components/panels/VehicleInfoPanel';
 import { StopMarkersLayer } from '@/components/maps/layers/StopMarkersLayer';
 import { RoutePolylineLayer } from '@/components/maps/layers/RoutePolylineLayer';
 import { VehicleLayer } from '@/components/maps/layers/VehicleLayer';
-import { DualMenuShell } from '@/components/layout/DualMenuShell';
+import { BottomSheet, type BottomSheetState } from '@/components/bottom-sheet/BottomSheet';
+import { TopBar } from '@/components/layout/TopBar';
+import { NavigationSidebar } from '@/components/layout/NavigationSidebar';
 import type { StopData } from '@/api/types';
 
 /**
@@ -18,6 +20,8 @@ export function CustomerRouteDetailPage() {
   const { publicId } = useParams<{ publicId: string }>();
   const mapRef = useRef<MapCanvasHandle>(null);
   const [selectedSequence, setSelectedSequence] = useState<number | null>(null);
+  const [navOpen, setNavOpen] = useState(false);
+  const [sheetState, setSheetState] = useState<BottomSheetState>('collapsed');
 
   const { mapData, isLoading, error, sseConnected } = useRouteMapData(publicId);
   const { route, stops, vehiclePosition } = getRouteFromMapData(mapData);
@@ -83,67 +87,65 @@ export function CustomerRouteDetailPage() {
     );
   }
 
-  const sidebar = (
-    <div className="flex flex-col h-full overflow-hidden">
-      {/* Header */}
-      <div className="p-4 border-b border-slate-800">
-        <h1 className="text-lg font-semibold text-white truncate">{route.name}</h1>
-        <div className="flex items-center gap-2 mt-1">
-          {route.status && (
-            <span className="text-xs font-medium text-slate-400 uppercase">{route.status}</span>
+  return (
+    <div className="flex flex-col h-screen w-full">
+      {navOpen && <NavigationSidebar mode="overlay" onClose={() => setNavOpen(false)} />}
+      <TopBar compact onMenuClick={() => setNavOpen(true)} />
+      <div className="flex-1 relative overflow-hidden">
+        <MapCanvas ref={mapRef}>
+          {route.polyline && (
+            <RoutePolylineLayer
+              id={route.publicId}
+              polyline={route.polyline}
+              color={route.color}
+            />
           )}
-          {sseConnected && (
-            <span className="w-2 h-2 rounded-full bg-emerald-500" title="Live updates active" />
-          )}
-        </div>
-      </div>
-
-      {/* Vehicle info (limited: name + speed only for customers) */}
-      {route.vehicleName && (
-        <div className="px-4 pt-3">
-          <VehicleInfoPanel
-            vehicle={{
-              name: route.vehicleName,
-              speed: vehiclePosition?.speed,
-            }}
+          <StopMarkersLayer
+            stops={markerStops}
+            keyPrefix={`customer-${route.publicId}-`}
+            onStopClick={handleStopClick}
+            routeColor={route.color}
+            selectedSequence={selectedSequence}
           />
-        </div>
-      )}
+          {vehicleMarkers.length > 0 && <VehicleLayer vehicles={vehicleMarkers} />}
+        </MapCanvas>
+        <BottomSheet state={sheetState} onStateChange={setSheetState} title={route.name}>
+          <div className="px-4 pb-4 space-y-4">
+            {/* Status badge and SSE indicator */}
+            <div className="flex items-center gap-2">
+              {route.status && (
+                <span className="text-xs font-medium text-slate-400 uppercase">{route.status}</span>
+              )}
+              {sseConnected && (
+                <span className="w-2 h-2 rounded-full bg-emerald-500" title="Live updates active" />
+              )}
+            </div>
 
-      {/* Stops */}
-      <div className="flex-1 overflow-y-auto p-4">
-        <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">
-          Stops ({stops.filter((s) => !s.isOrigin).length})
-        </div>
-        <StopListPanel
-          stops={stops}
-          selectedSequence={selectedSequence}
-          onStopClick={handleStopClick}
-          showEta
-        />
+            {/* Vehicle info (limited: name + speed only for customers) */}
+            {route.vehicleName && (
+              <VehicleInfoPanel
+                vehicle={{
+                  name: route.vehicleName,
+                  speed: vehiclePosition?.speed,
+                }}
+              />
+            )}
+
+            {/* Stops */}
+            <div>
+              <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">
+                Stops ({stops.filter((s) => !s.isOrigin).length})
+              </div>
+              <StopListPanel
+                stops={stops}
+                selectedSequence={selectedSequence}
+                onStopClick={handleStopClick}
+                showEta
+              />
+            </div>
+          </div>
+        </BottomSheet>
       </div>
     </div>
-  );
-
-  return (
-    <DualMenuShell dataSidebar={sidebar} dataSidebarWidth="w-80">
-      <MapCanvas ref={mapRef}>
-        {route.polyline && (
-          <RoutePolylineLayer
-            id={route.publicId}
-            polyline={route.polyline}
-            color={route.color}
-          />
-        )}
-        <StopMarkersLayer
-          stops={markerStops}
-          keyPrefix={`customer-${route.publicId}-`}
-          onStopClick={handleStopClick}
-          routeColor={route.color}
-          selectedSequence={selectedSequence}
-        />
-        {vehicleMarkers.length > 0 && <VehicleLayer vehicles={vehicleMarkers} />}
-      </MapCanvas>
-    </DualMenuShell>
   );
 }

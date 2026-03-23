@@ -5,7 +5,9 @@ import { StopMarker } from '@/components/maps/shared/StopMarker';
 import { OriginMarker } from '@/components/maps/shared/OriginMarker';
 import { ROUTE_COLORS } from '@/components/maps/shared/colors';
 import { RoutePolylineLayer } from '@/components/maps/layers/RoutePolylineLayer';
-import { DualMenuShell } from '@/components/layout/DualMenuShell';
+import { BottomSheet, type BottomSheetState } from '@/components/bottom-sheet/BottomSheet';
+import { TopBar } from '@/components/layout/TopBar';
+import { NavigationSidebar } from '@/components/layout/NavigationSidebar';
 import {
   usePlannerShipments,
   usePlannerImportShipments,
@@ -39,6 +41,8 @@ const STEP_LABELS = [
 export function RoutePlannerPage() {
   const [step, setStep] = useState<Step>(1);
   const mapRef = useRef<MapCanvasHandle>(null);
+  const [navOpen, setNavOpen] = useState(false);
+  const [sheetState, setSheetState] = useState<BottomSheetState>('half');
 
   // Read import_id from URL params
   const urlParams = useMemo(() => new URLSearchParams(window.location.search), []);
@@ -297,105 +301,13 @@ export function RoutePlannerPage() {
     [clusters],
   );
 
-  const sidebar = (
-    <div className="flex flex-col h-full overflow-hidden">
-      {/* Header */}
-      <div className="flex-shrink-0 px-5 pt-4 pb-3">
-        <div className="flex items-center gap-2.5 mb-4">
-          <div className="w-8 h-8 rounded-lg bg-purple-600 flex items-center justify-center">
-            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" />
-            </svg>
-          </div>
-          <div>
-            <h1 className="text-white font-bold text-base tracking-tight">Route Planner</h1>
-            <p className="text-slate-500 text-[10px] uppercase tracking-widest">Build optimized routes</p>
-          </div>
-        </div>
-
-        {/* Import mode banner */}
-        {importId && (
-          <div className="mb-2 rounded-lg bg-emerald-900/40 border border-emerald-700/40 px-3 py-2">
-            <p className="text-xs font-medium text-emerald-300">
-              Modo importacion CSV — envios pre-seleccionados
-            </p>
-          </div>
-        )}
-
-        {/* Step indicator */}
-        <StepIndicator currentStep={step} />
-      </div>
-
-      {/* Scrollable content */}
-      <div className="flex-1 overflow-y-auto px-4 pb-4">
-        {step === 1 && (
-          <Step1Panel
-              customerId={customerId}
-              onCustomerIdChange={setCustomerId}
-              shipments={shipments}
-              selectedShipmentIds={selectedShipmentIds}
-              isLoading={importId ? importShipmentsQuery.isFetching : shipmentsQuery.isFetching}
-              clusters={clusters}
-              numClusters={numClusters}
-              isClustering={clusterMutation.isPending}
-              onLoadShipments={handleLoadShipments}
-              onToggleShipment={handleToggleShipment}
-              onToggleAll={handleToggleAllShipments}
-              onNumClustersChange={setNumClusters}
-              onCluster={handleCluster}
-              onClearClusters={() => setClusters([])}
-              onNext={handleGoToStep2}
-              getClusterColor={getShipmentClusterColor}
-            />
-          )}
-
-          {step === 2 && (
-            <Step2Panel
-              vehicles={vehicles}
-              selectedVehicleIds={selectedVehicleIds}
-              isLoading={vehiclesQuery.isFetching}
-              locations={locations}
-              originPublicId={originPublicId}
-              maxStopsPerRoute={maxStopsPerRoute}
-              optimizers={optimizers}
-              optimizerName={optimizerName}
-              calibrations={calibrations}
-              useCalibration={useCalibration}
-              isGenerating={previewMutation.isPending}
-              onToggleVehicle={handleToggleVehicle}
-              onToggleAll={handleToggleAllVehicles}
-              onOriginChange={setOriginPublicId}
-              onMaxStopsChange={setMaxStopsPerRoute}
-              onOptimizerChange={setOptimizerName}
-              onCalibrationToggle={setUseCalibration}
-              onBack={() => setStep(1)}
-              onGenerate={handleGeneratePreview}
-            />
-          )}
-
-          {(step === 3 || step === 4) && (
-            <Step3Panel
-              routes={previewRoutes}
-              driverSuggestions={driverSuggestions}
-              driverAssignments={driverAssignments}
-              loadingDrivers={loadingDrivers}
-              isConfirming={confirmMutation.isPending}
-              onDriverAssign={(routeId, driverId) =>
-                setDriverAssignments((prev) => ({ ...prev, [routeId]: driverId }))
-              }
-              onBack={() => setStep(2)}
-              onCancel={handleCancel}
-              onConfirm={handleConfirm}
-            />
-          )}
-        </div>
-      </div>
-  );
-
   return (
-    <DualMenuShell dataSidebar={sidebar} dataSidebarWidth="w-96">
-      {/* Map */}
-      <MapCanvas ref={mapRef}>
+    <div className="flex flex-col h-screen w-full">
+      {navOpen && <NavigationSidebar mode="overlay" onClose={() => setNavOpen(false)} />}
+      <TopBar compact onMenuClick={() => setNavOpen(true)} />
+      <div className="flex-1 relative overflow-hidden">
+        {/* Map */}
+        <MapCanvas ref={mapRef}>
           {/* Step 1 & 2: Show shipment markers */}
           {(step === 1 || step === 2) && shipments.length > 0 && (
             <ShipmentClusterLayer
@@ -465,7 +377,84 @@ export function RoutePlannerPage() {
             return null;
           })()}
         </MapCanvas>
-    </DualMenuShell>
+        <BottomSheet state={sheetState} onStateChange={setSheetState} title="Route Planner">
+          <div className="px-4 pb-4 space-y-4">
+            {/* Import mode banner */}
+            {importId && (
+              <div className="rounded-lg bg-emerald-900/40 border border-emerald-700/40 px-3 py-2">
+                <p className="text-xs font-medium text-emerald-300">
+                  Modo importacion CSV — envios pre-seleccionados
+                </p>
+              </div>
+            )}
+
+            {/* Step indicator */}
+            <StepIndicator currentStep={step} />
+
+            {step === 1 && (
+              <Step1Panel
+                customerId={customerId}
+                onCustomerIdChange={setCustomerId}
+                shipments={shipments}
+                selectedShipmentIds={selectedShipmentIds}
+                isLoading={importId ? importShipmentsQuery.isFetching : shipmentsQuery.isFetching}
+                clusters={clusters}
+                numClusters={numClusters}
+                isClustering={clusterMutation.isPending}
+                onLoadShipments={handleLoadShipments}
+                onToggleShipment={handleToggleShipment}
+                onToggleAll={handleToggleAllShipments}
+                onNumClustersChange={setNumClusters}
+                onCluster={handleCluster}
+                onClearClusters={() => setClusters([])}
+                onNext={handleGoToStep2}
+                getClusterColor={getShipmentClusterColor}
+              />
+            )}
+
+            {step === 2 && (
+              <Step2Panel
+                vehicles={vehicles}
+                selectedVehicleIds={selectedVehicleIds}
+                isLoading={vehiclesQuery.isFetching}
+                locations={locations}
+                originPublicId={originPublicId}
+                maxStopsPerRoute={maxStopsPerRoute}
+                optimizers={optimizers}
+                optimizerName={optimizerName}
+                calibrations={calibrations}
+                useCalibration={useCalibration}
+                isGenerating={previewMutation.isPending}
+                onToggleVehicle={handleToggleVehicle}
+                onToggleAll={handleToggleAllVehicles}
+                onOriginChange={setOriginPublicId}
+                onMaxStopsChange={setMaxStopsPerRoute}
+                onOptimizerChange={setOptimizerName}
+                onCalibrationToggle={setUseCalibration}
+                onBack={() => setStep(1)}
+                onGenerate={handleGeneratePreview}
+              />
+            )}
+
+            {(step === 3 || step === 4) && (
+              <Step3Panel
+                routes={previewRoutes}
+                driverSuggestions={driverSuggestions}
+                driverAssignments={driverAssignments}
+                loadingDrivers={loadingDrivers}
+                isConfirming={confirmMutation.isPending}
+                onDriverAssign={(routeId, driverId) =>
+                  setDriverAssignments((prev) => ({ ...prev, [routeId]: driverId }))
+                }
+                onBack={() => setStep(2)}
+                onCancel={handleCancel}
+                onConfirm={handleConfirm}
+              />
+            )}
+          </div>
+        </BottomSheet>
+      </div>
+    </div>
   );
 }
 

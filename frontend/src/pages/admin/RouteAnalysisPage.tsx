@@ -1,10 +1,12 @@
-import { useRef, useEffect, useMemo } from 'react';
+import { useRef, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router';
 import { MapCanvas, type MapCanvasHandle } from '@/components/maps/MapCanvas';
 import { RoutePolylineLayer } from '@/components/maps/layers/RoutePolylineLayer';
 import { StopMarkersLayer } from '@/components/maps/layers/StopMarkersLayer';
 import { RouteMetricsPanel } from '@/components/panels/RouteMetricsPanel';
-import { DualMenuShell } from '@/components/layout/DualMenuShell';
+import { BottomSheet, type BottomSheetState } from '@/components/bottom-sheet/BottomSheet';
+import { TopBar } from '@/components/layout/TopBar';
+import { NavigationSidebar } from '@/components/layout/NavigationSidebar';
 import { useRouteAnalysis } from '@/api/hooks/useRouteAnalysis';
 import type { RouteData } from '@/api/types';
 
@@ -28,6 +30,8 @@ export function RouteAnalysisPage() {
   const { publicId } = useParams<{ publicId: string }>();
   const mapRef = useRef<MapCanvasHandle>(null);
   const { route, stops, isLoading, error } = useRouteAnalysis(publicId);
+  const [navOpen, setNavOpen] = useState(false);
+  const [sheetState, setSheetState] = useState<BottomSheetState>('collapsed');
 
   const comparison = useMemo(() => getComparisonStats(route), [route]);
 
@@ -74,10 +78,9 @@ export function RouteAnalysisPage() {
   const metrics = route.metrics as Record<string, number> | undefined;
 
   const sidebar = (
-    <div className="flex flex-col h-full">
+    <>
       {/* Route header */}
-      <div className="flex-shrink-0 px-5 pt-4 pb-3">
-        <div className="flex items-center gap-2.5 mb-4">
+      <div className="flex items-center gap-2.5 mb-4">
           <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
             <svg
               className="w-5 h-5 text-white"
@@ -104,26 +107,23 @@ export function RouteAnalysisPage() {
         </div>
 
         {/* Status badge */}
-        {route.status && (
-          <span
-            className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-              route.status === 'DONE'
-                ? 'bg-emerald-500/20 text-emerald-400'
-                : route.status === 'ACTIVE'
-                  ? 'bg-amber-500/20 text-amber-400'
-                  : route.status === 'PLANNED'
-                    ? 'bg-blue-500/20 text-blue-400'
-                    : 'bg-slate-500/20 text-slate-400'
-            }`}
-          >
-            {route.status}
-          </span>
-        )}
-      </div>
+      {route.status && (
+        <span
+          className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+            route.status === 'DONE'
+              ? 'bg-emerald-500/20 text-emerald-400'
+              : route.status === 'ACTIVE'
+                ? 'bg-amber-500/20 text-amber-400'
+                : route.status === 'PLANNED'
+                  ? 'bg-blue-500/20 text-blue-400'
+                  : 'bg-slate-500/20 text-slate-400'
+          }`}
+        >
+          {route.status}
+        </span>
+      )}
 
-      {/* Scrollable content */}
-      <div className="flex-1 overflow-y-auto px-5 pb-4 space-y-4">
-        {/* Comparison metrics */}
+      {/* Comparison metrics */}
         {comparison && (
           <div className="space-y-2">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
@@ -257,35 +257,47 @@ export function RouteAnalysisPage() {
             ))}
           </div>
         </div>
-      </div>
-    </div>
+    </>
   );
 
   return (
-    <DualMenuShell dataSidebar={sidebar} dataSidebarWidth="w-80">
-      <MapCanvas ref={mapRef}>
-        {/* Planned route polyline (blue, solid) */}
-        {route.polyline && (
-          <RoutePolylineLayer
-            id={`analysis-planned-${route.publicId}`}
-            polyline={route.polyline}
-            color="#3b82f6"
-          />
-        )}
+    <div className="flex flex-col h-screen w-full">
+      {navOpen && <NavigationSidebar mode="overlay" onClose={() => setNavOpen(false)} />}
+      <TopBar compact onMenuClick={() => setNavOpen(true)} />
+      <div className="flex-1 relative overflow-hidden">
+        <MapCanvas ref={mapRef}>
+          {/* Planned route polyline (blue, solid) */}
+          {route.polyline && (
+            <RoutePolylineLayer
+              id={`analysis-planned-${route.publicId}`}
+              polyline={route.polyline}
+              color="#3b82f6"
+            />
+          )}
 
-        {/* Actual route polyline (red, comparison) */}
-        {route.comparisonPolyline && (
-          <RoutePolylineLayer
-            id={`analysis-actual-${route.publicId}`}
-            polyline={route.comparisonPolyline}
-            color="#ef4444"
-          />
-        )}
+          {/* Actual route polyline (red, comparison) */}
+          {route.comparisonPolyline && (
+            <RoutePolylineLayer
+              id={`analysis-actual-${route.publicId}`}
+              polyline={route.comparisonPolyline}
+              color="#ef4444"
+            />
+          )}
 
-        {/* Stop markers */}
-        <StopMarkersLayer stops={mappedStops} keyPrefix="analysis-" routeColor="#3b82f6" />
-      </MapCanvas>
-    </DualMenuShell>
+          {/* Stop markers */}
+          <StopMarkersLayer stops={mappedStops} keyPrefix="analysis-" routeColor="#3b82f6" />
+        </MapCanvas>
+        <BottomSheet
+          state={sheetState}
+          onStateChange={setSheetState}
+          title={route.name ? `${route.name} — Analysis` : 'Route Analysis'}
+        >
+          <div className="px-4 pb-4 space-y-4">
+            {sidebar}
+          </div>
+        </BottomSheet>
+      </div>
+    </div>
   );
 }
 
