@@ -3,6 +3,7 @@ import {
   useState,
   useCallback,
   useImperativeHandle,
+  useMemo,
   forwardRef,
   type ReactNode,
 } from 'react';
@@ -11,7 +12,8 @@ import maplibregl from 'maplibre-gl';
 import type { MapLayerMouseEvent } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { Protocol } from 'pmtiles';
-import { createDarkStyle, FALLBACK_RASTER_STYLE } from './styles/dark-style';
+import { createMapStyle, FALLBACK_RASTER_STYLE } from './styles/map-style';
+import { useTheme } from '@/context/ThemeProvider';
 
 // Register PMTiles protocol once
 let protocolRegistered = false;
@@ -19,13 +21,6 @@ if (!protocolRegistered) {
   const protocol = new Protocol();
   maplibregl.addProtocol('pmtiles', protocol.tile);
   protocolRegistered = true;
-}
-
-// Lazy-init dark style (called once)
-let _darkStyle: ReturnType<typeof createDarkStyle> | null = null;
-function getDarkStyle() {
-  if (!_darkStyle) _darkStyle = createDarkStyle();
-  return _darkStyle;
 }
 
 export interface MapCanvasHandle {
@@ -62,6 +57,8 @@ export const MapCanvas = forwardRef<MapCanvasHandle, Props>(function MapCanvas(
   const mapRef = useRef<MapRef>(null);
   const [useFallback, setUseFallback] = useState(false);
   const tileErrorCount = useRef(0);
+  const { resolved: theme } = useTheme();
+  const mapStyle = useMemo(() => createMapStyle(theme), [theme]);
 
   const onMapLoad = useCallback(() => {
     const mapInstance = mapRef.current?.getMap();
@@ -100,7 +97,7 @@ export const MapCanvas = forwardRef<MapCanvasHandle, Props>(function MapCanvas(
     <Map
       ref={mapRef}
       mapLib={maplibregl}
-      mapStyle={useFallback ? FALLBACK_RASTER_STYLE : getDarkStyle()}
+      mapStyle={useFallback ? FALLBACK_RASTER_STYLE : mapStyle}
       onLoad={onMapLoad}
       initialViewState={{
         latitude: initialCenter.lat,
