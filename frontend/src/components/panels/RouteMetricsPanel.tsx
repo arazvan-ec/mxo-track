@@ -11,6 +11,11 @@ interface Props {
   metrics: Metrics | undefined;
 }
 
+const cardStyle = {
+  backgroundColor: 'color-mix(in srgb, var(--color-surface-elevated) 60%, transparent)',
+  borderColor: 'var(--color-border-subtle)',
+};
+
 /**
  * Route optimization metrics panel — admin only.
  * Shows distance before/after, savings %, timing breakdown.
@@ -24,28 +29,29 @@ export function RouteMetricsPanel({ metrics }: Props) {
     <div className="space-y-3">
       {/* Distance */}
       {metrics.distanceBeforeKm != null && metrics.distanceAfterKm != null && (
-        <div className="bg-slate-800/60 rounded-lg p-3 border border-slate-700/40">
-          <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">Distance</div>
+        <div className="rounded-lg p-3 border" style={cardStyle}>
+          <div className="text-[10px] uppercase tracking-wider mb-2" style={{ color: 'var(--color-text-muted)' }}>Distance</div>
           <div className="grid grid-cols-3 gap-2 text-center">
             <div>
-              <div className="text-sm font-medium text-slate-400">
+              <div className="text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
                 {metrics.distanceBeforeKm.toFixed(1)} km
               </div>
-              <div className="text-[9px] text-slate-600">Before</div>
+              <div className="text-[9px]" style={{ color: 'var(--color-text-muted)' }}>Before</div>
             </div>
             <div>
-              <div className="text-sm font-medium text-white">
+              <div className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
                 {metrics.distanceAfterKm.toFixed(1)} km
               </div>
-              <div className="text-[9px] text-slate-600">After</div>
+              <div className="text-[9px]" style={{ color: 'var(--color-text-muted)' }}>After</div>
             </div>
             <div>
-              <div className={`text-sm font-bold ${
-                (metrics.savingsPercent ?? 0) > 0 ? 'text-emerald-400' : 'text-slate-400'
-              }`}>
+              <div
+                className="text-sm font-bold"
+                style={{ color: (metrics.savingsPercent ?? 0) > 0 ? 'var(--color-success)' : 'var(--color-text-secondary)' }}
+              >
                 {(metrics.savingsPercent ?? 0).toFixed(1)}%
               </div>
-              <div className="text-[9px] text-slate-600">Saved</div>
+              <div className="text-[9px]" style={{ color: 'var(--color-text-muted)' }}>Saved</div>
             </div>
           </div>
         </div>
@@ -53,8 +59,8 @@ export function RouteMetricsPanel({ metrics }: Props) {
 
       {/* Timing breakdown */}
       {hasTiming && (
-        <div className="bg-slate-800/60 rounded-lg p-3 border border-slate-700/40">
-          <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">Timing</div>
+        <div className="rounded-lg p-3 border" style={cardStyle}>
+          <div className="text-[10px] uppercase tracking-wider mb-2" style={{ color: 'var(--color-text-muted)' }}>Timing</div>
           <div className="space-y-1.5">
             {metrics.drivingTimeMinutes != null && (
               <TimingRow label="Driving" minutes={metrics.drivingTimeMinutes} />
@@ -79,8 +85,11 @@ function TimingRow({ label, minutes, bold }: { label: string; minutes: number; b
 
   return (
     <div className="flex items-center justify-between text-xs">
-      <span className="text-slate-500">{label}</span>
-      <span className={bold ? 'text-white font-medium' : 'text-slate-300'}>
+      <span style={{ color: 'var(--color-text-muted)' }}>{label}</span>
+      <span
+        className={bold ? 'font-medium' : ''}
+        style={{ color: bold ? 'var(--color-text-primary)' : 'var(--color-text-secondary)' }}
+      >
         {formatted}
       </span>
     </div>

@@ -143,31 +143,36 @@ export function NavigationSidebar({ onClose, mode = 'overlay' }: Props) {
       {/* Backdrop (overlay mode only) */}
       {!inline && (
         <div
-          className="fixed inset-0 bg-black/50 z-40"
+          className="fixed inset-0 z-40"
+          style={{ backgroundColor: 'var(--color-surface-overlay)' }}
           onClick={onClose}
         />
       )}
 
       {/* Sidebar panel */}
-      <aside className={
-        inline
-          ? 'w-64 flex-shrink-0 bg-slate-800 flex flex-col border-r border-slate-700 h-full'
-          : 'fixed top-0 left-0 bottom-0 w-72 bg-slate-800 z-50 flex flex-col shadow-2xl animate-slide-in-left'
-      }>
+      <aside
+        className={
+          inline
+            ? 'w-64 flex-shrink-0 flex flex-col border-r h-full'
+            : 'fixed top-0 left-0 bottom-0 w-72 z-50 flex flex-col shadow-2xl animate-slide-in-left'
+        }
+        style={{ backgroundColor: 'var(--color-surface-elevated)', borderColor: 'var(--color-border)' }}
+      >
         {/* Brand header */}
-        <div className="flex h-14 shrink-0 items-center justify-between px-4 border-b border-slate-700">
+        <div className="flex h-14 shrink-0 items-center justify-between px-4 border-b" style={{ borderColor: 'var(--color-border)' }}>
           <a href="/" className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ backgroundColor: 'var(--color-accent-bg)' }}>
               <svg className="h-4 w-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
               </svg>
             </div>
-            <span className="text-base font-bold text-white tracking-tight">MXO Track</span>
+            <span className="text-base font-bold tracking-tight" style={{ color: 'var(--color-text-primary)' }}>MXO Track</span>
           </a>
           <button
             type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-white transition-colors p-1 rounded hover:bg-slate-700"
+            className="transition-colors p-1 rounded hover:opacity-80"
+            style={{ color: 'var(--color-text-secondary)' }}
             title="Minimizar navegacion"
           >
             {inline ? (
@@ -186,7 +191,7 @@ export function NavigationSidebar({ onClose, mode = 'overlay' }: Props) {
         <nav className="flex-1 overflow-y-auto px-3 py-4">
           {sections.map((section) => (
             <div key={section.title} className="mb-4">
-              <span className="px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+              <span className="px-3 text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>
                 {section.title}
               </span>
               <ul className="mt-1 space-y-0.5">
@@ -196,11 +201,12 @@ export function NavigationSidebar({ onClose, mode = 'overlay' }: Props) {
                     <li key={item.href}>
                       <a
                         href={item.href}
-                        className={`group flex items-center gap-x-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                        className="group flex items-center gap-x-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:opacity-90"
+                        style={
                           isActive
-                            ? 'bg-slate-900 text-white'
-                            : 'text-slate-300 hover:bg-slate-700 hover:text-white'
-                        }`}
+                            ? { backgroundColor: 'var(--color-accent-muted)', color: 'var(--color-accent)' }
+                            : { color: 'var(--color-text-secondary)' }
+                        }
                       >
                         {resolveIcon(item.icon)}
                         {item.label}
@@ -215,20 +221,21 @@ export function NavigationSidebar({ onClose, mode = 'overlay' }: Props) {
 
         {/* User footer */}
         {me && (
-          <div className="shrink-0 border-t border-slate-700 px-3 py-3">
+          <div className="shrink-0 border-t px-3 py-3" style={{ borderColor: 'var(--color-border)' }}>
             <div className="flex items-center gap-x-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-600 text-sm font-semibold text-white">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold" style={{ backgroundColor: 'var(--color-accent-bg)', color: '#fff' }}>
                 {(me.email ?? '?')[0].toUpperCase()}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-white truncate">{me.email}</p>
-                <p className="text-xs text-slate-400 truncate">
+                <p className="text-sm font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>{me.email}</p>
+                <p className="text-xs truncate" style={{ color: 'var(--color-text-secondary)' }}>
                   {me.role === 'ROLE_ADMIN' ? 'Administrador' : me.role === 'ROLE_CUSTOMER' ? 'Cliente' : 'Conductor'}
                 </p>
               </div>
               <a
                 href="/logout"
-                className="text-slate-400 hover:text-white transition-colors"
+                className="transition-colors hover:opacity-80"
+                style={{ color: 'var(--color-text-secondary)' }}
                 title="Cerrar sesion"
               >
                 {icons.logout}

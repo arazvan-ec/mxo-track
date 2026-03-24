@@ -1,7 +1,67 @@
 @import "tailwindcss";
 
+/* ── Design Tokens ── */
+:root {
+  --color-surface: #f8fafc;
+  --color-surface-elevated: #ffffff;
+  --color-surface-glass: rgba(255, 255, 255, 0.80);
+  --color-surface-overlay: rgba(0, 0, 0, 0.50);
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #64748b;
+  --color-text-muted: #94a3b8;
+  --color-border: #e2e8f0;
+  --color-border-subtle: rgba(226, 232, 240, 0.50);
+  --color-border-accent: rgba(94, 234, 212, 0.30);
+  --color-accent: #0d9488;
+  --color-accent-bg: #14b8a6;
+  --color-accent-hover: #0f766e;
+  --color-accent-muted: rgba(20, 184, 166, 0.15);
+  --color-success: #10b981;
+  --color-error: #ef4444;
+  --color-warning: #f59e0b;
+  --map-background: #e8ecf0;
+  --map-water: #bfdbfe;
+  --map-earth: #f1f5f9;
+  --map-highway: #94a3b8;
+  --map-major: #cbd5e1;
+  --map-minor: #e2e8f0;
+  --map-buildings: #dde3ea;
+  --map-park: #bbf7d0;
+}
+
+.dark {
+  --color-surface: #020617;
+  --color-surface-elevated: #0f172a;
+  --color-surface-glass: rgba(15, 23, 42, 0.80);
+  --color-surface-overlay: rgba(0, 0, 0, 0.60);
+  --color-text-primary: #f1f5f9;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted: #64748b;
+  --color-border: #334155;
+  --color-border-subtle: rgba(51, 65, 85, 0.40);
+  --color-border-accent: rgba(45, 212, 191, 0.30);
+  --color-accent: #2dd4bf;
+  --color-accent-bg: #14b8a6;
+  --color-accent-hover: #5eead4;
+  --color-accent-muted: rgba(20, 184, 166, 0.15);
+  --color-success: #34d399;
+  --color-error: #f87171;
+  --color-warning: #fbbf24;
+  --map-background: #0f172a;
+  --map-water: #1e293b;
+  --map-earth: #0f172a;
+  --map-highway: #475569;
+  --map-major: #334155;
+  --map-minor: #1e293b;
+  --map-buildings: #1a2332;
+  --map-park: #0d1f1a;
+}
+
 body {
   margin: 0;
+  background-color: var(--color-surface);
+  color: var(--color-text-primary);
+  transition: background-color 0.2s, color 0.2s;
 }
 
 #root {
@@ -10,62 +70,61 @@ body {
   display: flex;
 }
 
-/* Dark theme for MapLibre popups (fleet map) */
+/* MapLibre popups — themed */
 .maplibregl-popup-content {
-  background: rgba(15, 23, 42, 0.95) !important;
-  color: #e2e8f0 !important;
+  background: var(--color-surface-glass) !important;
+  color: var(--color-text-primary) !important;
   border-radius: 10px !important;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
-  border: 1px solid rgba(59, 130, 246, 0.3) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2) !important;
+  border: 1px solid var(--color-border-accent) !important;
   padding: 12px 14px !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
 }
 
 .maplibregl-popup-tip {
-  border-top-color: rgba(15, 23, 42, 0.95) !important;
+  border-top-color: var(--color-surface-glass) !important;
 }
 
 .maplibregl-popup-close-button {
-  color: #94a3b8 !important;
+  color: var(--color-text-secondary) !important;
   font-size: 18px !important;
   padding: 2px 6px !important;
 }
 
 .maplibregl-popup-close-button:hover {
-  color: #fff !important;
+  color: var(--color-text-primary) !important;
   background: transparent !important;
 }
 
-/* MapLibre zoom controls dark theme */
+/* MapLibre zoom controls — themed */
 .maplibregl-ctrl-group {
-  background: rgba(15, 23, 42, 0.85) !important;
-  border: 1px solid rgba(51, 65, 85, 0.6) !important;
+  background: var(--color-surface-glass) !important;
+  border: 1px solid var(--color-border-subtle) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
 }
 
 .maplibregl-ctrl-group button {
   background: transparent !important;
-  color: #e2e8f0 !important;
+  color: var(--color-text-primary) !important;
 }
 
 .maplibregl-ctrl-group button:hover {
-  background: rgba(30, 58, 138, 0.9) !important;
-  color: #fff !important;
+  background: var(--color-accent-muted) !important;
+  color: var(--color-accent) !important;
 }
 
 .maplibregl-ctrl-group button + button {
-  border-top-color: rgba(51, 65, 85, 0.6) !important;
+  border-top-color: var(--color-border-subtle) !important;
 }
 
 /* Navigation sidebar slide-in animation */
 @keyframes slide-in-left {
-  from {
-    transform: translateX(-100%);
-  }
-  to {
-    transform: translateX(0);
-  }
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
 }
 
 .animate-slide-in-left {
   animation: slide-in-left 0.2s ease-out;
 }
-
