@@ -56,7 +56,14 @@ export function ExceptionMapPage() {
         <MapCanvas ref={mapRef}>
           <ExceptionHeatmapLayer exceptions={exceptions} mode={viewMode} />
         </MapCanvas>
-        <BottomSheet state={sheetState} onStateChange={setSheetState} title="Excepciones">
+        <BottomSheet
+          state={sheetState}
+          onStateChange={setSheetState}
+          title="Excepciones"
+          isLoading={isLoading}
+          error={error}
+          loadingText="Cargando excepciones..."
+        >
           <div className="px-4 pb-4 space-y-4">
             {/* Date filters */}
             <div>
@@ -113,14 +120,9 @@ export function ExceptionMapPage() {
                 Resumen
               </div>
               <div className="text-lg font-bold text-white">
-                {isLoading ? '...' : exceptions.length}
+                {exceptions.length}
               </div>
               <div className="text-xs text-slate-400">excepciones encontradas</div>
-              {error && (
-                <div className="text-xs text-red-400 mt-1">
-                  Error cargando datos
-                </div>
-              )}
             </div>
 
             {/* Grouped by type */}

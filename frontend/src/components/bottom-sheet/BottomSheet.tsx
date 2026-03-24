@@ -6,9 +6,12 @@ interface BottomSheetProps {
   onStateChange: (s: BottomSheetState) => void;
   title: ReactNode;
   children: ReactNode;
+  isLoading?: boolean;
+  error?: Error | null;
+  loadingText?: string;
 }
 
-export function BottomSheet({ state, onStateChange, title, children }: BottomSheetProps) {
+export function BottomSheet({ state, onStateChange, title, children, isLoading, error, loadingText }: BottomSheetProps) {
   const { handleProps, sheetStyle, heightPx } = useBottomSheet(state, onStateChange);
 
   // Content area height = sheet visible height - handle area (~64px)
@@ -35,7 +38,23 @@ export function BottomSheet({ state, onStateChange, title, children }: BottomShe
         className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain"
         style={{ maxHeight: contentMaxHeight }}
       >
-        {children}
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="animate-spin h-8 w-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-4" />
+              <p className="text-slate-400 text-sm">{loadingText ?? 'Loading...'}</p>
+            </div>
+          </div>
+        ) : error ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-red-400 text-center">
+              <p className="text-lg font-medium mb-2">Error</p>
+              <p className="text-sm text-red-500">{error.message}</p>
+            </div>
+          </div>
+        ) : (
+          children
+        )}
       </div>
     </div>
   );

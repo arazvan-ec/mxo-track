@@ -3,7 +3,7 @@ import { useFleetMapData } from '@/api/hooks/useFleetMapData';
 import { useFleetKpi } from '@/api/hooks/useFleetKpi';
 import { MapCanvas, type MapCanvasHandle } from '@/components/maps/MapCanvas';
 import { VehicleLayer, type VehicleData } from '@/components/maps/layers/VehicleLayer';
-import type { FleetVehicle, FleetRoute } from '@/api/types';
+import type { FleetVehicle, FleetRoute, FleetStop } from '@/api/types';
 import { BottomSheet, type BottomSheetState } from '@/components/bottom-sheet/BottomSheet';
 import { TopBar } from '@/components/layout/TopBar';
 import { NavigationSidebar } from '@/components/layout/NavigationSidebar';
@@ -15,6 +15,7 @@ export function OperatorDashboardPage() {
   const mapRef = useRef<MapCanvasHandle>(null);
   const [navOpen, setNavOpen] = useState(false);
   const [sheetState, setSheetState] = useState<BottomSheetState>('collapsed');
+  const [expandedRouteId, setExpandedRouteId] = useState<string | null>(null);
 
   // Transform fleet vehicles to VehicleData for VehicleLayer
   const vehicleMarkers: VehicleData[] = useMemo(
@@ -53,22 +54,6 @@ export function OperatorDashboardPage() {
     return { lat: avgLat, lng: avgLng };
   }, [vehicles, routes]);
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-slate-900">
-        <div className="text-slate-500">Loading fleet data...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-slate-900">
-        <div className="text-red-500">Error: {error.message}</div>
-      </div>
-    );
-  }
-
   const activeRoutes = routes.filter(
     (r) => r.status === 'ACTIVE' || r.status === 'PLANNED',
   );
@@ -85,7 +70,14 @@ export function OperatorDashboardPage() {
         >
           <VehicleLayer vehicles={vehicleMarkers} />
         </MapCanvas>
-        <BottomSheet state={sheetState} onStateChange={setSheetState} title="Operations Dashboard">
+        <BottomSheet
+          state={sheetState}
+          onStateChange={setSheetState}
+          title="Operations Dashboard"
+          isLoading={isLoading}
+          error={error}
+          loadingText="Loading fleet data..."
+        >
           <div className="px-4 pb-4 space-y-4">
             {/* SSE connected indicator + KPI section */}
             <div className="space-y-2">
@@ -128,6 +120,12 @@ export function OperatorDashboardPage() {
                   <RouteListItem
                     key={route.publicId}
                     route={route}
+                    expanded={expandedRouteId === route.publicId}
+                    onToggle={() =>
+                      setExpandedRouteId((prev) =>
+                        prev === route.publicId ? null : route.publicId,
+                      )
+                    }
                     onFocus={() => {
                       const pts = route.stops
                         .filter((s) => s.lat && s.lng)
@@ -166,9 +164,13 @@ function KpiItem({
 
 function RouteListItem({
   route,
+  expanded,
+  onToggle,
   onFocus,
 }: {
   route: FleetRoute;
+  expanded: boolean;
+  onToggle: () => void;
   onFocus: () => void;
 }) {
   const delivered = route.deliveredStops;
@@ -180,61 +182,121 @@ function RouteListItem({
       ? 'bg-emerald-500/20 text-emerald-400'
       : 'bg-blue-500/20 text-blue-400';
 
+  const sortedStops = useMemo(
+    () => [...route.stops].sort((a, b) => a.sequence - b.sequence),
+    [route.stops],
+  );
+
   return (
-    <button
-      type="button"
-      className="w-full bg-slate-700/50 hover:bg-slate-700 rounded-lg p-3 text-left transition-colors"
-      onClick={onFocus}
-    >
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <div
-            className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-            style={{ backgroundColor: route.color }}
-          />
-          <span className="text-xs font-medium text-slate-100 truncate">
-            {route.name}
+    <div className="bg-slate-700/50 rounded-lg overflow-hidden">
+      <button
+        type="button"
+        className="w-full hover:bg-slate-700 p-3 text-left transition-colors"
+        onClick={() => {
+          onToggle();
+          onFocus();
+        }}
+      >
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <div
+              className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+              style={{ backgroundColor: route.color }}
+            />
+            <span className="text-xs font-medium text-slate-100 truncate">
+              {route.name}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span
+              className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${statusColor}`}
+            >
+              {route.status === 'ACTIVE' ? 'Active' : 'Planned'}
+            </span>
+            <svg
+              className={`w-3.5 h-3.5 text-slate-400 transition-transform ${expanded ? 'rotate-180' : ''}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
+
+        {/* Driver / Vehicle */}
+        <div className="flex items-center gap-3 mb-2">
+          {route.driverName && (
+            <span className="text-[10px] text-slate-400 truncate">
+              {route.driverName}
+            </span>
+          )}
+          {route.vehicleName && (
+            <span className="text-[10px] text-slate-500 truncate">
+              {route.vehicleName}
+            </span>
+          )}
+        </div>
+
+        {/* Progress bar */}
+        <div className="flex items-center gap-2">
+          <div className="flex-1 h-1.5 bg-slate-600 rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${
+                pct === 100
+                  ? 'bg-emerald-500'
+                  : pct > 50
+                    ? 'bg-blue-500'
+                    : 'bg-amber-500'
+              }`}
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+          <span className="text-[10px] text-slate-400 flex-shrink-0">
+            {delivered}/{total}
           </span>
         </div>
-        <span
-          className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${statusColor}`}
-        >
-          {route.status === 'ACTIVE' ? 'Active' : 'Planned'}
-        </span>
-      </div>
+      </button>
 
-      {/* Driver / Vehicle */}
-      <div className="flex items-center gap-3 mb-2">
-        {route.driverName && (
-          <span className="text-[10px] text-slate-400 truncate">
-            {route.driverName}
-          </span>
-        )}
-        {route.vehicleName && (
-          <span className="text-[10px] text-slate-500 truncate">
-            {route.vehicleName}
-          </span>
-        )}
-      </div>
-
-      {/* Progress bar */}
-      <div className="flex items-center gap-2">
-        <div className="flex-1 h-1.5 bg-slate-600 rounded-full overflow-hidden">
-          <div
-            className={`h-full rounded-full transition-all duration-500 ${
-              pct === 100
-                ? 'bg-emerald-500'
-                : pct > 50
-                  ? 'bg-blue-500'
-                  : 'bg-amber-500'
-            }`}
-            style={{ width: `${pct}%` }}
-          />
+      {/* Expandable stops list */}
+      {expanded && sortedStops.length > 0 && (
+        <div className="border-t border-slate-600/50 px-3 pb-3 pt-2 space-y-1.5">
+          {sortedStops.map((stop) => (
+            <StopItem key={`${route.publicId}-${stop.sequence}`} stop={stop} />
+          ))}
         </div>
-        <span className="text-[10px] text-slate-400 flex-shrink-0">
-          {delivered}/{total}
-        </span>
+      )}
+    </div>
+  );
+}
+
+function StopItem({ stop }: { stop: FleetStop }) {
+  const statusConfig: Record<string, { icon: string; color: string }> = {
+    DELIVERED: { icon: '\u2713', color: 'text-emerald-400' },
+    SKIPPED: { icon: '\u2717', color: 'text-red-400' },
+    EXCEPTION: { icon: '!', color: 'text-orange-400' },
+    PENDING: { icon: '\u25CB', color: 'text-slate-500' },
+  };
+  const cfg = statusConfig[stop.status] ?? statusConfig.PENDING;
+
+  return (
+    <div className="flex items-start gap-2 py-1">
+      <span className={`text-xs font-mono w-4 text-center flex-shrink-0 ${cfg.color}`}>
+        {cfg.icon}
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] text-slate-500 font-mono">{stop.sequence}</span>
+          <span className="text-[11px] text-slate-200 truncate">{stop.address}</span>
+        </div>
+        {stop.recipient && (
+          <span className="text-[10px] text-slate-500 truncate block">{stop.recipient}</span>
+        )}
       </div>
-    </button>
+      <span className={`text-[9px] font-medium flex-shrink-0 ${cfg.color}`}>
+        {stop.status}
+      </span>
+    </div>
   );
 }
