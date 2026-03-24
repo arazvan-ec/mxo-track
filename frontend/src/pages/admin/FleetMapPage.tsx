@@ -7,6 +7,7 @@ import { FleetSidebar } from '@/components/fleet/FleetSidebar';
 import { BottomSheet, type BottomSheetState } from '@/components/bottom-sheet/BottomSheet';
 import { TopBar } from '@/components/layout/TopBar';
 import { NavigationSidebar } from '@/components/layout/NavigationSidebar';
+import { SHEET_HEIGHTS } from '@/components/bottom-sheet/useBottomSheet';
 import type { FleetVehicle, FleetRoute, FleetStop } from '@/api/types';
 
 export function FleetMapPage() {
@@ -45,7 +46,8 @@ export function FleetMapPage() {
 
       const stop = activeStops?.stops.find((s) => s.sequence === sequence);
       if (stop?.lat && stop?.lng) {
-        mapRef.current?.flyTo(stop.lng, stop.lat, 16);
+        const bottomPadding = window.innerHeight * SHEET_HEIGHTS[sheetState];
+        mapRef.current?.flyTo(stop.lng, stop.lat, 16, { bottom: bottomPadding });
       }
     },
     [activeStops, selectedStopSequence],
@@ -65,7 +67,8 @@ export function FleetMapPage() {
 
       // Fly to vehicle position
       if (vehicle.last_position) {
-        mapRef.current?.flyTo(vehicle.last_position.lng, vehicle.last_position.lat);
+        const bottomPadding = window.innerHeight * SHEET_HEIGHTS[sheetState];
+        mapRef.current?.flyTo(vehicle.last_position.lng, vehicle.last_position.lat, undefined, { bottom: bottomPadding });
       } else {
         // Fly to route stops if no position
         const vehicleRoute = routes.find((r) => r.vehicleName === vehicle.name);

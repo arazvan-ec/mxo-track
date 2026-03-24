@@ -29,7 +29,7 @@ function getDarkStyle() {
 }
 
 export interface MapCanvasHandle {
-  flyTo(lng: number, lat: number, zoom?: number): void;
+  flyTo(lng: number, lat: number, zoom?: number, padding?: { top?: number; right?: number; bottom?: number; left?: number }): void;
   fitBounds(
     points: Array<{ lat: number; lng: number }>,
     options?: { padding?: number | { top: number; right: number; bottom: number; left: number } },
@@ -79,8 +79,8 @@ export const MapCanvas = forwardRef<MapCanvasHandle, Props>(function MapCanvas(
   }, [useFallback]);
 
   useImperativeHandle(ref, () => ({
-    flyTo(lng, lat, zoom = 15) {
-      mapRef.current?.flyTo({ center: [lng, lat], zoom, duration: 1000 });
+    flyTo(lng, lat, zoom = 15, padding) {
+      mapRef.current?.flyTo({ center: [lng, lat], zoom, duration: 1000, padding });
     },
     fitBounds(points, options) {
       if (!mapRef.current || points.length === 0) return;

@@ -11,6 +11,7 @@ import { StopListPanel, RouteMetricsPanel, VehicleInfoPanel } from '@/components
 import { BottomSheet, type BottomSheetState } from '@/components/bottom-sheet/BottomSheet';
 import { TopBar } from '@/components/layout/TopBar';
 import { NavigationSidebar } from '@/components/layout/NavigationSidebar';
+import { SHEET_HEIGHTS } from '@/components/bottom-sheet/useBottomSheet';
 import type { StopData, RouteData } from '@/api/types';
 
 const STATUS_COLORS: Record<string, string> = {
@@ -35,7 +36,7 @@ export function RouteDetailPage() {
     mapData?.vehiclePublicId ?? null,
   );
 
-  // Stop click -> fly to stop
+  // Stop click -> fly to stop (with bottom padding for sheet)
   const handleStopClick = useCallback(
     (sequence: number) => {
       setSelectedStopSequence(sequence === selectedStopSequence ? null : sequence);
@@ -43,10 +44,11 @@ export function RouteDetailPage() {
 
       const stop = route.stops.find((s) => s.sequence === sequence);
       if (stop?.lat != null && stop?.lng != null) {
-        mapRef.current?.flyTo(stop.lng, stop.lat, 16);
+        const bottomPadding = window.innerHeight * SHEET_HEIGHTS[sheetState];
+        mapRef.current?.flyTo(stop.lng, stop.lat, 16, { bottom: bottomPadding });
       }
     },
-    [route, selectedStopSequence],
+    [route, selectedStopSequence, sheetState],
   );
 
   // Build metrics from route data (merge metrics + timing)

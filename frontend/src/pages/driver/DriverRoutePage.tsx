@@ -9,6 +9,7 @@ import { VehicleLayer } from '@/components/maps/layers/VehicleLayer';
 import { BottomSheet, type BottomSheetState } from '@/components/bottom-sheet/BottomSheet';
 import { TopBar } from '@/components/layout/TopBar';
 import { NavigationSidebar } from '@/components/layout/NavigationSidebar';
+import { SHEET_HEIGHTS } from '@/components/bottom-sheet/useBottomSheet';
 import type { StopData } from '@/api/types';
 
 /**
@@ -40,19 +41,21 @@ export function DriverRoutePage() {
   // Auto-track vehicle position: when vehicle moves, center map on it
   useEffect(() => {
     if (vehiclePosition) {
-      mapRef.current?.flyTo(vehiclePosition.lng, vehiclePosition.lat, 14);
+      const bottomPadding = window.innerHeight * SHEET_HEIGHTS[sheetState];
+      mapRef.current?.flyTo(vehiclePosition.lng, vehiclePosition.lat, 14, { bottom: bottomPadding });
     }
-  }, [vehiclePosition?.lat, vehiclePosition?.lng]);
+  }, [vehiclePosition?.lat, vehiclePosition?.lng, sheetState]);
 
   const handleStopClick = useCallback(
     (sequence: number) => {
       setSelectedSequence(sequence);
       const stop = stops.find((s) => s.sequence === sequence);
       if (stop?.lat != null && stop?.lng != null) {
-        mapRef.current?.flyTo(stop.lng, stop.lat);
+        const bottomPadding = window.innerHeight * SHEET_HEIGHTS[sheetState];
+        mapRef.current?.flyTo(stop.lng, stop.lat, undefined, { bottom: bottomPadding });
       }
     },
-    [stops],
+    [stops, sheetState],
   );
 
   // Map-layer stop data (needs lat/lng required)

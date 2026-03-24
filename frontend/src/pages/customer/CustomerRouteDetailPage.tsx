@@ -10,6 +10,7 @@ import { VehicleLayer } from '@/components/maps/layers/VehicleLayer';
 import { BottomSheet, type BottomSheetState } from '@/components/bottom-sheet/BottomSheet';
 import { TopBar } from '@/components/layout/TopBar';
 import { NavigationSidebar } from '@/components/layout/NavigationSidebar';
+import { SHEET_HEIGHTS } from '@/components/bottom-sheet/useBottomSheet';
 import type { StopData } from '@/api/types';
 
 /**
@@ -31,10 +32,11 @@ export function CustomerRouteDetailPage() {
       setSelectedSequence(sequence);
       const stop = stops.find((s) => s.sequence === sequence);
       if (stop?.lat != null && stop?.lng != null) {
-        mapRef.current?.flyTo(stop.lng, stop.lat);
+        const bottomPadding = window.innerHeight * SHEET_HEIGHTS[sheetState];
+        mapRef.current?.flyTo(stop.lng, stop.lat, undefined, { bottom: bottomPadding });
       }
     },
-    [stops],
+    [stops, sheetState],
   );
 
   // Map-layer stop data (needs lat/lng required)
