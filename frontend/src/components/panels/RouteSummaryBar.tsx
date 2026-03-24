@@ -9,22 +9,22 @@ interface RouteSummaryBarProps {
 export function RouteSummaryBar({ status, deliveredCount, totalCount, remainingDistance, nextEta }: RouteSummaryBarProps) {
   return (
     <div className="flex items-center gap-2 text-[11px] overflow-hidden">
-      <span className="font-medium uppercase text-slate-400 flex-shrink-0">
+      <span className="font-medium uppercase flex-shrink-0" style={{ color: 'var(--color-text-secondary)' }}>
         {status}
       </span>
-      <span className="text-slate-300 flex-shrink-0">
+      <span className="flex-shrink-0" style={{ color: 'var(--color-text-primary)' }}>
         {deliveredCount}/{totalCount}
       </span>
       {remainingDistance && (
         <>
-          <span className="text-slate-600">&middot;</span>
-          <span className="text-slate-400 truncate">{remainingDistance}</span>
+          <span style={{ color: 'var(--color-text-muted)' }}>&middot;</span>
+          <span className="truncate" style={{ color: 'var(--color-text-secondary)' }}>{remainingDistance}</span>
         </>
       )}
       {nextEta && (
         <>
-          <span className="text-slate-600">&middot;</span>
-          <span className="text-blue-400 truncate">ETA {nextEta}</span>
+          <span style={{ color: 'var(--color-text-muted)' }}>&middot;</span>
+          <span className="truncate" style={{ color: 'var(--color-accent)' }}>ETA {nextEta}</span>
         </>
       )}
     </div>
