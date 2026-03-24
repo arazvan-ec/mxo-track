@@ -27,8 +27,8 @@ export const FleetMap = forwardRef<FleetMapHandle, Props>(function FleetMap(
   const canvasRef = useRef<MapCanvasHandle>(null);
 
   useImperativeHandle(ref, () => ({
-    flyTo(lng, lat, zoom) {
-      canvasRef.current?.flyTo(lng, lat, zoom);
+    flyTo(lng, lat, zoom, padding) {
+      canvasRef.current?.flyTo(lng, lat, zoom, padding);
     },
     fitBounds(points) {
       canvasRef.current?.fitBounds(points);
