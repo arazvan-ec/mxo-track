@@ -199,29 +199,15 @@ export function TestRoutingPage() {
           state={sheetState}
           onStateChange={setSheetState}
           title={sheetTitle}
+          isLoading={isLoading}
+          error={error}
+          loadingText="Running route optimization..."
         >
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="text-center">
-                <div className="animate-spin h-8 w-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-4" />
-                <p className="text-slate-400 text-sm">Running route optimization...</p>
-                <p className="text-slate-500 text-xs mt-1">This may take a few seconds</p>
-              </div>
-            </div>
-          ) : error ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="text-red-400 text-center">
-                <p className="text-lg font-medium mb-2">Optimization Error</p>
-                <p className="text-sm text-red-500">{error.message}</p>
-              </div>
-            </div>
-          ) : (
-            <WidgetRenderer
-              layout={layout}
-              sheetState={sheetState}
-              pageData={pageData}
-            />
-          )}
+          <WidgetRenderer
+            layout={layout}
+            sheetState={sheetState}
+            pageData={pageData}
+          />
         </BottomSheet>
       </div>
     </div>
