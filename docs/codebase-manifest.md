@@ -3,8 +3,7 @@
 > **Auto-generated** by `make manifest` (`backend/bin/generate-manifest.sh`).
 > Do not edit manually — regenerate with `make manifest`.
 
-**Generated:** 2026-03-24 10:21
-**Generated:** 2026-03-24 10:06
+**Generated:** 2026-03-24 20:31
 **Regenerate:** `make manifest`
 
 ## Project Overview

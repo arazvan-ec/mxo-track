@@ -513,10 +513,7 @@ Cada paso actualiza `session-state.json` via `jq`. El workflow-engine.sh (PreToo
 | Pensamiento | Realidad |
 |-------------|----------|
 | "Es un cambio de una línea" | Los cambios de una línea rompen producción. Full-flow. |
-| "Ya sé la respuesta" | La consulta revela lo que no sabes que no sabes. |
-| "El micro-flow es overkill para esta pregunta" | 10 segundos de consulta nunca son overkill. |
 | "Saltemos brainstorming, la solución es obvia" | Las soluciones "obvias" que saltan brainstorming son las que pierden edge cases. |
-| "Nadie va a leer la retrospectiva" | Las futuras instancias de Claude sí la leerán. Ese es el learning loop. |
 | "Es solo una extensión del feature actual" | Si no está en el plan, es scope change. Incrementar interaction_id. |
 
 ## Workflow Engine Integration (mandatory)
@@ -642,7 +639,7 @@ Nunca se validan: `.claude/session-state.json`, `.claude/hooks/*`, `.claude/sett
 | Fase | Evidencia requerida | Nivel |
 |------|-------------------|-------|
 | `consult` | `decisions_read` OR `logs_scanned` | HARD |
-| `brainstorming` | `user_turns ≥ 3` + `alternatives_proposed` + `user_approved` + `spec_path` (archivo ≥500B con keywords) | HARD |
+| `brainstorming` | `user_turns ≥ 1` (HARD) + SOFT warning si `< 3` + `alternatives_proposed` + `user_approved` + `spec_path` (archivo ≥500B con keywords) | MIXED |
 | `planning` | `plan_path` (archivo ≥300B con keywords) | HARD |
 | `implementation` | plan existe (HARD) + `tests_written > 0` (SOFT warning) | MIXED |
 | `verification` | `tests_passed = true` + `lint_clean = true` | HARD |
@@ -671,6 +668,44 @@ El engine mostrará warnings pero no bloqueará. **Requiere confirmación del us
 - Setear `evidence.user_approved = true` sin que el usuario realmente haya aprobado → viola el espíritu del proceso
 - Nunca editar `session-state.json` manualmente para "saltarse" gates sin deviation mode
 
+## Harness Assumptions & Evolution (mandatory)
+
+**Principio:** "Every component in a harness encodes assumptions about model limitations worth stress-testing." — Anthropic, 2025
+
+Cada mecanismo del harness codifica una asunción sobre limitaciones del modelo. Estas asunciones deben revisarse con cada cambio de modelo.
+
+### Inventario de asunciones
+
+| Componente | Asunción | Nivel | Última validación |
+|---|---|---|---|
+| Workflow engine HARD gates | Claude se salta fases sin enforcement mecánico | HARD | 2026-03-24 (baseline) |
+| Anti-rationalization tables | Claude inventa excusas para saltarse pasos | Docs | 2026-03-24 (consolidated) |
+| Brainstorm `user_turns ≥ 1` + SOFT `< 3` | Claude puede no conversar suficiente | SOFT | 2026-03-24 (relaxed from HARD ≥ 3) |
+| `session-state.json` evidencia granular | Estado externo necesario cross-session | HARD | 2026-03-24 (validated: necessary) |
+| Subagent output limits (300 líneas) | Subagentes producen output excesivo | Docs | 2026-03-24 (pending stress-test) |
+| Pre-Exploration Gate | Claude explora redundantemente sin manifest | Docs | 2026-03-24 (validated: saves tool calls) |
+| Scope Change Detection | Claude mezcla tareas sin detectar scope change | SOFT | 2026-03-24 (relaxed from HARD) |
+| Atomic commits | Se pierde trabajo en sesiones largas | Docs | 2026-03-24 (validated: safety reason) |
+
+### Niveles de enforcement
+
+- **HARD** — Bloquea la acción (exit 2). Para asunciones validadas como necesarias.
+- **SOFT** — Warning pero permite continuar (exit 1). Para asunciones en transición.
+- **Docs** — Best practice documentada, sin enforcement mecánico.
+- **Removed** — Asunción obsoleta, mecanismo eliminado.
+
+### Modelo de evolución
+
+```
+HARD → (stress-test: 5 tareas, ≥90% compliance) → SOFT → (10 tareas, ≥95%) → Docs → Remove
+```
+
+### Schedule de review
+
+- **Trigger:** Cada cambio de modelo base (e.g., Opus 4.6 → 5.0)
+- **Proceso:** 5 tareas reales con gate relajado un nivel, medir compliance
+- **Registro:** Actualizar columna "Última validación" con fecha y resultado
+
 ## Automatic Session Context (mandatory)
 
 **El SessionStart hook genera contexto automáticamente en cada inicio de sesión.** Esto es un mecanismo garantizado, no dependiente de que Claude recuerde consultar nada.
@@ -697,6 +732,17 @@ Además, `session-state.json` preserva un campo `last_work_summary` que sobreviv
 | Tarea toca un subsistema específico | Knowledge module correspondiente (tabla en "Knowledge Modules") |
 
 **Regla:** El hook es el mecanismo principal. La consulta manual es un complemento, no el mecanismo primario.
+
+## Context Hygiene (mandatory)
+
+**Principio:** Las sesiones largas degradan calidad. Los checkpoints estructurados preservan el progreso.
+
+### Reglas
+
+1. **Checkpoint en sesiones largas:** Después de ~50 tool calls o al notar compactación, hacer checkpoint: commit + push + actualizar session-state.
+2. **División de tareas grandes:** Si una tarea tiene más de ~8 pasos de implementación, considerar dividir en sesiones separadas.
+3. **Post-compactación:** Verificar acceso a spec (`evidence.spec_path`), plan (`evidence.plan_path`), y estado de tareas. Si no accesible → releer antes de continuar.
+4. **Handoff estructurado:** Al sugerir nueva sesión, documentar en session-state qué tareas están completadas, cuál está en progreso, y qué decisiones se tomaron.
 
 ## Automatic Status Line (mandatory)
 
@@ -1021,10 +1067,7 @@ Superpowers skills override default system prompt behavior, but **user instructi
 | Thought | Reality |
 |---------|---------|
 | "This is just a simple question" | Questions are tasks. Check for skills. |
-| "I need more context first" | Skill check comes BEFORE clarifying questions. |
-| "Let me explore the codebase first" | Skills tell you HOW to explore. Check first. |
 | "This doesn't need a formal skill" | If a skill exists, use it. |
-| "The skill is overkill" | Simple things become complex. Use it. |
 | "I'll just do this one thing first" | Check BEFORE doing anything. |
 
 #### Skill Priority
@@ -1245,6 +1288,29 @@ Execute plan by dispatching fresh subagent per task, with two-stage review after
 - Never start code quality review before spec compliance is approved
 - If subagent asks questions, answer clearly before proceeding
 - If reviewer finds issues, implementer fixes and reviewer re-reviews
+
+#### Sprint Contract Pattern
+
+Al despachar cada implementador, incluir acceptance criteria explícitos:
+
+```
+## Task: [nombre de la tarea del plan]
+## Acceptance Criteria
+- [ ] [Criterio específico y verificable extraído del plan]
+- [ ] [Criterio específico y verificable]
+- [ ] No introduce código innecesario para la tarea
+- [ ] Tests cubren el comportamiento nuevo/modificado
+```
+
+Estos criteria se incluyen en el prompt del implementador Y del spec compliance reviewer. El reviewer verifica cada criterio y reporta PASS/FAIL por item.
+
+#### Checkpoint Reviews (features XL)
+
+Para features XL (>10 tareas o >5 archivos):
+
+1. **Mid-implementation review:** Al ~50% de las tareas, despachar reviewer con el spec + archivos implementados. Pregunta: "¿Dirección coherente con spec? ¿Desvíos? ¿Calidad?"
+2. **Acción sobre feedback:** Corregir desvíos antes de continuar
+3. **No reemplaza** el review por tarea — es verificación adicional de coherencia global
 
 ---
 

@@ -14,9 +14,15 @@ SPEC_PATH=$(jq -r '.evidence.spec_path // ""' "$STATE_FILE" 2>/dev/null || echo 
 CURRENT_PHASE=$(jq -r '.current_phase // ""' "$STATE_FILE" 2>/dev/null || echo "")
 
 ERRORS=""
+WARNINGS=""
 
-if [ "$USER_TURNS" -lt 3 ]; then
-  ERRORS="${ERRORS}- Brainstorming requiere >= 3 turnos de dialogo (actual: $USER_TURNS)\n"
+if [ "$USER_TURNS" -lt 1 ]; then
+  ERRORS="${ERRORS}- Brainstorming requiere al menos 1 turno de dialogo con el usuario (actual: $USER_TURNS)\n"
+fi
+
+# Soft warning for < 3 turns (relaxed from HARD >= 3 per harness evolution 2026-03-24)
+if [ "$USER_TURNS" -ge 1 ] && [ "$USER_TURNS" -lt 3 ]; then
+  WARNINGS="${WARNINGS}- SOFT: Brainstorming con $USER_TURNS turno(s). Considera mas dialogo si el scope es complejo.\n"
 fi
 
 if [ "$ALTERNATIVES" != "true" ]; then
@@ -69,6 +75,12 @@ if [ -n "$ERRORS" ]; then
   echo -e "$ERRORS"
   echo "Completa el brainstorming (Skill 2) antes de continuar."
   exit 2
+fi
+
+# Soft warnings (exit 1 = warn but allow)
+if [ -n "$WARNINGS" ]; then
+  echo -e "$WARNINGS"
+  exit 1
 fi
 
 exit 0
