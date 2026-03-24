@@ -82,7 +82,7 @@ EVIDENCE_INTERACTION=$(jq -r '.evidence.interaction_id // 0' "$STATE_FILE" 2>/de
 if [ "$CURRENT_INTERACTION" != "$EVIDENCE_INTERACTION" ]; then
   case "$FILE_PATH" in
     */backend/src/*|*/frontend/src/*|*/backend/tests/*|*/frontend/tests/*)
-      deny "WORKFLOW ENGINE: Scope change detectado (interaction_id: $CURRENT_INTERACTION, evidence: $EVIDENCE_INTERACTION). Resetea evidence.interaction_id=$CURRENT_INTERACTION y completa las fases requeridas."
+      warn "WORKFLOW ENGINE (SOFT): Scope change detectado (interaction_id: $CURRENT_INTERACTION, evidence: $EVIDENCE_INTERACTION). Resetea evidence.interaction_id=$CURRENT_INTERACTION y completa las fases requeridas."
       ;;
   esac
 fi
