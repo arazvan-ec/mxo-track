@@ -7,7 +7,7 @@ import { StopMarkersLayer } from '@/components/maps/layers/StopMarkersLayer';
 import { RoutePolylineLayer } from '@/components/maps/layers/RoutePolylineLayer';
 import { VehicleLayer } from '@/components/maps/layers/VehicleLayer';
 import { VehicleTrailLayer } from '@/components/maps/layers/VehicleTrailLayer';
-import { StopListPanel, RouteMetricsPanel, VehicleInfoPanel } from '@/components/panels';
+import { StopListPanel, RouteMetricsPanel, VehicleInfoPanel, RouteSummaryBar } from '@/components/panels';
 import { BottomSheet, type BottomSheetState } from '@/components/bottom-sheet/BottomSheet';
 import { TopBar } from '@/components/layout/TopBar';
 import { NavigationSidebar } from '@/components/layout/NavigationSidebar';
@@ -28,6 +28,8 @@ export function RouteDetailPage() {
   const [selectedStopSequence, setSelectedStopSequence] = useState<number | null>(null);
   const [navOpen, setNavOpen] = useState(false);
   const [sheetState, setSheetState] = useState<BottomSheetState>('collapsed');
+
+  const contentHeight = window.innerHeight * SHEET_HEIGHTS[sheetState] - 64;
 
   const route: RouteData | null = mapData?.routes?.[0] ?? null;
 
@@ -101,6 +103,11 @@ export function RouteDetailPage() {
 
   const statusBadge = STATUS_COLORS[route?.status ?? ''] ?? STATUS_COLORS.PLANNED;
 
+  const nonOriginStops = route?.stops.filter((s) => !s.isOrigin) ?? [];
+  const deliveredCount = nonOriginStops.filter((s) => s.status === 'DELIVERED').length;
+  const totalCount = nonOriginStops.length;
+  const nextPendingStop = nonOriginStops.find((s) => s.status === 'PENDING');
+
   return (
     <div className="flex flex-col h-screen w-full">
       {navOpen && <NavigationSidebar mode="overlay" onClose={() => setNavOpen(false)} />}
@@ -143,38 +150,41 @@ export function RouteDetailPage() {
           error={error}
           loadingText="Loading route data..."
         >
-          {route && <div className="px-4 pb-4 space-y-4">
-            {/* Status badge and live indicator */}
+          {route && <div className="px-4 pb-4 space-y-3">
+            {/* Always visible: summary bar + SSE indicator */}
             <div className="flex items-center gap-2">
-              <span
-                className={`text-[10px] font-medium uppercase px-1.5 py-0.5 rounded border ${statusBadge}`}
-              >
-                {route.status}
-              </span>
+              <RouteSummaryBar
+                status={route.status}
+                deliveredCount={deliveredCount}
+                totalCount={totalCount}
+                remainingDistance={metrics?.distanceAfterKm != null ? `${metrics.distanceAfterKm.toFixed(1)} km` : undefined}
+                nextEta={nextPendingStop?.etaTime}
+              />
               {sseConnected && (
-                <span className="flex items-center gap-1 text-[10px] text-emerald-500">
+                <span className="flex items-center gap-1 text-[10px] text-emerald-500 flex-shrink-0">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                   Live
                 </span>
               )}
             </div>
 
-            {/* Vehicle info */}
-            <VehicleInfoPanel vehicle={vehicleInfo} />
+            {/* Medium zone: metrics (visible when enough space) */}
+            {contentHeight >= 350 && <RouteMetricsPanel metrics={metrics} />}
 
-            {/* Metrics */}
-            <RouteMetricsPanel metrics={metrics} />
+            {/* Large zone: vehicle info */}
+            {contentHeight >= 450 && <VehicleInfoPanel vehicle={vehicleInfo} />}
 
-            {/* Stops */}
+            {/* Always visible: stops */}
             <div>
               <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">
-                Stops ({route.stops.filter((s) => !s.isOrigin).length})
+                Stops ({totalCount})
               </div>
               <StopListPanel
                 stops={route.stops}
                 selectedSequence={selectedStopSequence}
                 onStopClick={handleStopClick}
                 showEta
+                maxItems={contentHeight < 200 ? 2 : undefined}
               />
             </div>
           </div>}

@@ -3,6 +3,7 @@ import { useParams } from 'react-router';
 import { useRouteMapData, getRouteFromMapData } from '@/api/hooks/useRouteMapData';
 import { MapCanvas, type MapCanvasHandle } from '@/components/maps/MapCanvas';
 import { StopListPanel } from '@/components/panels/StopListPanel';
+import { RouteSummaryBar } from '@/components/panels/RouteSummaryBar';
 import { StopMarkersLayer } from '@/components/maps/layers/StopMarkersLayer';
 import { RoutePolylineLayer } from '@/components/maps/layers/RoutePolylineLayer';
 import { VehicleLayer } from '@/components/maps/layers/VehicleLayer';
@@ -24,6 +25,8 @@ export function DriverRoutePage() {
   const [selectedSequence, setSelectedSequence] = useState<number | null>(null);
   const [navOpen, setNavOpen] = useState(false);
   const [sheetState, setSheetState] = useState<BottomSheetState>('collapsed');
+
+  const contentHeight = window.innerHeight * SHEET_HEIGHTS[sheetState] - 64;
 
   const { mapData, isLoading, error, sseConnected } = useRouteMapData(publicId);
   const { route, stops, vehiclePosition } = getRouteFromMapData(mapData);
@@ -121,42 +124,47 @@ export function DriverRoutePage() {
           error={error}
           loadingText="Loading route..."
         >
-          {route && <div className="px-4 pb-4 space-y-4">
-            {/* Status and live indicator */}
+          {route && <div className="px-4 pb-4 space-y-3">
+            {/* Always visible: summary bar + SSE indicator */}
             <div className="flex items-center gap-2">
-              {route.status && (
-                <span className="text-xs font-medium text-slate-400 uppercase">{route.status}</span>
-              )}
+              <RouteSummaryBar
+                status={route.status ?? ''}
+                deliveredCount={deliveredCount}
+                totalCount={totalCount}
+                nextEta={currentStop?.etaTime}
+              />
               {sseConnected && (
-                <span className="w-2 h-2 rounded-full bg-emerald-500" title="Live updates active" />
+                <span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" title="Live updates active" />
               )}
             </div>
 
-            {/* Progress bar */}
-            <div className="bg-slate-800/60 rounded-lg p-3 border border-slate-700/40">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] text-slate-500 uppercase tracking-wider">Progress</span>
-                <span className="text-xs font-medium text-white">
-                  {deliveredCount}/{totalCount}
-                </span>
-              </div>
-              <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-emerald-500 rounded-full transition-all duration-500"
-                  style={{ width: totalCount > 0 ? `${(deliveredCount / totalCount) * 100}%` : '0%' }}
-                />
-              </div>
-              {currentStop && (
-                <div className="mt-2 text-xs text-slate-400">
-                  Next: <span className="text-white">{currentStop.address}</span>
-                  {currentStop.etaTime && (
-                    <span className="text-blue-400 ml-1">ETA {currentStop.etaTime}</span>
-                  )}
+            {/* Medium zone: progress bar (visible when enough space) */}
+            {contentHeight >= 200 && (
+              <div className="bg-slate-800/60 rounded-lg p-3 border border-slate-700/40">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] text-slate-500 uppercase tracking-wider">Progress</span>
+                  <span className="text-xs font-medium text-white">
+                    {deliveredCount}/{totalCount}
+                  </span>
                 </div>
-              )}
-            </div>
+                <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                    style={{ width: totalCount > 0 ? `${(deliveredCount / totalCount) * 100}%` : '0%' }}
+                  />
+                </div>
+                {currentStop && (
+                  <div className="mt-2 text-xs text-slate-400">
+                    Next: <span className="text-white">{currentStop.address}</span>
+                    {currentStop.etaTime && (
+                      <span className="text-blue-400 ml-1">ETA {currentStop.etaTime}</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
-            {/* Stops list */}
+            {/* Always visible: stops */}
             <div>
               <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">
                 Stops ({totalCount})
@@ -166,6 +174,7 @@ export function DriverRoutePage() {
                 selectedSequence={selectedSequence ?? currentStop?.sequence}
                 onStopClick={handleStopClick}
                 showEta
+                maxItems={contentHeight < 200 ? 2 : undefined}
               />
             </div>
           </div>}

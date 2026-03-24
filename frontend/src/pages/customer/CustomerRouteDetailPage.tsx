@@ -4,6 +4,7 @@ import { useRouteMapData, getRouteFromMapData } from '@/api/hooks/useRouteMapDat
 import { MapCanvas, type MapCanvasHandle } from '@/components/maps/MapCanvas';
 import { StopListPanel } from '@/components/panels/StopListPanel';
 import { VehicleInfoPanel } from '@/components/panels/VehicleInfoPanel';
+import { RouteSummaryBar } from '@/components/panels/RouteSummaryBar';
 import { StopMarkersLayer } from '@/components/maps/layers/StopMarkersLayer';
 import { RoutePolylineLayer } from '@/components/maps/layers/RoutePolylineLayer';
 import { VehicleLayer } from '@/components/maps/layers/VehicleLayer';
@@ -23,6 +24,8 @@ export function CustomerRouteDetailPage() {
   const [selectedSequence, setSelectedSequence] = useState<number | null>(null);
   const [navOpen, setNavOpen] = useState(false);
   const [sheetState, setSheetState] = useState<BottomSheetState>('collapsed');
+
+  const contentHeight = window.innerHeight * SHEET_HEIGHTS[sheetState] - 64;
 
   const { mapData, isLoading, error, sseConnected } = useRouteMapData(publicId);
   const { route, stops, vehiclePosition } = getRouteFromMapData(mapData);
@@ -65,6 +68,11 @@ export function CustomerRouteDetailPage() {
         ]
       : [];
 
+  const nonOriginStops = stops.filter((s) => !s.isOrigin);
+  const deliveredCount = nonOriginStops.filter((s) => s.status === 'DELIVERED').length;
+  const totalCount = nonOriginStops.length;
+  const nextPendingStop = nonOriginStops.find((s) => s.status === 'PENDING');
+
   return (
     <div className="flex flex-col h-screen w-full">
       {navOpen && <NavigationSidebar mode="overlay" onClose={() => setNavOpen(false)} />}
@@ -97,19 +105,22 @@ export function CustomerRouteDetailPage() {
           error={error}
           loadingText="Loading route..."
         >
-          {route && <div className="px-4 pb-4 space-y-4">
-            {/* Status badge and SSE indicator */}
+          {route && <div className="px-4 pb-4 space-y-3">
+            {/* Always visible: summary bar + SSE indicator */}
             <div className="flex items-center gap-2">
-              {route.status && (
-                <span className="text-xs font-medium text-slate-400 uppercase">{route.status}</span>
-              )}
+              <RouteSummaryBar
+                status={route.status ?? ''}
+                deliveredCount={deliveredCount}
+                totalCount={totalCount}
+                nextEta={nextPendingStop?.etaTime}
+              />
               {sseConnected && (
-                <span className="w-2 h-2 rounded-full bg-emerald-500" title="Live updates active" />
+                <span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" title="Live updates active" />
               )}
             </div>
 
-            {/* Vehicle info (limited: name + speed only for customers) */}
-            {route.vehicleName && (
+            {/* Medium zone: vehicle info (visible when enough space) */}
+            {contentHeight >= 350 && route.vehicleName && (
               <VehicleInfoPanel
                 vehicle={{
                   name: route.vehicleName,
@@ -118,16 +129,17 @@ export function CustomerRouteDetailPage() {
               />
             )}
 
-            {/* Stops */}
+            {/* Always visible: stops */}
             <div>
               <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">
-                Stops ({stops.filter((s) => !s.isOrigin).length})
+                Stops ({totalCount})
               </div>
               <StopListPanel
                 stops={stops}
                 selectedSequence={selectedSequence}
                 onStopClick={handleStopClick}
                 showEta
+                maxItems={contentHeight < 200 ? 2 : undefined}
               />
             </div>
           </div>}
