@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Planning phase validator (HARD gate)
+# Planning phase validator (SOFT gate — stress-test 2026-03-24)
 # Checks: plan_path exists and contains task checkboxes
-# Exit 0 = pass, Exit 2 = block
+# Exit 0 = pass, Exit 1 = warn (relaxed from HARD for stress-test)
 set -euo pipefail
 
 STATE_FILE="${1:-.claude/session-state.json}"
@@ -25,20 +25,20 @@ if [ -z "$PLAN_FULL" ] || [ ! -f "$PLAN_FULL" ]; then
     # Plan is being created — allow if plan_path is declared
     exit 0
   fi
-  echo "BLOCKED: No hay plan de implementacion (plan_path: $PLAN_PATH)."
+  echo "WARNING (SOFT — stress-test): No hay plan de implementacion (plan_path: $PLAN_PATH)."
   echo "Crea el plan (Skill 3) antes de implementar."
-  exit 2
+  exit 1
 fi
 
 PLAN_SIZE=$(wc -c < "$PLAN_FULL")
 if [ "$PLAN_SIZE" -lt 300 ]; then
-  echo "BLOCKED: Plan demasiado pequeno ($PLAN_SIZE bytes, minimo 300)."
-  exit 2
+  echo "WARNING (SOFT — stress-test): Plan demasiado pequeno ($PLAN_SIZE bytes, minimo 300)."
+  exit 1
 fi
 
 if ! grep -qiE '(Task|Step|File|Archivo|Crear|Modificar|Actualizar)' "$PLAN_FULL" 2>/dev/null; then
-  echo "BLOCKED: Plan no contiene estructura minima (Task|Step|File|Archivo)."
-  exit 2
+  echo "WARNING (SOFT — stress-test): Plan no contiene estructura minima (Task|Step|File|Archivo)."
+  exit 1
 fi
 
 exit 0

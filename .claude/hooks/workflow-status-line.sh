@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# PostToolUse hook — generates a one-line workflow status for Claude to display.
-# Reads session-state.json, writes .claude/workflow-status-line.txt
+# PostToolUse hook — generates a detailed workflow status for Claude to display.
+# Reads session-state.json evidence fields, writes .claude/workflow-status-line.txt
+# Enhanced 2026-03-24: shows per-phase evidence and current phase needs.
 # Non-blocking: always exits 0.
 
 set -euo pipefail
@@ -15,14 +16,128 @@ if [ ! -f "$STATE_FILE" ]; then
   exit 0
 fi
 
-FLOW_TYPE=$(jq -r '.flow_type // "null"' "$STATE_FILE" 2>/dev/null || echo "null")
-CURRENT_PHASE=$(jq -r '.current_phase // "null"' "$STATE_FILE" 2>/dev/null || echo "null")
-DEV_ACTIVE=$(jq -r '.deviation.active // false' "$STATE_FILE" 2>/dev/null || echo "false")
+# Read all state at once
+STATE=$(cat "$STATE_FILE" 2>/dev/null || echo "{}")
+FLOW_TYPE=$(echo "$STATE" | jq -r '.flow_type // "null"')
+CURRENT_PHASE=$(echo "$STATE" | jq -r '.current_phase // "null"')
+DEV_ACTIVE=$(echo "$STATE" | jq -r '.deviation.active // false')
+
+# Evidence fields
+DECISIONS_READ=$(echo "$STATE" | jq -r '.evidence.decisions_read // false')
+LOGS_SCANNED=$(echo "$STATE" | jq -r '.evidence.logs_scanned // false')
+USER_TURNS=$(echo "$STATE" | jq -r '.evidence.user_turns // 0')
+ALTERNATIVES=$(echo "$STATE" | jq -r '.evidence.alternatives_proposed // false')
+USER_APPROVED=$(echo "$STATE" | jq -r '.evidence.user_approved // false')
+SPEC_PATH=$(echo "$STATE" | jq -r '.evidence.spec_path // ""')
+PLAN_PATH=$(echo "$STATE" | jq -r '.evidence.plan_path // ""')
+TESTS_WRITTEN=$(echo "$STATE" | jq -r '.evidence.tests_written // 0')
+TESTS_PASSED=$(echo "$STATE" | jq -r '.evidence.tests_passed // "null"')
+LINT_CLEAN=$(echo "$STATE" | jq -r '.evidence.lint_clean // "null"')
+EXEC_LOG=$(echo "$STATE" | jq -r '.evidence.execution_log_path // ""')
+BRANCH_STRATEGY=$(echo "$STATE" | jq -r '.evidence.branch_strategy // ""')
+ROOT_CAUSE=$(echo "$STATE" | jq -r '.evidence.root_cause_identified // false')
+PATTERN_WIDE=$(echo "$STATE" | jq -r '.evidence.pattern_wide_search_done // false')
 
 DEVIATION_SUFFIX=""
 if [ "$DEV_ACTIVE" = "true" ]; then
   DEVIATION_SUFFIX=" | ⚠ DESVÍO"
 fi
+
+# Helper: basename or empty
+base_name() {
+  if [ -n "$1" ]; then
+    basename "$1" 2>/dev/null || echo "$1"
+  fi
+}
+
+# Helper: build evidence tag for a completed phase
+# Returns abbreviated evidence string
+phase_evidence() {
+  local phase="$1"
+  case "$phase" in
+    consult)
+      local ev=""
+      [ "$DECISIONS_READ" = "true" ] && ev="dec"
+      [ "$LOGS_SCANNED" = "true" ] && { [ -n "$ev" ] && ev="$ev+log" || ev="log"; }
+      [ -n "$ev" ] && echo "(${ev})" || echo "(—)"
+      ;;
+    brainstorming)
+      local ev="t${USER_TURNS}"
+      [ "$ALTERNATIVES" = "true" ] && ev="$ev,alt"
+      [ "$USER_APPROVED" = "true" ] && ev="$ev,ok"
+      local sp=$(base_name "$SPEC_PATH")
+      [ -n "$sp" ] && ev="$ev,${sp:0:20}"
+      echo "(${ev})"
+      ;;
+    planning)
+      local sp=$(base_name "$PLAN_PATH")
+      [ -n "$sp" ] && echo "(${sp:0:25})" || echo "(—)"
+      ;;
+    implementation)
+      echo "(tests:${TESTS_WRITTEN})"
+      ;;
+    verification)
+      local ev=""
+      [ "$TESTS_PASSED" = "true" ] && ev="tests✓" || ev="tests?"
+      [ "$LINT_CLEAN" = "true" ] && ev="$ev,lint✓" || ev="$ev,lint?"
+      echo "(${ev})"
+      ;;
+    capture)
+      local sp=$(base_name "$EXEC_LOG")
+      [ -n "$sp" ] && echo "(${sp:0:25})" || echo "(—)"
+      ;;
+    retrospective)
+      echo ""
+      ;;
+    finalize)
+      [ -n "$BRANCH_STRATEGY" ] && echo "(${BRANCH_STRATEGY})" || echo "(—)"
+      ;;
+    *)
+      echo ""
+      ;;
+  esac
+}
+
+# Helper: what does the current phase still need?
+phase_needs() {
+  local phase="$1"
+  case "$phase" in
+    consult)
+      local needs=""
+      [ "$DECISIONS_READ" != "true" ] && [ "$LOGS_SCANNED" != "true" ] && needs="read decisions or logs"
+      [ -n "$needs" ] && echo " | Need: $needs"
+      ;;
+    brainstorming)
+      local needs=""
+      [ "$USER_TURNS" -lt 1 ] 2>/dev/null && needs="user dialog"
+      [ "$ALTERNATIVES" != "true" ] && { [ -n "$needs" ] && needs="$needs, alternatives" || needs="alternatives"; }
+      [ "$USER_APPROVED" != "true" ] && { [ -n "$needs" ] && needs="$needs, approval" || needs="approval"; }
+      [ -z "$SPEC_PATH" ] && { [ -n "$needs" ] && needs="$needs, spec" || needs="spec"; }
+      [ -n "$needs" ] && echo " | Need: $needs"
+      ;;
+    planning)
+      [ -z "$PLAN_PATH" ] && echo " | Need: plan document"
+      ;;
+    implementation)
+      [ "$TESTS_WRITTEN" -eq 0 ] 2>/dev/null && echo " | Need: tests first (TDD)"
+      ;;
+    verification)
+      local needs=""
+      [ "$TESTS_PASSED" != "true" ] && needs="run tests"
+      [ "$LINT_CLEAN" != "true" ] && { [ -n "$needs" ] && needs="$needs, run lint" || needs="run lint"; }
+      [ -n "$needs" ] && echo " | Need: $needs"
+      ;;
+    capture)
+      [ -z "$EXEC_LOG" ] && echo " | Need: execution log"
+      ;;
+    finalize)
+      [ -z "$BRANCH_STRATEGY" ] && echo " | Need: branch strategy"
+      ;;
+    *)
+      echo ""
+      ;;
+  esac
+}
 
 # No flow declared
 if [ "$FLOW_TYPE" = "null" ] || [ -z "$FLOW_TYPE" ]; then
@@ -46,7 +161,7 @@ case "$FLOW_TYPE" in
     ;;
 esac
 
-# Full-flow: 8 phases
+# Full-flow: 8 phases with evidence
 if [ "$FLOW_TYPE" = "full" ]; then
   PHASES=("consult" "brainstorming" "planning" "implementation" "verification" "capture" "retrospective" "finalize")
   TOTAL=8
@@ -60,26 +175,26 @@ if [ "$FLOW_TYPE" = "full" ]; then
     fi
   done
 
-  # If current_phase not in list, show raw
   if [ "$CURRENT_INDEX" -eq 0 ]; then
     echo "📍 full | ${CURRENT_PHASE} | ⚠ fase no reconocida${DEVIATION_SUFFIX}" > "$OUTPUT"
     exit 0
   fi
 
-  # Build completed phases string
+  # Build completed phases with evidence
   COMPLETED=""
   for i in "${!PHASES[@]}"; do
     idx=$((i + 1))
     if [ "$idx" -lt "$CURRENT_INDEX" ]; then
+      EV=$(phase_evidence "${PHASES[$i]}")
       if [ -n "$COMPLETED" ]; then
-        COMPLETED="${COMPLETED} → ✅ ${PHASES[$i]}"
+        COMPLETED="${COMPLETED} → ✅ ${PHASES[$i]}${EV}"
       else
-        COMPLETED="✅ ${PHASES[$i]}"
+        COMPLETED="✅ ${PHASES[$i]}${EV}"
       fi
     fi
   done
 
-  # Build pending phases string
+  # Build pending phases
   PENDING=""
   for i in "${!PHASES[@]}"; do
     idx=$((i + 1))
@@ -92,16 +207,19 @@ if [ "$FLOW_TYPE" = "full" ]; then
     fi
   done
 
-  # Capitalize current phase for display
+  # Capitalize
   DISPLAY_PHASE="$(echo "${CURRENT_PHASE:0:1}" | tr '[:lower:]' '[:upper:]')${CURRENT_PHASE:1}"
 
-  # Build full line
+  # Current phase needs
+  NEEDS=$(phase_needs "$CURRENT_PHASE")
+
   LINE="📍 full | ${DISPLAY_PHASE} (${CURRENT_INDEX}/${TOTAL})"
   if [ -n "$COMPLETED" ]; then
     LINE="${LINE} | ${COMPLETED} → 🔄 ${CURRENT_PHASE}"
   else
     LINE="${LINE} | 🔄 ${CURRENT_PHASE}"
   fi
+  LINE="${LINE}${NEEDS}"
   if [ -n "$PENDING" ]; then
     LINE="${LINE} | Pendiente: ${PENDING}"
   fi
@@ -111,20 +229,16 @@ if [ "$FLOW_TYPE" = "full" ]; then
   exit 0
 fi
 
-# Debug-flow: 4 phases
+# Debug-flow: 4 phases with evidence
 if [ "$FLOW_TYPE" = "debug" ]; then
-  # Determine debug phase from evidence
-  ROOT_CAUSE=$(jq -r '.evidence.root_cause_identified // false' "$STATE_FILE" 2>/dev/null || echo "false")
-  PATTERN_SEARCH=$(jq -r '.evidence.pattern_wide_search_done // false' "$STATE_FILE" 2>/dev/null || echo "false")
-
   DEBUG_PHASES=("consult" "root_cause" "pattern_search" "fix")
   TOTAL=4
 
   # Determine current debug phase
-  if [ "$CURRENT_PHASE" = "implementation" ] || ([ "$ROOT_CAUSE" = "true" ] && [ "$PATTERN_SEARCH" = "true" ]); then
+  if [ "$CURRENT_PHASE" = "implementation" ] || ([ "$ROOT_CAUSE" = "true" ] && [ "$PATTERN_WIDE" = "true" ]); then
     DEBUG_CURRENT="fix"
     DEBUG_INDEX=4
-  elif [ "$PATTERN_SEARCH" = "true" ]; then
+  elif [ "$PATTERN_WIDE" = "true" ]; then
     DEBUG_CURRENT="fix"
     DEBUG_INDEX=4
   elif [ "$ROOT_CAUSE" = "true" ]; then
@@ -134,20 +248,30 @@ if [ "$FLOW_TYPE" = "debug" ]; then
     DEBUG_CURRENT="consult"
     DEBUG_INDEX=1
   else
-    # Default: infer from current_phase
     DEBUG_CURRENT="root_cause"
     DEBUG_INDEX=2
   fi
 
-  # Build completed
+  # Build completed with evidence
   COMPLETED=""
   for i in "${!DEBUG_PHASES[@]}"; do
     idx=$((i + 1))
     if [ "$idx" -lt "$DEBUG_INDEX" ]; then
+      PH="${DEBUG_PHASES[$i]}"
+      case "$PH" in
+        consult)
+          EV=""
+          [ "$DECISIONS_READ" = "true" ] && EV="(dec)"
+          [ "$LOGS_SCANNED" = "true" ] && EV="(log)"
+          ;;
+        root_cause) EV="(identified)" ;;
+        pattern_search) EV="(done)" ;;
+        *) EV="" ;;
+      esac
       if [ -n "$COMPLETED" ]; then
-        COMPLETED="${COMPLETED} → ✅ ${DEBUG_PHASES[$i]}"
+        COMPLETED="${COMPLETED} → ✅ ${PH}${EV}"
       else
-        COMPLETED="✅ ${DEBUG_PHASES[$i]}"
+        COMPLETED="✅ ${PH}${EV}"
       fi
     fi
   done
@@ -165,7 +289,23 @@ if [ "$FLOW_TYPE" = "debug" ]; then
     fi
   done
 
-  # Capitalize
+  # Current phase needs for debug
+  NEEDS=""
+  case "$DEBUG_CURRENT" in
+    consult)
+      [ "$DECISIONS_READ" != "true" ] && [ "$LOGS_SCANNED" != "true" ] && NEEDS=" | Need: read decisions or logs"
+      ;;
+    root_cause)
+      [ "$ROOT_CAUSE" != "true" ] && NEEDS=" | Need: identify root cause (Skill 8)"
+      ;;
+    pattern_search)
+      [ "$PATTERN_WIDE" != "true" ] && NEEDS=" | Need: pattern-wide search (Skill 8 Phase 2.5)"
+      ;;
+    fix)
+      NEEDS=" | Need: TDD fix + verify"
+      ;;
+  esac
+
   DISPLAY_PHASE="$(echo "${DEBUG_CURRENT:0:1}" | tr '[:lower:]' '[:upper:]')${DEBUG_CURRENT:1}"
 
   LINE="📍 debug | ${DISPLAY_PHASE} (${DEBUG_INDEX}/${TOTAL})"
@@ -174,6 +314,7 @@ if [ "$FLOW_TYPE" = "debug" ]; then
   else
     LINE="${LINE} | 🔄 ${DEBUG_CURRENT}"
   fi
+  LINE="${LINE}${NEEDS}"
   if [ -n "$PENDING" ]; then
     LINE="${LINE} | Pendiente: ${PENDING}"
   fi
