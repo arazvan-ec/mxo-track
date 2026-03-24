@@ -5,8 +5,9 @@ const MAX_BATCH_SIZE = parseInt(process.env.EMBEDDING_BATCH_SIZE || '20', 10);
 const MAX_RETRIES = 3;
 const RETRY_BASE_DELAY_MS = 1000;
 // OpenAI text-embedding-3-small has an 8192 token limit per input.
-// ~4 chars per token is a safe approximation for truncation.
-const MAX_INPUT_CHARS = 30000;
+// Code tokenizes at ~2.5-3 chars/token (not ~4 as in prose), so use
+// a conservative limit: 8192 tokens * 2.5 chars/token ≈ 20000 chars.
+const MAX_INPUT_CHARS = 20000;
 
 export class OpenAIEmbedder implements Embedder {
   readonly dimensions = 1536;
