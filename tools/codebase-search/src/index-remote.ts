@@ -10,7 +10,7 @@ import { GitManager } from './git/git-manager.js';
 import { createSseApp } from './transport/sse-server.js';
 
 const DATA_DIR = process.env.DATA_DIR ?? '/data';
-const GITHUB_REPO_URL = process.env.GITHUB_REPO_URL;
+const GITHUB_REPO_URL = process.env.GITHUB_REPO_URL?.trim();
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const PORT = parseInt(process.env.PORT ?? '3000', 10);
 

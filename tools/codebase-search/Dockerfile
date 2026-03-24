@@ -16,7 +16,7 @@ RUN npm run build
 # Stage 2: Runtime
 FROM node:22-bookworm-slim
 
-RUN apt-get update && apt-get install -y --no-install-recommends git python3 make g++ \
+RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates python3 make g++ \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
