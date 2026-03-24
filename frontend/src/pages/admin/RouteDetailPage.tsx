@@ -49,32 +49,8 @@ export function RouteDetailPage() {
     [route, selectedStopSequence],
   );
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-full bg-slate-900">
-        <div className="text-slate-500">Loading route data...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-full bg-slate-900">
-        <div className="text-red-500">Error: {error.message}</div>
-      </div>
-    );
-  }
-
-  if (!route) {
-    return (
-      <div className="flex items-center justify-center h-full bg-slate-900">
-        <div className="text-slate-500">Route not found</div>
-      </div>
-    );
-  }
-
   // Build metrics from route data (merge metrics + timing)
-  const metrics = route.metrics
+  const metrics = route?.metrics
     ? {
         distanceBeforeKm: route.metrics.distanceBeforeKm as number | undefined,
         distanceAfterKm: route.metrics.distanceAfterKm as number | undefined,
@@ -87,7 +63,7 @@ export function RouteDetailPage() {
 
   // Build vehicle info
   const vehicleInfo =
-    route.vehicleName || route.driverName
+    route?.vehicleName || route?.driverName
       ? {
           name: route.vehicleName ?? 'Unknown vehicle',
           driverName: route.driverName,
@@ -96,7 +72,7 @@ export function RouteDetailPage() {
       : null;
 
   // Build stops for map layers
-  const mapStops = route.stops
+  const mapStops = (route?.stops ?? [])
     .filter((s): s is StopData & { lat: number; lng: number } => s.lat != null && s.lng != null)
     .map((s) => ({
       lat: s.lat,
@@ -112,7 +88,7 @@ export function RouteDetailPage() {
       ? [
           {
             publicId: mapData.vehiclePublicId,
-            name: route.vehicleName ?? 'Vehicle',
+            name: route?.vehicleName ?? 'Vehicle',
             lat: mapData.vehiclePosition.lat,
             lng: mapData.vehiclePosition.lng,
             speed: mapData.vehiclePosition.speed,
@@ -121,7 +97,7 @@ export function RouteDetailPage() {
         ]
       : [];
 
-  const statusBadge = STATUS_COLORS[route.status ?? ''] ?? STATUS_COLORS.PLANNED;
+  const statusBadge = STATUS_COLORS[route?.status ?? ''] ?? STATUS_COLORS.PLANNED;
 
   return (
     <div className="flex flex-col h-screen w-full">
@@ -134,11 +110,11 @@ export function RouteDetailPage() {
           initialZoom={mapData?.origin ? 13 : 6}
         >
           {/* Route polyline */}
-          {route.polyline && (
+          {route?.polyline && (
             <RoutePolylineLayer
-              id={route.publicId}
-              polyline={route.polyline}
-              color={route.color}
+              id={route!.publicId}
+              polyline={route!.polyline!}
+              color={route!.color}
             />
           )}
 
@@ -146,7 +122,7 @@ export function RouteDetailPage() {
           <StopMarkersLayer
             stops={mapStops}
             onStopClick={handleStopClick}
-            routeColor={route.color}
+            routeColor={route?.color}
             selectedSequence={selectedStopSequence}
           />
 
@@ -157,8 +133,15 @@ export function RouteDetailPage() {
           <VehicleTrailLayer coordinates={trailCoordinates} />
         </MapCanvas>
 
-        <BottomSheet state={sheetState} onStateChange={setSheetState} title={route.name}>
-          <div className="px-4 pb-4 space-y-4">
+        <BottomSheet
+          state={sheetState}
+          onStateChange={setSheetState}
+          title={route?.name ?? 'Route'}
+          isLoading={isLoading}
+          error={error}
+          loadingText="Loading route data..."
+        >
+          {route && <div className="px-4 pb-4 space-y-4">
             {/* Status badge and live indicator */}
             <div className="flex items-center gap-2">
               <span
@@ -192,7 +175,7 @@ export function RouteDetailPage() {
                 showEta
               />
             </div>
-          </div>
+          </div>}
         </BottomSheet>
       </div>
     </div>
