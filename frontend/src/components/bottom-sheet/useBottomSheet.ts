@@ -3,7 +3,7 @@ import { useState, useRef, useCallback, useEffect, type CSSProperties, type Poin
 export type BottomSheetState = 'collapsed' | 'half' | 'full';
 
 export const SHEET_HEIGHTS: Record<BottomSheetState, number> = {
-  collapsed: 0.15,
+  collapsed: 0.20,
   half: 0.50,
   full: 0.85,
 };
@@ -17,6 +17,7 @@ interface UseBottomSheetReturn {
   state: BottomSheetState;
   setState: (s: BottomSheetState) => void;
   heightPx: number;
+  contentHeight: number;
   heightPercent: number;
   handleProps: {
     onPointerDown: (e: ReactPointerEvent) => void;
@@ -55,6 +56,7 @@ export function useBottomSheet(
 
   const heightPercent = SHEET_HEIGHTS[state];
   const heightPx = viewportHeight * heightPercent;
+  const contentHeight = Math.max(0, heightPx - 64);
 
   const snapToNearest = useCallback(
     (currentHeightPx: number, velocity: number) => {
@@ -152,6 +154,7 @@ export function useBottomSheet(
     state,
     setState,
     heightPx,
+    contentHeight,
     heightPercent,
     handleProps: { onPointerDown },
     sheetStyle,
