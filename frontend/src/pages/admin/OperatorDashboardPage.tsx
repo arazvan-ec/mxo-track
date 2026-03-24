@@ -3,6 +3,8 @@ import { useFleetMapData } from '@/api/hooks/useFleetMapData';
 import { useFleetKpi } from '@/api/hooks/useFleetKpi';
 import { MapCanvas, type MapCanvasHandle } from '@/components/maps/MapCanvas';
 import { VehicleLayer, type VehicleData } from '@/components/maps/layers/VehicleLayer';
+import { StopMarkersLayer } from '@/components/maps/layers/StopMarkersLayer';
+import { RoutePolylineLayer } from '@/components/maps/layers/RoutePolylineLayer';
 import type { FleetVehicle, FleetRoute, FleetStop } from '@/api/types';
 import { BottomSheet, type BottomSheetState } from '@/components/bottom-sheet/BottomSheet';
 import { TopBar } from '@/components/layout/TopBar';
@@ -69,6 +71,24 @@ export function OperatorDashboardPage() {
           initialZoom={6}
         >
           <VehicleLayer vehicles={vehicleMarkers} />
+          {activeRoutes.map((route) => (
+            <StopMarkersLayer
+              key={`stops-${route.publicId}`}
+              stops={route.stops}
+              keyPrefix={`${route.publicId}-`}
+              routeColor={route.color}
+            />
+          ))}
+          {activeRoutes.map((route) =>
+            route.polyline ? (
+              <RoutePolylineLayer
+                key={`poly-${route.publicId}`}
+                id={route.publicId}
+                polyline={route.polyline}
+                color={route.color}
+              />
+            ) : null,
+          )}
         </MapCanvas>
         <BottomSheet
           state={sheetState}
