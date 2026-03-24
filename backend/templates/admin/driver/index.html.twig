@@ -44,6 +44,10 @@
                 {{ driver.createdAt|date('d/m/Y H:i') }}
               </td>
               <td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
+                {% if driverRoutes[driver.id] is defined %}
+                  <a href="{{ path('admin_routes_show', {publicId: driverRoutes[driver.id]}) }}"
+                     class="text-indigo-600 hover:text-indigo-900 mr-3">Ruta</a>
+                {% endif %}
                 <a href="{{ path('admin_drivers_availability', {publicId: driver.publicIdString}) }}"
                    class="text-green-600 hover:text-green-900 mr-3">Horario</a>
                 <a href="{{ path('admin_drivers_edit', {publicId: driver.publicIdString}) }}"

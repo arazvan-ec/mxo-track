@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Controller\Admin;
 
+use App\Domain\Route\Model\Route as RouteEntity;
 use App\Entity\User;
+use App\Enum\RouteStatus;
 use App\Enum\UserRole;
 use App\Form\DriverType;
 use App\Repository\UserRepository;
@@ -55,8 +57,33 @@ class DriverAdminController extends AbstractController
 
         $totalPages = max(1, (int) ceil($total / $limit));
 
+        // Find active/planned routes for these drivers
+        $driverRoutes = [];
+        $driverIds = array_map(fn(User $d) => $d->getId(), $drivers);
+
+        if (\count($driverIds) > 0) {
+            $rows = $this->em->createQueryBuilder()
+                ->select('IDENTITY(r.driver) AS driverId', 'r.publicId')
+                ->from(RouteEntity::class, 'r')
+                ->where('IDENTITY(r.driver) IN (:driverIds)')
+                ->andWhere('r.status IN (:statuses)')
+                ->setParameter('driverIds', $driverIds)
+                ->setParameter('statuses', [RouteStatus::ACTIVE->value, RouteStatus::PLANNED->value])
+                ->orderBy('r.id', 'DESC')
+                ->getQuery()
+                ->getArrayResult();
+
+            foreach ($rows as $row) {
+                $did = $row['driverId'];
+                if (!isset($driverRoutes[$did])) {
+                    $driverRoutes[$did] = (string) $row['publicId'];
+                }
+            }
+        }
+
         return $this->render('admin/driver/index.html.twig', [
             'drivers' => $drivers,
+            'driverRoutes' => $driverRoutes,
             'page' => $page,
             'totalPages' => $totalPages,
         ]);
