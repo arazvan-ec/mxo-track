@@ -29,6 +29,7 @@ export class Indexer {
     private storage: StorageBackend,
     private searchEngine: SearchEngine,
     private projectRoot: string,
+    private dataDir?: string,
   ) {}
 
   async indexFull(): Promise<IndexMetadata> {
@@ -202,6 +203,6 @@ export class Indexer {
   }
 
   private getDataDir(): string {
-    return join(this.projectRoot, 'tools', 'codebase-search', 'data');
+    return this.dataDir ?? join(this.projectRoot, 'tools', 'codebase-search', 'data');
   }
 }
