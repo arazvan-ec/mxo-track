@@ -29,7 +29,7 @@ function getDarkStyle() {
 }
 
 export interface MapCanvasHandle {
-  flyTo(lng: number, lat: number, zoom?: number, padding?: { top?: number; right?: number; bottom?: number; left?: number }): void;
+  flyTo(lng: number, lat: number, zoom?: number, padding?: maplibregl.PaddingOptions): void;
   fitBounds(
     points: Array<{ lat: number; lng: number }>,
     options?: { padding?: number | { top: number; right: number; bottom: number; left: number } },
