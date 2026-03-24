@@ -15,16 +15,22 @@ Checked other route-rendering components (`RouteList.tsx`, `FleetSidebar.tsx`, `
 
 ## Fix
 
+### Commit 1: Expandable stops in bottom sheet
 - Made `RouteListItem` expandable with toggle state managed by parent (`expandedRouteId`)
 - Added chevron indicator for expand/collapse
 - Added `StopItem` component showing: sequence number, address, recipient, and color-coded status (DELIVERED/PENDING/SKIPPED/EXCEPTION)
 - Stops sorted by sequence number
 
+### Commit 2: Route stops and polylines on map
+- Added `StopMarkersLayer` for all active routes — shows stop markers with route-colored pins
+- Added `RoutePolylineLayer` for routes that have polyline data — shows route path on map
+- Both layers already existed as reusable components, just weren't used in this page
+
 ## Files Changed
 
 | File | Change |
 |------|--------|
-| `frontend/src/pages/admin/OperatorDashboardPage.tsx` | Added expandable stops list, `StopItem` component, `expandedRouteId` state |
+| `frontend/src/pages/admin/OperatorDashboardPage.tsx` | Added expandable stops list, StopItem component, StopMarkersLayer, RoutePolylineLayer |
 
 ## Verification
 
