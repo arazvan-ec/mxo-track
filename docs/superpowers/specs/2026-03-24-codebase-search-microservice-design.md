@@ -272,6 +272,35 @@ The server supports both local (stdio) and remote (SSE) modes:
 
 ---
 
+## Alternatives Evaluated
+
+### Approach A: SSE transport + git clone on Railway (ELEGIDO)
+- **Ventaja:** Reutiliza 100% del código existente, solo añade transport layer
+- **Ventaja:** Auto-reindex via webhook mantiene el índice fresco sin intervención
+- **Desventaja:** Requiere volumen persistente en Railway para el índice
+- **Trade-off:** Simplicidad de deploy > overhead de clonar repo en container
+
+### Approach B: Streamable HTTP transport (MCP 2025-03-26 spec)
+- **Ventaja:** Más moderno, stateless, no requiere SSE long-polling
+- **Desventaja:** MCP SDK aún no tiene soporte estable para Streamable HTTP server
+- **Descartado:** SSE es el transport remoto estable del SDK actual
+
+### Approach C: Serverless (Lambda/Cloud Functions)
+- **Ventaja:** Zero infra management, pay-per-use
+- **Desventaja:** Cold starts de 5-10s inaceptables para búsqueda interactiva; HNSW index no persiste entre invocaciones
+- **Descartado:** Latencia y complejidad de state management
+
+### Otras decisiones
+
+| Problema | Opcion elegida | Alternativa descartada | Razón |
+|----------|---------------|----------------------|-------|
+| Auth | Bearer API key | OAuth/JWT | Single-user tool, API key suficiente |
+| Git strategy | Shallow clone | Full clone | Solo necesitamos HEAD para indexar |
+| Webhook scope | Solo refs/heads/main | Todas las ramas | Index reflects production code only |
+| HTTP framework | Express 5 | Fastify / native http | Express es el ejemplo del MCP SDK |
+
+---
+
 ## Complexity Estimate
 
 **S/M** — Core search engine untouched. Changes are:
