@@ -19,16 +19,23 @@ export function BottomSheet({ state, onStateChange, title, children, isLoading, 
 
   return (
     <div
-      className="fixed left-0 right-0 top-0 z-40 flex flex-col bg-slate-900 rounded-t-2xl border-t border-slate-700 shadow-2xl"
-      style={sheetStyle}
+      className="fixed left-0 right-0 top-0 z-40 flex flex-col rounded-t-2xl border-t"
+      style={{
+        ...sheetStyle,
+        backgroundColor: 'var(--color-surface-glass)',
+        borderColor: 'var(--color-border-accent)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        boxShadow: '0 -8px 32px rgba(0,0,0,0.12)',
+      }}
     >
       {/* Drag handle */}
       <div
         className="flex-shrink-0 py-3 px-4 cursor-grab active:cursor-grabbing touch-none select-none"
         {...handleProps}
       >
-        <div className="w-10 h-1 bg-slate-600 rounded-full mx-auto mb-2" />
-        <h2 className="text-sm font-semibold text-slate-200 text-center">
+        <div className="w-10 h-1 rounded-full mx-auto mb-2" style={{ backgroundColor: 'var(--color-text-muted)' }} />
+        <h2 className="text-sm font-semibold text-center" style={{ color: 'var(--color-text-primary)' }}>
           {title}
         </h2>
       </div>
@@ -41,15 +48,18 @@ export function BottomSheet({ state, onStateChange, title, children, isLoading, 
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <div className="text-center">
-              <div className="animate-spin h-8 w-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-4" />
-              <p className="text-slate-400 text-sm">{loadingText ?? 'Loading...'}</p>
+              <div
+                className="animate-spin h-8 w-8 border-2 border-t-transparent rounded-full mx-auto mb-4"
+                style={{ borderColor: 'var(--color-accent)', borderTopColor: 'transparent' }}
+              />
+              <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>{loadingText ?? 'Loading...'}</p>
             </div>
           </div>
         ) : error ? (
           <div className="flex items-center justify-center py-12">
-            <div className="text-red-400 text-center">
+            <div className="text-center" style={{ color: 'var(--color-error)' }}>
               <p className="text-lg font-medium mb-2">Error</p>
-              <p className="text-sm text-red-500">{error.message}</p>
+              <p className="text-sm" style={{ color: 'var(--color-error)' }}>{error.message}</p>
             </div>
           </div>
         ) : (
