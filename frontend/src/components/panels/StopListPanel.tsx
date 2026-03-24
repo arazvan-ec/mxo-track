@@ -15,14 +15,16 @@ interface Props {
   selectedSequence?: number | null;
   onStopClick?: (sequence: number) => void;
   showEta?: boolean;
+  maxItems?: number;
 }
 
 /**
  * Shared stop list panel — used in route detail, customer, and driver views.
  * Renders a scrollable list of stops with status badges and optional ETAs.
  */
-export function StopListPanel({ stops, selectedSequence, onStopClick, showEta = false }: Props) {
+export function StopListPanel({ stops, selectedSequence, onStopClick, showEta = false, maxItems }: Props) {
   const nonOriginStops = stops.filter((s) => !s.isOrigin);
+  const visibleStops = maxItems != null ? nonOriginStops.slice(0, maxItems) : nonOriginStops;
 
   if (nonOriginStops.length === 0) {
     return <div className="text-center py-8 text-slate-600 text-sm">No stops</div>;
@@ -30,7 +32,7 @@ export function StopListPanel({ stops, selectedSequence, onStopClick, showEta = 
 
   return (
     <div className="space-y-1">
-      {nonOriginStops.map((stop) => {
+      {visibleStops.map((stop) => {
         const color = STOP_STATUS_COLORS[stop.status] ?? STOP_STATUS_COLORS.PENDING;
         const isSelected = selectedSequence === stop.sequence;
 
@@ -81,6 +83,11 @@ export function StopListPanel({ stops, selectedSequence, onStopClick, showEta = 
           </button>
         );
       })}
+      {nonOriginStops.length > visibleStops.length && (
+        <div className="text-[10px] text-slate-500 text-center py-1">
+          +{nonOriginStops.length - visibleStops.length} more
+        </div>
+      )}
     </div>
   );
 }
