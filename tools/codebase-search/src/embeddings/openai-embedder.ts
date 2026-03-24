@@ -4,6 +4,9 @@ import type { Embedder } from './embedder-interface.js';
 const MAX_BATCH_SIZE = parseInt(process.env.EMBEDDING_BATCH_SIZE || '20', 10);
 const MAX_RETRIES = 3;
 const RETRY_BASE_DELAY_MS = 1000;
+// OpenAI text-embedding-3-small has an 8192 token limit per input.
+// ~4 chars per token is a safe approximation for truncation.
+const MAX_INPUT_CHARS = 30000;
 
 export class OpenAIEmbedder implements Embedder {
   readonly dimensions = 1536;
@@ -36,9 +39,12 @@ export class OpenAIEmbedder implements Embedder {
 
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       try {
+        const truncated = texts.map(t =>
+          t.length > MAX_INPUT_CHARS ? t.slice(0, MAX_INPUT_CHARS) : t,
+        );
         const response = await this.client.embeddings.create({
           model: this.modelId,
-          input: texts,
+          input: truncated,
         });
 
         // Sort by index to ensure correct order
