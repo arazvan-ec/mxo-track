@@ -86,54 +86,39 @@ export function DriverRoutePage() {
   const deliveredCount = nonOriginStops.filter((s) => s.status === 'DELIVERED').length;
   const totalCount = nonOriginStops.length;
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-full bg-slate-900">
-        <div className="text-slate-500">Loading route...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-full bg-slate-900">
-        <div className="text-red-500">Error: {error.message}</div>
-      </div>
-    );
-  }
-
-  if (!route) {
-    return (
-      <div className="flex items-center justify-center h-full bg-slate-900">
-        <div className="text-slate-500">Route not found</div>
-      </div>
-    );
-  }
-
   return (
     <div className="flex flex-col h-screen w-full">
       {navOpen && <NavigationSidebar mode="overlay" onClose={() => setNavOpen(false)} />}
       <TopBar compact onMenuClick={() => setNavOpen(true)} />
       <div className="flex-1 relative overflow-hidden">
         <MapCanvas ref={mapRef}>
-          {route.polyline && (
+          {route?.polyline && (
             <RoutePolylineLayer
               id={route.publicId}
               polyline={route.polyline}
               color={route.color}
             />
           )}
-          <StopMarkersLayer
-            stops={markerStops}
-            keyPrefix={`driver-${route.publicId}-`}
-            onStopClick={handleStopClick}
-            routeColor={route.color}
-            selectedSequence={selectedSequence ?? currentStop?.sequence}
-          />
+          {route && (
+            <StopMarkersLayer
+              stops={markerStops}
+              keyPrefix={`driver-${route.publicId}-`}
+              onStopClick={handleStopClick}
+              routeColor={route.color}
+              selectedSequence={selectedSequence ?? currentStop?.sequence}
+            />
+          )}
           {vehicleMarkers.length > 0 && <VehicleLayer vehicles={vehicleMarkers} />}
         </MapCanvas>
-        <BottomSheet state={sheetState} onStateChange={setSheetState} title={route.name}>
-          <div className="px-4 pb-4 space-y-4">
+        <BottomSheet
+          state={sheetState}
+          onStateChange={setSheetState}
+          title={route?.name ?? 'Route'}
+          isLoading={isLoading}
+          error={error}
+          loadingText="Loading route..."
+        >
+          {route && <div className="px-4 pb-4 space-y-4">
             {/* Status and live indicator */}
             <div className="flex items-center gap-2">
               {route.status && (
@@ -180,7 +165,7 @@ export function DriverRoutePage() {
                 showEta
               />
             </div>
-          </div>
+          </div>}
         </BottomSheet>
       </div>
     </div>

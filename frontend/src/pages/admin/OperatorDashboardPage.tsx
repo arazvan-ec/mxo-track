@@ -53,22 +53,6 @@ export function OperatorDashboardPage() {
     return { lat: avgLat, lng: avgLng };
   }, [vehicles, routes]);
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-slate-900">
-        <div className="text-slate-500">Loading fleet data...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-slate-900">
-        <div className="text-red-500">Error: {error.message}</div>
-      </div>
-    );
-  }
-
   const activeRoutes = routes.filter(
     (r) => r.status === 'ACTIVE' || r.status === 'PLANNED',
   );
@@ -85,7 +69,14 @@ export function OperatorDashboardPage() {
         >
           <VehicleLayer vehicles={vehicleMarkers} />
         </MapCanvas>
-        <BottomSheet state={sheetState} onStateChange={setSheetState} title="Operations Dashboard">
+        <BottomSheet
+          state={sheetState}
+          onStateChange={setSheetState}
+          title="Operations Dashboard"
+          isLoading={isLoading}
+          error={error}
+          loadingText="Loading fleet data..."
+        >
           <div className="px-4 pb-4 space-y-4">
             {/* SSE connected indicator + KPI section */}
             <div className="space-y-2">
