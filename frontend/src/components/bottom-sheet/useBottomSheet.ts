@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect, type CSSProperties, type Poin
 
 export type BottomSheetState = 'collapsed' | 'half' | 'full';
 
-const SHEET_HEIGHTS: Record<BottomSheetState, number> = {
+export const SHEET_HEIGHTS: Record<BottomSheetState, number> = {
   collapsed: 0.15,
   half: 0.50,
   full: 0.85,
