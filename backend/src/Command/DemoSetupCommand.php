@@ -8,6 +8,7 @@ use App\Application\Route\BuildRoutesInput;
 use App\Application\Route\RoutePlanningService;
 use App\Service\DemoScenarioBuilder;
 use App\Service\ShipmentCsvImporter;
+use Doctrine\DBAL\Exception\TableNotFoundException;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -159,12 +160,44 @@ final class DemoSetupCommand extends Command
     private function purgeExistingDemoData(): void
     {
         $conn = $this->em->getConnection();
-        $conn->executeStatement("DELETE FROM shipment WHERE customer_id IN (SELECT id FROM customer WHERE name = 'Logística Express Madrid')");
-        $conn->executeStatement("DELETE FROM route_stop WHERE route_id IN (SELECT r.id FROM route r JOIN customer c ON r.customer_id = c.id WHERE c.name = 'Logística Express Madrid')");
-        $conn->executeStatement("DELETE FROM route WHERE customer_id IN (SELECT id FROM customer WHERE name = 'Logística Express Madrid')");
-        $conn->executeStatement("DELETE FROM vehicle WHERE name LIKE 'Furgoneta Madrid%' OR name LIKE 'Camión Refrigerado%' OR name LIKE 'Moto Express%'");
-        $conn->executeStatement("DELETE FROM \"user\" WHERE email LIKE '%@demo.local'");
-        $conn->executeStatement("DELETE FROM customer_location WHERE customer_id IN (SELECT id FROM customer WHERE name = 'Logística Express Madrid')");
-        $conn->executeStatement("DELETE FROM customer WHERE name = 'Logística Express Madrid'");
+        $demoCustomerFilter = "(SELECT id FROM customer WHERE name = 'Logística Express Madrid')";
+        $demoUserFilter = "(SELECT id FROM \"user\" WHERE email LIKE '%@demo.local')";
+        $demoRouteFilter = "(SELECT id FROM route_plan WHERE customer_id IN $demoCustomerFilter)";
+
+        // Delete in FK-dependency order (children first, parents last)
+        $statements = [
+            // Route children (deepest first)
+            "DELETE FROM pod WHERE route_stop_id IN (SELECT id FROM route_stop WHERE route_id IN $demoRouteFilter)",
+            "DELETE FROM delivery_evidence WHERE route_stop_id IN (SELECT id FROM route_stop WHERE route_id IN $demoRouteFilter)",
+            "DELETE FROM route_stop WHERE route_id IN $demoRouteFilter",
+            "DELETE FROM route_event WHERE route_id IN $demoRouteFilter",
+            "DELETE FROM route_snapshot WHERE route_id IN $demoRouteFilter",
+            "DELETE FROM route_current_state WHERE route_id IN $demoRouteFilter",
+            "DELETE FROM route_optimization_log WHERE route_id IN $demoRouteFilter",
+            "DELETE FROM route_performance_metric WHERE route_id IN $demoRouteFilter",
+            "DELETE FROM optimization_strategy_comparison WHERE route_id IN $demoRouteFilter",
+            // Shipment children
+            "DELETE FROM parcel WHERE shipment_id IN (SELECT id FROM shipment WHERE customer_id IN $demoCustomerFilter)",
+            "DELETE FROM shipment_event WHERE shipment_id IN (SELECT id FROM shipment WHERE customer_id IN $demoCustomerFilter)",
+            // User children (tables without ON DELETE CASCADE)
+            "DELETE FROM driver_action WHERE driver_user_id IN $demoUserFilter",
+            "DELETE FROM driver_feedback WHERE driver_id IN $demoUserFilter",
+            "UPDATE audit_log SET actor_user_id = NULL WHERE actor_user_id IN $demoUserFilter",
+            // Main entities
+            "DELETE FROM shipment WHERE customer_id IN $demoCustomerFilter",
+            "DELETE FROM route_plan WHERE customer_id IN $demoCustomerFilter",
+            "DELETE FROM vehicle WHERE name LIKE 'Furgoneta Madrid%' OR name LIKE 'Camión Refrigerado%' OR name LIKE 'Moto Express%'",
+            "DELETE FROM \"user\" WHERE email LIKE '%@demo.local'",
+            "DELETE FROM customer_location WHERE customer_id IN $demoCustomerFilter",
+            "DELETE FROM customer WHERE name = 'Logística Express Madrid'",
+        ];
+
+        foreach ($statements as $sql) {
+            try {
+                $conn->executeStatement($sql);
+            } catch (TableNotFoundException) {
+                // Table may not exist yet if migrations are pending — safe to skip
+            }
+        }
     }
 }
