@@ -18,7 +18,7 @@ const SCOPE_PATTERNS: Record<string, string[]> = {
   sql: ['backend/migrations/**/*.php'],
 };
 
-const EMBEDDING_BATCH_SIZE = 100;
+const EMBEDDING_BATCH_SIZE = parseInt(process.env.EMBEDDING_BATCH_SIZE || '20', 10);
 
 export class Indexer {
   private sqlParser = new SqlParser();

@@ -1,7 +1,7 @@
 import OpenAI from 'openai';
 import type { Embedder } from './embedder-interface.js';
 
-const MAX_BATCH_SIZE = 100;
+const MAX_BATCH_SIZE = parseInt(process.env.EMBEDDING_BATCH_SIZE || '20', 10);
 const MAX_RETRIES = 3;
 const RETRY_BASE_DELAY_MS = 1000;
 
