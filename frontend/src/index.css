@@ -4,7 +4,7 @@
 :root {
   --color-surface: #f8fafc;
   --color-surface-elevated: #ffffff;
-  --color-surface-glass: rgba(255, 255, 255, 0.80);
+  --color-surface-glass: rgba(255, 255, 255, 0.55);
   --color-surface-overlay: rgba(0, 0, 0, 0.50);
   --color-text-primary: #0f172a;
   --color-text-secondary: #64748b;
@@ -32,7 +32,7 @@
 .dark {
   --color-surface: #020617;
   --color-surface-elevated: #0f172a;
-  --color-surface-glass: rgba(15, 23, 42, 0.80);
+  --color-surface-glass: rgba(15, 23, 42, 0.55);
   --color-surface-overlay: rgba(0, 0, 0, 0.60);
   --color-text-primary: #f1f5f9;
   --color-text-secondary: #94a3b8;

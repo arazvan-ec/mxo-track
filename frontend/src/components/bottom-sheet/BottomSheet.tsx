@@ -24,9 +24,9 @@ export function BottomSheet({ state, onStateChange, title, children, isLoading, 
         ...sheetStyle,
         backgroundColor: 'var(--color-surface-glass)',
         borderColor: 'var(--color-border-accent)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        boxShadow: '0 -8px 32px rgba(0,0,0,0.12)',
+        backdropFilter: 'blur(24px) saturate(1.4)',
+        WebkitBackdropFilter: 'blur(24px) saturate(1.4)',
+        boxShadow: '0 -8px 32px rgba(0,0,0,0.18)',
       }}
     >
       {/* Drag handle */}
