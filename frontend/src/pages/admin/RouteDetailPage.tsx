@@ -14,13 +14,6 @@ import { NavigationSidebar } from '@/components/layout/NavigationSidebar';
 import { SHEET_HEIGHTS } from '@/components/bottom-sheet/useBottomSheet';
 import type { StopData, RouteData } from '@/api/types';
 
-const STATUS_COLORS: Record<string, string> = {
-  PLANNED: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-  ACTIVE: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
-  COMPLETED: 'bg-slate-500/20 text-slate-400 border-slate-500/30',
-  CANCELLED: 'bg-red-500/20 text-red-400 border-red-500/30',
-};
-
 export function RouteDetailPage() {
   const { publicId } = useParams<{ publicId: string }>();
   const { mapData, isLoading, error, sseConnected } = useRouteMapData(publicId);
@@ -101,8 +94,6 @@ export function RouteDetailPage() {
         ]
       : [];
 
-  const statusBadge = STATUS_COLORS[route?.status ?? ''] ?? STATUS_COLORS.PLANNED;
-
   const nonOriginStops = route?.stops.filter((s) => !s.isOrigin) ?? [];
   const deliveredCount = nonOriginStops.filter((s) => s.status === 'DELIVERED').length;
   const totalCount = nonOriginStops.length;
@@ -154,7 +145,7 @@ export function RouteDetailPage() {
             {/* Always visible: summary bar + SSE indicator */}
             <div className="flex items-center gap-2">
               <RouteSummaryBar
-                status={route.status}
+                status={route.status ?? 'PLANNED'}
                 deliveredCount={deliveredCount}
                 totalCount={totalCount}
                 remainingDistance={metrics?.distanceAfterKm != null ? `${metrics.distanceAfterKm.toFixed(1)} km` : undefined}
