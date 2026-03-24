@@ -66,3 +66,5 @@ docker/osrm/data/*
 .claude/session-context.md
 .claude/workflow-status.md
 .claude/workflow-status-line.txt
+tools/codebase-search/data/
+node_modules/

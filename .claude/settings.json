@@ -77,6 +77,16 @@
       }
     ]
   },
+  "mcpServers": {
+    "codebase-search": {
+      "command": "node",
+      "args": ["tools/codebase-search/dist/index.js"],
+      "cwd": "/home/user/mxo-track",
+      "env": {
+        "PROJECT_ROOT": "/home/user/mxo-track"
+      }
+    }
+  },
   "plugins": [
     {
       "name": "multi-agent-workflow",
