@@ -1,7 +1,5 @@
 node_modules
-src
+dist
 tests
 data
-*.ts
-tsconfig.json
 .env
