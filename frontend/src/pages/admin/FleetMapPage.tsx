@@ -109,22 +109,6 @@ export function FleetMapPage() {
     [vehicles, handleSelectVehicle],
   );
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-full bg-slate-900">
-        <div className="text-slate-500">Loading fleet data...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-full bg-slate-900">
-        <div className="text-red-500">Error: {error.message}</div>
-      </div>
-    );
-  }
-
   return (
     <div className="flex flex-col h-screen w-full">
       {navOpen && <NavigationSidebar mode="overlay" onClose={() => setNavOpen(false)} />}
@@ -152,6 +136,9 @@ export function FleetMapPage() {
               />
             </span>
           }
+          isLoading={isLoading}
+          error={error}
+          loadingText="Loading fleet data..."
         >
           <div className="px-4 pb-4 space-y-4">
             <FleetSidebar

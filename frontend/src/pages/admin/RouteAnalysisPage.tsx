@@ -57,27 +57,9 @@ export function RouteAnalysisPage() {
     }
   }, [mappedStops]);
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-full bg-slate-900">
-        <div className="text-slate-500">Cargando analisis de ruta...</div>
-      </div>
-    );
-  }
+  const metrics = (route?.metrics ?? undefined) as Record<string, number> | undefined;
 
-  if (error || !route) {
-    return (
-      <div className="flex items-center justify-center h-full bg-slate-900">
-        <div className="text-red-500">
-          {error ? `Error: ${error.message}` : 'Ruta no encontrada'}
-        </div>
-      </div>
-    );
-  }
-
-  const metrics = route.metrics as Record<string, number> | undefined;
-
-  const sidebar = (
+  const sidebar = !route ? null : (
     <>
       {/* Route header */}
       <div className="flex items-center gap-2.5 mb-4">
@@ -267,7 +249,7 @@ export function RouteAnalysisPage() {
       <div className="flex-1 relative overflow-hidden">
         <MapCanvas ref={mapRef}>
           {/* Planned route polyline (blue, solid) */}
-          {route.polyline && (
+          {route?.polyline && (
             <RoutePolylineLayer
               id={`analysis-planned-${route.publicId}`}
               polyline={route.polyline}
@@ -276,7 +258,7 @@ export function RouteAnalysisPage() {
           )}
 
           {/* Actual route polyline (red, comparison) */}
-          {route.comparisonPolyline && (
+          {route?.comparisonPolyline && (
             <RoutePolylineLayer
               id={`analysis-actual-${route.publicId}`}
               polyline={route.comparisonPolyline}
@@ -290,7 +272,10 @@ export function RouteAnalysisPage() {
         <BottomSheet
           state={sheetState}
           onStateChange={setSheetState}
-          title={route.name ? `${route.name} — Analysis` : 'Route Analysis'}
+          title={route?.name ? `${route.name} — Analysis` : 'Route Analysis'}
+          isLoading={isLoading}
+          error={error}
+          loadingText="Cargando analisis de ruta..."
         >
           <div className="px-4 pb-4 space-y-4">
             {sidebar}
