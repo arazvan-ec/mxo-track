@@ -335,16 +335,48 @@ Cuando necesites entender algo que no está en el manifest ni en knowledge modul
 - Lee el knowledge module relevante (tabla de Knowledge Modules abajo)
 - Si esto responde tu pregunta → **PARA**
 
+**Capa 1.5: Búsqueda semántica — `codebase_search` MCP (1 tool call)**
+- Usa `codebase_search` para queries en lenguaje natural: "cómo funciona X", "dónde se maneja Y", "qué hace Z"
+- Ideal para preguntas conceptuales donde no sabes el nombre exacto de la clase/método
+- Soporta filtros: `language` (php, twig, yaml, markdown, sql) y `type` (class, method, function, block, section, config, migration)
+- Si esto responde tu pregunta → **PARA**
+
+**Regla de decisión `codebase_search` vs Grep/Glob:**
+
+| Situación | Herramienta |
+|-----------|-------------|
+| Sabes el nombre exacto: `RouteStop`, `optimize()`, `#[Route('/api/...')]` | **Grep** (exacto, rápido) |
+| Sabes el patrón de archivo: `*Controller.php`, `*.twig` | **Glob** (pattern matching) |
+| Query semántica: "cómo se calculan las ETAs", "dónde se valida el peso del paquete" | **codebase_search** (semántico) |
+| Explorar relaciones: "qué servicios dependen de RouteOptimizer" | **codebase_search** (semántico) |
+| Buscar por concepto, no por keyword: "manejo de errores en providers" | **codebase_search** (semántico) |
+| Contar ocurrencias, verificar presencia exacta | **Grep** con `output_mode: count` |
+
 **Capa 2: Búsqueda dirigida (1-3 tool calls)**
 - Grep por clase/función/ruta específica
 - Glob para encontrar archivos por patrón
-- Read del archivo más relevante identificado en Capa 1
+- Read del archivo más relevante identificado en Capa 1/1.5
 - Si esto responde tu pregunta → **PARA**
 
 **Capa 3: Exploración con agente (subagente Explore)**
-- Solo si Capa 1 y 2 no fueron suficientes
+- Solo si Capa 1, 1.5 y 2 no fueron suficientes
 - Dar al agente contexto de lo que YA encontraste en capas anteriores
 - Pedir hallazgos específicos, no dumps de código
+
+### Mantenimiento del índice semántico
+
+El índice de `codebase_search` se actualiza automáticamente en cada push vía webhook a `codebase-search-production.up.railway.app`. No requiere acción manual.
+
+**Herramientas MCP disponibles:**
+- `codebase_search` — búsqueda semántica (query en lenguaje natural, filtros opcionales)
+- `codebase_index` — reindexar manualmente (mode: `full` | `incremental`). Solo usar si el índice parece desactualizado.
+- `codebase_index_status` — verificar estado del índice (último commit indexado, cobertura)
+
+**Cuándo reindexar manualmente:**
+- Si `codebase_search` devuelve resultados obviamente desactualizados
+- Si `codebase_index_status` muestra un commit viejo (>1 día de retraso)
+- Después de merges grandes o reestructuración de archivos
+- Usar `incremental` por defecto; `full` solo si el incremental no captura los cambios
 
 ### Anti-patterns de exploración
 
@@ -353,6 +385,8 @@ Cuando necesites entender algo que no está en el manifest ni en knowledge modul
 - Leer archivos completos cuando solo necesitas una sección específica
 - Explorar la misma área que ya está documentada en un knowledge module
 - Explorar para contar/listar cuando el manifest ya tiene esa información
+- Usar Grep para queries semánticas ("cómo funciona X") cuando `codebase_search` es más efectivo
+- Usar `codebase_search` para búsquedas exactas de nombres (`class RouteStop`) cuando Grep es más preciso
 
 ## Principio de Escalabilidad en Decisiones (mandatory)
 
