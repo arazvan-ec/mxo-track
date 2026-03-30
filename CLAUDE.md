@@ -515,6 +515,8 @@ Cada paso actualiza `session-state.json` via `jq`. El workflow-engine.sh (PreToo
 | "Es un cambio de una línea" | Los cambios de una línea rompen producción. Full-flow. |
 | "Saltemos brainstorming, la solución es obvia" | Las soluciones "obvias" que saltan brainstorming son las que pierden edge cases. |
 | "Es solo una extensión del feature actual" | Si no está en el plan, es scope change. Incrementar interaction_id. |
+| "Ya sé la arquitectura final, implemento directo" | Primero v0 que funcione, después madura. Dos fases. |
+| "v0 es perder el tiempo, puedo hacer la versión final directa" | La versión "final directa" es la que más reescrituras causa. v0 valida el concepto. |
 
 ## Workflow Engine Integration (mandatory)
 
@@ -1172,7 +1174,31 @@ Write comprehensive implementation plans assuming the engineer has zero context 
 - Focused files with single responsibilities
 - Exact file paths and complete code samples
 
-#### Task Structure (cycle)
+#### Two-Phase Implementation (mandatory)
+
+Every plan MUST be structured in two explicit phases:
+
+**Phase 1 — v0 (make it work):**
+- The simplest, most direct implementation that satisfies the requirements
+- No abstractions, no patterns, no DDD layers — just working code
+- Can use concrete classes, inline logic, direct dependencies
+- MUST have tests that validate the behavior (these tests survive into Phase 2)
+- Goal: prove the solution works, validate the concept end-to-end
+
+**Phase 2 — Mature (make it right):**
+- Refactor v0 toward the target architecture (SOLID, DDD, patterns)
+- Extract interfaces, move to domain layer, apply design patterns — as needed
+- Tests from Phase 1 are the safety net — they MUST stay green throughout
+- Goal: production-quality code that follows project conventions
+
+**Rules:**
+- Phase 1 tasks and Phase 2 tasks must be clearly separated in the plan with headers `## Phase 1: v0` and `## Phase 2: Mature`
+- Phase 1 MUST be fully implemented and verified before starting Phase 2
+- Tests written in Phase 1 define the contract — Phase 2 cannot change behavior, only structure
+- If Phase 1 reveals the design was wrong, STOP and revisit the spec before Phase 2
+- Small changes (1-2 files, no new abstractions needed) may merge both phases — but declare it explicitly: "Single-phase: v0 is already production-quality because [reason]"
+
+#### Task Structure (cycle, both phases)
 
 1. Write failing test
 2. Verify failure
@@ -1185,7 +1211,8 @@ Write comprehensive implementation plans assuming the engineer has zero context 
 Every plan must include:
 - Header with goal, architecture, tech stack
 - File structure mapping
-- Numbered tasks with exact file paths
+- **Phase 1: v0** — numbered tasks for the basic working implementation
+- **Phase 2: Mature** — numbered tasks for refactoring toward target architecture (or "Single-phase" declaration with justification)
 - Complete code snippets (not pseudocode)
 - Exact commands with expected outputs
 - Checkbox tracking (`- [ ]`)
@@ -1295,11 +1322,13 @@ Al despachar cada implementador, incluir acceptance criteria explícitos:
 
 ```
 ## Task: [nombre de la tarea del plan]
+## Phase: v0 | Mature
 ## Acceptance Criteria
 - [ ] [Criterio específico y verificable extraído del plan]
 - [ ] [Criterio específico y verificable]
 - [ ] No introduce código innecesario para la tarea
 - [ ] Tests cubren el comportamiento nuevo/modificado
+- [ ] (Phase Mature only) Tests from v0 still pass without modification
 ```
 
 Estos criteria se incluyen en el prompt del implementador Y del spec compliance reviewer. El reviewer verifica cada criterio y reporta PASS/FAIL por item.
@@ -1495,9 +1524,11 @@ Write code before the test? Delete it. Start over.
 **Verify GREEN - Watch It Pass (MANDATORY)**
 - Test passes, other tests still pass, output pristine
 
-**REFACTOR - Clean Up**
+**REFACTOR - Clean Up (within a phase)**
 - After green only: remove duplication, improve names, extract helpers
 - Keep tests green. Don't add behavior.
+- In Phase 1 (v0): refactor is minimal — clean up obvious mess, nothing architectural
+- In Phase 2 (Mature): refactor IS the work — extract interfaces, move to domain layer, apply patterns. Tests from v0 are the safety net.
 
 #### Common Rationalizations
 
