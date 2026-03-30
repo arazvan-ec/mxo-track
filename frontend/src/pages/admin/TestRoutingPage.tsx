@@ -16,6 +16,11 @@ const SHEET_HEIGHTS: Record<BottomSheetState, number> = {
   full: 0.85,
 };
 
+function getSheetPadding(sheetState: BottomSheetState) {
+  const bottomPadding = window.innerHeight * SHEET_HEIGHTS[sheetState];
+  return { top: 80, right: 80, bottom: bottomPadding + 20, left: 80 };
+}
+
 export function TestRoutingPage() {
   const { data, isLoading, error } = useTestRoutingData();
   const { layout } = usePageLayout('test_routing');
@@ -35,9 +40,8 @@ export function TestRoutingPage() {
   // FitBounds when sheet state changes
   useEffect(() => {
     if (!data || allPoints.length === 0) return;
-    const bottomPadding = window.innerHeight * SHEET_HEIGHTS[sheetState];
     mapRef.current?.fitBounds(allPoints, {
-      padding: { top: 80, right: 80, bottom: bottomPadding + 20, left: 80 },
+      padding: getSheetPadding(sheetState),
     });
   }, [sheetState]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -46,16 +50,19 @@ export function TestRoutingPage() {
       if (!data) return;
       const newIdx = highlightedRouteIdx === idx ? null : idx;
       setHighlightedRouteIdx(newIdx);
+      const padding = getSheetPadding(sheetState);
       if (newIdx !== null) {
         const points = data.routesData[newIdx].stopsAfter
           .filter((s) => s.lat && s.lng)
           .map((s) => ({ lat: s.lat, lng: s.lng }));
         if (points.length > 0) {
-          mapRef.current?.fitBounds(points);
+          mapRef.current?.fitBounds(points, { padding });
         }
+      } else if (allPoints.length > 0) {
+        mapRef.current?.fitBounds(allPoints, { padding });
       }
     },
-    [data, highlightedRouteIdx],
+    [data, highlightedRouteIdx, sheetState, allPoints],
   );
 
   const handleStopClick = useCallback(
@@ -164,7 +171,7 @@ export function TestRoutingPage() {
           <button
             type="button"
             className="absolute top-4 right-4 bg-slate-800/90 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-slate-700 transition-colors border border-slate-600 z-10"
-            onClick={() => mapRef.current?.fitBounds(allPoints)}
+            onClick={() => mapRef.current?.fitBounds(allPoints, { padding: getSheetPadding(sheetState) })}
           >
             Fit all
           </button>
