@@ -1,6 +1,6 @@
 # Knowledge Modules Index
 
-**Última actualización:** 2026-03-19
+**Última actualización:** 2026-03-30
 **Estado:** Vigente
 
 Índice de módulos de conocimiento del proyecto mxo-track. Cada módulo cubre un subsistema específico y se consulta bajo demanda.
@@ -29,6 +29,8 @@
 | Superpowers Skills | `superpowers-skills.md` | -- | Skills completas: TDD, brainstorming, debugging, verification, etc. | Aplicar cualquier skill de desarrollo |
 | Feedback & Learning | `feedback-learning.md` | -- | Sistema de captura de datos, execution logs, retrospectives, learning loop, métricas de negocio | Feedback, execution logs, learning loop, retrospectives |
 | UI & Frontend | `ui-frontend.md` | 2026-03-22 | Templates Twig, Alpine.js, Tailwind, componentes, React frontend, layout architecture | Trabajar con templates, UI, sidebar, frontend |
+| SOLID Principles | `solid-principles.md` | 2026-03-30 | Los 5 principios SOLID con ejemplos y violaciones conocidas del codebase | Code review, crear código nuevo, refactorizar |
+| Development Workflow | `development-workflow.md` | 2026-03-30 | Workflow engine, session-state schema, gates, validators, status line, known problems | Entender gates, resolver bloqueos del engine, debugging del workflow |
 
 ## Cómo Usar
 
