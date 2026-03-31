@@ -3,7 +3,7 @@
 > **Auto-generated** by `make manifest` (`backend/bin/generate-manifest.sh`).
 > Do not edit manually — regenerate with `make manifest`.
 
-**Generated:** 2026-03-30 22:26
+**Generated:** 2026-03-31 10:10
 **Regenerate:** `make manifest`
 
 ## Project Overview
@@ -620,6 +620,8 @@ Freshness of knowledge modules (parsed from `docs/knowledge/index.md`):
 | Superpowers Skills | -- | Not verified |
 | Feedback & Learning | -- | Not verified |
 | UI & Frontend | 2026-03-22 | 2026-03-22 |
+| SOLID Principles | 2026-03-30 | 2026-03-30 |
+| Development Workflow | 2026-03-30 | 2026-03-30 |
 
 ---
 
