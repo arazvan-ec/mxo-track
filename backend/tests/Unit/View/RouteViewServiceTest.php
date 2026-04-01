@@ -6,6 +6,7 @@ namespace App\Tests\Unit\View;
 
 use App\Domain\Route\Model\RouteSnapshot;
 use App\Domain\Route\Repository\RouteSnapshotRepositoryInterface;
+use App\Domain\Route\Repository\RouteStopRepositoryInterface;
 use App\Domain\Route\Service\RouteMapProjection;
 use App\Domain\Route\Model\Route;
 use App\Enum\RouteStatus;
@@ -25,7 +26,8 @@ final class RouteViewServiceTest extends TestCase
     protected function setUp(): void
     {
         $this->snapshotRepo = $this->createMock(RouteSnapshotRepositoryInterface::class);
-        $projection = new RouteMapProjection($this->snapshotRepo);
+        $stopRepo = $this->createMock(RouteStopRepositoryInterface::class);
+        $projection = new RouteMapProjection($this->snapshotRepo, $stopRepo);
         $this->service = new RouteViewService($projection, $this->snapshotRepo);
     }
 

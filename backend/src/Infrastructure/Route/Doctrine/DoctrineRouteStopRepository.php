@@ -38,6 +38,30 @@ final readonly class DoctrineRouteStopRepository implements RouteStopRepositoryI
             ->getResult();
     }
 
+    public function findByRoutes(array $routes): array
+    {
+        if (\count($routes) === 0) {
+            return [];
+        }
+
+        $stops = $this->em->createQueryBuilder()
+            ->select('s')
+            ->from(RouteStop::class, 's')
+            ->where('s.route IN (:routes)')
+            ->setParameter('routes', $routes)
+            ->orderBy('s.sequence', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        $map = [];
+        foreach ($stops as $stop) {
+            $routeId = $stop->getRoute()->getId();
+            $map[$routeId][] = $stop;
+        }
+
+        return $map;
+    }
+
     public function save(RouteStop $stop): void
     {
         $this->em->persist($stop);

@@ -9,9 +9,12 @@ use App\Domain\Route\Model\RouteMapOptions;
 use App\Domain\Route\Model\RouteMapTiming;
 use App\Domain\Route\Model\RouteMapView;
 use App\Domain\Route\Model\RouteSnapshot;
+use App\Domain\Route\Model\RouteStop;
 use App\Domain\Route\Model\StopMapView;
 use App\Domain\Route\Repository\RouteSnapshotRepositoryInterface;
+use App\Domain\Route\Repository\RouteStopRepositoryInterface;
 use App\Domain\Route\Model\Route;
+use App\Routing\PolylineEncoder;
 
 /**
  * Projects Route + RouteSnapshot into RouteMapView Value Objects.
@@ -25,6 +28,7 @@ final readonly class RouteMapProjection
 
     public function __construct(
         private RouteSnapshotRepositoryInterface $snapshotRepo,
+        private RouteStopRepositoryInterface $stopRepo,
     ) {}
 
     public function projectRoute(
@@ -34,8 +38,11 @@ final readonly class RouteMapProjection
         ?RouteSnapshot $snapshot = null,
     ): RouteMapView {
         $snapshot ??= $this->snapshotRepo->findByRoute($route);
+        $entityStops = $this->needsEntityFallback($snapshot)
+            ? $this->stopRepo->findByRoute($route)
+            : null;
 
-        return $this->buildView($route, $snapshot, $options, $colorIndex);
+        return $this->buildView($route, $snapshot, $options, $colorIndex, $entityStops);
     }
 
     /**
@@ -47,11 +54,25 @@ final readonly class RouteMapProjection
     public function projectRoutes(array $routes, RouteMapOptions $options): array
     {
         $snapshotMap = $this->snapshotRepo->findByRoutes($routes);
+
+        // Pre-load RouteStop entities for routes needing fallback
+        $routesNeedingStops = [];
+        foreach ($routes as $route) {
+            $snapshot = $snapshotMap[$route->getId()] ?? null;
+            if ($this->needsEntityFallback($snapshot)) {
+                $routesNeedingStops[] = $route;
+            }
+        }
+        $stopMap = \count($routesNeedingStops) > 0
+            ? $this->stopRepo->findByRoutes($routesNeedingStops)
+            : [];
+
         $views = [];
 
         foreach ($routes as $index => $route) {
             $snapshot = $snapshotMap[$route->getId()] ?? null;
-            $views[] = $this->buildView($route, $snapshot, $options, $index);
+            $entityStops = $stopMap[$route->getId()] ?? null;
+            $views[] = $this->buildView($route, $snapshot, $options, $index, $entityStops);
         }
 
         return $views;
@@ -86,14 +107,29 @@ final readonly class RouteMapProjection
         return null;
     }
 
+    /**
+     * @param list<RouteStop>|null $entityStops Fallback stops from DB when snapshot lacks coordinates
+     */
     private function buildView(
         Route $route,
         ?RouteSnapshot $snapshot,
         RouteMapOptions $options,
         int $colorIndex,
+        ?array $entityStops = null,
     ): RouteMapView {
         $color = self::ROUTE_COLORS[$colorIndex % \count(self::ROUTE_COLORS)];
         $stops = $this->buildStops($snapshot, $options);
+
+        // Fallback: use RouteStop entities when snapshot provides no stops or lacks coordinates
+        if ($entityStops !== null && $this->stopsLackCoordinates($stops)) {
+            $stops = $this->buildStopsFromEntities($entityStops);
+        }
+
+        // Fallback polyline: connect stops in order when OSRM polyline is missing
+        $polyline = $snapshot?->getPolyline();
+        if ($polyline === null) {
+            $polyline = $this->generateFallbackPolyline($stops);
+        }
 
         try {
             $publicId = $route->getPublicIdString();
@@ -105,7 +141,7 @@ final readonly class RouteMapProjection
             publicId: $publicId,
             name: $route->getName(),
             color: $color,
-            polyline: $snapshot?->getPolyline(),
+            polyline: $polyline,
             stops: $stops,
             status: $route->getStatus()->value,
             vehicleName: $route->getVehicle()?->getName(),
@@ -188,5 +224,96 @@ final readonly class RouteMapProjection
             static fn (array $state) => StopMapView::fromSnapshotState($state),
             $original,
         );
+    }
+
+    /**
+     * Checks whether a snapshot needs entity-based fallback for stop coordinates.
+     */
+    private function needsEntityFallback(?RouteSnapshot $snapshot): bool
+    {
+        if ($snapshot === null) {
+            return true;
+        }
+
+        $stopStates = $snapshot->getStopStates();
+        if ($stopStates === null || $stopStates === []) {
+            return true;
+        }
+
+        // Check if ANY stop lacks coordinates
+        foreach ($stopStates as $state) {
+            if (!isset($state['lat']) || !isset($state['lng']) || $state['lat'] === null || $state['lng'] === null) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param list<StopMapView> $stops
+     */
+    private function stopsLackCoordinates(array $stops): bool
+    {
+        if ($stops === []) {
+            return true;
+        }
+
+        foreach ($stops as $stop) {
+            if ($stop->lat === null || $stop->lng === null) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param list<RouteStop> $entityStops
+     * @return list<StopMapView>
+     */
+    private function buildStopsFromEntities(array $entityStops): array
+    {
+        $views = [];
+        foreach ($entityStops as $stop) {
+            $views[] = new StopMapView(
+                sequence: $stop->getSequence(),
+                address: $stop->getAddress(),
+                lat: $stop->getLatitude(),
+                lng: $stop->getLongitude(),
+                status: $stop->getStatus()->value,
+                isOrigin: $stop->isOrigin(),
+                recipientName: $stop->getRecipientName(),
+                recipientPhone: $stop->getRecipientPhone(),
+                deliveredAt: $stop->getDeliveredAt()?->format(\DateTimeInterface::ATOM),
+                exceptionCode: $stop->getExceptionCode()?->value,
+                exceptionNotes: $stop->getExceptionNotes(),
+                shipmentPublicId: $stop->getShipment()?->getPublicIdString(),
+            );
+        }
+
+        return $views;
+    }
+
+    /**
+     * Generates a straight-line polyline connecting stops in order.
+     * Used as visual fallback when OSRM polyline is unavailable.
+     *
+     * @param list<StopMapView> $stops
+     */
+    private function generateFallbackPolyline(array $stops): ?string
+    {
+        $points = [];
+        foreach ($stops as $stop) {
+            if ($stop->lat !== null && $stop->lng !== null) {
+                $points[] = [$stop->lat, $stop->lng];
+            }
+        }
+
+        if (\count($points) < 2) {
+            return null;
+        }
+
+        return PolylineEncoder::encode($points);
     }
 }
