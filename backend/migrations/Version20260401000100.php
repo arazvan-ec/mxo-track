@@ -28,6 +28,9 @@ final class Version20260401000100 extends AbstractMigration
             AND sheet_state IN ('half', 'full')
         ");
 
+        // Reset sequence to avoid PK collision (BIGSERIAL doesn't auto-adjust after DELETE)
+        $this->addSql("SELECT setval('page_layout_widget_id_seq', (SELECT COALESCE(MAX(id), 0) FROM page_layout_widget))");
+
         // New half state: kpi_pills, route_card_list
         $halfWidgets = ['kpi_pills', 'route_card_list'];
         foreach ($halfWidgets as $position => $widgetType) {
@@ -61,6 +64,9 @@ final class Version20260401000100 extends AbstractMigration
             )
             AND sheet_state IN ('half', 'full')
         ");
+
+        // Reset sequence to avoid PK collision
+        $this->addSql("SELECT setval('page_layout_widget_id_seq', (SELECT COALESCE(MAX(id), 0) FROM page_layout_widget))");
 
         // Restore original half: kpi_pills, vehicle_info
         $halfWidgets = ['kpi_pills', 'vehicle_info'];
