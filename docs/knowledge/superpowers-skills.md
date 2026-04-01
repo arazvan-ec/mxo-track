@@ -132,6 +132,9 @@ Write comprehensive implementation plans assuming the engineer has zero context 
 
 ### Task Structure (cycle)
 
+Each task in the plan includes its own TDD cycle. **Never create a separate "add tests"
+or "write tests" task** — the test is step 1 of implementing each task.
+
 1. Write failing test
 2. Verify failure
 3. Implement minimal solution
