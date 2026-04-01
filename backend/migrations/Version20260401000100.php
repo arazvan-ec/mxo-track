@@ -10,9 +10,9 @@ use Doctrine\Migrations\AbstractMigration;
 /**
  * Add route_card_list widget to fleet_map layout (half + full states).
  *
- * Uses a single DO block to be atomic — previous multi-statement approach
- * left the DB in a broken state when individual INSERTs failed (DELETE
- * committed but INSERTs did not, desynchronising the BIGSERIAL sequence).
+ * Uses explicit id generation via (SELECT MAX(id) FROM page_layout_widget)
+ * instead of relying on the BIGSERIAL sequence, which was desynchronised by
+ * previous failed migration attempts.
  */
 final class Version20260401000100 extends AbstractMigration
 {
@@ -27,6 +27,7 @@ final class Version20260401000100 extends AbstractMigration
             DO \$\$
             DECLARE
                 v_layout_id BIGINT;
+                v_max_id    BIGINT;
             BEGIN
                 -- Resolve fleet_map global layout
                 SELECT id INTO v_layout_id
@@ -37,28 +38,34 @@ final class Version20260401000100 extends AbstractMigration
                     RAISE EXCEPTION 'fleet_map global layout not found';
                 END IF;
 
-                -- Remove current half and full widgets (idempotent — may already be deleted by previous failed run)
+                -- Remove current half and full widgets (idempotent)
                 DELETE FROM page_layout_widget
                 WHERE page_layout_id = v_layout_id
                   AND sheet_state IN ('half', 'full');
 
-                -- Fix BIGSERIAL sequence (may be desynchronised from previous failed attempts)
-                PERFORM setval(
-                    pg_get_serial_sequence('page_layout_widget', 'id'),
-                    COALESCE((SELECT MAX(id) FROM page_layout_widget), 0)
-                );
+                -- Get current max id to generate explicit ids (avoids BIGSERIAL sequence issues)
+                SELECT COALESCE(MAX(id), 0) INTO v_max_id FROM page_layout_widget;
 
                 -- half: kpi_pills (pos 0), route_card_list (pos 1)
-                INSERT INTO page_layout_widget (public_id, page_layout_id, widget_definition_id, sheet_state, position, created_at)
-                SELECT gen_random_uuid(), v_layout_id, wd.id, 'half', pos, NOW()
+                INSERT INTO page_layout_widget (id, public_id, page_layout_id, widget_definition_id, sheet_state, position, created_at)
+                SELECT v_max_id + row_number() OVER (), gen_random_uuid(), v_layout_id, wd.id, 'half', pos, NOW()
                 FROM (VALUES ('kpi_pills', 0), ('route_card_list', 1)) AS t(wtype, pos)
                 JOIN widget_definition wd ON wd.type = t.wtype;
 
+                -- Update v_max_id after first batch
+                SELECT COALESCE(MAX(id), 0) INTO v_max_id FROM page_layout_widget;
+
                 -- full: kpi_pills (0), route_card_list (1), vehicle_info (2), driver_info (3), map_legend (4)
-                INSERT INTO page_layout_widget (public_id, page_layout_id, widget_definition_id, sheet_state, position, created_at)
-                SELECT gen_random_uuid(), v_layout_id, wd.id, 'full', pos, NOW()
+                INSERT INTO page_layout_widget (id, public_id, page_layout_id, widget_definition_id, sheet_state, position, created_at)
+                SELECT v_max_id + row_number() OVER (), gen_random_uuid(), v_layout_id, wd.id, 'full', pos, NOW()
                 FROM (VALUES ('kpi_pills', 0), ('route_card_list', 1), ('vehicle_info', 2), ('driver_info', 3), ('map_legend', 4)) AS t(wtype, pos)
                 JOIN widget_definition wd ON wd.type = t.wtype;
+
+                -- Fix the BIGSERIAL sequence so future inserts don't collide
+                PERFORM setval(
+                    pg_get_serial_sequence('page_layout_widget', 'id'),
+                    (SELECT MAX(id) FROM page_layout_widget)
+                );
             END
             \$\$
         ");
@@ -70,6 +77,7 @@ final class Version20260401000100 extends AbstractMigration
             DO \$\$
             DECLARE
                 v_layout_id BIGINT;
+                v_max_id    BIGINT;
             BEGIN
                 SELECT id INTO v_layout_id
                 FROM page_layout
@@ -83,22 +91,26 @@ final class Version20260401000100 extends AbstractMigration
                 WHERE page_layout_id = v_layout_id
                   AND sheet_state IN ('half', 'full');
 
-                PERFORM setval(
-                    pg_get_serial_sequence('page_layout_widget', 'id'),
-                    COALESCE((SELECT MAX(id) FROM page_layout_widget), 0)
-                );
+                SELECT COALESCE(MAX(id), 0) INTO v_max_id FROM page_layout_widget;
 
                 -- Restore original half: kpi_pills (0), vehicle_info (1)
-                INSERT INTO page_layout_widget (public_id, page_layout_id, widget_definition_id, sheet_state, position, created_at)
-                SELECT gen_random_uuid(), v_layout_id, wd.id, 'half', pos, NOW()
+                INSERT INTO page_layout_widget (id, public_id, page_layout_id, widget_definition_id, sheet_state, position, created_at)
+                SELECT v_max_id + row_number() OVER (), gen_random_uuid(), v_layout_id, wd.id, 'half', pos, NOW()
                 FROM (VALUES ('kpi_pills', 0), ('vehicle_info', 1)) AS t(wtype, pos)
                 JOIN widget_definition wd ON wd.type = t.wtype;
 
+                SELECT COALESCE(MAX(id), 0) INTO v_max_id FROM page_layout_widget;
+
                 -- Restore original full: kpi_pills (0), vehicle_info (1), driver_info (2), map_legend (3)
-                INSERT INTO page_layout_widget (public_id, page_layout_id, widget_definition_id, sheet_state, position, created_at)
-                SELECT gen_random_uuid(), v_layout_id, wd.id, 'full', pos, NOW()
+                INSERT INTO page_layout_widget (id, public_id, page_layout_id, widget_definition_id, sheet_state, position, created_at)
+                SELECT v_max_id + row_number() OVER (), gen_random_uuid(), v_layout_id, wd.id, 'full', pos, NOW()
                 FROM (VALUES ('kpi_pills', 0), ('vehicle_info', 1), ('driver_info', 2), ('map_legend', 3)) AS t(wtype, pos)
                 JOIN widget_definition wd ON wd.type = t.wtype;
+
+                PERFORM setval(
+                    pg_get_serial_sequence('page_layout_widget', 'id'),
+                    (SELECT MAX(id) FROM page_layout_widget)
+                );
             END
             \$\$
         ");
