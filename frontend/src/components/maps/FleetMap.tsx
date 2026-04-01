@@ -15,13 +15,14 @@ interface Props {
   routes: FleetRoute[];
   activeStops?: { routeId: string; stops: FleetStop[]; polyline?: string; color?: string } | null;
   trailCoordinates?: [number, number][];
+  showArrows?: boolean;
   onVehicleClick?: (vehicleId: string) => void;
   onStopClick?: (sequence: number) => void;
   selectedStopSequence?: number | null;
 }
 
 export const FleetMap = forwardRef<FleetMapHandle, Props>(function FleetMap(
-  { vehicles, routes, activeStops, trailCoordinates, onVehicleClick, onStopClick, selectedStopSequence },
+  { vehicles, routes, activeStops, trailCoordinates, showArrows, onVehicleClick, onStopClick, selectedStopSequence },
   ref,
 ) {
   const canvasRef = useRef<MapCanvasHandle>(null);
@@ -64,7 +65,7 @@ export const FleetMap = forwardRef<FleetMapHandle, Props>(function FleetMap(
   return (
     <MapCanvas ref={canvasRef}>
       {trailCoordinates && trailCoordinates.length > 1 && (
-        <VehicleTrailLayer coordinates={trailCoordinates} />
+        <VehicleTrailLayer coordinates={trailCoordinates} showArrows={showArrows} />
       )}
 
       {activeStops?.polyline && (
@@ -73,6 +74,7 @@ export const FleetMap = forwardRef<FleetMapHandle, Props>(function FleetMap(
           id={activeStops.routeId}
           polyline={activeStops.polyline}
           color={activeStops.color ?? '#3B82F6'}
+          showArrows={showArrows}
         />
       )}
 
