@@ -1,29 +1,29 @@
-import { useRef, useEffect, useImperativeHandle, forwardRef, type ReactNode } from 'react';
+import { useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
 import { MapCanvas, type MapCanvasHandle } from './MapCanvas';
 import { VehicleMarker } from './shared/VehicleMarker';
-import { StopMarker } from './shared/StopMarker';
+import { StopMarkersLayer } from './layers/StopMarkersLayer';
 import { RoutePolylineLayer } from './layers/RoutePolylineLayer';
 import { VehicleTrailLayer } from './layers/VehicleTrailLayer';
+import { StopPopup } from './shared/StopPopup';
 import { VehiclePopup } from '@/components/fleet/VehiclePopup';
 import { getVehicleColor } from './shared/colors';
-import type { FleetVehicle, FleetRoute, FleetStop } from '@/api/types';
+import type { FleetVehicle, FleetRoute } from '@/api/types';
 
 export type FleetMapHandle = MapCanvasHandle;
 
 interface Props {
   vehicles: FleetVehicle[];
   routes: FleetRoute[];
-  activeStops?: { routeId: string; stops: FleetStop[]; polyline?: string; color?: string } | null;
   trailCoordinates?: [number, number][];
   showArrows?: boolean;
   onVehicleClick?: (vehicleId: string) => void;
-  onStopClick?: (sequence: number) => void;
+  onStopClick?: (routePublicId: string, sequence: number) => void;
+  selectedRouteId?: string | null;
   selectedStopSequence?: number | null;
-  renderStopPopup?: (stop: FleetStop) => ReactNode;
 }
 
 export const FleetMap = forwardRef<FleetMapHandle, Props>(function FleetMap(
-  { vehicles, routes, activeStops, trailCoordinates, showArrows, onVehicleClick, onStopClick, selectedStopSequence, renderStopPopup },
+  { vehicles, routes, trailCoordinates, showArrows, onVehicleClick, onStopClick, selectedRouteId, selectedStopSequence },
   ref,
 ) {
   const canvasRef = useRef<MapCanvasHandle>(null);
@@ -69,32 +69,51 @@ export const FleetMap = forwardRef<FleetMapHandle, Props>(function FleetMap(
         <VehicleTrailLayer coordinates={trailCoordinates} showArrows={showArrows} />
       )}
 
-      {activeStops?.polyline && (
-        <RoutePolylineLayer
-          key={activeStops.routeId}
-          id={activeStops.routeId}
-          polyline={activeStops.polyline}
-          color={activeStops.color ?? '#3B82F6'}
-          showArrows={showArrows}
-        />
-      )}
-
-      {activeStops?.stops.map((stop) =>
-        stop.lat && stop.lng ? (
-          <StopMarker
-            key={`${activeStops.routeId}-${stop.sequence}`}
-            lng={stop.lng}
-            lat={stop.lat}
-            sequence={stop.sequence}
-            status={stop.status}
-            address={stop.address}
-            routeColor={activeStops.color ?? '#3B82F6'}
-            onClick={() => onStopClick?.(stop.sequence)}
-            isSelected={stop.sequence === selectedStopSequence}
-            popupContent={renderStopPopup?.(stop)}
+      {/* Route polylines — always visible for all routes */}
+      {routes.map((route) =>
+        route.polyline ? (
+          <RoutePolylineLayer
+            key={route.publicId}
+            id={route.publicId}
+            polyline={route.polyline}
+            color={route.color}
+            showArrows={showArrows}
           />
         ) : null,
       )}
+
+      {/* Stop markers — always visible for all routes */}
+      {routes.map((route) => (
+        <StopMarkersLayer
+          key={`stops-${route.publicId}`}
+          stops={route.stops
+            .filter((s) => s.lat && s.lng)
+            .map((s) => ({
+              lat: s.lat,
+              lng: s.lng,
+              sequence: s.sequence,
+              status: s.status,
+              address: s.address,
+              recipientName: s.recipient,
+              shipmentPublicId: s.shipmentPublicId,
+            }))}
+          keyPrefix={`fleet-${route.publicId}-`}
+          onStopClick={(seq) => onStopClick?.(route.publicId, seq)}
+          routeColor={route.color}
+          selectedSequence={
+            selectedRouteId === route.publicId ? selectedStopSequence : null
+          }
+          renderPopup={(stop) => (
+            <StopPopup
+              sequence={stop.sequence}
+              address={stop.address}
+              status={stop.status}
+              recipientName={stop.recipientName}
+              shipmentPublicId={stop.shipmentPublicId}
+            />
+          )}
+        />
+      ))}
 
       {vehicles.map((vehicle) => {
         if (!vehicle.last_position) return null;

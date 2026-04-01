@@ -5,14 +5,13 @@ import { useVehicleTrail } from '@/api/hooks/useVehicleTrail';
 import { useMe } from '@/api/hooks/useMe';
 import { FleetMap, type FleetMapHandle } from '@/components/maps/FleetMap';
 import { FleetSidebar } from '@/components/fleet/FleetSidebar';
-import { StopPopup } from '@/components/maps/shared/StopPopup';
 import { EntityActionPanel } from '@/components/panels/EntityActionPanel';
 import { useMapSelection } from '@/hooks/useMapSelection';
 import { BottomSheet, type BottomSheetState } from '@/components/bottom-sheet/BottomSheet';
 import { TopBar } from '@/components/layout/TopBar';
 import { NavigationSidebar } from '@/components/layout/NavigationSidebar';
 import { SHEET_HEIGHTS } from '@/components/bottom-sheet/useBottomSheet';
-import type { FleetVehicle, FleetRoute, FleetStop } from '@/api/types';
+import type { FleetVehicle, FleetRoute } from '@/api/types';
 
 export function FleetMapPage() {
   const { vehicles, routes, isLoading, error, sseConnected } = useFleetMapData();
@@ -31,14 +30,6 @@ export function FleetMapPage() {
   // Trail for selected vehicle
   const { coordinates: trailCoordinates } = useVehicleTrail(selectedVehicleId);
 
-  // Derive active stops from selection
-  const activeStops = getActiveStops(
-    vehicles,
-    routes,
-    selectedVehicleId,
-    selectedRouteId,
-  );
-
   // Derive the route associated with selected vehicle
   const selectedVehicleRoute = selectedVehicleId
     ? routes.find((r) => {
@@ -47,18 +38,28 @@ export function FleetMapPage() {
       }) ?? null
     : null;
 
+  // The active route for stop selection highlighting
+  const activeRouteId = selectedRouteId ?? selectedVehicleRoute?.publicId ?? null;
+
   const handleStopClick = useCallback(
-    (sequence: number) => {
-      const stop = activeStops?.stops.find((s) => s.sequence === sequence);
+    (routePublicId: string, sequence: number) => {
+      const route = routes.find((r) => r.publicId === routePublicId);
+      const stop = route?.stops.find((s) => s.sequence === sequence);
       if (!stop) return;
 
-      selectStop(`stop-${activeStops!.routeId}-${sequence}`, {
+      // Auto-select the route when clicking a stop
+      if (!selectedRouteId || selectedRouteId !== routePublicId) {
+        setSelectedVehicleId(null);
+        setSelectedRouteId(routePublicId);
+      }
+
+      selectStop(`stop-${routePublicId}-${sequence}`, {
         sequence: stop.sequence,
         address: stop.address,
         status: stop.status,
         recipientName: stop.recipient,
         shipmentPublicId: stop.shipmentPublicId,
-        routePublicId: activeStops!.routeId,
+        routePublicId,
         lat: stop.lat,
         lng: stop.lng,
       });
@@ -68,7 +69,7 @@ export function FleetMapPage() {
         mapRef.current?.flyTo(stop.lng, stop.lat, 16, { bottom: bottomPadding });
       }
     },
-    [activeStops, selectStop, sheetState],
+    [routes, selectedRouteId, selectStop, sheetState],
   );
 
   const handleSelectVehicle = useCallback(
@@ -156,21 +157,12 @@ export function FleetMapPage() {
           ref={mapRef}
           vehicles={vehicles}
           routes={routes}
-          activeStops={activeStops}
           trailCoordinates={trailCoordinates}
           onVehicleClick={handleVehicleClick}
           onStopClick={handleStopClick}
+          selectedRouteId={activeRouteId}
           selectedStopSequence={selectedStopSequence}
           showArrows={showArrows}
-          renderStopPopup={(stop) => (
-            <StopPopup
-              sequence={stop.sequence}
-              address={stop.address}
-              status={stop.status}
-              recipientName={stop.recipient}
-              shipmentPublicId={stop.shipmentPublicId}
-            />
-          )}
         />
         <button
           type="button"
@@ -225,29 +217,4 @@ export function FleetMapPage() {
       </div>
     </div>
   );
-}
-
-/** Determine which stops to show based on current selection */
-function getActiveStops(
-  vehicles: FleetVehicle[],
-  routes: FleetRoute[],
-  selectedVehicleId: string | null,
-  selectedRouteId: string | null,
-): { routeId: string; stops: FleetStop[]; polyline?: string; color?: string } | null {
-  if (selectedRouteId) {
-    const route = routes.find((r) => r.publicId === selectedRouteId);
-    if (route) return { routeId: route.publicId, stops: route.stops, polyline: route.polyline, color: route.color };
-  }
-
-  if (selectedVehicleId) {
-    const vehicle = vehicles.find((v) => v.public_id === selectedVehicleId);
-    if (vehicle) {
-      const vehicleRoute = routes.find((r) => r.vehicleName === vehicle.name);
-      if (vehicleRoute) {
-        return { routeId: vehicleRoute.publicId, stops: vehicleRoute.stops, polyline: vehicleRoute.polyline, color: vehicleRoute.color };
-      }
-    }
-  }
-
-  return null;
 }
