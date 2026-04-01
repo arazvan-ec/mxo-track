@@ -49,6 +49,7 @@ final class RouteViewData
             etaMinutes: $s->etaMinutes,
             etaTime: $s->etaTime,
             etaDistanceKm: $s->etaDistanceKm,
+            shipmentPublicId: $s->shipmentPublicId,
         ), $view->stops);
 
         $originalStops = $view->originalStops !== null

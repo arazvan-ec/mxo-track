@@ -1,4 +1,4 @@
-import { useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
+import { useRef, useEffect, useImperativeHandle, forwardRef, type ReactNode } from 'react';
 import { MapCanvas, type MapCanvasHandle } from './MapCanvas';
 import { VehicleMarker } from './shared/VehicleMarker';
 import { StopMarker } from './shared/StopMarker';
@@ -19,10 +19,11 @@ interface Props {
   onVehicleClick?: (vehicleId: string) => void;
   onStopClick?: (sequence: number) => void;
   selectedStopSequence?: number | null;
+  renderStopPopup?: (stop: FleetStop) => ReactNode;
 }
 
 export const FleetMap = forwardRef<FleetMapHandle, Props>(function FleetMap(
-  { vehicles, routes, activeStops, trailCoordinates, showArrows, onVehicleClick, onStopClick, selectedStopSequence },
+  { vehicles, routes, activeStops, trailCoordinates, showArrows, onVehicleClick, onStopClick, selectedStopSequence, renderStopPopup },
   ref,
 ) {
   const canvasRef = useRef<MapCanvasHandle>(null);
@@ -90,6 +91,7 @@ export const FleetMap = forwardRef<FleetMapHandle, Props>(function FleetMap(
             routeColor={activeStops.color ?? '#3B82F6'}
             onClick={() => onStopClick?.(stop.sequence)}
             isSelected={stop.sequence === selectedStopSequence}
+            popupContent={renderStopPopup?.(stop)}
           />
         ) : null,
       )}

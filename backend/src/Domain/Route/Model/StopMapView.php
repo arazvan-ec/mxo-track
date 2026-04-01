@@ -21,6 +21,7 @@ final readonly class StopMapView
         public ?int $etaMinutes = null,
         public ?string $etaTime = null,
         public ?float $etaDistanceKm = null,
+        public ?string $shipmentPublicId = null,
     ) {}
 
     /**
@@ -55,6 +56,7 @@ final readonly class StopMapView
             etaMinutes: $etaData['minutes'] ?? null,
             etaTime: $etaTime,
             etaDistanceKm: isset($etaData['distance_km']) ? (float) $etaData['distance_km'] : null,
+            shipmentPublicId: $state['shipmentPublicId'] ?? null,
         );
     }
 
@@ -76,6 +78,7 @@ final readonly class StopMapView
             'etaMinutes' => $this->etaMinutes,
             'etaTime' => $this->etaTime,
             'etaDistanceKm' => $this->etaDistanceKm,
+            'shipmentPublicId' => $this->shipmentPublicId,
         ], static fn (mixed $v) => $v !== null && $v !== false);
     }
 }

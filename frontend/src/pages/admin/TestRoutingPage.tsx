@@ -4,6 +4,7 @@ import { usePageLayout } from '@/api/hooks/usePageLayout';
 import { MapCanvas, type MapCanvasHandle } from '@/components/maps/MapCanvas';
 import { RoutePolylineLayer } from '@/components/maps/layers/RoutePolylineLayer';
 import { StopMarkersLayer } from '@/components/maps/layers/StopMarkersLayer';
+import { StopPopup } from '@/components/maps/shared/StopPopup';
 import { ROUTE_COLORS } from '@/components/maps/shared/colors';
 import { BottomSheet, type BottomSheetState } from '@/components/bottom-sheet/BottomSheet';
 import { WidgetRenderer } from '@/components/bottom-sheet/WidgetRenderer';
@@ -154,6 +155,13 @@ export function TestRoutingPage() {
                   address: s.address,
                 }))}
                 onStopClick={() => handleStopClick(idx)}
+                renderPopup={(stop) => (
+                  <StopPopup
+                    sequence={stop.sequence}
+                    address={stop.address}
+                    status={stop.status}
+                  />
+                )}
               />
             );
           })}

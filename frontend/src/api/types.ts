@@ -74,6 +74,7 @@ export interface StopData {
   etaMinutes?: number;
   etaTime?: string;
   etaDistanceKm?: number;
+  shipmentPublicId?: string;
 }
 
 // Match MapUpdate VO — src/Domain/MapView/Model/MapUpdate.php
@@ -150,6 +151,8 @@ export interface FleetStop {
   sequence: number;
   status: string;
   recipient?: string;
+  shipmentPublicId?: string;
+  routePublicId?: string;
 }
 
 // ── Route Planner types ──────────────────────────────────────────────

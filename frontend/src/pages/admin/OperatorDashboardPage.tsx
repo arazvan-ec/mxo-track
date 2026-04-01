@@ -1,10 +1,18 @@
-import { useRef, useMemo, useState } from 'react';
+import { useRef, useMemo, useState, useCallback } from 'react';
 import { useFleetMapData } from '@/api/hooks/useFleetMapData';
 import { useFleetKpi } from '@/api/hooks/useFleetKpi';
+import { useMe } from '@/api/hooks/useMe';
 import { MapCanvas, type MapCanvasHandle } from '@/components/maps/MapCanvas';
 import { VehicleLayer, type VehicleData } from '@/components/maps/layers/VehicleLayer';
+import { StopMarkersLayer } from '@/components/maps/layers/StopMarkersLayer';
+import { RoutePolylineLayer } from '@/components/maps/layers/RoutePolylineLayer';
+import { StopPopup } from '@/components/maps/shared/StopPopup';
+import { VehiclePopup } from '@/components/fleet/VehiclePopup';
+import { EntityActionPanel } from '@/components/panels/EntityActionPanel';
+import { useMapSelection } from '@/hooks/useMapSelection';
 import type { FleetVehicle, FleetRoute, FleetStop } from '@/api/types';
 import { BottomSheet, type BottomSheetState } from '@/components/bottom-sheet/BottomSheet';
+import { SHEET_HEIGHTS } from '@/components/bottom-sheet/useBottomSheet';
 import { TopBar } from '@/components/layout/TopBar';
 import { NavigationSidebar } from '@/components/layout/NavigationSidebar';
 
@@ -12,10 +20,12 @@ export function OperatorDashboardPage() {
   const { vehicles, routes, isLoading, error, sseConnected } =
     useFleetMapData();
   const { data: kpi } = useFleetKpi();
+  const { data: me } = useMe();
   const mapRef = useRef<MapCanvasHandle>(null);
   const [navOpen, setNavOpen] = useState(false);
   const [sheetState, setSheetState] = useState<BottomSheetState>('collapsed');
   const [expandedRouteId, setExpandedRouteId] = useState<string | null>(null);
+  const { selection, selectStop, selectVehicle, clear } = useMapSelection();
 
   // Transform fleet vehicles to VehicleData for VehicleLayer
   const vehicleMarkers: VehicleData[] = useMemo(
@@ -58,6 +68,65 @@ export function OperatorDashboardPage() {
     (r) => r.status === 'ACTIVE' || r.status === 'PLANNED',
   );
 
+  // Build stop markers for all active routes
+  const allStopMarkers = useMemo(
+    () =>
+      activeRoutes.flatMap((route) =>
+        route.stops
+          .filter((s) => s.lat && s.lng)
+          .map((s) => ({
+            lat: s.lat,
+            lng: s.lng,
+            sequence: s.sequence,
+            status: s.status,
+            address: s.address,
+            recipientName: s.recipient,
+            shipmentPublicId: s.shipmentPublicId,
+            routePublicId: route.publicId,
+            routeColor: route.color,
+          })),
+      ),
+    [activeRoutes],
+  );
+
+  const handleStopClick = useCallback(
+    (sequence: number) => {
+      const stop = allStopMarkers.find((s) => s.sequence === sequence);
+      if (!stop) return;
+      selectStop(`stop-${stop.routePublicId}-${sequence}`, {
+        sequence: stop.sequence,
+        address: stop.address,
+        status: stop.status,
+        recipientName: stop.recipientName,
+        shipmentPublicId: stop.shipmentPublicId,
+        routePublicId: stop.routePublicId,
+        lat: stop.lat,
+        lng: stop.lng,
+      });
+      const bottomPadding = window.innerHeight * SHEET_HEIGHTS[sheetState];
+      mapRef.current?.flyTo(stop.lng, stop.lat, 16, { bottom: bottomPadding });
+    },
+    [allStopMarkers, selectStop, sheetState],
+  );
+
+  const handleVehicleClick = useCallback(
+    (publicId: string) => {
+      const vehicle = vehicles.find((v) => v.public_id === publicId);
+      if (!vehicle) return;
+      const route = routes.find((r) => r.vehicleName === vehicle.name);
+      selectVehicle(publicId, {
+        publicId,
+        name: vehicle.name,
+        speed: vehicle.last_position?.speed,
+        course: vehicle.last_position?.course,
+        driverName: vehicle.driver_name,
+        routePublicId: route?.publicId,
+        routeName: route?.name,
+      });
+    },
+    [vehicles, routes, selectVehicle],
+  );
+
   return (
     <div className="flex flex-col h-screen w-full">
       {navOpen && <NavigationSidebar mode="overlay" onClose={() => setNavOpen(false)} />}
@@ -68,7 +137,64 @@ export function OperatorDashboardPage() {
           initialCenter={initialCenter}
           initialZoom={6}
         >
-          <VehicleLayer vehicles={vehicleMarkers} />
+          {/* Route polylines */}
+          {activeRoutes.map((route) =>
+            route.polyline ? (
+              <RoutePolylineLayer
+                key={route.publicId}
+                id={route.publicId}
+                polyline={route.polyline}
+                color={route.color}
+              />
+            ) : null,
+          )}
+
+          {/* Stop markers for all routes */}
+          {activeRoutes.map((route) => (
+            <StopMarkersLayer
+              key={`stops-${route.publicId}`}
+              stops={route.stops
+                .filter((s) => s.lat && s.lng)
+                .map((s) => ({
+                  lat: s.lat,
+                  lng: s.lng,
+                  sequence: s.sequence,
+                  status: s.status,
+                  address: s.address,
+                  recipientName: s.recipient,
+                  shipmentPublicId: s.shipmentPublicId,
+                }))}
+              keyPrefix={`op-${route.publicId}-`}
+              onStopClick={handleStopClick}
+              routeColor={route.color}
+              selectedSequence={
+                selection?.type === 'stop' && selection.entityId.includes(route.publicId)
+                  ? (selection.data as { sequence: number }).sequence
+                  : null
+              }
+              renderPopup={(stop) => (
+                <StopPopup
+                  sequence={stop.sequence}
+                  address={stop.address}
+                  status={stop.status}
+                  recipientName={stop.recipientName}
+                  shipmentPublicId={stop.shipmentPublicId}
+                />
+              )}
+            />
+          ))}
+
+          {/* Vehicle markers */}
+          <VehicleLayer
+            vehicles={vehicleMarkers}
+            onVehicleClick={handleVehicleClick}
+            renderPopup={(v) => {
+              const vehicle = vehicles.find((fv) => fv.public_id === v.publicId);
+              if (!vehicle) return null;
+              const route = routes.find((r) => r.vehicleName === vehicle.name);
+              return <VehiclePopup vehicle={vehicle} routeName={route?.name} />;
+            }}
+          />
         </MapCanvas>
         <BottomSheet
           state={sheetState}
@@ -79,6 +205,15 @@ export function OperatorDashboardPage() {
           loadingText="Loading fleet data..."
         >
           <div className="px-4 pb-4 space-y-4">
+            {/* Entity Action Panel — shown when a map element is selected */}
+            {selection && (
+              <EntityActionPanel
+                selection={selection}
+                userRole={me?.role}
+                onClose={clear}
+              />
+            )}
+
             {/* SSE connected indicator + KPI section */}
             <div className="space-y-2">
               <div className="flex items-center gap-2">
@@ -134,6 +269,7 @@ export function OperatorDashboardPage() {
                         mapRef.current?.fitBounds(pts);
                       }
                     }}
+                    onStopClick={handleStopClick}
                   />
                 ))
               )}
@@ -167,11 +303,13 @@ function RouteListItem({
   expanded,
   onToggle,
   onFocus,
+  onStopClick,
 }: {
   route: FleetRoute;
   expanded: boolean;
   onToggle: () => void;
   onFocus: () => void;
+  onStopClick?: (sequence: number) => void;
 }) {
   const delivered = route.deliveredStops;
   const total = route.totalStops;
@@ -263,7 +401,11 @@ function RouteListItem({
       {expanded && sortedStops.length > 0 && (
         <div className="border-t border-slate-600/50 px-3 pb-3 pt-2 space-y-1.5">
           {sortedStops.map((stop) => (
-            <StopItem key={`${route.publicId}-${stop.sequence}`} stop={stop} />
+            <StopItem
+              key={`${route.publicId}-${stop.sequence}`}
+              stop={stop}
+              onClick={() => onStopClick?.(stop.sequence)}
+            />
           ))}
         </div>
       )}
@@ -271,7 +413,7 @@ function RouteListItem({
   );
 }
 
-function StopItem({ stop }: { stop: FleetStop }) {
+function StopItem({ stop, onClick }: { stop: FleetStop; onClick?: () => void }) {
   const statusConfig: Record<string, { icon: string; color: string }> = {
     DELIVERED: { icon: '\u2713', color: 'text-emerald-400' },
     SKIPPED: { icon: '\u2717', color: 'text-red-400' },
@@ -281,7 +423,11 @@ function StopItem({ stop }: { stop: FleetStop }) {
   const cfg = statusConfig[stop.status] ?? statusConfig.PENDING;
 
   return (
-    <div className="flex items-start gap-2 py-1">
+    <button
+      type="button"
+      className="flex items-start gap-2 py-1 w-full text-left hover:bg-slate-600/30 rounded px-1 -mx-1 transition-colors"
+      onClick={onClick}
+    >
       <span className={`text-xs font-mono w-4 text-center flex-shrink-0 ${cfg.color}`}>
         {cfg.icon}
       </span>
@@ -297,6 +443,6 @@ function StopItem({ stop }: { stop: FleetStop }) {
       <span className={`text-[9px] font-medium flex-shrink-0 ${cfg.color}`}>
         {stop.status}
       </span>
-    </div>
+    </button>
   );
 }

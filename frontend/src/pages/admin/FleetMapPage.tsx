@@ -2,8 +2,12 @@ import { useState, useCallback, useRef } from 'react';
 import { useFleetMapData } from '@/api/hooks/useFleetMapData';
 import { useFleetKpi } from '@/api/hooks/useFleetKpi';
 import { useVehicleTrail } from '@/api/hooks/useVehicleTrail';
+import { useMe } from '@/api/hooks/useMe';
 import { FleetMap, type FleetMapHandle } from '@/components/maps/FleetMap';
 import { FleetSidebar } from '@/components/fleet/FleetSidebar';
+import { StopPopup } from '@/components/maps/shared/StopPopup';
+import { EntityActionPanel } from '@/components/panels/EntityActionPanel';
+import { useMapSelection } from '@/hooks/useMapSelection';
 import { BottomSheet, type BottomSheetState } from '@/components/bottom-sheet/BottomSheet';
 import { TopBar } from '@/components/layout/TopBar';
 import { NavigationSidebar } from '@/components/layout/NavigationSidebar';
@@ -13,14 +17,16 @@ import type { FleetVehicle, FleetRoute, FleetStop } from '@/api/types';
 export function FleetMapPage() {
   const { vehicles, routes, isLoading, error, sseConnected } = useFleetMapData();
   const { data: kpi } = useFleetKpi();
+  const { data: me } = useMe();
   const mapRef = useRef<FleetMapHandle>(null);
 
   const [navOpen, setNavOpen] = useState(false);
   const [sheetState, setSheetState] = useState<BottomSheetState>('collapsed');
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
-  const [selectedStopSequence, setSelectedStopSequence] = useState<number | null>(null);
   const [showArrows, setShowArrows] = useState(true);
+
+  const { selection, selectStop, selectVehicle, clear } = useMapSelection();
 
   // Trail for selected vehicle
   const { coordinates: trailCoordinates } = useVehicleTrail(selectedVehicleId);
@@ -43,28 +49,50 @@ export function FleetMapPage() {
 
   const handleStopClick = useCallback(
     (sequence: number) => {
-      setSelectedStopSequence(sequence === selectedStopSequence ? null : sequence);
-
       const stop = activeStops?.stops.find((s) => s.sequence === sequence);
-      if (stop?.lat && stop?.lng) {
+      if (!stop) return;
+
+      selectStop(`stop-${activeStops!.routeId}-${sequence}`, {
+        sequence: stop.sequence,
+        address: stop.address,
+        status: stop.status,
+        recipientName: stop.recipient,
+        shipmentPublicId: stop.shipmentPublicId,
+        routePublicId: activeStops!.routeId,
+        lat: stop.lat,
+        lng: stop.lng,
+      });
+
+      if (stop.lat && stop.lng) {
         const bottomPadding = window.innerHeight * SHEET_HEIGHTS[sheetState];
         mapRef.current?.flyTo(stop.lng, stop.lat, 16, { bottom: bottomPadding });
       }
     },
-    [activeStops, selectedStopSequence],
+    [activeStops, selectStop, sheetState],
   );
 
   const handleSelectVehicle = useCallback(
     (vehicle: FleetVehicle) => {
       setSelectedRouteId(null);
-      setSelectedStopSequence(null);
 
       if (selectedVehicleId === vehicle.public_id) {
         setSelectedVehicleId(null);
+        clear();
         return;
       }
 
       setSelectedVehicleId(vehicle.public_id);
+      const route = routes.find((r) => r.vehicleName === vehicle.name);
+
+      selectVehicle(vehicle.public_id, {
+        publicId: vehicle.public_id,
+        name: vehicle.name,
+        speed: vehicle.last_position?.speed,
+        course: vehicle.last_position?.course,
+        driverName: vehicle.driver_name,
+        routePublicId: route?.publicId,
+        routeName: route?.name,
+      });
 
       // Fly to vehicle position
       if (vehicle.last_position) {
@@ -81,13 +109,13 @@ export function FleetMapPage() {
         }
       }
     },
-    [selectedVehicleId, routes, vehicles],
+    [selectedVehicleId, routes, vehicles, selectVehicle, clear, sheetState],
   );
 
   const handleSelectRoute = useCallback(
     (route: FleetRoute) => {
       setSelectedVehicleId(null);
-      setSelectedStopSequence(null);
+      clear();
 
       if (selectedRouteId === route.publicId) {
         setSelectedRouteId(null);
@@ -102,7 +130,7 @@ export function FleetMapPage() {
         mapRef.current?.fitBounds(validStops);
       }
     },
-    [selectedRouteId],
+    [selectedRouteId, clear],
   );
 
   const handleVehicleClick = useCallback(
@@ -112,6 +140,12 @@ export function FleetMapPage() {
     },
     [vehicles, handleSelectVehicle],
   );
+
+  // Selected stop sequence for marker highlighting
+  const selectedStopSequence =
+    selection?.type === 'stop'
+      ? (selection.data as { sequence: number }).sequence
+      : null;
 
   return (
     <div className="flex flex-col h-screen w-full">
@@ -128,6 +162,15 @@ export function FleetMapPage() {
           onStopClick={handleStopClick}
           selectedStopSequence={selectedStopSequence}
           showArrows={showArrows}
+          renderStopPopup={(stop) => (
+            <StopPopup
+              sequence={stop.sequence}
+              address={stop.address}
+              status={stop.status}
+              recipientName={stop.recipient}
+              shipmentPublicId={stop.shipmentPublicId}
+            />
+          )}
         />
         <button
           type="button"
@@ -137,9 +180,9 @@ export function FleetMapPage() {
               : 'bg-slate-800/50 text-slate-400 border-slate-700 hover:bg-slate-700/50'
           }`}
           onClick={() => setShowArrows((v) => !v)}
-          title={showArrows ? 'Ocultar flechas de dirección' : 'Mostrar flechas de dirección'}
+          title={showArrows ? 'Ocultar flechas de direccion' : 'Mostrar flechas de direccion'}
         >
-          ▶▶ {showArrows ? 'ON' : 'OFF'}
+          {showArrows ? 'ON' : 'OFF'}
         </button>
         <BottomSheet
           state={sheetState}
@@ -158,6 +201,15 @@ export function FleetMapPage() {
           loadingText="Loading fleet data..."
         >
           <div className="px-4 pb-4 space-y-4">
+            {/* Entity Action Panel */}
+            {selection && (
+              <EntityActionPanel
+                selection={selection}
+                userRole={me?.role}
+                onClose={clear}
+              />
+            )}
+
             <FleetSidebar
               vehicles={vehicles}
               routes={routes}

@@ -215,6 +215,7 @@ final class RouteSnapshotManager
                 'lng' => $stop->getLongitude(),
                 'isOrigin' => $stop->isOrigin(),
                 'status' => $stop->getStatus()->value,
+                'shipmentPublicId' => $stop->getShipment()?->getPublicIdString(),
             ];
 
             if ($stop->getDeliveredAt() !== null) {
