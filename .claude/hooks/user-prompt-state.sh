@@ -188,10 +188,27 @@ if [ "$FLOW_TYPE" = "full" ]; then
   DEV_SUFFIX=""
   [ "$DEV_ACTIVE" = "true" ] && DEV_SUFFIX=" | DEVIATION ACTIVE"
 
+  # Build visual phase progress bar (✅🔄⬚)
+  PHASE_BAR=""
+  for i in "${!PHASES[@]}"; do
+    IDX=$((i + 1))
+    if [ "$IDX" -lt "$CURRENT_INDEX" ]; then
+      PHASE_BAR="${PHASE_BAR}✅"
+    elif [ "$IDX" -eq "$CURRENT_INDEX" ]; then
+      PHASE_BAR="${PHASE_BAR}🔄"
+    else
+      PHASE_BAR="${PHASE_BAR}⬚"
+    fi
+  done
+
   echo "── WORKFLOW STATE ──"
   echo "Flow: full | Phase: $CURRENT_PHASE ($CURRENT_INDEX/$TOTAL)${DEV_SUFFIX}"
+  echo "Progress: $PHASE_BAR"
   echo "Evidence: $EVIDENCE"
   echo "Next: $NEXT"
+  echo ""
+  echo "DISPLAY RULE: Start your response with this progress header (copy exactly):"
+  echo "${PHASE_BAR} ${CURRENT_PHASE^} (${CURRENT_INDEX}/${TOTAL}) — [describe what was completed with concrete data]"
   echo "────────────────────"
   exit 0
 fi

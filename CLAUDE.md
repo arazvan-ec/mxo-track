@@ -225,24 +225,49 @@ This produces status lines like:
 **Regla obligatoria:** Cada mensaje al usuario DEBE incluir indicador de progreso visible.
 No basta con actualizar `session-state.json` — el progreso se comunica en el texto del mensaje.
 
+**Principio clave: RESULTADO, no proceso.** Los mensajes comunican qué se completó y qué
+sigue — nunca el proceso interno de pensamiento. El usuario no necesita saber "voy a leer
+archivos" o "necesito entender X". Solo necesita saber qué se hizo y qué falta.
+
+**PROHIBIDO:**
+- Narrar intenciones: "Voy a hacer...", "Necesito ver...", "Primero tengo que..."
+- Repetir lo obvio: "Tengo toda la info", "Ahora voy a implementar"
+- Mensajes sin contenido útil: solo texto que describe lo que harás a continuación
+
+**CORRECTO:** Cada mensaje incluye (1) qué se completó con dato concreto, (2) qué sigue.
+
 **En cada transición de fase:**
 ```
-✅ Consult (1/8) — Revisé decision log y execution logs recientes
-🔄 Brainstorm (2/8) — Proponiendo diseño...
+✅ Consult (1/8) — 3 decision logs relevantes, 2 execution logs recientes
+🔄 Brainstorm (2/8) — 8 páginas analizadas, 17 componentes mapeados
 ```
 
 **En cada tarea durante implementación:**
 ```
 📍 Tarea 1/3 — Derivar visibleRoutes
-[qué se hizo + resultado]
+Resultado: 3 archivos modificados, TypeScript limpio
 
 📍 Tarea 2/3 — Usar visibleRoutes en capas del mapa
-[qué se hizo + resultado]
+Resultado: FleetMap renderiza 46 paradas de 3 rutas
 ```
 
 **En verificación:**
 ```
 🧪 Verificación — TypeScript: ✅ | Lint: ✅ | Tests: ✅ (602 tests, 0 nuevos fallos)
+```
+
+**Entre fases (cuando se lanzan herramientas/agentes):** Un solo mensaje corto con
+lo completado + lo que sigue. NO narrar cada paso intermedio.
+```
+✅ 6 widgets implementados, registry actualizado (10/10)
+🔄 Migrando 7 páginas al widget system (5 en paralelo)
+```
+
+**Hook-driven header:** El `UserPromptSubmit` hook inyecta un `DISPLAY RULE` con el
+formato exacto del header. **Copia el template del hook** al inicio de cada respuesta,
+reemplazando `[describe what was completed]` con datos concretos. Ejemplo:
+```
+✅✅🔄⬚⬚⬚⬚⬚ Planning (3/8) — Spec aprobado, 12 tareas en plan
 ```
 
 **Formato:** Usar prefijos emoji (✅ completado, 🔄 en curso, ⬚ pendiente, ❌ fallo)
