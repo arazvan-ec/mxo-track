@@ -106,11 +106,5 @@
       }
     }
   },
-  "plugins": [
-    {
-      "name": "multi-agent-workflow",
-      "path": ".claude/plugins/multi-agent-workflow",
-      "enabled": true
-    }
-  ]
+  "plugins": []
 }
