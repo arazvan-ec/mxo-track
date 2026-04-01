@@ -3,6 +3,8 @@ import { useFleetMapData } from '@/api/hooks/useFleetMapData';
 import { useFleetKpi } from '@/api/hooks/useFleetKpi';
 import { MapCanvas, type MapCanvasHandle } from '@/components/maps/MapCanvas';
 import { VehicleLayer, type VehicleData } from '@/components/maps/layers/VehicleLayer';
+import { RoutePolylineLayer } from '@/components/maps/layers/RoutePolylineLayer';
+import { StopMarkersLayer } from '@/components/maps/layers/StopMarkersLayer';
 import type { FleetVehicle, FleetRoute, FleetStop } from '@/api/types';
 import { BottomSheet, type BottomSheetState } from '@/components/bottom-sheet/BottomSheet';
 import { TopBar } from '@/components/layout/TopBar';
@@ -58,6 +60,11 @@ export function OperatorDashboardPage() {
     (r) => r.status === 'ACTIVE' || r.status === 'PLANNED',
   );
 
+  const selectedRoute = useMemo(
+    () => (expandedRouteId ? activeRoutes.find((r) => r.publicId === expandedRouteId) : undefined),
+    [expandedRouteId, activeRoutes],
+  );
+
   return (
     <div className="flex flex-col h-screen w-full">
       {navOpen && <NavigationSidebar mode="overlay" onClose={() => setNavOpen(false)} />}
@@ -69,6 +76,24 @@ export function OperatorDashboardPage() {
           initialZoom={6}
         >
           <VehicleLayer vehicles={vehicleMarkers} />
+
+          {/* Route polyline when a route is selected */}
+          {selectedRoute?.polyline && (
+            <RoutePolylineLayer
+              id={selectedRoute.publicId}
+              polyline={selectedRoute.polyline}
+              color={selectedRoute.color}
+            />
+          )}
+
+          {/* Stop markers when a route is selected */}
+          {selectedRoute && (
+            <StopMarkersLayer
+              stops={selectedRoute.stops}
+              keyPrefix={`op-${selectedRoute.publicId}-`}
+              routeColor={selectedRoute.color}
+            />
+          )}
         </MapCanvas>
         <BottomSheet
           state={sheetState}
