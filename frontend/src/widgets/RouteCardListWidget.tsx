@@ -1,6 +1,6 @@
 import type { TestRoutingRoute, TestRoutingStop } from '@/api/hooks/useTestRoutingData';
 import { ROUTE_COLORS } from '@/components/maps/shared/colors';
-import type { FleetRoute, FleetStop } from '@/api/types';
+import type { FleetRoute } from '@/api/types';
 import type { WidgetProps } from './types';
 
 interface RouteCardListData {
