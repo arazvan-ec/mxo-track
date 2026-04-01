@@ -204,6 +204,34 @@ This produces status lines like:
 ```
 📍 full | Implementation (4/8) | ✅🔄⬚⬚⬚ t2/5: Add toggle button (TDD, commit after each task)
 ```
+
+### Message Progress Display
+
+**Regla obligatoria:** Cada mensaje al usuario DEBE incluir indicador de progreso visible.
+No basta con actualizar `session-state.json` — el progreso se comunica en el texto del mensaje.
+
+**En cada transición de fase:**
+```
+✅ Consult (1/8) — Revisé decision log y execution logs recientes
+🔄 Brainstorm (2/8) — Proponiendo diseño...
+```
+
+**En cada tarea durante implementación:**
+```
+📍 Tarea 1/3 — Derivar visibleRoutes
+[qué se hizo + resultado]
+
+📍 Tarea 2/3 — Usar visibleRoutes en capas del mapa
+[qué se hizo + resultado]
+```
+
+**En verificación:**
+```
+🧪 Verificación — TypeScript: ✅ | Lint: ✅ | Tests: ✅ (602 tests, 0 nuevos fallos)
+```
+
+**Formato:** Usar prefijos emoji (✅ completado, 🔄 en curso, ⬚ pendiente, ❌ fallo)
+para que el estado sea visible de un vistazo. Idioma: español.
 <!-- GENERIC-END -->
 
 ---
