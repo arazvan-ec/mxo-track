@@ -56,6 +56,12 @@
         "hooks": [
           {
             "type": "command",
+            "command": "/home/user/mxo-track/.claude/hooks/auto-evidence.sh",
+            "timeout": 2,
+            "statusMessage": "Detectando evidencia..."
+          },
+          {
+            "type": "command",
             "command": "/home/user/mxo-track/.claude/hooks/workflow-status-line.sh",
             "timeout": 2,
             "statusMessage": "Actualizando progreso del proceso..."
