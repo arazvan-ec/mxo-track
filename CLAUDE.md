@@ -263,6 +263,13 @@ lo completado + lo que sigue. NO narrar cada paso intermedio.
 🔄 Migrando 7 páginas al widget system (5 en paralelo)
 ```
 
+**Hook-driven header:** El `UserPromptSubmit` hook inyecta un `DISPLAY RULE` con el
+formato exacto del header. **Copia el template del hook** al inicio de cada respuesta,
+reemplazando `[describe what was completed]` con datos concretos. Ejemplo:
+```
+✅✅🔄⬚⬚⬚⬚⬚ Planning (3/8) — Spec aprobado, 12 tareas en plan
+```
+
 **Formato:** Usar prefijos emoji (✅ completado, 🔄 en curso, ⬚ pendiente, ❌ fallo)
 para que el estado sea visible de un vistazo. Idioma: español.
 <!-- GENERIC-END -->
