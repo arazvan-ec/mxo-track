@@ -151,6 +151,11 @@ export interface FleetStop {
   sequence: number;
   status: string;
   recipient?: string;
+  recipientName?: string;
+  recipientPhone?: string;
+  deliveredAt?: string;
+  exceptionCode?: string;
+  exceptionNotes?: string;
   shipmentPublicId?: string;
   routePublicId?: string;
 }
