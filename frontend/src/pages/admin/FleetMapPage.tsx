@@ -158,9 +158,10 @@ export function FleetMapPage() {
       vehicles,
       selectedRouteId,
       onSelectRoute: handleSelectRoute,
+      onStopClick: handleStopClick,
       selectedVehicleId,
     }),
-    [kpi, routes, vehicles, selectedRouteId, handleSelectRoute, selectedVehicleId],
+    [kpi, routes, vehicles, selectedRouteId, handleSelectRoute, handleStopClick, selectedVehicleId],
   );
 
   return (

@@ -1,6 +1,6 @@
 import type { TestRoutingRoute, TestRoutingStop } from '@/api/hooks/useTestRoutingData';
 import { ROUTE_COLORS } from '@/components/maps/shared/colors';
-import type { FleetRoute } from '@/api/types';
+import type { FleetRoute, FleetStop } from '@/api/types';
 import type { WidgetProps } from './types';
 
 interface RouteCardListData {
@@ -12,10 +12,11 @@ interface RouteCardListData {
   routes?: FleetRoute[];
   selectedRouteId?: string | null;
   onSelectRoute?: (route: FleetRoute) => void;
+  onStopClick?: (routePublicId: string, sequence: number) => void;
 }
 
 export function RouteCardListWidget({ data }: WidgetProps) {
-  const { routesData, highlightedRouteIdx, onRouteSelect, routes, selectedRouteId, onSelectRoute } =
+  const { routesData, highlightedRouteIdx, onRouteSelect, routes, selectedRouteId, onSelectRoute, onStopClick } =
     data as RouteCardListData;
 
   // Fleet routes mode
@@ -28,6 +29,7 @@ export function RouteCardListWidget({ data }: WidgetProps) {
             route={route}
             selected={selectedRouteId === route.publicId}
             onSelect={() => onSelectRoute?.(route)}
+            onStopClick={onStopClick}
           />
         ))}
       </div>
@@ -52,15 +54,24 @@ export function RouteCardListWidget({ data }: WidgetProps) {
   );
 }
 
-/** Fleet route card — shows name, status, vehicle, stop progress */
+const STOP_STATUS_STYLES: Record<string, { color: string; bg: string; label: string }> = {
+  PENDING: { color: '#94A3B8', bg: '#94A3B820', label: 'Pending' },
+  DELIVERED: { color: '#10B981', bg: '#10B98120', label: 'Delivered' },
+  EXCEPTION: { color: '#EF4444', bg: '#EF444420', label: 'Exception' },
+  SKIPPED: { color: '#F59E0B', bg: '#F59E0B20', label: 'Skipped' },
+};
+
+/** Fleet route card — shows name, status, vehicle, stop progress. Expands to show stops when selected. */
 function FleetRouteCard({
   route,
   selected,
   onSelect,
+  onStopClick,
 }: {
   route: FleetRoute;
   selected: boolean;
   onSelect: () => void;
+  onStopClick?: (routePublicId: string, sequence: number) => void;
 }) {
   const STATUS_COLORS: Record<string, string> = {
     PLANNED: '#3B82F6',
@@ -72,9 +83,7 @@ function FleetRouteCard({
   const statusColor = STATUS_COLORS[route.status] ?? '#6B7280';
 
   return (
-    <button
-      type="button"
-      onClick={onSelect}
+    <div
       className={`w-full text-left rounded-lg overflow-hidden transition-all duration-200 border ${
         selected
           ? 'ring-2 ring-blue-500/60 shadow-lg shadow-blue-500/10 border-blue-500/40'
@@ -82,7 +91,7 @@ function FleetRouteCard({
       }`}
       style={{ backgroundColor: 'var(--color-surface-elevated)' }}
     >
-      <div className="px-3 py-2.5">
+      <button type="button" onClick={onSelect} className="w-full text-left px-3 py-2.5">
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2 min-w-0">
             <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: route.color }} />
@@ -109,8 +118,51 @@ function FleetRouteCard({
             {route.driverName}
           </div>
         )}
-      </div>
-    </button>
+      </button>
+
+      {/* Expandable stop list */}
+      {selected && route.stops.length > 0 && (
+        <div className="border-t border-slate-700/50 max-h-60 overflow-y-auto">
+          {route.stops.map((stop) => {
+            const style = STOP_STATUS_STYLES[stop.status] ?? STOP_STATUS_STYLES.PENDING;
+            return (
+              <button
+                key={stop.sequence}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onStopClick?.(route.publicId, stop.sequence);
+                }}
+                className="w-full text-left px-3 py-1.5 flex items-center gap-2 hover:bg-slate-700/30 transition-colors"
+              >
+                <span
+                  className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0"
+                  style={{ backgroundColor: route.color, color: '#fff' }}
+                >
+                  {stop.sequence}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs truncate" style={{ color: 'var(--color-text-primary)' }}>
+                    {stop.recipient ?? stop.address}
+                  </div>
+                  {stop.recipient && (
+                    <div className="text-[10px] truncate" style={{ color: 'var(--color-text-muted)' }}>
+                      {stop.address}
+                    </div>
+                  )}
+                </div>
+                <span
+                  className="text-[9px] font-semibold uppercase px-1 py-0.5 rounded flex-shrink-0"
+                  style={{ color: style.color, backgroundColor: style.bg }}
+                >
+                  {style.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
 
