@@ -2,12 +2,15 @@ import { useCallback, useRef, useState } from 'react';
 import { useParams } from 'react-router';
 import { useRouteMapData } from '@/api/hooks/useRouteMapData';
 import { useVehicleTrail } from '@/api/hooks/useVehicleTrail';
+import { useMe } from '@/api/hooks/useMe';
 import { MapCanvas, type MapCanvasHandle } from '@/components/maps/MapCanvas';
 import { StopMarkersLayer } from '@/components/maps/layers/StopMarkersLayer';
 import { RoutePolylineLayer } from '@/components/maps/layers/RoutePolylineLayer';
 import { VehicleLayer } from '@/components/maps/layers/VehicleLayer';
 import { VehicleTrailLayer } from '@/components/maps/layers/VehicleTrailLayer';
-import { StopListPanel, RouteMetricsPanel, VehicleInfoPanel, RouteSummaryBar } from '@/components/panels';
+import { StopPopup } from '@/components/maps/shared/StopPopup';
+import { StopListPanel, RouteMetricsPanel, VehicleInfoPanel, RouteSummaryBar, EntityActionPanel } from '@/components/panels';
+import { useMapSelection } from '@/hooks/useMapSelection';
 import { BottomSheet, type BottomSheetState } from '@/components/bottom-sheet/BottomSheet';
 import { TopBar } from '@/components/layout/TopBar';
 import { NavigationSidebar } from '@/components/layout/NavigationSidebar';
@@ -17,10 +20,11 @@ import type { StopData, RouteData } from '@/api/types';
 export function RouteDetailPage() {
   const { publicId } = useParams<{ publicId: string }>();
   const { mapData, isLoading, error, sseConnected } = useRouteMapData(publicId);
+  const { data: me } = useMe();
   const mapRef = useRef<MapCanvasHandle>(null);
-  const [selectedStopSequence, setSelectedStopSequence] = useState<number | null>(null);
   const [navOpen, setNavOpen] = useState(false);
   const [sheetState, setSheetState] = useState<BottomSheetState>('collapsed');
+  const { selection, selectStop, clear } = useMapSelection();
 
   const contentHeight = window.innerHeight * SHEET_HEIGHTS[sheetState] - 64;
 
@@ -31,19 +35,40 @@ export function RouteDetailPage() {
     mapData?.vehiclePublicId ?? null,
   );
 
-  // Stop click -> fly to stop (with bottom padding for sheet)
+  // Selected stop sequence for highlighting
+  const selectedStopSequence =
+    selection?.type === 'stop'
+      ? (selection.data as { sequence: number }).sequence
+      : null;
+
+  // Stop click -> select + fly to stop
   const handleStopClick = useCallback(
     (sequence: number) => {
-      setSelectedStopSequence(sequence === selectedStopSequence ? null : sequence);
       if (!route) return;
-
       const stop = route.stops.find((s) => s.sequence === sequence);
-      if (stop?.lat != null && stop?.lng != null) {
+      if (!stop) return;
+
+      selectStop(`stop-${route.publicId}-${sequence}`, {
+        sequence: stop.sequence,
+        address: stop.address,
+        status: stop.status,
+        recipientName: stop.recipientName,
+        recipientPhone: stop.recipientPhone,
+        shipmentPublicId: stop.shipmentPublicId,
+        routePublicId: route.publicId,
+        etaTime: stop.etaTime,
+        deliveredAt: stop.deliveredAt,
+        exceptionCode: stop.exceptionCode,
+        lat: stop.lat,
+        lng: stop.lng,
+      });
+
+      if (stop.lat != null && stop.lng != null) {
         const bottomPadding = window.innerHeight * SHEET_HEIGHTS[sheetState];
         mapRef.current?.flyTo(stop.lng, stop.lat, 16, { bottom: bottomPadding });
       }
     },
-    [route, selectedStopSequence, sheetState],
+    [route, selectStop, sheetState],
   );
 
   // Build metrics from route data (merge metrics + timing)
@@ -77,6 +102,8 @@ export function RouteDetailPage() {
       sequence: s.sequence,
       status: s.status,
       address: s.address,
+      recipientName: s.recipientName,
+      shipmentPublicId: s.shipmentPublicId,
     }));
 
   // Build vehicle markers
@@ -124,6 +151,15 @@ export function RouteDetailPage() {
             onStopClick={handleStopClick}
             routeColor={route?.color}
             selectedSequence={selectedStopSequence}
+            renderPopup={(stop) => (
+              <StopPopup
+                sequence={stop.sequence}
+                address={stop.address}
+                status={stop.status}
+                recipientName={stop.recipientName}
+                shipmentPublicId={stop.shipmentPublicId}
+              />
+            )}
           />
 
           {/* Vehicle marker */}
@@ -142,6 +178,15 @@ export function RouteDetailPage() {
           loadingText="Loading route data..."
         >
           {route && <div className="px-4 pb-4 space-y-3">
+            {/* Entity Action Panel */}
+            {selection && (
+              <EntityActionPanel
+                selection={selection}
+                userRole={me?.role}
+                onClose={clear}
+              />
+            )}
+
             {/* Always visible: summary bar + SSE indicator */}
             <div className="flex items-center gap-2">
               <RouteSummaryBar
