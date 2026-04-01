@@ -1,7 +1,8 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router';
 import { useRouteMapData } from '@/api/hooks/useRouteMapData';
 import { useVehicleTrail } from '@/api/hooks/useVehicleTrail';
+import { usePageLayout } from '@/api/hooks/usePageLayout';
 import { useMe } from '@/api/hooks/useMe';
 import { MapCanvas, type MapCanvasHandle } from '@/components/maps/MapCanvas';
 import { StopMarkersLayer } from '@/components/maps/layers/StopMarkersLayer';
@@ -9,9 +10,10 @@ import { RoutePolylineLayer } from '@/components/maps/layers/RoutePolylineLayer'
 import { VehicleLayer } from '@/components/maps/layers/VehicleLayer';
 import { VehicleTrailLayer } from '@/components/maps/layers/VehicleTrailLayer';
 import { StopPopup } from '@/components/maps/shared/StopPopup';
-import { StopListPanel, RouteMetricsPanel, VehicleInfoPanel, RouteSummaryBar, EntityActionPanel } from '@/components/panels';
+import { RouteSummaryBar, EntityActionPanel } from '@/components/panels';
 import { useMapSelection } from '@/hooks/useMapSelection';
 import { BottomSheet, type BottomSheetState } from '@/components/bottom-sheet/BottomSheet';
+import { WidgetRenderer } from '@/components/bottom-sheet/WidgetRenderer';
 import { TopBar } from '@/components/layout/TopBar';
 import { NavigationSidebar } from '@/components/layout/NavigationSidebar';
 import { SHEET_HEIGHTS } from '@/components/bottom-sheet/useBottomSheet';
@@ -20,13 +22,12 @@ import type { StopData, RouteData } from '@/api/types';
 export function RouteDetailPage() {
   const { publicId } = useParams<{ publicId: string }>();
   const { mapData, isLoading, error, sseConnected } = useRouteMapData(publicId);
+  const { layout } = usePageLayout('route_detail');
   const { data: me } = useMe();
   const mapRef = useRef<MapCanvasHandle>(null);
   const [navOpen, setNavOpen] = useState(false);
   const [sheetState, setSheetState] = useState<BottomSheetState>('collapsed');
   const { selection, selectStop, clear } = useMapSelection();
-
-  const contentHeight = window.innerHeight * SHEET_HEIGHTS[sheetState] - 64;
 
   const route: RouteData | null = mapData?.routes?.[0] ?? null;
 
@@ -92,6 +93,21 @@ export function RouteDetailPage() {
           speed: mapData?.vehiclePosition?.speed,
         }
       : null;
+
+  // Page data passed to all widgets
+  const pageData = useMemo(
+    () => ({
+      stops: route?.stops ?? [],
+      selectedSequence: selectedStopSequence,
+      selectedStopSequence,
+      onStopClick: handleStopClick,
+      showEta: true,
+      vehicleInfo,
+      metrics,
+      route,
+    }),
+    [route, selectedStopSequence, handleStopClick, vehicleInfo, metrics],
+  );
 
   // Build stops for map layers
   const mapStops = (route?.stops ?? [])
@@ -177,53 +193,35 @@ export function RouteDetailPage() {
           error={error}
           loadingText="Loading route data..."
         >
-          {route && <div className="px-4 pb-4 space-y-3">
-            {/* Entity Action Panel */}
-            {selection && (
-              <EntityActionPanel
-                selection={selection}
-                userRole={me?.role}
-                onClose={clear}
-              />
-            )}
-
-            {/* Always visible: summary bar + SSE indicator */}
-            <div className="flex items-center gap-2">
-              <RouteSummaryBar
-                status={route.status ?? 'PLANNED'}
-                deliveredCount={deliveredCount}
-                totalCount={totalCount}
-                remainingDistance={metrics?.distanceAfterKm != null ? `${metrics.distanceAfterKm.toFixed(1)} km` : undefined}
-                nextEta={nextPendingStop?.etaTime}
-              />
-              {sseConnected && (
-                <span className="flex items-center gap-1 text-[10px] text-emerald-500 flex-shrink-0">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  Live
-                </span>
+          {route && (
+            <div className="space-y-3">
+              {selection && (
+                <div className="px-4">
+                  <EntityActionPanel
+                    selection={selection}
+                    userRole={me?.role}
+                    onClose={clear}
+                  />
+                </div>
               )}
-            </div>
-
-            {/* Medium zone: metrics (visible when enough space) */}
-            {contentHeight >= 350 && <RouteMetricsPanel metrics={metrics} />}
-
-            {/* Large zone: vehicle info */}
-            {contentHeight >= 450 && <VehicleInfoPanel vehicle={vehicleInfo} />}
-
-            {/* Always visible: stops */}
-            <div>
-              <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">
-                Stops ({totalCount})
+              <div className="px-4 flex items-center gap-2">
+                <RouteSummaryBar
+                  status={route.status ?? 'PLANNED'}
+                  deliveredCount={deliveredCount}
+                  totalCount={totalCount}
+                  remainingDistance={metrics?.distanceAfterKm != null ? `${metrics.distanceAfterKm.toFixed(1)} km` : undefined}
+                  nextEta={nextPendingStop?.etaTime}
+                />
+                {sseConnected && (
+                  <span className="flex items-center gap-1 text-[10px] text-emerald-500 flex-shrink-0">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    Live
+                  </span>
+                )}
               </div>
-              <StopListPanel
-                stops={route.stops}
-                selectedSequence={selectedStopSequence}
-                onStopClick={handleStopClick}
-                showEta
-                maxItems={contentHeight < 200 ? 2 : undefined}
-              />
+              <WidgetRenderer layout={layout} sheetState={sheetState} pageData={pageData} />
             </div>
-          </div>}
+          )}
         </BottomSheet>
       </div>
     </div>

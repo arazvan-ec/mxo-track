@@ -1,13 +1,14 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import { useFleetMapData } from '@/api/hooks/useFleetMapData';
 import { useFleetKpi } from '@/api/hooks/useFleetKpi';
 import { useVehicleTrail } from '@/api/hooks/useVehicleTrail';
 import { useMe } from '@/api/hooks/useMe';
+import { usePageLayout } from '@/api/hooks/usePageLayout';
 import { FleetMap, type FleetMapHandle } from '@/components/maps/FleetMap';
-import { FleetSidebar } from '@/components/fleet/FleetSidebar';
 import { EntityActionPanel } from '@/components/panels/EntityActionPanel';
 import { useMapSelection } from '@/hooks/useMapSelection';
 import { BottomSheet, type BottomSheetState } from '@/components/bottom-sheet/BottomSheet';
+import { WidgetRenderer } from '@/components/bottom-sheet/WidgetRenderer';
 import { TopBar } from '@/components/layout/TopBar';
 import { NavigationSidebar } from '@/components/layout/NavigationSidebar';
 import { SHEET_HEIGHTS } from '@/components/bottom-sheet/useBottomSheet';
@@ -17,6 +18,7 @@ export function FleetMapPage() {
   const { vehicles, routes, isLoading, error, sseConnected } = useFleetMapData();
   const { data: kpi } = useFleetKpi();
   const { data: me } = useMe();
+  const { layout } = usePageLayout('fleet_map');
   const mapRef = useRef<FleetMapHandle>(null);
 
   const [navOpen, setNavOpen] = useState(false);
@@ -148,6 +150,19 @@ export function FleetMapPage() {
       ? (selection.data as { sequence: number }).sequence
       : null;
 
+  // Widget system data
+  const pageData = useMemo(
+    () => ({
+      kpi,
+      routes,
+      vehicles,
+      selectedRouteId,
+      onSelectRoute: handleSelectRoute,
+      selectedVehicleId,
+    }),
+    [kpi, routes, vehicles, selectedRouteId, handleSelectRoute, selectedVehicleId],
+  );
+
   return (
     <div className="flex flex-col h-screen w-full">
       {navOpen && <NavigationSidebar mode="overlay" onClose={() => setNavOpen(false)} />}
@@ -192,25 +207,22 @@ export function FleetMapPage() {
           error={error}
           loadingText="Loading fleet data..."
         >
-          <div className="px-4 pb-4 space-y-4">
-            {/* Entity Action Panel */}
+          <div className="space-y-4">
+            {/* Entity Action Panel — outside widget system (selection-driven) */}
             {selection && (
-              <EntityActionPanel
-                selection={selection}
-                userRole={me?.role}
-                onClose={clear}
-              />
+              <div className="px-4">
+                <EntityActionPanel
+                  selection={selection}
+                  userRole={me?.role}
+                  onClose={clear}
+                />
+              </div>
             )}
 
-            <FleetSidebar
-              vehicles={vehicles}
-              routes={routes}
-              kpi={kpi}
-              selectedVehicleId={selectedVehicleId}
-              selectedRouteId={selectedRouteId}
-              onSelectVehicle={handleSelectVehicle}
-              onSelectRoute={handleSelectRoute}
-              selectedVehicleRoute={selectedVehicleRoute}
+            <WidgetRenderer
+              layout={layout}
+              sheetState={sheetState}
+              pageData={pageData}
             />
           </div>
         </BottomSheet>

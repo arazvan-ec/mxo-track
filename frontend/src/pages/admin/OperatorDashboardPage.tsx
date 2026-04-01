@@ -2,6 +2,7 @@ import { useRef, useMemo, useState, useCallback } from 'react';
 import { useFleetMapData } from '@/api/hooks/useFleetMapData';
 import { useFleetKpi } from '@/api/hooks/useFleetKpi';
 import { useMe } from '@/api/hooks/useMe';
+import { usePageLayout } from '@/api/hooks/usePageLayout';
 import { MapCanvas, type MapCanvasHandle } from '@/components/maps/MapCanvas';
 import { VehicleLayer, type VehicleData } from '@/components/maps/layers/VehicleLayer';
 import { StopMarkersLayer } from '@/components/maps/layers/StopMarkersLayer';
@@ -9,6 +10,7 @@ import { RoutePolylineLayer } from '@/components/maps/layers/RoutePolylineLayer'
 import { StopPopup } from '@/components/maps/shared/StopPopup';
 import { VehiclePopup } from '@/components/fleet/VehiclePopup';
 import { EntityActionPanel } from '@/components/panels/EntityActionPanel';
+import { WidgetRenderer } from '@/components/bottom-sheet/WidgetRenderer';
 import { useMapSelection } from '@/hooks/useMapSelection';
 import type { FleetVehicle, FleetRoute, FleetStop } from '@/api/types';
 import { BottomSheet, type BottomSheetState } from '@/components/bottom-sheet/BottomSheet';
@@ -26,6 +28,7 @@ export function OperatorDashboardPage() {
   const [sheetState, setSheetState] = useState<BottomSheetState>('collapsed');
   const [expandedRouteId, setExpandedRouteId] = useState<string | null>(null);
   const { selection, selectStop, selectVehicle, clear } = useMapSelection();
+  const { layout } = usePageLayout('fleet_map');
 
   // Transform fleet vehicles to VehicleData for VehicleLayer
   const vehicleMarkers: VehicleData[] = useMemo(
@@ -72,6 +75,35 @@ export function OperatorDashboardPage() {
   const visibleRoutes = expandedRouteId
     ? activeRoutes.filter((r) => r.publicId === expandedRouteId)
     : activeRoutes;
+
+  const onSelectRoute = useCallback(
+    (route: FleetRoute) => {
+      const willExpand = expandedRouteId !== route.publicId;
+      setExpandedRouteId((prev) =>
+        prev === route.publicId ? null : route.publicId,
+      );
+      if (willExpand) {
+        const pts = route.stops
+          .filter((s) => s.lat && s.lng)
+          .map((s) => ({ lat: s.lat, lng: s.lng }));
+        if (pts.length > 0) {
+          mapRef.current?.fitBounds(pts);
+        }
+      }
+    },
+    [expandedRouteId],
+  );
+
+  // Widget system data
+  const pageData = useMemo(
+    () => ({
+      kpi,
+      routes: activeRoutes,
+      selectedRouteId: expandedRouteId,
+      onSelectRoute,
+    }),
+    [kpi, activeRoutes, expandedRouteId, onSelectRoute],
+  );
 
   // Build stop markers for all active routes
   const allStopMarkers = useMemo(
@@ -209,77 +241,23 @@ export function OperatorDashboardPage() {
           error={error}
           loadingText="Loading fleet data..."
         >
-          <div className="px-4 pb-4 space-y-4">
-            {/* Entity Action Panel — shown when a map element is selected */}
+          <div className="space-y-4">
+            {/* Entity Action Panel — outside widget system (selection-driven) */}
             {selection && (
-              <EntityActionPanel
-                selection={selection}
-                userRole={me?.role}
-                onClose={clear}
-              />
+              <div className="px-4">
+                <EntityActionPanel
+                  selection={selection}
+                  userRole={me?.role}
+                  onClose={clear}
+                />
+              </div>
             )}
 
-            {/* SSE connected indicator + KPI section */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="relative flex h-2 w-2">
-                  <span
-                    className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 ${
-                      sseConnected ? 'bg-emerald-400' : 'bg-red-400'
-                    }`}
-                  />
-                  <span
-                    className={`relative inline-flex h-2 w-2 rounded-full ${
-                      sseConnected ? 'bg-emerald-500' : 'bg-red-500'
-                    }`}
-                  />
-                </span>
-                <span className="text-xs font-medium text-slate-400">
-                  {sseConnected ? 'Live' : 'Disconnected'}
-                </span>
-              </div>
-              <div className="flex items-center gap-4">
-                <KpiItem label="Active Routes" value={kpi?.active_routes ?? 0} color="text-indigo-400" />
-                <KpiItem label="Vehicles" value={kpi?.total_vehicles ?? 0} color="text-violet-400" />
-                <KpiItem label="Pending" value={kpi?.pending_stops ?? 0} color="text-amber-400" />
-              </div>
-            </div>
-
-            {/* Active routes */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-slate-100">Active Routes</h2>
-                <span className="text-xs text-slate-400">{activeRoutes.length} routes</span>
-              </div>
-              {activeRoutes.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-xs text-slate-500">No active routes</p>
-                </div>
-              ) : (
-                activeRoutes.map((route) => (
-                  <RouteListItem
-                    key={route.publicId}
-                    route={route}
-                    expanded={expandedRouteId === route.publicId}
-                    onToggle={() => {
-                      const willExpand = expandedRouteId !== route.publicId;
-                      setExpandedRouteId((prev) =>
-                        prev === route.publicId ? null : route.publicId,
-                      );
-                      if (willExpand) {
-                        const pts = route.stops
-                          .filter((s) => s.lat && s.lng)
-                          .map((s) => ({ lat: s.lat, lng: s.lng }));
-                        if (pts.length > 0) {
-                          mapRef.current?.fitBounds(pts);
-                        }
-                      }
-                    }}
-                    onStopClick={handleStopClick}
-                  />
-                ))
-              )}
-            </div>
+            <WidgetRenderer
+              layout={layout}
+              sheetState={sheetState}
+              pageData={pageData}
+            />
           </div>
         </BottomSheet>
       </div>

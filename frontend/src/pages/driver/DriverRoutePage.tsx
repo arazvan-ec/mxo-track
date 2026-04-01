@@ -1,9 +1,9 @@
-import { useRef, useState, useCallback, useEffect } from 'react';
+import { useRef, useState, useCallback, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router';
 import { useRouteMapData, getRouteFromMapData } from '@/api/hooks/useRouteMapData';
 import { useMe } from '@/api/hooks/useMe';
+import { usePageLayout } from '@/api/hooks/usePageLayout';
 import { MapCanvas, type MapCanvasHandle } from '@/components/maps/MapCanvas';
-import { StopListPanel } from '@/components/panels/StopListPanel';
 import { RouteSummaryBar } from '@/components/panels/RouteSummaryBar';
 import { EntityActionPanel } from '@/components/panels/EntityActionPanel';
 import { StopMarkersLayer } from '@/components/maps/layers/StopMarkersLayer';
@@ -12,6 +12,7 @@ import { VehicleLayer } from '@/components/maps/layers/VehicleLayer';
 import { StopPopup } from '@/components/maps/shared/StopPopup';
 import { useMapSelection } from '@/hooks/useMapSelection';
 import { BottomSheet, type BottomSheetState } from '@/components/bottom-sheet/BottomSheet';
+import { WidgetRenderer } from '@/components/bottom-sheet/WidgetRenderer';
 import { TopBar } from '@/components/layout/TopBar';
 import { NavigationSidebar } from '@/components/layout/NavigationSidebar';
 import { SHEET_HEIGHTS } from '@/components/bottom-sheet/useBottomSheet';
@@ -30,8 +31,7 @@ export function DriverRoutePage() {
   const [sheetState, setSheetState] = useState<BottomSheetState>('collapsed');
   const { data: me } = useMe();
   const { selection, selectStop, clear } = useMapSelection();
-
-  const contentHeight = window.innerHeight * SHEET_HEIGHTS[sheetState] - 64;
+  const { layout } = usePageLayout('driver_route');
 
   const { mapData, isLoading, error, sseConnected } = useRouteMapData(publicId);
   const { route, stops, vehiclePosition } = getRouteFromMapData(mapData);
@@ -130,6 +130,31 @@ export function DriverRoutePage() {
   const deliveredCount = nonOriginStops.filter((s) => s.status === 'DELIVERED').length;
   const totalCount = nonOriginStops.length;
 
+  const pageData = useMemo(
+    () => ({
+      driverName: route?.driverName ?? route?.vehicleName,
+      deliveredCount,
+      totalCount,
+      currentStop: currentStop
+        ? { address: currentStop.address, etaTime: currentStop.etaTime }
+        : null,
+      stops,
+      selectedSequence: selectedStopSequence ?? currentStop?.sequence,
+      onStopClick: handleStopClick,
+      showEta: true,
+    }),
+    [
+      route?.driverName,
+      route?.vehicleName,
+      deliveredCount,
+      totalCount,
+      currentStop,
+      stops,
+      selectedStopSequence,
+      handleStopClick,
+    ],
+  );
+
   return (
     <div className="flex flex-col h-screen w-full">
       {navOpen && <NavigationSidebar mode="overlay" onClose={() => setNavOpen(false)} />}
@@ -171,18 +196,18 @@ export function DriverRoutePage() {
           error={error}
           loadingText="Loading route..."
         >
-          {route && <div className="px-4 pb-4 space-y-3">
-            {/* Entity Action Panel */}
+          {route && <div className="space-y-3">
             {selection && (
-              <EntityActionPanel
-                selection={selection}
-                userRole={me?.role}
-                onClose={clear}
-              />
+              <div className="px-4">
+                <EntityActionPanel
+                  selection={selection}
+                  userRole={me?.role}
+                  onClose={clear}
+                />
+              </div>
             )}
 
-            {/* Always visible: summary bar + SSE indicator */}
-            <div className="flex items-center gap-2">
+            <div className="px-4 flex items-center gap-2">
               <RouteSummaryBar
                 status={route.status ?? ''}
                 deliveredCount={deliveredCount}
@@ -194,45 +219,7 @@ export function DriverRoutePage() {
               )}
             </div>
 
-            {/* Medium zone: progress bar (visible when enough space) */}
-            {contentHeight >= 200 && (
-              <div className="bg-slate-800/60 rounded-lg p-3 border border-slate-700/40">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] text-slate-500 uppercase tracking-wider">Progress</span>
-                  <span className="text-xs font-medium text-white">
-                    {deliveredCount}/{totalCount}
-                  </span>
-                </div>
-                <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-emerald-500 rounded-full transition-all duration-500"
-                    style={{ width: totalCount > 0 ? `${(deliveredCount / totalCount) * 100}%` : '0%' }}
-                  />
-                </div>
-                {currentStop && (
-                  <div className="mt-2 text-xs text-slate-400">
-                    Next: <span className="text-white">{currentStop.address}</span>
-                    {currentStop.etaTime && (
-                      <span className="text-blue-400 ml-1">ETA {currentStop.etaTime}</span>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Always visible: stops */}
-            <div>
-              <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">
-                Stops ({totalCount})
-              </div>
-              <StopListPanel
-                stops={stops}
-                selectedSequence={selectedStopSequence ?? currentStop?.sequence}
-                onStopClick={handleStopClick}
-                showEta
-                maxItems={contentHeight < 200 ? 2 : undefined}
-              />
-            </div>
+            <WidgetRenderer layout={layout} sheetState={sheetState} pageData={pageData} />
           </div>}
         </BottomSheet>
       </div>
