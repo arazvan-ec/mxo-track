@@ -3,7 +3,7 @@
 > **Auto-generated** by `make manifest` (`backend/bin/generate-manifest.sh`).
 > Do not edit manually — regenerate with `make manifest`.
 
-**Generated:** 2026-04-01 20:42
+**Generated:** 2026-04-01 21:08
 **Regenerate:** `make manifest`
 
 ## Project Overview
@@ -11,7 +11,7 @@
 | Area | Path | Files | Tech |
 |------|------|------:|------|
 | Backend | `backend/` | 515 PHP | Symfony 7.4, PHP 8.4 |
-| Frontend | `frontend/` | 85 JS/TS | React |
+| Frontend | `frontend/` | 90 JS/TS | React |
 | ML Service | `ml-service/` | 17 Python | FastAPI |
 | Docker/Infra | `docker/` + `scripts/` | 9 + 5 | Docker, OSRM, VROOM, Traccar |
 | OpenSpec | `openspec/` | 28 specs | YAML specs |
@@ -213,7 +213,7 @@ View
 
 | Category | Count |
 |----------|------:|
-| JS/TS files total | 85 |
+| JS/TS files total | 90 |
 | Pages | 11 |
 
 ### Directory Tree
