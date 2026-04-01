@@ -1,6 +1,5 @@
-import type { LayoutConfig, SheetStateName, WidgetType } from '@/types/layout';
+import type { LayoutConfig, SheetStateName } from '@/types/layout';
 import { WIDGET_REGISTRY } from '@/widgets/registry';
-import { PlaceholderWidget } from '@/widgets/PlaceholderWidget';
 
 interface WidgetRendererProps {
   layout: LayoutConfig;
@@ -19,12 +18,9 @@ export function WidgetRenderer({ layout, sheetState, pageData }: WidgetRendererP
     <>
       {widgets.map(({ type, position }) => {
         const entry = WIDGET_REGISTRY[type];
-        if (entry) {
-          const Component = entry.component;
-          return <Component key={`${type}-${position}`} data={pageData} expanded={expanded} />;
-        }
-        // Unimplemented widget type — show placeholder
-        return <PlaceholderWidget key={`${type}-${position}`} widgetType={type as WidgetType} />;
+        if (!entry) return null;
+        const Component = entry.component;
+        return <Component key={`${type}-${position}`} data={pageData} expanded={expanded} />;
       })}
     </>
   );
