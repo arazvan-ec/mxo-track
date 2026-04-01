@@ -60,7 +60,7 @@ SOLID, DDD, Anti-Omission dejan de ser secciones separadas y se integran donde a
 | Knowledge Modules table | 35 | `CLAUDE.md` raíz (comprimida) |
 | Governance rule | 15 | `CLAUDE.md` raíz |
 | Features Document | 4 | `docs/CLAUDE.md` |
-| Backlog Arquitectónico | 48 | `docs/CLAUDE.md` o `docs/backlog.md` |
+| Backlog Arquitectónico | 48 | `docs/backlog.md` |
 | **Skills inline (14 skills, ~900 líneas)** | 900 | Semi-comprimidas en archivo correspondiente |
 | Problemas conocidos (3 bloques) | 80 | `.claude/README.md` |
 
@@ -72,13 +72,13 @@ SOLID, DDD, Anti-Omission dejan de ser secciones separadas y se integran donde a
 | 2. Brainstorming | 90 | `CLAUDE.md` raíz | Trigger + checklist compacto (~25 líneas) |
 | 3. Writing Plans | 70 | `CLAUDE.md` raíz | Trigger + estructura key (~15 líneas) |
 | 4. Executing Plans | 40 | `backend/src/CLAUDE.md` | Trigger + proceso core (~10 líneas) |
-| 5. Subagent-Driven Dev | 80 | `AGENTS.md` | Completo (solo subagentes lo ven) |
-| 6. Dispatching Parallel | 40 | `AGENTS.md` | Completo (solo subagentes lo ven) |
+| 5. Subagent-Driven Dev | 80 | Trigger en raíz (~5 líneas) + `AGENTS.md` completo | Raíz sabe cuándo usarla, AGENTS.md tiene el cómo |
+| 6. Dispatching Parallel | 40 | Trigger en raíz (~5 líneas) + `AGENTS.md` completo | Raíz sabe cuándo usarla, AGENTS.md tiene el cómo |
 | 7. TDD | 70 | `backend/src/CLAUDE.md` | Iron law + red-green-refactor (~20 líneas) |
 | 8. Systematic Debugging | 80 | `backend/src/CLAUDE.md` | 4 fases + pattern-wide (~25 líneas) |
 | 9. Verification | 40 | `CLAUDE.md` raíz | Iron law + gate function (~15 líneas) |
-| 10. Receiving Code Review | 35 | `AGENTS.md` | Completo (reviewers lo necesitan) |
-| 11. Requesting Code Review | 25 | `AGENTS.md` | Completo |
+| 10. Receiving Code Review | 35 | Proceso core en raíz (~15 líneas) + `AGENTS.md` completo | Hilo principal recibe reviews, no solo subagentes |
+| 11. Requesting Code Review | 25 | Proceso core en raíz (~15 líneas) + `AGENTS.md` completo | Hilo principal solicita reviews |
 | 12. Finishing Branch | 50 | `CLAUDE.md` raíz | Proceso core (~15 líneas) |
 | 13. Git Worktrees | 25 | Eliminar (no se usa activamente) |
 | 14. Writing Skills | 60 | Eliminar (meta-skill, no operativo) |
@@ -92,7 +92,7 @@ SOLID, DDD, Anti-Omission dejan de ser secciones separadas y se integran donde a
 
 | Element | Decision | Justification |
 |---------|----------|---------------|
-| Notas personales (líneas 1-12) | Omit | Son notas temporales, no instrucciones. Mover a doc aparte si se quieren conservar |
+| Notas personales (líneas 1-12) | Move | Mover a `docs/notes.md` para conservar |
 | Skill 13 (Git Worktrees) | Omit | No se usa activamente en el proyecto |
 | Skill 14 (Writing Skills) | Omit | Meta-skill para crear skills, no operativa |
 | Tablas anti-racionalización (5 tablas) | Transform | Consolidar en 1 tabla en raíz, eliminar las de skills individuales (la filosofía las reemplaza) |
@@ -276,9 +276,6 @@ Freshness protocol.]
 ## Features document
 [FEATURES.md: qué es, cuándo actualizar]
 
-## Backlog arquitectónico
-[Las entradas del backlog, tal cual]
-
 ## Learning review
 [Skill 15 comprimida: cuándo hacer review, proceso, output]
 
@@ -288,7 +285,7 @@ Freshness protocol.]
 
 ### 6. `AGENTS.md` — ~150 líneas
 
-**Se carga:** Solo para subagentes (Agent tool)
+**Se carga:** Por el hilo principal cuando despacha subagentes, y por los subagentes mismos.
 
 **Contenido:**
 
@@ -413,4 +410,15 @@ Los hooks en `.claude/hooks/` no necesitan cambios — validan `session-state.js
 
 ## Preparación para plugin futuro
 
-Los CLAUDE.md jerárquicos se escriben con marcadores `<!-- GENERIC -->` y `<!-- PROJECT-SPECIFIC -->` para facilitar la extracción futura como plugin distribuible. Cuando el usuario proporcione el repo del plugin, extraer la capa genérica será mecánico.
+Los CLAUDE.md jerárquicos se escriben con marcadores `<!-- GENERIC -->` y `<!-- PROJECT-SPECIFIC -->` para facilitar la extracción futura como plugin distribuible.
+
+**Repo destino del plugin:** `arazvan-ec/yader`
+
+Después de validar la jerarquía en mxo-track, extraer la capa genérica al repo del plugin será mecánico: copiar estructura, reemplazar PROJECT-SPECIFIC con placeholders, crear skill de generación.
+
+## Archivos adicionales
+
+| Archivo | Contenido |
+|---------|-----------|
+| `docs/notes.md` | Notas personales migradas de las líneas 1-12 del CLAUDE.md actual |
+| `docs/backlog.md` | Backlog arquitectónico migrado del CLAUDE.md actual |
