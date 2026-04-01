@@ -175,6 +175,21 @@ Plans go to `docs/superpowers/plans/YYYY-MM-DD-<feature>.md` with:
 - **Never create a separate "add tests" task.** Tests are integral to each task via TDD —
   writing the test IS the first step of implementing the task, not a task on its own.
 
+**Parallel execution by default:** Plans MUST identify which tasks can run in parallel
+and group them explicitly. Independent tasks (e.g., backend change + frontend type change,
+or changes to unrelated files/subsystems) should be grouped in a `[parallel]` block.
+Tasks that depend on prior results remain sequential. When executing, use the Agent tool
+to launch parallel tasks concurrently whenever possible.
+
+```markdown
+### [parallel] Tarea 1a + 1b
+- **1a:** Backend — add field to snapshot (backend/src/...)
+- **1b:** Frontend — extend TypeScript type (frontend/src/...)
+
+### Tarea 2 (depends on 1a + 1b)
+- Frontend — use new fields in component
+```
+
 **Detail:** TDD rules in `backend/src/CLAUDE.md`, debugging rules in `backend/src/CLAUDE.md`
 
 ### Task Progress Tracking

@@ -211,6 +211,7 @@ final class RouteSnapshotManager
                 'sequence' => $stop->getSequence(),
                 'address' => $stop->getAddress(),
                 'recipientName' => $stop->getRecipientName(),
+                'recipientPhone' => $stop->getRecipientPhone(),
                 'lat' => $stop->getLatitude(),
                 'lng' => $stop->getLongitude(),
                 'isOrigin' => $stop->isOrigin(),
