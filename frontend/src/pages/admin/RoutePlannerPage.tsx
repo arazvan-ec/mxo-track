@@ -7,8 +7,6 @@ import { OriginMarker } from '@/components/maps/shared/OriginMarker';
 import { ROUTE_COLORS } from '@/components/maps/shared/colors';
 import { RoutePolylineLayer } from '@/components/maps/layers/RoutePolylineLayer';
 import { BottomSheet, type BottomSheetState } from '@/components/bottom-sheet/BottomSheet';
-import { usePageLayout } from '@/api/hooks/usePageLayout';
-import { WidgetRenderer } from '@/components/bottom-sheet/WidgetRenderer';
 import { TopBar } from '@/components/layout/TopBar';
 import { NavigationSidebar } from '@/components/layout/NavigationSidebar';
 import {
@@ -46,7 +44,6 @@ export function RoutePlannerPage() {
   const mapRef = useRef<MapCanvasHandle>(null);
   const [navOpen, setNavOpen] = useState(false);
   const [sheetState, setSheetState] = useState<BottomSheetState>('half');
-  const { layout } = usePageLayout('route_planner');
 
   // Read import_id from URL params
   const urlParams = useMemo(() => new URLSearchParams(window.location.search), []);
