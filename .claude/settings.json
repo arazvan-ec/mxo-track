@@ -8,7 +8,20 @@
             "type": "command",
             "command": "/home/user/mxo-track/.claude/hooks/session-start.sh",
             "timeout": 5,
-            "statusMessage": "Initializing session state..."
+            "statusMessage": "Inicializando sesion..."
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/user/mxo-track/.claude/hooks/user-prompt-state.sh",
+            "timeout": 2,
+            "statusMessage": "Leyendo estado del proceso..."
           }
         ]
       }
@@ -21,7 +34,7 @@
             "type": "command",
             "command": "/home/user/mxo-track/.claude/hooks/workflow-engine.sh",
             "timeout": 5,
-            "statusMessage": "Checking workflow compliance..."
+            "statusMessage": "Verificando workflow gate..."
           }
         ]
       },
@@ -32,7 +45,7 @@
             "type": "command",
             "command": "/home/user/mxo-track/.claude/hooks/pre-push-gate.sh",
             "timeout": 5,
-            "statusMessage": "Checking pre-push gates..."
+            "statusMessage": "Verificando pre-push gate..."
           }
         ]
       }
@@ -45,7 +58,7 @@
             "type": "command",
             "command": "/home/user/mxo-track/.claude/hooks/workflow-status-line.sh",
             "timeout": 2,
-            "statusMessage": "Updating status line..."
+            "statusMessage": "Actualizando progreso del proceso..."
           }
         ]
       },
@@ -65,13 +78,13 @@
             "type": "command",
             "command": "/home/user/mxo-track/.claude/hooks/post-commit-validator.sh",
             "timeout": 5,
-            "statusMessage": "Validating commit..."
+            "statusMessage": "Validando formato de commit..."
           },
           {
             "type": "command",
             "command": "/home/user/mxo-track/.claude/hooks/post-push-validator.sh",
             "timeout": 30,
-            "statusMessage": "Post-push tasks..."
+            "statusMessage": "Ejecutando tareas post-push..."
           }
         ]
       }

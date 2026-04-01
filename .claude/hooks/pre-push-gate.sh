@@ -136,19 +136,28 @@ ERRORS=""
 TESTS_PASSED=$(jq -r '.evidence.tests_passed // "null"' "$STATE_FILE" 2>/dev/null || echo "null")
 LINT_CLEAN=$(jq -r '.evidence.lint_clean // "null"' "$STATE_FILE" 2>/dev/null || echo "null")
 
-if [ "$TESTS_PASSED" != "true" ]; then
-  ERRORS="${ERRORS}[verification] tests_passed no es true (actual: $TESTS_PASSED). Ejecuta tests primero. "
+CHECKLIST=""
+
+if [ "$TESTS_PASSED" = "true" ]; then
+  CHECKLIST="${CHECKLIST}✅ tests_passed | "
+else
+  CHECKLIST="${CHECKLIST}❌ tests_passed (actual: $TESTS_PASSED) | "
+  ERRORS="${ERRORS}tests "
 fi
 
-if [ "$LINT_CLEAN" != "true" ]; then
-  ERRORS="${ERRORS}[verification] lint_clean no es true (actual: $LINT_CLEAN). Ejecuta linter primero. "
+if [ "$LINT_CLEAN" = "true" ]; then
+  CHECKLIST="${CHECKLIST}✅ lint_clean | "
+else
+  CHECKLIST="${CHECKLIST}❌ lint_clean (actual: $LINT_CLEAN) | "
+  ERRORS="${ERRORS}lint "
 fi
 
 # ── 2. Capture: execution_log_path exists and file ≥500B ──
 EXEC_LOG_PATH=$(jq -r '.evidence.execution_log_path // ""' "$STATE_FILE" 2>/dev/null || echo "")
 
 if [ -z "$EXEC_LOG_PATH" ]; then
-  ERRORS="${ERRORS}[capture] No hay execution_log_path. Crea un execution log en docs/superpowers/execution-logs/. "
+  CHECKLIST="${CHECKLIST}❌ execution_log (no path) | "
+  ERRORS="${ERRORS}exec_log "
 else
   # Resolve path (could be relative or absolute)
   FULL_PATH="$EXEC_LOG_PATH"
@@ -157,11 +166,15 @@ else
   fi
 
   if [ ! -f "$FULL_PATH" ]; then
-    ERRORS="${ERRORS}[capture] Execution log '$EXEC_LOG_PATH' no existe. Crealo antes de pushear. "
+    CHECKLIST="${CHECKLIST}❌ execution_log (archivo no existe) | "
+    ERRORS="${ERRORS}exec_log "
   else
     FILE_SIZE=$(wc -c < "$FULL_PATH" 2>/dev/null || echo "0")
     if [ "$FILE_SIZE" -lt 500 ]; then
-      ERRORS="${ERRORS}[capture] Execution log es muy pequeno (${FILE_SIZE}B < 500B). Completa el log antes de pushear. "
+      CHECKLIST="${CHECKLIST}❌ execution_log (${FILE_SIZE}B < 500B) | "
+      ERRORS="${ERRORS}exec_log "
+    else
+      CHECKLIST="${CHECKLIST}✅ execution_log | "
     fi
   fi
 fi
@@ -171,15 +184,17 @@ BRANCH_STRATEGY=$(jq -r '.evidence.branch_strategy // ""' "$STATE_FILE" 2>/dev/n
 
 case "$BRANCH_STRATEGY" in
   merge|pr|keep|discard)
-    ;; # valid
+    CHECKLIST="${CHECKLIST}✅ branch_strategy ($BRANCH_STRATEGY)"
+    ;;
   *)
-    ERRORS="${ERRORS}[finalize] branch_strategy no declarado o invalido (actual: '$BRANCH_STRATEGY'). Usa Skill 12 para finalizar la rama. "
+    CHECKLIST="${CHECKLIST}❌ branch_strategy (actual: '$BRANCH_STRATEGY')"
+    ERRORS="${ERRORS}branch_strategy "
     ;;
 esac
 
 # ── Apply HARD gates ──
 if [ -n "$ERRORS" ]; then
-  gate "$ERRORS"
+  gate "❌ PUSH BLOQUEADO [$FLOW_TYPE] | $CHECKLIST | Accion: completa los items marcados con ❌"
 fi
 
 # ══════════════════════════════════════════════════════════════
@@ -187,7 +202,7 @@ fi
 # ══════════════════════════════════════════════════════════════
 
 if ! phase_completed "retrospective"; then
-  echo "{\"systemMessage\":\"PRE-PUSH WARNING: Fase 'retrospective' no completada. Considera actualizar docs/decisions/log.md antes del push final.\"}"
+  echo "{\"systemMessage\":\"⚠ PRE-PUSH [$FLOW_TYPE] Fase 'retrospective' pendiente. Considera actualizar docs/decisions/log.md antes del push final.\"}"
   exit 0
 fi
 
