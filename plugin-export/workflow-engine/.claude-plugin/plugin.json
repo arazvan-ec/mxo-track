@@ -1,0 +1,56 @@
+{
+  "name": "workflow-engine",
+  "version": "1.0.0",
+  "description": "Structured workflow engine for Claude Code. Enforces phased development (consult → brainstorm → plan → implement → verify → capture → retrospective → finalize) with mechanical gates, evidence tracking, and session state persistence. Supports 5 flow types: micro, light, debug, full, explore.",
+  "author": {
+    "name": "arazvan-ec",
+    "url": "https://github.com/arazvan-ec"
+  },
+  "homepage": "https://github.com/arazvan-ec/yader",
+  "repository": "https://github.com/arazvan-ec/yader",
+  "license": "MIT",
+  "keywords": [
+    "workflow",
+    "process-enforcement",
+    "tdd",
+    "evidence-tracking",
+    "session-state",
+    "phase-gates",
+    "brainstorming",
+    "code-review",
+    "quality-assurance",
+    "context-engineering"
+  ],
+  "hooks": "./hooks/hooks.json",
+  "skills": "./skills/",
+  "agents": [
+    "./agents/task-executor.md",
+    "./agents/code-reviewer.md"
+  ],
+  "userConfig": {
+    "src_paths": {
+      "description": "Comma-separated source paths relative to repo root (e.g. backend/src,frontend/src). Default: src"
+    },
+    "test_paths": {
+      "description": "Comma-separated test paths relative to repo root (e.g. backend/tests). Default: tests"
+    },
+    "test_command": {
+      "description": "Command to run tests (e.g. php vendor/bin/phpunit, npm test). Default: npm test"
+    },
+    "lint_command": {
+      "description": "Command to run linter (e.g. make lint, npm run lint). Default: npm run lint"
+    },
+    "specs_path": {
+      "description": "Path for spec documents relative to repo root. Default: docs/specs"
+    },
+    "plans_path": {
+      "description": "Path for plan documents relative to repo root. Default: docs/plans"
+    },
+    "execution_logs_path": {
+      "description": "Path for execution logs relative to repo root. Default: docs/execution-logs"
+    },
+    "decisions_log": {
+      "description": "Path to decision log file relative to repo root. Default: docs/decisions/log.md"
+    }
+  }
+}

@@ -1,0 +1,82 @@
+{
+  "SessionStart": [
+    {
+      "matcher": "",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/session-start.sh",
+          "timeout": 5,
+          "statusMessage": "Initializing workflow session..."
+        }
+      ]
+    }
+  ],
+  "UserPromptSubmit": [
+    {
+      "matcher": "",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/user-prompt-state.sh",
+          "timeout": 2,
+          "statusMessage": "Reading workflow state..."
+        }
+      ]
+    }
+  ],
+  "PreToolUse": [
+    {
+      "matcher": "Edit|Write",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/workflow-engine.sh",
+          "timeout": 5,
+          "statusMessage": "Checking workflow gate..."
+        }
+      ]
+    },
+    {
+      "matcher": "Bash",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/pre-push-gate.sh",
+          "timeout": 5,
+          "statusMessage": "Checking pre-push gate..."
+        }
+      ]
+    }
+  ],
+  "PostToolUse": [
+    {
+      "matcher": "",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/auto-evidence.sh",
+          "timeout": 2,
+          "statusMessage": "Detecting evidence..."
+        },
+        {
+          "type": "command",
+          "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/workflow-status-line.sh",
+          "timeout": 2,
+          "statusMessage": "Updating workflow progress..."
+        }
+      ]
+    },
+    {
+      "matcher": "Bash",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/post-commit-validator.sh",
+          "timeout": 5,
+          "statusMessage": "Validating commit format..."
+        }
+      ]
+    }
+  ]
+}

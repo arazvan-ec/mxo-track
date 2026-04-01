@@ -1,0 +1,39 @@
+{
+  "session_date": "YYYY-MM-DD",
+  "flow_type": null,
+  "current_phase": null,
+  "interaction_id": 0,
+  "interaction_classification": null,
+  "phase_history": [],
+  "last_work_summary": {},
+  "evidence": {
+    "interaction_id": 0,
+    "decisions_read": false,
+    "logs_scanned": false,
+    "user_turns": 0,
+    "alternatives_proposed": false,
+    "user_approved": false,
+    "spec_path": null,
+    "plan_path": null,
+    "tests_written": 0,
+    "tests_passed": null,
+    "lint_clean": null,
+    "execution_log_path": null,
+    "branch_strategy": null,
+    "root_cause_identified": false,
+    "pattern_wide_search_done": false,
+    "task_progress": {
+      "current": 0,
+      "total": 0,
+      "label": null,
+      "completed_labels": []
+    }
+  },
+  "deviation": {
+    "active": false,
+    "reason": null,
+    "skipped_phases": [],
+    "return_to_phase": null,
+    "acknowledged_by_user": false
+  }
+}
