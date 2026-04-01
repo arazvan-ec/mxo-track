@@ -62,10 +62,10 @@ DEVIATION_ACTIVE=$(jq -r '.deviation.active // false' "$STATE_FILE" 2>/dev/null 
 if [ "$FLOW_TYPE" = "null" ]; then
   case "$FILE_PATH" in
     */backend/src/*|*/frontend/src/*|*/backend/tests/*|*/frontend/tests/*)
-      deny "WORKFLOW ENGINE: Declara flow_type antes de modificar codigo. Escribe flow_type (micro|light|debug|full|explore) en .claude/session-state.json"
+      deny "❌ BLOQUEADO [flow no declarado] Archivo: $FILE_CLASS | No puedes editar codigo sin declarar flow_type. | Accion: escribe flow_type (micro|light|debug|full|explore) en .claude/session-state.json"
       ;;
     *)
-      warn "WORKFLOW ENGINE: flow_type no declarado. Declara flow_type en .claude/session-state.json antes de hacer cambios."
+      warn "⚠ [flow no declarado] Archivo: $FILE_CLASS | Declara flow_type en session-state.json antes de continuar."
       ;;
   esac
 fi
@@ -73,7 +73,7 @@ fi
 # ── Gate 2: Deviation mode — warn but allow ──
 if [ "$DEVIATION_ACTIVE" = "true" ]; then
   RETURN_TO=$(jq -r '.deviation.return_to_phase // "unknown"' "$STATE_FILE" 2>/dev/null || echo "unknown")
-  warn "WORKFLOW ENGINE: Deviation activa. Retoma fase: $RETURN_TO despues de la accion actual."
+  warn "⚠ DESVIO ACTIVO [$FLOW_TYPE | $CURRENT_PHASE] Retoma fase '$RETURN_TO' despues de la accion actual."
 fi
 
 # ── Gate 3: Scope-change detection via interaction_id (all flows that touch code) ──
@@ -82,7 +82,7 @@ EVIDENCE_INTERACTION=$(jq -r '.evidence.interaction_id // 0' "$STATE_FILE" 2>/de
 if [ "$CURRENT_INTERACTION" != "$EVIDENCE_INTERACTION" ]; then
   case "$FILE_PATH" in
     */backend/src/*|*/frontend/src/*|*/backend/tests/*|*/frontend/tests/*)
-      warn "WORKFLOW ENGINE (SOFT): Scope change detectado (interaction_id: $CURRENT_INTERACTION, evidence: $EVIDENCE_INTERACTION). Resetea evidence.interaction_id=$CURRENT_INTERACTION y completa las fases requeridas."
+      warn "⚠ SCOPE CHANGE [$FLOW_TYPE | $CURRENT_PHASE] interaction_id=$CURRENT_INTERACTION pero evidence=$EVIDENCE_INTERACTION | Accion: resetea evidence.interaction_id y completa fases requeridas."
       ;;
   esac
 fi
@@ -119,8 +119,8 @@ get_validators_for_flow() {
     # Should rarely edit files. Warn on any edit except docs/config.
     micro|micro-flow)
       case "$file_class" in
-        code|test)  echo "DENY:micro-flow no debe editar codigo. Reclasifica como debug o full." ;;
-        spec|plan)  echo "DENY:micro-flow no debe crear specs ni plans. Reclasifica como full." ;;
+        code|test)  echo "DENY:❌ [micro-flow] No puede editar $file_class. | Accion: reclasifica como debug (bug) o full (feature)." ;;
+        spec|plan)  echo "DENY:❌ [micro-flow] No puede crear specs/plans. | Accion: reclasifica como full." ;;
         *)          echo "" ;;  # docs, config, other: pass
       esac
       ;;
@@ -129,8 +129,8 @@ get_validators_for_flow() {
     # Can edit docs, config. Cannot edit code/tests/specs/plans.
     light|light-flow)
       case "$file_class" in
-        code|test)  echo "DENY:light-flow no debe editar codigo. Reclasifica como debug o full." ;;
-        spec|plan)  echo "DENY:light-flow no debe crear specs ni plans. Reclasifica como full." ;;
+        code|test)  echo "DENY:❌ [light-flow] No puede editar $file_class. | Accion: reclasifica como debug (bug) o full (feature)." ;;
+        spec|plan)  echo "DENY:❌ [light-flow] No puede crear specs/plans. | Accion: reclasifica como full." ;;
         *)          echo "" ;;  # docs, config, execution-log, decision, other: pass
       esac
       ;;
@@ -139,8 +139,8 @@ get_validators_for_flow() {
     # Can write to docs/agent-outputs. Cannot edit code.
     explore|explore-flow)
       case "$file_class" in
-        code|test)  echo "DENY:explore-flow no debe editar codigo. Reclasifica como debug o full." ;;
-        spec|plan)  echo "DENY:explore-flow no debe crear specs ni plans. Reclasifica como full." ;;
+        code|test)  echo "DENY:❌ [explore-flow] No puede editar $file_class. | Accion: reclasifica como debug (bug) o full (feature)." ;;
+        spec|plan)  echo "DENY:❌ [explore-flow] No puede crear specs/plans. | Accion: reclasifica como full." ;;
         *)          echo "" ;;  # docs, config, other: pass
       esac
       ;;
@@ -199,10 +199,10 @@ if [ "$VALIDATOR_SPEC" = "debug-code" ]; then
 
     if [ "$EXIT_CODE" -eq 2 ]; then
       ESCAPED_RESULT=$(echo "$RESULT" | tr '\n' ' ' | sed 's/"/\\"/g')
-      deny "WORKFLOW ENGINE (debug): $ESCAPED_RESULT"
+      deny "❌ BLOQUEADO [debug | $CURRENT_PHASE] Archivo: $FILE_CLASS | $ESCAPED_RESULT"
     elif [ "$EXIT_CODE" -eq 1 ]; then
       ESCAPED_RESULT=$(echo "$RESULT" | tr '\n' ' ' | sed 's/"/\\"/g')
-      warn "WORKFLOW ENGINE (debug): $ESCAPED_RESULT"
+      warn "⚠ [debug | $CURRENT_PHASE] Archivo: $FILE_CLASS | $ESCAPED_RESULT"
     fi
   fi
   exit 0
@@ -224,10 +224,10 @@ for validator_name in $VALIDATOR_SPEC; do
 
   if [ "$EXIT_CODE" -eq 2 ]; then
     ESCAPED_RESULT=$(echo "$RESULT" | tr '\n' ' ' | sed 's/"/\\"/g')
-    deny "WORKFLOW ENGINE ($validator_name): $ESCAPED_RESULT"
+    deny "❌ BLOQUEADO [$FLOW_TYPE | $CURRENT_PHASE | gate:$validator_name] Archivo: $FILE_CLASS | $ESCAPED_RESULT"
   elif [ "$EXIT_CODE" -eq 1 ]; then
     ESCAPED_RESULT=$(echo "$RESULT" | tr '\n' ' ' | sed 's/"/\\"/g')
-    ACCUMULATED_WARNINGS="${ACCUMULATED_WARNINGS}WORKFLOW ENGINE ($validator_name): $ESCAPED_RESULT "
+    ACCUMULATED_WARNINGS="${ACCUMULATED_WARNINGS}⚠ [$FLOW_TYPE | $CURRENT_PHASE | gate:$validator_name] $ESCAPED_RESULT "
   fi
 done
 
