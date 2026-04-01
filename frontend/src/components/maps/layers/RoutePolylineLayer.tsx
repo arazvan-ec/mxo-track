@@ -1,5 +1,6 @@
 import { Source, Layer } from 'react-map-gl/maplibre';
 import { polylineToGeoJSON } from '../shared/polyline';
+import { directionArrowsConfig } from '../shared/directionArrows';
 
 interface Props {
   id: string;
@@ -38,21 +39,7 @@ export function RoutePolylineLayer({ id, polyline, color, dashed, showArrows, op
         <Layer
           id={`route-arrows-${id}`}
           type="symbol"
-          layout={{
-            'symbol-placement': 'line',
-            'symbol-spacing': 100,
-            'text-field': '▶',
-            'text-size': 12,
-            'text-rotation-alignment': 'map',
-            'text-allow-overlap': true,
-            'text-ignore-placement': true,
-            'text-keep-upright': false,
-          }}
-          paint={{
-            'text-color': color,
-            'text-halo-color': 'rgba(0,0,0,0.7)',
-            'text-halo-width': 1,
-          }}
+          {...directionArrowsConfig(color)}
         />
       )}
     </Source>
