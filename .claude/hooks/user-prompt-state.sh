@@ -24,6 +24,13 @@ fi
 STATE=$(cat "$STATE_FILE" 2>/dev/null || echo "{}")
 FLOW_TYPE=$(echo "$STATE" | jq -r '.flow_type // "null"')
 CURRENT_PHASE=$(echo "$STATE" | jq -r '.current_phase // "null"')
+
+# Auto-increment user_turns during brainstorming
+if [ "$FLOW_TYPE" = "full" ] && [ "$CURRENT_PHASE" = "brainstorming" ]; then
+  jq '.evidence.user_turns = (.evidence.user_turns + 1)' "$STATE_FILE" > /tmp/upt.json && mv /tmp/upt.json "$STATE_FILE"
+  # Re-read state after update
+  STATE=$(cat "$STATE_FILE" 2>/dev/null || echo "{}")
+fi
 INTERACTION_ID=$(echo "$STATE" | jq -r '.interaction_id // 0')
 DEV_ACTIVE=$(echo "$STATE" | jq -r '.deviation.active // false')
 
