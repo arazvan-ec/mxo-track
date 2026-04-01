@@ -21,6 +21,7 @@ final class StopViewData
         public readonly ?int $etaMinutes = null,
         public readonly ?string $etaTime = null,
         public readonly ?float $etaDistanceKm = null,
+        public readonly ?string $shipmentPublicId = null,
     ) {}
 
     /**
@@ -43,6 +44,7 @@ final class StopViewData
             'etaMinutes' => $this->etaMinutes,
             'etaTime' => $this->etaTime,
             'etaDistanceKm' => $this->etaDistanceKm,
+            'shipmentPublicId' => $this->shipmentPublicId,
         ], static fn($v) => $v !== null);
     }
 }

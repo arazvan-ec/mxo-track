@@ -44,6 +44,45 @@ final class MapViewDataTest extends TestCase
     }
 
     #[Test]
+    public function stopViewDataIncludesShipmentPublicId(): void
+    {
+        $stop = new StopViewData(
+            sequence: 1,
+            address: 'Calle Mayor 1',
+            recipientName: 'Juan',
+            recipientPhone: '600000000',
+            lat: 40.416775,
+            lng: -3.703790,
+            status: 'PENDING',
+            isOrigin: false,
+            shipmentPublicId: '01ABCDEF1234567890123456',
+        );
+
+        $array = $stop->toArray();
+
+        self::assertSame('01ABCDEF1234567890123456', $array['shipmentPublicId']);
+    }
+
+    #[Test]
+    public function stopViewDataOmitsNullShipmentPublicId(): void
+    {
+        $stop = new StopViewData(
+            sequence: 1,
+            address: 'Calle Mayor 1',
+            recipientName: null,
+            recipientPhone: null,
+            lat: 40.0,
+            lng: -3.0,
+            status: 'PENDING',
+            isOrigin: false,
+        );
+
+        $array = $stop->toArray();
+
+        self::assertArrayNotHasKey('shipmentPublicId', $array);
+    }
+
+    #[Test]
     public function stopViewDataIncludesDeliveryInfo(): void
     {
         $stop = new StopViewData(
