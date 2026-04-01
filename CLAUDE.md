@@ -264,9 +264,14 @@ lo completado + lo que sigue. NO narrar cada paso intermedio.
 ```
 
 **Hook-driven header:** El `UserPromptSubmit` hook inyecta un `DISPLAY RULE` con el
-formato exacto del header. **Copia el template del hook** al inicio de cada respuesta,
-reemplazando `[describe what was completed]` con datos concretos. Ejemplo:
+formato exacto del header **en TODOS los flows** (micro, light, debug, explore, full).
+**Copia el template del hook** al inicio de CADA respuesta sin excepción,
+reemplazando `[...]` con datos concretos. Ejemplos por flow:
 ```
+💬 El endpoint devuelve 404 porque falta la ruta en routing.yaml
+📝 Light — Eliminados 2 imports no usados en RoutePlannerPage, TS limpio
+🐛 Debug (fix) — TS6133 por import no usado, eliminado, build pasa
+🔍 Explore — 8 controllers encontrados, 3 usan HubInterface directamente
 ✅✅🔄⬚⬚⬚⬚⬚ Planning (3/8) — Spec aprobado, 12 tareas en plan
 ```
 
