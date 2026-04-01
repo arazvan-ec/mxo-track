@@ -1,12 +1,14 @@
-import { useRef, useEffect, useMemo, useState } from 'react';
+import { useRef, useEffect, useMemo, useState, useCallback } from 'react';
 import { useParams } from 'react-router';
 import { MapCanvas, type MapCanvasHandle } from '@/components/maps/MapCanvas';
 import { RoutePolylineLayer } from '@/components/maps/layers/RoutePolylineLayer';
 import { StopMarkersLayer } from '@/components/maps/layers/StopMarkersLayer';
+import { StopPopup } from '@/components/maps/shared/StopPopup';
 import { RouteMetricsPanel } from '@/components/panels/RouteMetricsPanel';
 import { BottomSheet, type BottomSheetState } from '@/components/bottom-sheet/BottomSheet';
 import { TopBar } from '@/components/layout/TopBar';
 import { NavigationSidebar } from '@/components/layout/NavigationSidebar';
+import { SHEET_HEIGHTS } from '@/components/bottom-sheet/useBottomSheet';
 import { useRouteAnalysis } from '@/api/hooks/useRouteAnalysis';
 import type { RouteData } from '@/api/types';
 
@@ -33,6 +35,7 @@ export function RouteAnalysisPage() {
   const [navOpen, setNavOpen] = useState(false);
   const [sheetState, setSheetState] = useState<BottomSheetState>('collapsed');
 
+  const [selectedStopSequence, setSelectedStopSequence] = useState<number | null>(null);
   const comparison = useMemo(() => getComparisonStats(route), [route]);
 
   // Mapped stops for the StopMarkersLayer
@@ -46,8 +49,22 @@ export function RouteAnalysisPage() {
           sequence: s.sequence,
           status: s.status,
           address: s.address,
+          recipientName: s.recipientName,
+          shipmentPublicId: s.shipmentPublicId,
         })),
     [stops],
+  );
+
+  const handleStopClick = useCallback(
+    (sequence: number) => {
+      setSelectedStopSequence((prev) => (prev === sequence ? null : sequence));
+      const stop = mappedStops.find((s) => s.sequence === sequence);
+      if (stop) {
+        const bottomPadding = window.innerHeight * SHEET_HEIGHTS[sheetState];
+        mapRef.current?.flyTo(stop.lng, stop.lat, 16, { bottom: bottomPadding });
+      }
+    },
+    [mappedStops, sheetState],
   );
 
   // Auto-fit bounds
@@ -267,7 +284,22 @@ export function RouteAnalysisPage() {
           )}
 
           {/* Stop markers */}
-          <StopMarkersLayer stops={mappedStops} keyPrefix="analysis-" routeColor="#3b82f6" />
+          <StopMarkersLayer
+            stops={mappedStops}
+            keyPrefix="analysis-"
+            routeColor="#3b82f6"
+            onStopClick={handleStopClick}
+            selectedSequence={selectedStopSequence}
+            renderPopup={(stop) => (
+              <StopPopup
+                sequence={stop.sequence}
+                address={stop.address}
+                status={stop.status}
+                recipientName={stop.recipientName}
+                shipmentPublicId={stop.shipmentPublicId}
+              />
+            )}
+          />
         </MapCanvas>
         <BottomSheet
           state={sheetState}
