@@ -13,6 +13,7 @@ OUTPUT="$REPO/.claude/workflow-status-line.txt"
 # Graceful fallback
 if [ ! -f "$STATE_FILE" ]; then
   echo "📍 status unavailable" > "$OUTPUT"
+  cat "$OUTPUT"
   exit 0
 fi
 
@@ -142,6 +143,7 @@ phase_needs() {
 # No flow declared
 if [ "$FLOW_TYPE" = "null" ] || [ -z "$FLOW_TYPE" ]; then
   echo "📍 no flow declared${DEVIATION_SUFFIX}" > "$OUTPUT"
+  cat "$OUTPUT"
   exit 0
 fi
 
@@ -149,14 +151,17 @@ fi
 case "$FLOW_TYPE" in
   micro)
     echo "📍 micro | Responder${DEVIATION_SUFFIX}" > "$OUTPUT"
+    cat "$OUTPUT"
     exit 0
     ;;
   light)
     echo "📍 light | Documentar${DEVIATION_SUFFIX}" > "$OUTPUT"
+    cat "$OUTPUT"
     exit 0
     ;;
   explore)
     echo "📍 explore | Investigar${DEVIATION_SUFFIX}" > "$OUTPUT"
+    cat "$OUTPUT"
     exit 0
     ;;
 esac
@@ -177,6 +182,7 @@ if [ "$FLOW_TYPE" = "full" ]; then
 
   if [ "$CURRENT_INDEX" -eq 0 ]; then
     echo "📍 full | ${CURRENT_PHASE} | ⚠ fase no reconocida${DEVIATION_SUFFIX}" > "$OUTPUT"
+    cat "$OUTPUT"
     exit 0
   fi
 
@@ -226,6 +232,7 @@ if [ "$FLOW_TYPE" = "full" ]; then
   LINE="${LINE}${DEVIATION_SUFFIX}"
 
   echo "$LINE" > "$OUTPUT"
+  cat "$OUTPUT"
   exit 0
 fi
 
@@ -321,9 +328,11 @@ if [ "$FLOW_TYPE" = "debug" ]; then
   LINE="${LINE}${DEVIATION_SUFFIX}"
 
   echo "$LINE" > "$OUTPUT"
+  cat "$OUTPUT"
   exit 0
 fi
 
 # Unknown flow type — show raw
 echo "📍 ${FLOW_TYPE} | ${CURRENT_PHASE}${DEVIATION_SUFFIX}" > "$OUTPUT"
+cat "$OUTPUT"
 exit 0
