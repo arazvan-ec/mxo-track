@@ -1,12 +1,16 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { useParams } from 'react-router';
 import { useRouteMapData, getRouteFromMapData } from '@/api/hooks/useRouteMapData';
+import { useMe } from '@/api/hooks/useMe';
 import { MapCanvas, type MapCanvasHandle } from '@/components/maps/MapCanvas';
 import { StopListPanel } from '@/components/panels/StopListPanel';
 import { RouteSummaryBar } from '@/components/panels/RouteSummaryBar';
+import { EntityActionPanel } from '@/components/panels/EntityActionPanel';
 import { StopMarkersLayer } from '@/components/maps/layers/StopMarkersLayer';
 import { RoutePolylineLayer } from '@/components/maps/layers/RoutePolylineLayer';
 import { VehicleLayer } from '@/components/maps/layers/VehicleLayer';
+import { StopPopup } from '@/components/maps/shared/StopPopup';
+import { useMapSelection } from '@/hooks/useMapSelection';
 import { BottomSheet, type BottomSheetState } from '@/components/bottom-sheet/BottomSheet';
 import { TopBar } from '@/components/layout/TopBar';
 import { NavigationSidebar } from '@/components/layout/NavigationSidebar';
@@ -22,9 +26,10 @@ import type { StopData } from '@/api/types';
 export function DriverRoutePage() {
   const { publicId } = useParams<{ publicId: string }>();
   const mapRef = useRef<MapCanvasHandle>(null);
-  const [selectedSequence, setSelectedSequence] = useState<number | null>(null);
   const [navOpen, setNavOpen] = useState(false);
   const [sheetState, setSheetState] = useState<BottomSheetState>('collapsed');
+  const { data: me } = useMe();
+  const { selection, selectStop, clear } = useMapSelection();
 
   const contentHeight = window.innerHeight * SHEET_HEIGHTS[sheetState] - 64;
 
@@ -34,12 +39,28 @@ export function DriverRoutePage() {
   // Find the current stop (first PENDING stop)
   const currentStop = stops.find((s) => !s.isOrigin && s.status === 'PENDING') ?? null;
 
+  const selectedStopSequence =
+    selection?.type === 'stop'
+      ? (selection.data as { sequence: number }).sequence
+      : null;
+
   // Auto-select current stop on first load
   useEffect(() => {
-    if (currentStop && selectedSequence === null) {
-      setSelectedSequence(currentStop.sequence);
+    if (currentStop && selection === null) {
+      selectStop(`stop-${route?.publicId}-${currentStop.sequence}`, {
+        sequence: currentStop.sequence,
+        address: currentStop.address,
+        status: currentStop.status,
+        recipientName: currentStop.recipientName,
+        recipientPhone: currentStop.recipientPhone,
+        shipmentPublicId: currentStop.shipmentPublicId,
+        routePublicId: route?.publicId,
+        etaTime: currentStop.etaTime,
+        lat: currentStop.lat,
+        lng: currentStop.lng,
+      });
     }
-  }, [currentStop, selectedSequence]);
+  }, [currentStop, selection, selectStop, route?.publicId]);
 
   // Auto-track vehicle position: when vehicle moves, center map on it
   useEffect(() => {
@@ -51,14 +72,29 @@ export function DriverRoutePage() {
 
   const handleStopClick = useCallback(
     (sequence: number) => {
-      setSelectedSequence(sequence);
       const stop = stops.find((s) => s.sequence === sequence);
-      if (stop?.lat != null && stop?.lng != null) {
+      if (!stop) return;
+
+      selectStop(`stop-${route?.publicId}-${sequence}`, {
+        sequence: stop.sequence,
+        address: stop.address,
+        status: stop.status,
+        recipientName: stop.recipientName,
+        recipientPhone: stop.recipientPhone,
+        shipmentPublicId: stop.shipmentPublicId,
+        routePublicId: route?.publicId,
+        etaTime: stop.etaTime,
+        deliveredAt: stop.deliveredAt,
+        lat: stop.lat,
+        lng: stop.lng,
+      });
+
+      if (stop.lat != null && stop.lng != null) {
         const bottomPadding = window.innerHeight * SHEET_HEIGHTS[sheetState];
         mapRef.current?.flyTo(stop.lng, stop.lat, undefined, { bottom: bottomPadding });
       }
     },
-    [stops, sheetState],
+    [stops, sheetState, selectStop, route?.publicId],
   );
 
   // Map-layer stop data (needs lat/lng required)
@@ -70,6 +106,8 @@ export function DriverRoutePage() {
       sequence: s.sequence,
       status: s.status,
       address: s.address,
+      recipientName: s.recipientName,
+      shipmentPublicId: s.shipmentPublicId,
     }));
 
   // Vehicle marker data
@@ -111,7 +149,16 @@ export function DriverRoutePage() {
               keyPrefix={`driver-${route.publicId}-`}
               onStopClick={handleStopClick}
               routeColor={route.color}
-              selectedSequence={selectedSequence ?? currentStop?.sequence}
+              selectedSequence={selectedStopSequence ?? currentStop?.sequence}
+              renderPopup={(stop) => (
+                <StopPopup
+                  sequence={stop.sequence}
+                  address={stop.address}
+                  status={stop.status}
+                  recipientName={stop.recipientName}
+                  shipmentPublicId={stop.shipmentPublicId}
+                />
+              )}
             />
           )}
           {vehicleMarkers.length > 0 && <VehicleLayer vehicles={vehicleMarkers} />}
@@ -125,6 +172,15 @@ export function DriverRoutePage() {
           loadingText="Loading route..."
         >
           {route && <div className="px-4 pb-4 space-y-3">
+            {/* Entity Action Panel */}
+            {selection && (
+              <EntityActionPanel
+                selection={selection}
+                userRole={me?.role}
+                onClose={clear}
+              />
+            )}
+
             {/* Always visible: summary bar + SSE indicator */}
             <div className="flex items-center gap-2">
               <RouteSummaryBar
@@ -171,7 +227,7 @@ export function DriverRoutePage() {
               </div>
               <StopListPanel
                 stops={stops}
-                selectedSequence={selectedSequence ?? currentStop?.sequence}
+                selectedSequence={selectedStopSequence ?? currentStop?.sequence}
                 onStopClick={handleStopClick}
                 showEta
                 maxItems={contentHeight < 200 ? 2 : undefined}
