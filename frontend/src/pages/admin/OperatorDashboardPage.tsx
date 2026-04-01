@@ -80,7 +80,7 @@ export function OperatorDashboardPage() {
             sequence: s.sequence,
             status: s.status,
             address: s.address,
-            recipientName: s.recipient,
+            recipientName: s.recipientName,
             shipmentPublicId: s.shipmentPublicId,
             routePublicId: route.publicId,
             routeColor: route.color,
@@ -97,7 +97,7 @@ export function OperatorDashboardPage() {
         sequence: stop.sequence,
         address: stop.address,
         status: stop.status,
-        recipientName: stop.recipientName,
+        recipientName: stop.recipientNameName,
         shipmentPublicId: stop.shipmentPublicId,
         routePublicId: stop.routePublicId,
         lat: stop.lat,
@@ -161,7 +161,7 @@ export function OperatorDashboardPage() {
                   sequence: s.sequence,
                   status: s.status,
                   address: s.address,
-                  recipientName: s.recipient,
+                  recipientName: s.recipientName,
                   shipmentPublicId: s.shipmentPublicId,
                 }))}
               keyPrefix={`op-${route.publicId}-`}
@@ -177,7 +177,7 @@ export function OperatorDashboardPage() {
                   sequence={stop.sequence}
                   address={stop.address}
                   status={stop.status}
-                  recipientName={stop.recipientName}
+                  recipientName={stop.recipientNameName}
                   shipmentPublicId={stop.shipmentPublicId}
                 />
               )}
@@ -436,8 +436,8 @@ function StopItem({ stop, onClick }: { stop: FleetStop; onClick?: () => void }) 
           <span className="text-[10px] text-slate-500 font-mono">{stop.sequence}</span>
           <span className="text-[11px] text-slate-200 truncate">{stop.address}</span>
         </div>
-        {stop.recipient && (
-          <span className="text-[10px] text-slate-500 truncate block">{stop.recipient}</span>
+        {stop.recipientName && (
+          <span className="text-[10px] text-slate-500 truncate block">{stop.recipientName}</span>
         )}
       </div>
       <span className={`text-[9px] font-medium flex-shrink-0 ${cfg.color}`}>

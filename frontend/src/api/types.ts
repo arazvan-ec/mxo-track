@@ -150,7 +150,7 @@ export interface FleetStop {
   address: string;
   sequence: number;
   status: string;
-  recipient?: string;
+  recipientName?: string;
   shipmentPublicId?: string;
   routePublicId?: string;
 }

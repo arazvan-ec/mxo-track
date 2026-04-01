@@ -56,7 +56,7 @@ export function FleetMapPage() {
         sequence: stop.sequence,
         address: stop.address,
         status: stop.status,
-        recipientName: stop.recipient,
+        recipientName: stop.recipientName,
         shipmentPublicId: stop.shipmentPublicId,
         routePublicId: activeStops!.routeId,
         lat: stop.lat,
@@ -167,7 +167,7 @@ export function FleetMapPage() {
               sequence={stop.sequence}
               address={stop.address}
               status={stop.status}
-              recipientName={stop.recipient}
+              recipientName={stop.recipientName}
               shipmentPublicId={stop.shipmentPublicId}
             />
           )}
