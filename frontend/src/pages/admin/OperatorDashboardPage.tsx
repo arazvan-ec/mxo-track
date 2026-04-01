@@ -68,6 +68,11 @@ export function OperatorDashboardPage() {
     (r) => r.status === 'ACTIVE' || r.status === 'PLANNED',
   );
 
+  // When a route is selected (expanded), show only that route on the map
+  const visibleRoutes = expandedRouteId
+    ? activeRoutes.filter((r) => r.publicId === expandedRouteId)
+    : activeRoutes;
+
   // Build stop markers for all active routes
   const allStopMarkers = useMemo(
     () =>
@@ -137,8 +142,8 @@ export function OperatorDashboardPage() {
           initialCenter={initialCenter}
           initialZoom={6}
         >
-          {/* Route polylines */}
-          {activeRoutes.map((route) =>
+          {/* Route polylines — filtered to selected route when one is expanded */}
+          {visibleRoutes.map((route) =>
             route.polyline ? (
               <RoutePolylineLayer
                 key={route.publicId}
@@ -149,8 +154,8 @@ export function OperatorDashboardPage() {
             ) : null,
           )}
 
-          {/* Stop markers for all routes */}
-          {activeRoutes.map((route) => (
+          {/* Stop markers — filtered to selected route when one is expanded */}
+          {visibleRoutes.map((route) => (
             <StopMarkersLayer
               key={`stops-${route.publicId}`}
               stops={route.stops
@@ -256,17 +261,18 @@ export function OperatorDashboardPage() {
                     key={route.publicId}
                     route={route}
                     expanded={expandedRouteId === route.publicId}
-                    onToggle={() =>
+                    onToggle={() => {
+                      const willExpand = expandedRouteId !== route.publicId;
                       setExpandedRouteId((prev) =>
                         prev === route.publicId ? null : route.publicId,
-                      )
-                    }
-                    onFocus={() => {
-                      const pts = route.stops
-                        .filter((s) => s.lat && s.lng)
-                        .map((s) => ({ lat: s.lat, lng: s.lng }));
-                      if (pts.length > 0) {
-                        mapRef.current?.fitBounds(pts);
+                      );
+                      if (willExpand) {
+                        const pts = route.stops
+                          .filter((s) => s.lat && s.lng)
+                          .map((s) => ({ lat: s.lat, lng: s.lng }));
+                        if (pts.length > 0) {
+                          mapRef.current?.fitBounds(pts);
+                        }
                       }
                     }}
                     onStopClick={handleStopClick}
@@ -302,13 +308,11 @@ function RouteListItem({
   route,
   expanded,
   onToggle,
-  onFocus,
   onStopClick,
 }: {
   route: FleetRoute;
   expanded: boolean;
   onToggle: () => void;
-  onFocus: () => void;
   onStopClick?: (sequence: number) => void;
 }) {
   const delivered = route.deliveredStops;
@@ -330,10 +334,7 @@ function RouteListItem({
       <button
         type="button"
         className="w-full hover:bg-slate-700 p-3 text-left transition-colors"
-        onClick={() => {
-          onToggle();
-          onFocus();
-        }}
+        onClick={onToggle}
       >
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2 min-w-0">
