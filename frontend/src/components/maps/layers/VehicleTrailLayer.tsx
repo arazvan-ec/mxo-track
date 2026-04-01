@@ -1,13 +1,16 @@
 import { Source, Layer } from 'react-map-gl/maplibre';
+import { directionArrowsConfig } from '../shared/directionArrows';
 
 interface Props {
   coordinates: [number, number][]; // [lng, lat][]
+  /** Show directional arrows along the trail (default: true) */
+  showArrows?: boolean;
 }
 
 /**
  * Renders a trail polyline from historical vehicle positions.
  */
-export function VehicleTrailLayer({ coordinates }: Props) {
+export function VehicleTrailLayer({ coordinates, showArrows = true }: Props) {
   if (coordinates.length < 2) return null;
 
   const geojson: GeoJSON.Feature<GeoJSON.LineString> = {
@@ -34,6 +37,13 @@ export function VehicleTrailLayer({ coordinates }: Props) {
           'line-join': 'round',
         }}
       />
+      {showArrows && (
+        <Layer
+          id="vehicle-trail-arrows"
+          type="symbol"
+          {...directionArrowsConfig('#3b82f6')}
+        />
+      )}
     </Source>
   );
 }
