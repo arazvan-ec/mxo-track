@@ -9,6 +9,10 @@ use Doctrine\Migrations\AbstractMigration;
 
 /**
  * Add route_card_list widget to fleet_map layout (half + full states).
+ *
+ * Uses a single DO block to be atomic — previous multi-statement approach
+ * left the DB in a broken state when individual INSERTs failed (DELETE
+ * committed but INSERTs did not, desynchronising the BIGSERIAL sequence).
  */
 final class Version20260401000100 extends AbstractMigration
 {
@@ -19,75 +23,84 @@ final class Version20260401000100 extends AbstractMigration
 
     public function up(Schema $schema): void
     {
-        // Remove current half and full widgets for fleet_map global layout
         $this->addSql("
-            DELETE FROM page_layout_widget
-            WHERE page_layout_id = (
-                SELECT id FROM page_layout WHERE page_key = 'fleet_map' AND customer_id IS NULL
-            )
-            AND sheet_state IN ('half', 'full')
+            DO \$\$
+            DECLARE
+                v_layout_id BIGINT;
+            BEGIN
+                -- Resolve fleet_map global layout
+                SELECT id INTO v_layout_id
+                FROM page_layout
+                WHERE page_key = 'fleet_map' AND customer_id IS NULL;
+
+                IF v_layout_id IS NULL THEN
+                    RAISE EXCEPTION 'fleet_map global layout not found';
+                END IF;
+
+                -- Remove current half and full widgets (idempotent — may already be deleted by previous failed run)
+                DELETE FROM page_layout_widget
+                WHERE page_layout_id = v_layout_id
+                  AND sheet_state IN ('half', 'full');
+
+                -- Fix BIGSERIAL sequence (may be desynchronised from previous failed attempts)
+                PERFORM setval(
+                    pg_get_serial_sequence('page_layout_widget', 'id'),
+                    COALESCE((SELECT MAX(id) FROM page_layout_widget), 0)
+                );
+
+                -- half: kpi_pills (pos 0), route_card_list (pos 1)
+                INSERT INTO page_layout_widget (public_id, page_layout_id, widget_definition_id, sheet_state, position, created_at)
+                SELECT gen_random_uuid(), v_layout_id, wd.id, 'half', pos, NOW()
+                FROM (VALUES ('kpi_pills', 0), ('route_card_list', 1)) AS t(wtype, pos)
+                JOIN widget_definition wd ON wd.type = t.wtype;
+
+                -- full: kpi_pills (0), route_card_list (1), vehicle_info (2), driver_info (3), map_legend (4)
+                INSERT INTO page_layout_widget (public_id, page_layout_id, widget_definition_id, sheet_state, position, created_at)
+                SELECT gen_random_uuid(), v_layout_id, wd.id, 'full', pos, NOW()
+                FROM (VALUES ('kpi_pills', 0), ('route_card_list', 1), ('vehicle_info', 2), ('driver_info', 3), ('map_legend', 4)) AS t(wtype, pos)
+                JOIN widget_definition wd ON wd.type = t.wtype;
+            END
+            \$\$
         ");
-
-        // Reset sequence to avoid PK collision (BIGSERIAL doesn't auto-adjust after DELETE)
-        $this->addSql("SELECT setval('page_layout_widget_id_seq', (SELECT COALESCE(MAX(id), 0) FROM page_layout_widget))");
-
-        // New half state: kpi_pills, route_card_list
-        $halfWidgets = ['kpi_pills', 'route_card_list'];
-        foreach ($halfWidgets as $position => $widgetType) {
-            $this->addSql("
-                INSERT INTO page_layout_widget (public_id, page_layout_id, widget_definition_id, sheet_state, position, created_at)
-                SELECT gen_random_uuid(), pl.id, wd.id, 'half', {$position}, NOW()
-                FROM page_layout pl, widget_definition wd
-                WHERE pl.page_key = 'fleet_map' AND pl.customer_id IS NULL AND wd.type = '{$widgetType}'
-            ");
-        }
-
-        // New full state: kpi_pills, route_card_list, vehicle_info, driver_info, map_legend
-        $fullWidgets = ['kpi_pills', 'route_card_list', 'vehicle_info', 'driver_info', 'map_legend'];
-        foreach ($fullWidgets as $position => $widgetType) {
-            $this->addSql("
-                INSERT INTO page_layout_widget (public_id, page_layout_id, widget_definition_id, sheet_state, position, created_at)
-                SELECT gen_random_uuid(), pl.id, wd.id, 'full', {$position}, NOW()
-                FROM page_layout pl, widget_definition wd
-                WHERE pl.page_key = 'fleet_map' AND pl.customer_id IS NULL AND wd.type = '{$widgetType}'
-            ");
-        }
     }
 
     public function down(Schema $schema): void
     {
-        // Restore original half and full widgets for fleet_map
         $this->addSql("
-            DELETE FROM page_layout_widget
-            WHERE page_layout_id = (
-                SELECT id FROM page_layout WHERE page_key = 'fleet_map' AND customer_id IS NULL
-            )
-            AND sheet_state IN ('half', 'full')
+            DO \$\$
+            DECLARE
+                v_layout_id BIGINT;
+            BEGIN
+                SELECT id INTO v_layout_id
+                FROM page_layout
+                WHERE page_key = 'fleet_map' AND customer_id IS NULL;
+
+                IF v_layout_id IS NULL THEN
+                    RAISE EXCEPTION 'fleet_map global layout not found';
+                END IF;
+
+                DELETE FROM page_layout_widget
+                WHERE page_layout_id = v_layout_id
+                  AND sheet_state IN ('half', 'full');
+
+                PERFORM setval(
+                    pg_get_serial_sequence('page_layout_widget', 'id'),
+                    COALESCE((SELECT MAX(id) FROM page_layout_widget), 0)
+                );
+
+                -- Restore original half: kpi_pills (0), vehicle_info (1)
+                INSERT INTO page_layout_widget (public_id, page_layout_id, widget_definition_id, sheet_state, position, created_at)
+                SELECT gen_random_uuid(), v_layout_id, wd.id, 'half', pos, NOW()
+                FROM (VALUES ('kpi_pills', 0), ('vehicle_info', 1)) AS t(wtype, pos)
+                JOIN widget_definition wd ON wd.type = t.wtype;
+
+                -- Restore original full: kpi_pills (0), vehicle_info (1), driver_info (2), map_legend (3)
+                INSERT INTO page_layout_widget (public_id, page_layout_id, widget_definition_id, sheet_state, position, created_at)
+                SELECT gen_random_uuid(), v_layout_id, wd.id, 'full', pos, NOW()
+                FROM (VALUES ('kpi_pills', 0), ('vehicle_info', 1), ('driver_info', 2), ('map_legend', 3)) AS t(wtype, pos)
+                JOIN widget_definition wd ON wd.type = t.wtype;
+            END
+            \$\$
         ");
-
-        // Reset sequence to avoid PK collision
-        $this->addSql("SELECT setval('page_layout_widget_id_seq', (SELECT COALESCE(MAX(id), 0) FROM page_layout_widget))");
-
-        // Restore original half: kpi_pills, vehicle_info
-        $halfWidgets = ['kpi_pills', 'vehicle_info'];
-        foreach ($halfWidgets as $position => $widgetType) {
-            $this->addSql("
-                INSERT INTO page_layout_widget (public_id, page_layout_id, widget_definition_id, sheet_state, position, created_at)
-                SELECT gen_random_uuid(), pl.id, wd.id, 'half', {$position}, NOW()
-                FROM page_layout pl, widget_definition wd
-                WHERE pl.page_key = 'fleet_map' AND pl.customer_id IS NULL AND wd.type = '{$widgetType}'
-            ");
-        }
-
-        // Restore original full: kpi_pills, vehicle_info, driver_info, map_legend
-        $fullWidgets = ['kpi_pills', 'vehicle_info', 'driver_info', 'map_legend'];
-        foreach ($fullWidgets as $position => $widgetType) {
-            $this->addSql("
-                INSERT INTO page_layout_widget (public_id, page_layout_id, widget_definition_id, sheet_state, position, created_at)
-                SELECT gen_random_uuid(), pl.id, wd.id, 'full', {$position}, NOW()
-                FROM page_layout pl, widget_definition wd
-                WHERE pl.page_key = 'fleet_map' AND pl.customer_id IS NULL AND wd.type = '{$widgetType}'
-            ");
-        }
     }
 }
