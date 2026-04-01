@@ -174,6 +174,34 @@ Plans go to `docs/superpowers/plans/YYYY-MM-DD-<feature>.md` with:
 - Each task follows TDD: write test → verify fail → implement → verify pass → commit
 
 **Detail:** TDD rules in `backend/src/CLAUDE.md`, debugging rules in `backend/src/CLAUDE.md`
+
+### Task Progress Tracking
+
+During the implementation phase, update `task_progress` in session-state so the status
+line shows granular progress (e.g., "Tarea 3/5: Verify TypeScript").
+
+**When entering implementation:** Count the tasks in the plan, initialize progress:
+```bash
+jq '.evidence.task_progress = {"current": 1, "total": N, "label": "first task name", "completed_labels": []}' \
+  .claude/session-state.json > /tmp/ss.json && mv /tmp/ss.json .claude/session-state.json
+```
+
+**When starting each new task:** Advance `current`, move previous label to `completed_labels`:
+```bash
+jq '.evidence.task_progress.completed_labels += [.evidence.task_progress.label] | .evidence.task_progress.current = N | .evidence.task_progress.label = "next task name"' \
+  .claude/session-state.json > /tmp/ss.json && mv /tmp/ss.json .claude/session-state.json
+```
+
+**When all tasks complete:** Reset before transitioning to verification:
+```bash
+jq '.evidence.task_progress = {"current": 0, "total": 0, "label": null, "completed_labels": []}' \
+  .claude/session-state.json > /tmp/ss.json && mv /tmp/ss.json .claude/session-state.json
+```
+
+This produces status lines like:
+```
+📍 full | Implementation (4/8) | ✅🔄⬚⬚⬚ t2/5: Add toggle button (TDD, commit after each task)
+```
 <!-- GENERIC-END -->
 
 ---

@@ -39,6 +39,12 @@ BRANCH_STRATEGY=$(echo "$STATE" | jq -r '.evidence.branch_strategy // ""')
 ROOT_CAUSE=$(echo "$STATE" | jq -r '.evidence.root_cause_identified // false')
 PATTERN_WIDE=$(echo "$STATE" | jq -r '.evidence.pattern_wide_search_done // false')
 
+# Task progress fields
+TASK_CURRENT=$(echo "$STATE" | jq -r '.evidence.task_progress.current // 0')
+TASK_TOTAL=$(echo "$STATE" | jq -r '.evidence.task_progress.total // 0')
+TASK_LABEL=$(echo "$STATE" | jq -r '.evidence.task_progress.label // ""')
+TASK_COMPLETED=$(echo "$STATE" | jq -r '.evidence.task_progress.completed_labels // [] | length')
+
 DEVIATION_SUFFIX=""
 if [ "$DEV_ACTIVE" = "true" ]; then
   DEVIATION_SUFFIX=" | ⚠ DESVÍO"
@@ -75,7 +81,11 @@ phase_evidence() {
       [ -n "$sp" ] && echo "(${sp:0:25})" || echo "(—)"
       ;;
     implementation)
-      echo "(tests:${TESTS_WRITTEN})"
+      if [ "$TASK_TOTAL" -gt 0 ] 2>/dev/null; then
+        echo "(t${TASK_CURRENT}/${TASK_TOTAL},tests:${TESTS_WRITTEN})"
+      else
+        echo "(tests:${TESTS_WRITTEN})"
+      fi
       ;;
     verification)
       local ev=""
@@ -120,7 +130,13 @@ phase_needs() {
       [ -z "$PLAN_PATH" ] && echo " | Need: plan document"
       ;;
     implementation)
-      [ "$TESTS_WRITTEN" -eq 0 ] 2>/dev/null && echo " | Need: tests first (TDD)"
+      local parts=""
+      if [ "$TASK_TOTAL" -gt 0 ] 2>/dev/null && [ "$TASK_CURRENT" -gt 0 ] 2>/dev/null; then
+        parts="Tarea ${TASK_CURRENT}/${TASK_TOTAL}"
+        [ -n "$TASK_LABEL" ] && parts="${parts}: ${TASK_LABEL}"
+      fi
+      [ "$TESTS_WRITTEN" -eq 0 ] 2>/dev/null && { [ -n "$parts" ] && parts="$parts — tests first (TDD)" || parts="tests first (TDD)"; }
+      [ -n "$parts" ] && echo " | ${parts}"
       ;;
     verification)
       local needs=""
@@ -220,6 +236,25 @@ if [ "$FLOW_TYPE" = "full" ]; then
   NEEDS=$(phase_needs "$CURRENT_PHASE")
 
   LINE="📍 full | ${DISPLAY_PHASE} (${CURRENT_INDEX}/${TOTAL})"
+
+  # Add task progress for implementation/verification phases
+  if [ "$TASK_TOTAL" -gt 0 ] 2>/dev/null && [ "$TASK_CURRENT" -gt 0 ] 2>/dev/null; then
+    if [ "$CURRENT_PHASE" = "implementation" ] || [ "$CURRENT_PHASE" = "verification" ]; then
+      TASK_BAR=""
+      for ti in $(seq 1 "$TASK_TOTAL"); do
+        if [ "$ti" -lt "$TASK_CURRENT" ]; then
+          TASK_BAR="${TASK_BAR}✅"
+        elif [ "$ti" -eq "$TASK_CURRENT" ]; then
+          TASK_BAR="${TASK_BAR}🔄"
+        else
+          TASK_BAR="${TASK_BAR}⬚"
+        fi
+      done
+      LINE="${LINE} | ${TASK_BAR} t${TASK_CURRENT}/${TASK_TOTAL}"
+      [ -n "$TASK_LABEL" ] && LINE="${LINE}: ${TASK_LABEL}"
+    fi
+  fi
+
   if [ -n "$COMPLETED" ]; then
     LINE="${LINE} | ${COMPLETED} → 🔄 ${CURRENT_PHASE}"
   else

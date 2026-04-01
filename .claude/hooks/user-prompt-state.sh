@@ -73,6 +73,11 @@ BRANCH_STRATEGY=$(echo "$STATE" | jq -r '.evidence.branch_strategy // ""')
 ROOT_CAUSE=$(echo "$STATE" | jq -r '.evidence.root_cause_identified // false')
 PATTERN_WIDE=$(echo "$STATE" | jq -r '.evidence.pattern_wide_search_done // false')
 
+# Task progress
+TASK_CURRENT=$(echo "$STATE" | jq -r '.evidence.task_progress.current // 0')
+TASK_TOTAL=$(echo "$STATE" | jq -r '.evidence.task_progress.total // 0')
+TASK_LABEL=$(echo "$STATE" | jq -r '.evidence.task_progress.label // ""')
+
 # Helper: Y/N from bool
 yn() { [ "$1" = "true" ] && echo "Y" || echo "N"; }
 
@@ -108,6 +113,10 @@ if [ "$FLOW_TYPE" = "full" ]; then
       ;;
     implementation)
       EVIDENCE="plan=$([ -n "$PLAN_PATH" ] && echo "Y" || echo "N") tests_written=$TESTS_WRITTEN"
+      if [ "$TASK_TOTAL" -gt 0 ] 2>/dev/null; then
+        EVIDENCE="$EVIDENCE task=${TASK_CURRENT}/${TASK_TOTAL}"
+        [ -n "$TASK_LABEL" ] && EVIDENCE="$EVIDENCE (${TASK_LABEL})"
+      fi
       ;;
     verification)
       EVIDENCE="tests_passed=$(yn ${TESTS_PASSED:-false}) lint_clean=$(yn ${LINT_CLEAN:-false})"
@@ -143,7 +152,13 @@ if [ "$FLOW_TYPE" = "full" ]; then
       [ -z "$PLAN_PATH" ] && NEXT="write plan" || NEXT="transition to implementation"
       ;;
     implementation)
-      NEXT="follow TDD cycle (test first), commit frequently"
+      if [ "$TASK_TOTAL" -gt 0 ] 2>/dev/null && [ "$TASK_CURRENT" -gt 0 ] 2>/dev/null; then
+        NEXT="task ${TASK_CURRENT}/${TASK_TOTAL}"
+        [ -n "$TASK_LABEL" ] && NEXT="$NEXT: ${TASK_LABEL}"
+        NEXT="$NEXT (TDD, commit after each task)"
+      else
+        NEXT="follow TDD cycle (test first), commit frequently"
+      fi
       ;;
     verification)
       PARTS=""

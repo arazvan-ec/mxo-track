@@ -44,7 +44,13 @@ it, gates cannot enforce anything.
     "execution_log_path": null,
     "branch_strategy": null,        // merge|pr|keep|discard
     "root_cause_identified": false, // (debug-flow) true tras Skill 8 Phase 1
-    "pattern_wide_search_done": false // (debug-flow) true tras Skill 8 Phase 2.5
+    "pattern_wide_search_done": false, // (debug-flow) true tras Skill 8 Phase 2.5
+    "task_progress": {              // Progreso de tareas dentro de implementation/fix
+      "current": 0,                 // Índice de tarea actual (1-based, 0 = no iniciado)
+      "total": 0,                   // Total de tareas del plan
+      "label": null,                // Descripción corta de la tarea actual
+      "completed_labels": []        // Lista de labels de tareas completadas
+    }
   },
   "deviation": {
     "active": false,
@@ -80,6 +86,24 @@ jq '.evidence.decisions_read = true' \
 **Scope change (new interaction):**
 ```bash
 jq '.interaction_id += 1' \
+  .claude/session-state.json > /tmp/ss.json && mv /tmp/ss.json .claude/session-state.json
+```
+
+**Task progress — initialize when entering implementation (read total from plan):**
+```bash
+jq '.evidence.task_progress = {"current": 1, "total": 5, "label": "Add showArrows prop", "completed_labels": []}' \
+  .claude/session-state.json > /tmp/ss.json && mv /tmp/ss.json .claude/session-state.json
+```
+
+**Task progress — advance to next task:**
+```bash
+jq '.evidence.task_progress.completed_labels += [.evidence.task_progress.label] | .evidence.task_progress.current = 3 | .evidence.task_progress.label = "Verify TypeScript"' \
+  .claude/session-state.json > /tmp/ss.json && mv /tmp/ss.json .claude/session-state.json
+```
+
+**Task progress — reset (when leaving implementation or starting new interaction):**
+```bash
+jq '.evidence.task_progress = {"current": 0, "total": 0, "label": null, "completed_labels": []}' \
   .claude/session-state.json > /tmp/ss.json && mv /tmp/ss.json .claude/session-state.json
 ```
 
