@@ -58,6 +58,23 @@ FLOW_TYPE=$(jq -r '.flow_type // "null"' "$STATE_FILE" 2>/dev/null || echo "null
 CURRENT_PHASE=$(jq -r '.current_phase // "null"' "$STATE_FILE" 2>/dev/null || echo "null")
 DEVIATION_ACTIVE=$(jq -r '.deviation.active // false' "$STATE_FILE" 2>/dev/null || echo "false")
 
+# ── Classify file for gating (early, needed by Gate 1 messages) ──
+classify_file() {
+  case "$1" in
+    */backend/src/*|*/frontend/src/*)                echo "code" ;;
+    */backend/tests/*|*/frontend/tests/*)             echo "test" ;;
+    */docs/superpowers/specs/*)                       echo "spec" ;;
+    */docs/superpowers/plans/*)                       echo "plan" ;;
+    */docs/superpowers/execution-logs/*)              echo "execution-log" ;;
+    */docs/decisions/*)                               echo "decision" ;;
+    */docs/knowledge/*|*/docs/FEATURES.md|*/docs/codebase-manifest.md) echo "docs" ;;
+    */CLAUDE.md|*/AGENTS.md)                         echo "config" ;;
+    *)                                                echo "other" ;;
+  esac
+}
+
+FILE_CLASS=$(classify_file "$FILE_PATH")
+
 # ── Gate 1: Flow type must be declared for ALL file edits ──
 if [ "$FLOW_TYPE" = "null" ]; then
   case "$FILE_PATH" in
@@ -86,24 +103,6 @@ if [ "$CURRENT_INTERACTION" != "$EVIDENCE_INTERACTION" ]; then
       ;;
   esac
 fi
-
-# ── Classify file for gating ──
-# Returns: code, test, spec, plan, execution-log, decision, docs, config, other
-classify_file() {
-  case "$1" in
-    */backend/src/*|*/frontend/src/*)                echo "code" ;;
-    */backend/tests/*|*/frontend/tests/*)             echo "test" ;;
-    */docs/superpowers/specs/*)                       echo "spec" ;;
-    */docs/superpowers/plans/*)                       echo "plan" ;;
-    */docs/superpowers/execution-logs/*)              echo "execution-log" ;;
-    */docs/decisions/*)                               echo "decision" ;;
-    */docs/knowledge/*|*/docs/FEATURES.md|*/docs/codebase-manifest.md) echo "docs" ;;
-    */CLAUDE.md|*/AGENTS.md)                         echo "config" ;;
-    *)                                                echo "other" ;;
-  esac
-}
-
-FILE_CLASS=$(classify_file "$FILE_PATH")
 
 # ══════════════════════════════════════════════════════════════
 # Flow-specific validation
