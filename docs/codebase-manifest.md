@@ -3,7 +3,7 @@
 > **Auto-generated** by `make manifest` (`backend/bin/generate-manifest.sh`).
 > Do not edit manually — regenerate with `make manifest`.
 
-**Generated:** 2026-04-01 22:41
+**Generated:** 2026-04-01 22:53
 **Regenerate:** `make manifest`
 
 ## Project Overview
@@ -38,7 +38,7 @@
 | Messenger Messages | 4 |
 | Message Handlers | 4 |
 | Tests | 128 |
-| Migrations | 34 |
+| Migrations | 35 |
 
 ## Entity List
 
