@@ -47,18 +47,42 @@ case "$FLOW_TYPE" in
   micro)
     echo "── WORKFLOW STATE ──"
     echo "Flow: micro | Respond"
+    echo ""
+    echo "DISPLAY RULE: Inicia tu respuesta con: 💬 [respuesta concisa con datos concretos]"
     echo "────────────────────"
     exit 0
     ;;
   light)
     echo "── WORKFLOW STATE ──"
     echo "Flow: light | Document"
+    echo ""
+    echo "DISPLAY RULE: Inicia tu respuesta con: 📝 Light — [qué se completó con datos concretos]"
     echo "────────────────────"
     exit 0
     ;;
   explore)
     echo "── WORKFLOW STATE ──"
     echo "Flow: explore | Investigate"
+    echo ""
+    echo "DISPLAY RULE: Inicia tu respuesta con: 🔍 Explore — [qué se encontró con datos concretos]"
+    echo "────────────────────"
+    exit 0
+    ;;
+  debug)
+    # Read debug evidence
+    ROOT_CAUSE=$(echo "$STATE" | jq -r '.evidence.root_cause_identified // false')
+    PATTERN_WIDE=$(echo "$STATE" | jq -r '.evidence.pattern_wide_search_done // false')
+    if [ "$ROOT_CAUSE" = "true" ] && [ "$PATTERN_WIDE" = "true" ]; then
+      DEBUG_PHASE="fix"
+    elif [ "$ROOT_CAUSE" = "true" ]; then
+      DEBUG_PHASE="pattern_search"
+    else
+      DEBUG_PHASE="root_cause"
+    fi
+    echo "── WORKFLOW STATE ──"
+    echo "Flow: debug | Phase: $DEBUG_PHASE"
+    echo ""
+    echo "DISPLAY RULE: Inicia tu respuesta con: 🐛 Debug ($DEBUG_PHASE) — [causa raíz o fix aplicado con datos concretos]"
     echo "────────────────────"
     exit 0
     ;;
