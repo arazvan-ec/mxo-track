@@ -1,33 +1,121 @@
 import type { TestRoutingRoute, TestRoutingStop } from '@/api/hooks/useTestRoutingData';
 import { ROUTE_COLORS } from '@/components/maps/shared/colors';
+import type { FleetRoute } from '@/api/types';
 import type { WidgetProps } from './types';
 
 interface RouteCardListData {
-  routesData: TestRoutingRoute[];
-  highlightedRouteIdx: number | null;
-  onRouteSelect: (idx: number) => void;
+  /** TestRouting data format */
+  routesData?: TestRoutingRoute[];
+  highlightedRouteIdx?: number | null;
+  onRouteSelect?: (idx: number) => void;
+  /** Fleet data format */
+  routes?: FleetRoute[];
+  selectedRouteId?: string | null;
+  onSelectRoute?: (route: FleetRoute) => void;
 }
 
 export function RouteCardListWidget({ data }: WidgetProps) {
-  const { routesData, highlightedRouteIdx, onRouteSelect } = data as RouteCardListData;
+  const { routesData, highlightedRouteIdx, onRouteSelect, routes, selectedRouteId, onSelectRoute } =
+    data as RouteCardListData;
+
+  // Fleet routes mode
+  if (routes && routes.length > 0) {
+    return (
+      <div className="px-4 pb-4 space-y-2">
+        {routes.map((route) => (
+          <FleetRouteCard
+            key={route.publicId}
+            route={route}
+            selected={selectedRouteId === route.publicId}
+            onSelect={() => onSelectRoute?.(route)}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  // TestRouting mode
   if (!routesData) return null;
 
   return (
     <div className="px-4 pb-4 space-y-3">
       {routesData.map((route, idx) => (
-        <RouteCard
+        <OptimizationRouteCard
           key={route.name}
           route={route}
           color={ROUTE_COLORS[idx % ROUTE_COLORS.length]}
           highlighted={highlightedRouteIdx === idx}
-          onSelect={() => onRouteSelect(idx)}
+          onSelect={() => onRouteSelect?.(idx)}
         />
       ))}
     </div>
   );
 }
 
-function RouteCard({
+/** Fleet route card — shows name, status, vehicle, stop progress */
+function FleetRouteCard({
+  route,
+  selected,
+  onSelect,
+}: {
+  route: FleetRoute;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  const STATUS_COLORS: Record<string, string> = {
+    PLANNED: '#3B82F6',
+    ACTIVE: '#F59E0B',
+    DONE: '#10B981',
+    CANCELLED: '#9CA3AF',
+  };
+
+  const statusColor = STATUS_COLORS[route.status] ?? '#6B7280';
+
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={`w-full text-left rounded-lg overflow-hidden transition-all duration-200 border ${
+        selected
+          ? 'ring-2 ring-blue-500/60 shadow-lg shadow-blue-500/10 border-blue-500/40'
+          : 'border-slate-700 hover:border-slate-600'
+      }`}
+      style={{ backgroundColor: 'var(--color-surface-elevated)' }}
+    >
+      <div className="px-3 py-2.5">
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: route.color }} />
+            <span className="text-sm font-semibold truncate" style={{ color: 'var(--color-text-primary)' }}>
+              {route.name}
+            </span>
+          </div>
+          <span
+            className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded flex-shrink-0"
+            style={{ color: statusColor, backgroundColor: `${statusColor}20` }}
+          >
+            {route.status}
+          </span>
+        </div>
+        <div className="flex items-center justify-between text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+          <span className="truncate">{route.vehicleName ?? 'No vehicle'}</span>
+          <span className="flex-shrink-0">
+            <span style={{ color: 'var(--color-success)' }}>{route.deliveredStops}</span>
+            <span style={{ color: 'var(--color-text-muted)' }}> / {route.totalStops} stops</span>
+          </span>
+        </div>
+        {route.driverName && (
+          <div className="text-[11px] mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
+            {route.driverName}
+          </div>
+        )}
+      </div>
+    </button>
+  );
+}
+
+/** Optimization route card — shows before/after distance and stop order comparison */
+function OptimizationRouteCard({
   route,
   color,
   highlighted,
@@ -52,10 +140,7 @@ function RouteCard({
         onClick={onSelect}
       >
         <div className="flex items-center gap-2">
-          <div
-            className="w-3 h-3 rounded-full flex-shrink-0"
-            style={{ backgroundColor: color }}
-          />
+          <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
           <h3 className="text-sm font-semibold text-slate-100">{route.name}</h3>
           <span className="text-xs text-slate-400">{route.vehicle}</span>
         </div>

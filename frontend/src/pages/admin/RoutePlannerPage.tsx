@@ -1,11 +1,14 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { MapCanvas, type MapCanvasHandle } from '@/components/maps/MapCanvas';
 import { ShipmentClusterLayer } from '@/components/maps/layers/ShipmentClusterLayer';
-import { StopMarker } from '@/components/maps/shared/StopMarker';
+import { StopMarkersLayer } from '@/components/maps/layers/StopMarkersLayer';
+import { StopPopup } from '@/components/maps/shared/StopPopup';
 import { OriginMarker } from '@/components/maps/shared/OriginMarker';
 import { ROUTE_COLORS } from '@/components/maps/shared/colors';
 import { RoutePolylineLayer } from '@/components/maps/layers/RoutePolylineLayer';
 import { BottomSheet, type BottomSheetState } from '@/components/bottom-sheet/BottomSheet';
+import { usePageLayout } from '@/api/hooks/usePageLayout';
+import { WidgetRenderer } from '@/components/bottom-sheet/WidgetRenderer';
 import { TopBar } from '@/components/layout/TopBar';
 import { NavigationSidebar } from '@/components/layout/NavigationSidebar';
 import {
@@ -43,6 +46,7 @@ export function RoutePlannerPage() {
   const mapRef = useRef<MapCanvasHandle>(null);
   const [navOpen, setNavOpen] = useState(false);
   const [sheetState, setSheetState] = useState<BottomSheetState>('half');
+  const { layout } = usePageLayout('route_planner');
 
   // Read import_id from URL params
   const urlParams = useMemo(() => new URLSearchParams(window.location.search), []);
@@ -345,19 +349,29 @@ export function RoutePlannerPage() {
           {step >= 3 &&
             previewRoutes.map((routeData, idx) => {
               const routeColor = ROUTE_COLORS[idx % ROUTE_COLORS.length];
-              return routeData.stops
-                .filter((s) => s.latitude && s.longitude && !s.isOrigin)
-                .map((s) => (
-                  <StopMarker
-                    key={`${routeData.route.publicId}-${s.sequence}`}
-                    lng={s.longitude}
-                    lat={s.latitude}
-                    sequence={s.sequence}
-                    status="PENDING"
-                    address={s.address}
-                    routeColor={routeColor}
-                  />
-                ));
+              return (
+                <StopMarkersLayer
+                  key={`stops-${routeData.route.publicId}`}
+                  keyPrefix={`planner-${routeData.route.publicId}-`}
+                  routeColor={routeColor}
+                  stops={routeData.stops
+                    .filter((s) => s.latitude && s.longitude && !s.isOrigin)
+                    .map((s) => ({
+                      lat: s.latitude,
+                      lng: s.longitude,
+                      sequence: s.sequence,
+                      status: 'PENDING',
+                      address: s.address,
+                    }))}
+                  renderPopup={(stop) => (
+                    <StopPopup
+                      sequence={stop.sequence}
+                      address={stop.address}
+                      status={stop.status}
+                    />
+                  )}
+                />
+              );
             })}
 
           {/* Step 3: Origin marker from preview stops */}

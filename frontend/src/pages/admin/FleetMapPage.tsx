@@ -1,23 +1,24 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import { useFleetMapData } from '@/api/hooks/useFleetMapData';
 import { useFleetKpi } from '@/api/hooks/useFleetKpi';
 import { useVehicleTrail } from '@/api/hooks/useVehicleTrail';
 import { useMe } from '@/api/hooks/useMe';
+import { usePageLayout } from '@/api/hooks/usePageLayout';
 import { FleetMap, type FleetMapHandle } from '@/components/maps/FleetMap';
-import { FleetSidebar } from '@/components/fleet/FleetSidebar';
-import { StopPopup } from '@/components/maps/shared/StopPopup';
 import { EntityActionPanel } from '@/components/panels/EntityActionPanel';
 import { useMapSelection } from '@/hooks/useMapSelection';
 import { BottomSheet, type BottomSheetState } from '@/components/bottom-sheet/BottomSheet';
+import { WidgetRenderer } from '@/components/bottom-sheet/WidgetRenderer';
 import { TopBar } from '@/components/layout/TopBar';
 import { NavigationSidebar } from '@/components/layout/NavigationSidebar';
 import { SHEET_HEIGHTS } from '@/components/bottom-sheet/useBottomSheet';
-import type { FleetVehicle, FleetRoute, FleetStop } from '@/api/types';
+import type { FleetVehicle, FleetRoute } from '@/api/types';
 
 export function FleetMapPage() {
   const { vehicles, routes, isLoading, error, sseConnected } = useFleetMapData();
   const { data: kpi } = useFleetKpi();
   const { data: me } = useMe();
+  const { layout } = usePageLayout('fleet_map');
   const mapRef = useRef<FleetMapHandle>(null);
 
   const [navOpen, setNavOpen] = useState(false);
@@ -31,14 +32,6 @@ export function FleetMapPage() {
   // Trail for selected vehicle
   const { coordinates: trailCoordinates } = useVehicleTrail(selectedVehicleId);
 
-  // Derive active stops from selection
-  const activeStops = getActiveStops(
-    vehicles,
-    routes,
-    selectedVehicleId,
-    selectedRouteId,
-  );
-
   // Derive the route associated with selected vehicle
   const selectedVehicleRoute = selectedVehicleId
     ? routes.find((r) => {
@@ -47,18 +40,28 @@ export function FleetMapPage() {
       }) ?? null
     : null;
 
+  // The active route for stop selection highlighting
+  const activeRouteId = selectedRouteId ?? selectedVehicleRoute?.publicId ?? null;
+
   const handleStopClick = useCallback(
-    (sequence: number) => {
-      const stop = activeStops?.stops.find((s) => s.sequence === sequence);
+    (routePublicId: string, sequence: number) => {
+      const route = routes.find((r) => r.publicId === routePublicId);
+      const stop = route?.stops.find((s) => s.sequence === sequence);
       if (!stop) return;
 
-      selectStop(`stop-${activeStops!.routeId}-${sequence}`, {
+      // Auto-select the route when clicking a stop
+      if (!selectedRouteId || selectedRouteId !== routePublicId) {
+        setSelectedVehicleId(null);
+        setSelectedRouteId(routePublicId);
+      }
+
+      selectStop(`stop-${routePublicId}-${sequence}`, {
         sequence: stop.sequence,
         address: stop.address,
         status: stop.status,
         recipientName: stop.recipient,
         shipmentPublicId: stop.shipmentPublicId,
-        routePublicId: activeStops!.routeId,
+        routePublicId,
         lat: stop.lat,
         lng: stop.lng,
       });
@@ -68,7 +71,7 @@ export function FleetMapPage() {
         mapRef.current?.flyTo(stop.lng, stop.lat, 16, { bottom: bottomPadding });
       }
     },
-    [activeStops, selectStop, sheetState],
+    [routes, selectedRouteId, selectStop, sheetState],
   );
 
   const handleSelectVehicle = useCallback(
@@ -147,6 +150,19 @@ export function FleetMapPage() {
       ? (selection.data as { sequence: number }).sequence
       : null;
 
+  // Widget system data
+  const pageData = useMemo(
+    () => ({
+      kpi,
+      routes,
+      vehicles,
+      selectedRouteId,
+      onSelectRoute: handleSelectRoute,
+      selectedVehicleId,
+    }),
+    [kpi, routes, vehicles, selectedRouteId, handleSelectRoute, selectedVehicleId],
+  );
+
   return (
     <div className="flex flex-col h-screen w-full">
       {navOpen && <NavigationSidebar mode="overlay" onClose={() => setNavOpen(false)} />}
@@ -156,21 +172,12 @@ export function FleetMapPage() {
           ref={mapRef}
           vehicles={vehicles}
           routes={routes}
-          activeStops={activeStops}
           trailCoordinates={trailCoordinates}
           onVehicleClick={handleVehicleClick}
           onStopClick={handleStopClick}
+          selectedRouteId={activeRouteId}
           selectedStopSequence={selectedStopSequence}
           showArrows={showArrows}
-          renderStopPopup={(stop) => (
-            <StopPopup
-              sequence={stop.sequence}
-              address={stop.address}
-              status={stop.status}
-              recipientName={stop.recipient}
-              shipmentPublicId={stop.shipmentPublicId}
-            />
-          )}
         />
         <button
           type="button"
@@ -200,54 +207,26 @@ export function FleetMapPage() {
           error={error}
           loadingText="Loading fleet data..."
         >
-          <div className="px-4 pb-4 space-y-4">
-            {/* Entity Action Panel */}
+          <div className="space-y-4">
+            {/* Entity Action Panel — outside widget system (selection-driven) */}
             {selection && (
-              <EntityActionPanel
-                selection={selection}
-                userRole={me?.role}
-                onClose={clear}
-              />
+              <div className="px-4">
+                <EntityActionPanel
+                  selection={selection}
+                  userRole={me?.role}
+                  onClose={clear}
+                />
+              </div>
             )}
 
-            <FleetSidebar
-              vehicles={vehicles}
-              routes={routes}
-              kpi={kpi}
-              selectedVehicleId={selectedVehicleId}
-              selectedRouteId={selectedRouteId}
-              onSelectVehicle={handleSelectVehicle}
-              onSelectRoute={handleSelectRoute}
-              selectedVehicleRoute={selectedVehicleRoute}
+            <WidgetRenderer
+              layout={layout}
+              sheetState={sheetState}
+              pageData={pageData}
             />
           </div>
         </BottomSheet>
       </div>
     </div>
   );
-}
-
-/** Determine which stops to show based on current selection */
-function getActiveStops(
-  vehicles: FleetVehicle[],
-  routes: FleetRoute[],
-  selectedVehicleId: string | null,
-  selectedRouteId: string | null,
-): { routeId: string; stops: FleetStop[]; polyline?: string; color?: string } | null {
-  if (selectedRouteId) {
-    const route = routes.find((r) => r.publicId === selectedRouteId);
-    if (route) return { routeId: route.publicId, stops: route.stops, polyline: route.polyline, color: route.color };
-  }
-
-  if (selectedVehicleId) {
-    const vehicle = vehicles.find((v) => v.public_id === selectedVehicleId);
-    if (vehicle) {
-      const vehicleRoute = routes.find((r) => r.vehicleName === vehicle.name);
-      if (vehicleRoute) {
-        return { routeId: vehicleRoute.publicId, stops: vehicleRoute.stops, polyline: vehicleRoute.polyline, color: vehicleRoute.color };
-      }
-    }
-  }
-
-  return null;
 }
