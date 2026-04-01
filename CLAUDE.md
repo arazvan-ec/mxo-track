@@ -172,6 +172,8 @@ Plans go to `docs/superpowers/plans/YYYY-MM-DD-<feature>.md` with:
 - Phase 1 (v0): simplest working implementation with tests
 - Phase 2 (Mature): refactor toward target architecture
 - Each task follows TDD: write test → verify fail → implement → verify pass → commit
+- **Never create a separate "add tests" task.** Tests are integral to each task via TDD —
+  writing the test IS the first step of implementing the task, not a task on its own.
 
 **Detail:** TDD rules in `backend/src/CLAUDE.md`, debugging rules in `backend/src/CLAUDE.md`
 
