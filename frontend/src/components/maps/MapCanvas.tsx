@@ -1,7 +1,5 @@
 import {
   useRef,
-  useState,
-  useCallback,
   useImperativeHandle,
   useMemo,
   forwardRef,
@@ -11,17 +9,8 @@ import Map, { NavigationControl, type MapRef } from 'react-map-gl/maplibre';
 import maplibregl from 'maplibre-gl';
 import type { MapLayerMouseEvent } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { Protocol } from 'pmtiles';
-import { createMapStyle, FALLBACK_RASTER_STYLE } from './styles/map-style';
+import { createMapStyle } from './styles/map-style';
 import { useTheme } from '@/context/ThemeProvider';
-
-// Register PMTiles protocol once
-let protocolRegistered = false;
-if (!protocolRegistered) {
-  const protocol = new Protocol();
-  maplibregl.addProtocol('pmtiles', protocol.tile);
-  protocolRegistered = true;
-}
 
 export interface MapCanvasHandle {
   flyTo(lng: number, lat: number, zoom?: number, padding?: maplibregl.PaddingOptions): void;
@@ -55,33 +44,8 @@ export const MapCanvas = forwardRef<MapCanvasHandle, Props>(function MapCanvas(
   ref,
 ) {
   const mapRef = useRef<MapRef>(null);
-  const [useFallback, setUseFallback] = useState(false);
-  const tileErrorCount = useRef(0);
   const { resolved: theme } = useTheme();
   const mapStyle = useMemo(() => createMapStyle(theme), [theme]);
-
-  const onMapLoad = useCallback(() => {
-    const mapInstance = mapRef.current?.getMap();
-    if (!mapInstance) return;
-
-    // Workaround: MapLibre sometimes skips rendering vector tiles on initial
-    // paint while GeoJSON layers render fine. A 1px pan + undo forces the
-    // tile rendering pipeline to activate (same code path as user interaction).
-    requestAnimationFrame(() => {
-      mapInstance.panBy([1, 0], { duration: 0 });
-      mapInstance.panBy([-1, 0], { duration: 0 });
-    });
-
-    mapInstance.on('error', (e: { sourceId?: string }) => {
-      if (e.sourceId === 'protomaps') {
-        tileErrorCount.current++;
-        if (tileErrorCount.current >= 3 && !useFallback) {
-          console.warn('[MapCanvas] Vector tiles unavailable, falling back to raster OSM');
-          setUseFallback(true);
-        }
-      }
-    });
-  }, [useFallback]);
 
   useImperativeHandle(ref, () => ({
     flyTo(lng, lat, zoom = 15, padding) {
@@ -105,8 +69,7 @@ export const MapCanvas = forwardRef<MapCanvasHandle, Props>(function MapCanvas(
     <Map
       ref={mapRef}
       mapLib={maplibregl}
-      mapStyle={useFallback ? FALLBACK_RASTER_STYLE : mapStyle}
-      onLoad={onMapLoad}
+      mapStyle={mapStyle}
       initialViewState={{
         latitude: initialCenter.lat,
         longitude: initialCenter.lng,
