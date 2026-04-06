@@ -779,3 +779,39 @@ La API de Claude rechaza peticiones con HTTP 400 y mensaje `tool_use ids must be
 5. **Leer TodoWrite** — si había una lista de tareas, verificar cuáles están completadas y cuáles pendientes
 
 **Regla:** Ante este error, NUNCA asumir que el trabajo previo se guardó. Verificar con `git log` y `git status` antes de continuar. Hacer commits más frecuentes es la mejor protección.
+
+---
+
+## Calibration Data
+
+Real measurements from past tasks. Use to estimate future work of similar type.
+
+### Task Type: Wiring (connect existing callback/prop)
+
+| Date | Task | Files | Lines | Time |
+|------|------|-------|-------|------|
+| 2026-04-06 | OperatorDashboardPage: wire onStopClick to pageData | 1 | +24 | Trivial (<5 min) |
+| 2026-04-06 | OperatorDashboardPage: unify handlers with routePublicId | 1 | +3/-23 | Trivial (<5 min) |
+| 2026-04-06 | RoutePlannerPage: add handlePreviewStopClick | 1 | +16 | Trivial (<5 min) |
+| 2026-04-06 | TestRoutingPage: rewrite handleStopClick with flyTo | 1 | +13/-3 | Trivial (<5 min) |
+
+**Pattern:** Wiring tasks average ~15 lines, 1 file, <5 min. Full brainstorm+plan adds
+10-15 min overhead with zero design value. Use deviation mode for these.
+
+### Task Type: Boilerplate Migration (SQL widget layout)
+
+| Date | Task | Files | Lines | Time |
+|------|------|-------|-------|------|
+| 2026-04-06 | RouteAnalysisPage: add stop_list to widget layout | 1 | ~120 | <10 min |
+
+**Pattern:** Widget layout migrations follow an established DO $$ block pattern
+(Version20260401000100). ~120 lines but 90% is boilerplate (explicit id generation,
+sequence fix, down() rollback). Actual logic is 2-3 VALUES tuples. Copy the pattern,
+change the page_key and widget list.
+
+### When to Add Entries
+
+Add a calibration entry after any task that was:
+- Significantly faster or slower than expected
+- A new type not yet represented in this table
+- A repeat of an existing type (validates the estimate)

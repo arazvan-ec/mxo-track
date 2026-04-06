@@ -165,7 +165,7 @@ not just declared. Evidence fields are set by Claude; hooks verify them mechanic
 | `implementation` | plan exists (HARD) + `tests_written > 0` (SOFT warning) | MIXED |
 | `verification` | `tests_passed = true` + `lint_clean = true` | HARD |
 | `capture` | `execution_log_path` exists | SOFT |
-| `retrospective` | (recordatorio: actualizar decision log) | SOFT |
+| `retrospective` | must be in `phase_history` (pre-push gate) | HARD |
 | `finalize` | `branch_strategy` declared + knowledge module check | SOFT |
 | `debug-code` | `decisions_read` OR `logs_scanned` + `root_cause_identified` + `pattern_wide_search_done` | HARD |
 

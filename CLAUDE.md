@@ -99,6 +99,27 @@ and accumulates technical debt silently.
 
 After classifying, update session-state: `jq '.flow_type = "<type>"' .claude/session-state.json`
 
+### Deviation for Wiring-Only Changes
+
+Some code changes are pure wiring — connecting an existing callback, passing a prop,
+adding an import. These don't involve design decisions and the full brainstorm+plan
+overhead is counterproductive. Use deviation mode when ALL criteria are met:
+
+- **< 30 lines** changed across all files
+- **0 design decisions** — no new abstractions, no new patterns, no trade-offs
+- **No new entities, migrations, or API endpoints**
+- **Pattern already exists** in the codebase (copying an established approach)
+
+**How:** Activate deviation, skip brainstorm+plan, go straight to implement:
+```bash
+jq '.deviation = {"active": true, "reason": "wiring-only (<30 lines, 0 design decisions)", "skipped_phases": ["brainstorm", "plan"], "return_to_phase": null, "acknowledged_by_user": true}' \
+  .claude/session-state.json > /tmp/ss.json && mv /tmp/ss.json .claude/session-state.json
+```
+
+**Still mandatory:** consult, implement, verify, capture, retrospective, finalize.
+The retrospective is especially important for wiring changes — it's where you catch
+patterns that indicate a systemic issue (e.g., "this is the 3rd page missing onStopClick").
+
 ### Full-Flow: The 8 Phases
 
 Each phase produces something that feeds the next. The workflow engine (hooks in

@@ -53,3 +53,24 @@ Single task: wire callback through pageData to RouteCardListWidget
 - Vite build: success (5.77s)
 - PHP syntax: clean
 - Migration: follows established pattern (explicit id, DO $$ block)
+
+---
+
+## Phase 3 — Workflow Improvements (same session)
+
+### Problem
+Retrospective phase skipped twice in same session. Wiring-only changes forced through
+full brainstorm+plan with zero design value.
+
+### Changes
+
+| # | Improvement | File |
+|---|------------|------|
+| 1 | Retrospective promoted from SOFT to HARD in pre-push gate | `.claude/hooks/pre-push-gate.sh` |
+| 2 | Deviation criteria for wiring-only changes (<30 lines, 0 decisions) | `CLAUDE.md` |
+| 3 | Calibration data: wiring tasks (~15 lines, <5 min) | `docs/knowledge/superpowers-skills.md` |
+| 4 | Calibration data: boilerplate migrations (~120 lines, <10 min) | `docs/knowledge/superpowers-skills.md` |
+
+### Verification
+- Bash syntax: clean
+- TypeScript: 0 errors (no frontend changes)
