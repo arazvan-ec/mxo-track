@@ -298,6 +298,16 @@ lo completado + lo que sigue. NO narrar cada paso intermedio.
 🔄 Migrando 7 páginas al widget system (5 en paralelo)
 ```
 
+**PROHIBIDO entre tool calls:** NO emitir el status line entre herramientas consecutivas
+si el estado no cambió. El hook ya inyecta el estado en cada prompt del usuario — repetirlo
+manualmente entre Grep/Read/Bash es ruido visual. Solo emitir texto entre tool calls cuando:
+- Hay un **cambio de fase** real (root_cause → pattern_search → fix)
+- Hay un **resultado concreto** que comunicar al usuario
+- Se necesita **decisión del usuario** antes de continuar
+
+Si solo estás leyendo archivos o investigando, no emitas texto — lanza las herramientas
+directamente sin narrar cada paso.
+
 **Hook-driven header:** El `UserPromptSubmit` hook inyecta un `DISPLAY RULE` con el
 formato exacto del header **en TODOS los flows** (micro, light, debug, explore, full).
 **Copia el template del hook** al inicio de CADA respuesta sin excepción,
