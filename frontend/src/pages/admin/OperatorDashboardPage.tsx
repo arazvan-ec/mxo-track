@@ -94,18 +94,6 @@ export function OperatorDashboardPage() {
     [expandedRouteId],
   );
 
-  // Widget system data
-  const pageData = useMemo(
-    () => ({
-      kpi,
-      routes: activeRoutes,
-      selectedRouteId: expandedRouteId,
-      onSelectRoute,
-      onStopClick: handleStopClick,
-    }),
-    [kpi, activeRoutes, expandedRouteId, onSelectRoute, handleStopClick],
-  );
-
   // Build stop markers for all active routes
   const allStopMarkers = useMemo(
     () =>
@@ -147,6 +135,18 @@ export function OperatorDashboardPage() {
       mapRef.current?.flyTo(stop.lng, stop.lat, 16, { bottom: bottomPadding });
     },
     [allStopMarkers, selectStop, sheetState],
+  );
+
+  // Widget system data
+  const pageData = useMemo(
+    () => ({
+      kpi,
+      routes: activeRoutes,
+      selectedRouteId: expandedRouteId,
+      onSelectRoute,
+      onStopClick: handleStopClick,
+    }),
+    [kpi, activeRoutes, expandedRouteId, onSelectRoute, handleStopClick],
   );
 
   const handleVehicleClick = useCallback(
