@@ -140,6 +140,20 @@ consult → brainstorm → plan → implement → verify → capture → retrosp
 **Scope change detection:** If the user requests something NOT in the current plan,
 it's a new interaction. Increment `interaction_id`, reclassify, restart the flow.
 
+### Fix Invalidation
+
+When the user reports a fix didn't work ("sigue sin funcionar", "no mejoró", "same problem",
+"still broken", etc.), this is a **new debug interaction** — not a continuation of the previous
+fix phase. Reset immediately:
+
+```bash
+jq '.interaction_id = (.interaction_id + 1) | .evidence.root_cause_identified = false | .evidence.pattern_wide_search_done = false | .evidence.tests_passed = null | .current_phase = "root_cause"' \
+  .claude/session-state.json > /tmp/ss.json && mv /tmp/ss.json .claude/session-state.json
+```
+
+The previous root cause was wrong. Start fresh: re-examine, don't assume the previous analysis
+was correct.
+
 ### Workflow Engine (summary)
 
 The hooks mechanically enforce the flow. Without them, phases get skipped.
