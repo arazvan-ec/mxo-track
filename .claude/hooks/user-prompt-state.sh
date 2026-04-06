@@ -42,6 +42,41 @@ if [ "$FLOW_TYPE" = "null" ] || [ -z "$FLOW_TYPE" ]; then
   exit 0
 fi
 
+# Auto-reset completed flows: if finalize is done (branch_strategy set), reset for next interaction
+if [ "$FLOW_TYPE" = "full" ] && [ "$CURRENT_PHASE" = "finalize" ]; then
+  BRANCH_STRATEGY_CHECK=$(echo "$STATE" | jq -r '.evidence.branch_strategy // ""')
+  if [ -n "$BRANCH_STRATEGY_CHECK" ]; then
+    # Preserve last work summary before resetting
+    LAST_SUMMARY=$(echo "$STATE" | jq -c '{flow_type: .flow_type, phase: .current_phase, branch_strategy: .evidence.branch_strategy}')
+    jq --argjson summary "$LAST_SUMMARY" '
+      .flow_type = null |
+      .current_phase = null |
+      .phase_history = [] |
+      .last_work_summary = $summary |
+      .interaction_id = (.interaction_id + 1) |
+      .evidence.decisions_read = false |
+      .evidence.logs_scanned = false |
+      .evidence.user_turns = 0 |
+      .evidence.alternatives_proposed = false |
+      .evidence.user_approved = false |
+      .evidence.spec_path = null |
+      .evidence.plan_path = null |
+      .evidence.tests_written = 0 |
+      .evidence.tests_passed = null |
+      .evidence.lint_clean = null |
+      .evidence.execution_log_path = null |
+      .evidence.branch_strategy = null |
+      .evidence.root_cause_identified = false |
+      .evidence.pattern_wide_search_done = false |
+      .evidence.task_progress = {"current": 0, "total": 0, "label": null, "completed_labels": []}
+    ' "$STATE_FILE" > /tmp/ss_reset.json && mv /tmp/ss_reset.json "$STATE_FILE"
+    echo "── WORKFLOW STATE ──"
+    echo "Flow: not declared | Classify before proceeding"
+    echo "────────────────────"
+    exit 0
+  fi
+fi
+
 # Simple flows
 case "$FLOW_TYPE" in
   micro)
