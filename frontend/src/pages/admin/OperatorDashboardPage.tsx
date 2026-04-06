@@ -101,9 +101,9 @@ export function OperatorDashboardPage() {
       routes: activeRoutes,
       selectedRouteId: expandedRouteId,
       onSelectRoute,
-      onStopClick: handleWidgetStopClick,
+      onStopClick: handleStopClick,
     }),
-    [kpi, activeRoutes, expandedRouteId, onSelectRoute, handleWidgetStopClick],
+    [kpi, activeRoutes, expandedRouteId, onSelectRoute, handleStopClick],
   );
 
   // Build stop markers for all active routes
@@ -128,26 +128,6 @@ export function OperatorDashboardPage() {
   );
 
   const handleStopClick = useCallback(
-    (sequence: number) => {
-      const stop = allStopMarkers.find((s) => s.sequence === sequence);
-      if (!stop) return;
-      selectStop(`stop-${stop.routePublicId}-${sequence}`, {
-        sequence: stop.sequence,
-        address: stop.address,
-        status: stop.status,
-        recipientName: stop.recipientName,
-        shipmentPublicId: stop.shipmentPublicId,
-        routePublicId: stop.routePublicId,
-        lat: stop.lat,
-        lng: stop.lng,
-      });
-      const bottomPadding = window.innerHeight * SHEET_HEIGHTS[sheetState];
-      mapRef.current?.flyTo(stop.lng, stop.lat, 16, { bottom: bottomPadding });
-    },
-    [allStopMarkers, selectStop, sheetState],
-  );
-
-  const handleWidgetStopClick = useCallback(
     (routePublicId: string, sequence: number) => {
       const stop = allStopMarkers.find(
         (s) => s.routePublicId === routePublicId && s.sequence === sequence,
@@ -225,7 +205,7 @@ export function OperatorDashboardPage() {
                   shipmentPublicId: s.shipmentPublicId,
                 }))}
               keyPrefix={`op-${route.publicId}-`}
-              onStopClick={handleStopClick}
+              onStopClick={(seq) => handleStopClick(route.publicId, seq)}
               routeColor={route.color}
               selectedSequence={
                 selection?.type === 'stop' && selection.entityId.includes(route.publicId)
