@@ -298,15 +298,21 @@ lo completado + lo que sigue. NO narrar cada paso intermedio.
 🔄 Migrando 7 páginas al widget system (5 en paralelo)
 ```
 
-**PROHIBIDO entre tool calls:** NO emitir el status line entre herramientas consecutivas
-si el estado no cambió. El hook ya inyecta el estado en cada prompt del usuario — repetirlo
-manualmente entre Grep/Read/Bash es ruido visual. Solo emitir texto entre tool calls cuando:
+**PROHIBIDO entre tool calls:** NO emitir texto entre herramientas consecutivas salvo que
+haya un resultado concreto nuevo. Esto incluye:
+- NO repetir el status line entre Grep/Read/Bash/ToolSearch — el hook ya lo inyecta
+- NO emitir texto antes de ToolSearch (cargar herramientas es técnico, no visible)
+- NO emitir texto entre ToolSearch y la herramienta que se carga (son un par atómico)
+- NO narrar pasos intermedios: "voy a leer...", "ahora busco..."
+
+**Solo emitir texto entre tool calls cuando:**
 - Hay un **cambio de fase** real (root_cause → pattern_search → fix)
 - Hay un **resultado concreto** que comunicar al usuario
 - Se necesita **decisión del usuario** antes de continuar
 
-Si solo estás leyendo archivos o investigando, no emitas texto — lanza las herramientas
-directamente sin narrar cada paso.
+**El status line debe reflejar la realidad actual.** Si el trabajo está hecho (PR creado,
+fix mergeado), actualiza `session-state.json` ANTES de responder para que el hook muestre
+el estado correcto. Nunca dejes el estado en "Need: TDD fix + verify" cuando ya se creó el PR.
 
 **Hook-driven header:** El `UserPromptSubmit` hook inyecta un `DISPLAY RULE` con el
 formato exacto del header **en TODOS los flows** (micro, light, debug, explore, full).
