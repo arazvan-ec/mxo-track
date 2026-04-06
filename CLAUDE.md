@@ -322,6 +322,8 @@ Before claiming anything is done:
 
 **Capture to execution log:** `docs/superpowers/execution-logs/YYYY-MM-DD-<feature>.md`
 with data from each phase (alternatives, blockers, test results, lessons).
+**One log per feature/interaction, not per session.** If a session implements 3 features,
+create 3 separate files so each is independently consultable in future brainstorming.
 
 **Update decision log:** If design decisions were made, add entry to `docs/decisions/log.md`.
 

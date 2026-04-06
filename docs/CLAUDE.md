@@ -65,8 +65,12 @@ that adds, modifies, or removes functionality.
 <!-- GENERIC-START -->
 ## Execution Logs and Retrospectives
 
-After EVERY code change or bug fix, create/update:
+After EVERY code change or bug fix, create a **separate** execution log per feature/interaction:
 `docs/superpowers/execution-logs/YYYY-MM-DD-<feature-name>.md`
+
+**One log per feature, not per session.** If a session implements 3 different features,
+create 3 separate files. This makes each log independently consultable in future
+brainstorming sessions. Never append unrelated features to an existing log.
 
 | Phase | Data to capture |
 |-------|----------------|
