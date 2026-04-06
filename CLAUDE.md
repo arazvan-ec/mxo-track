@@ -298,15 +298,28 @@ lo completado + lo que sigue. NO narrar cada paso intermedio.
 🔄 Migrando 7 páginas al widget system (5 en paralelo)
 ```
 
-**PROHIBIDO entre tool calls:** NO emitir el status line entre herramientas consecutivas
-si el estado no cambió. El hook ya inyecta el estado en cada prompt del usuario — repetirlo
-manualmente entre Grep/Read/Bash es ruido visual. Solo emitir texto entre tool calls cuando:
+**PROHIBIDO entre tool calls:** NO emitir texto entre herramientas consecutivas salvo que
+haya un resultado concreto nuevo. Esto incluye:
+- NO repetir el status line entre Grep/Read/Bash/ToolSearch — el hook ya lo inyecta
+- NO emitir texto antes de ToolSearch (cargar herramientas es técnico, no visible)
+- NO emitir texto entre ToolSearch y la herramienta que se carga (son un par atómico)
+- NO narrar pasos intermedios: "voy a leer...", "ahora busco..."
+
+**Solo emitir texto entre tool calls cuando:**
 - Hay un **cambio de fase** real (root_cause → pattern_search → fix)
 - Hay un **resultado concreto** que comunicar al usuario
 - Se necesita **decisión del usuario** antes de continuar
 
-Si solo estás leyendo archivos o investigando, no emitas texto — lanza las herramientas
-directamente sin narrar cada paso.
+**Regla de estado anticipado:** El hook `UserPromptSubmit` inyecta el status line
+automáticamente entre tool calls. Por tanto, actualiza `session-state.json` **ANTES** de
+ejecutar la acción que cambia la fase, no después. Ejemplos:
+- Antes de crear un PR → actualizar `branch_strategy = "pr"` y `current_phase = "finalize"`
+- Antes de hacer push → actualizar `tests_passed`, `lint_clean`
+- Antes de marcar root cause → actualizar `root_cause_identified`
+
+Así cuando el hook se dispare entre tools, mostrará el estado correcto y no uno stale.
+Esto es especialmente importante en pares atómicos como ToolSearch → herramienta MCP,
+donde el hook se dispara entre ambos y muestra el estado al usuario.
 
 **Hook-driven header:** El `UserPromptSubmit` hook inyecta un `DISPLAY RULE` con el
 formato exacto del header **en TODOS los flows** (micro, light, debug, explore, full).
