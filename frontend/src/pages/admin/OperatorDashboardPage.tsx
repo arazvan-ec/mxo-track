@@ -101,8 +101,9 @@ export function OperatorDashboardPage() {
       routes: activeRoutes,
       selectedRouteId: expandedRouteId,
       onSelectRoute,
+      onStopClick: handleStopClick,
     }),
-    [kpi, activeRoutes, expandedRouteId, onSelectRoute],
+    [kpi, activeRoutes, expandedRouteId, onSelectRoute, handleStopClick],
   );
 
   // Build stop markers for all active routes
@@ -127,10 +128,12 @@ export function OperatorDashboardPage() {
   );
 
   const handleStopClick = useCallback(
-    (sequence: number) => {
-      const stop = allStopMarkers.find((s) => s.sequence === sequence);
+    (routePublicId: string, sequence: number) => {
+      const stop = allStopMarkers.find(
+        (s) => s.routePublicId === routePublicId && s.sequence === sequence,
+      );
       if (!stop) return;
-      selectStop(`stop-${stop.routePublicId}-${sequence}`, {
+      selectStop(`stop-${routePublicId}-${sequence}`, {
         sequence: stop.sequence,
         address: stop.address,
         status: stop.status,
@@ -202,7 +205,7 @@ export function OperatorDashboardPage() {
                   shipmentPublicId: s.shipmentPublicId,
                 }))}
               keyPrefix={`op-${route.publicId}-`}
-              onStopClick={handleStopClick}
+              onStopClick={(seq) => handleStopClick(route.publicId, seq)}
               routeColor={route.color}
               selectedSequence={
                 selection?.type === 'stop' && selection.entityId.includes(route.publicId)
