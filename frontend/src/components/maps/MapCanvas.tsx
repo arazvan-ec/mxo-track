@@ -64,6 +64,13 @@ export const MapCanvas = forwardRef<MapCanvasHandle, Props>(function MapCanvas(
     const mapInstance = mapRef.current?.getMap();
     if (!mapInstance) return;
 
+    // Force resize after layout stabilizes — fixes blank tiles on first load
+    // when flexbox container hasn't settled its dimensions yet
+    mapInstance.resize();
+    requestAnimationFrame(() => {
+      mapInstance.resize();
+    });
+
     mapInstance.on('error', (e: { sourceId?: string }) => {
       if (e.sourceId === 'protomaps') {
         tileErrorCount.current++;
