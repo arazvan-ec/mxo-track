@@ -6,8 +6,8 @@
 # - For full/debug flows with protected changes:
 #   HARD: verification (tests_passed + lint_clean)
 #   HARD: capture (execution_log_path exists, file ≥500B)
+#   HARD: retrospective (must be in phase_history)
 #   HARD: finalize (branch_strategy declared)
-#   SOFT: retrospective (warning only)
 # - Deviation mode: converts DENY to WARN
 #
 # Skips git push --dry-run commands.
@@ -179,7 +179,15 @@ else
   fi
 fi
 
-# ── 3. Finalize: branch_strategy declared ──
+# ── 3. Retrospective: must be in phase_history ──
+if phase_completed "retrospective"; then
+  CHECKLIST="${CHECKLIST}✅ retrospective | "
+else
+  CHECKLIST="${CHECKLIST}❌ retrospective (not in phase_history) | "
+  ERRORS="${ERRORS}retrospective "
+fi
+
+# ── 4. Finalize: branch_strategy declared ──
 BRANCH_STRATEGY=$(jq -r '.evidence.branch_strategy // ""' "$STATE_FILE" 2>/dev/null || echo "")
 
 case "$BRANCH_STRATEGY" in
@@ -195,15 +203,6 @@ esac
 # ── Apply HARD gates ──
 if [ -n "$ERRORS" ]; then
   gate "❌ PUSH BLOQUEADO [$FLOW_TYPE] | $CHECKLIST | Accion: completa los items marcados con ❌"
-fi
-
-# ══════════════════════════════════════════════════════════════
-# SOFT warning: retrospective
-# ══════════════════════════════════════════════════════════════
-
-if ! phase_completed "retrospective"; then
-  echo "{\"systemMessage\":\"⚠ PRE-PUSH [$FLOW_TYPE] Fase 'retrospective' pendiente. Considera actualizar docs/decisions/log.md antes del push final.\"}"
-  exit 0
 fi
 
 exit 0

@@ -7,6 +7,7 @@ import { OriginMarker } from '@/components/maps/shared/OriginMarker';
 import { ROUTE_COLORS } from '@/components/maps/shared/colors';
 import { RoutePolylineLayer } from '@/components/maps/layers/RoutePolylineLayer';
 import { BottomSheet, type BottomSheetState } from '@/components/bottom-sheet/BottomSheet';
+import { SHEET_HEIGHTS } from '@/components/bottom-sheet/useBottomSheet';
 import { TopBar } from '@/components/layout/TopBar';
 import { NavigationSidebar } from '@/components/layout/NavigationSidebar';
 import {
@@ -281,6 +282,20 @@ export function RoutePlannerPage() {
     setStep(1);
   }, []);
 
+  const handlePreviewStopClick = useCallback(
+    (sequence: number) => {
+      for (const routeData of previewRoutes) {
+        const stop = routeData.stops.find((s) => s.sequence === sequence && !s.isOrigin);
+        if (stop && stop.latitude && stop.longitude) {
+          const bottomPadding = window.innerHeight * SHEET_HEIGHTS[sheetState];
+          mapRef.current?.flyTo(stop.longitude, stop.latitude, 16, { bottom: bottomPadding });
+          return;
+        }
+      }
+    },
+    [previewRoutes, sheetState],
+  );
+
   // Derive origin location for map
   const originLocation = useMemo(() => {
     if (!originPublicId) return null;
@@ -351,6 +366,7 @@ export function RoutePlannerPage() {
                   key={`stops-${routeData.route.publicId}`}
                   keyPrefix={`planner-${routeData.route.publicId}-`}
                   routeColor={routeColor}
+                  onStopClick={handlePreviewStopClick}
                   stops={routeData.stops
                     .filter((s) => s.latitude && s.longitude && !s.isOrigin)
                     .map((s) => ({

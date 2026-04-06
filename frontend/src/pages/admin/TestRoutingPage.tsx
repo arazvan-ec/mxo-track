@@ -60,11 +60,18 @@ export function TestRoutingPage() {
   );
 
   const handleStopClick = useCallback(
-    (routeIdx: number) => {
+    (routeIdx: number, sequence: number) => {
       setHighlightedRouteIdx(routeIdx);
       if (sheetState === 'collapsed') setSheetState('half');
+      if (!data) return;
+      const route = data.routesData[routeIdx];
+      if (!route) return;
+      const stop = route.stopsAfter.find((s) => s.seq === sequence);
+      if (!stop?.lat || !stop?.lng) return;
+      const bottomPadding = window.innerHeight * SHEET_HEIGHTS[sheetState];
+      mapRef.current?.flyTo(stop.lng, stop.lat, 16, { bottom: bottomPadding });
     },
-    [sheetState],
+    [data, sheetState],
   );
 
   // Page data passed to all widgets
@@ -154,7 +161,7 @@ export function TestRoutingPage() {
                   status: 'PENDING',
                   address: s.address,
                 }))}
-                onStopClick={() => handleStopClick(idx)}
+                onStopClick={(seq) => handleStopClick(idx, seq)}
                 renderPopup={(stop) => (
                   <StopPopup
                     sequence={stop.sequence}

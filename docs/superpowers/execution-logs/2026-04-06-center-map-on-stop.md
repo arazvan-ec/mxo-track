@@ -21,6 +21,7 @@ Single task: wire callback through pageData to RouteCardListWidget
 - Uses both `routePublicId` AND `sequence` to find stop (more precise than existing `handleStopClick` which only uses sequence)
 - Calls `selectStop()` + `mapRef.flyTo()` with bottom sheet padding
 - Added `onStopClick: handleWidgetStopClick` to `pageData` useMemo
+- Later unified both handlers into single `handleStopClick(routePublicId, sequence)`, map layer passes routePublicId via closure
 
 ## Verification
 
