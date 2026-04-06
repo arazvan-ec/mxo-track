@@ -140,6 +140,20 @@ consult → brainstorm → plan → implement → verify → capture → retrosp
 **Scope change detection:** If the user requests something NOT in the current plan,
 it's a new interaction. Increment `interaction_id`, reclassify, restart the flow.
 
+### Fix Invalidation
+
+When the user reports a fix didn't work ("sigue sin funcionar", "no mejoró", "same problem",
+"still broken", etc.), this is a **new debug interaction** — not a continuation of the previous
+fix phase. Reset immediately:
+
+```bash
+jq '.interaction_id = (.interaction_id + 1) | .evidence.root_cause_identified = false | .evidence.pattern_wide_search_done = false | .evidence.tests_passed = null | .current_phase = "root_cause"' \
+  .claude/session-state.json > /tmp/ss.json && mv /tmp/ss.json .claude/session-state.json
+```
+
+The previous root cause was wrong. Start fresh: re-examine, don't assume the previous analysis
+was correct.
+
 ### Workflow Engine (summary)
 
 The hooks mechanically enforce the flow. Without them, phases get skipped.
@@ -283,6 +297,16 @@ lo completado + lo que sigue. NO narrar cada paso intermedio.
 ✅ 6 widgets implementados, registry actualizado (10/10)
 🔄 Migrando 7 páginas al widget system (5 en paralelo)
 ```
+
+**PROHIBIDO entre tool calls:** NO emitir el status line entre herramientas consecutivas
+si el estado no cambió. El hook ya inyecta el estado en cada prompt del usuario — repetirlo
+manualmente entre Grep/Read/Bash es ruido visual. Solo emitir texto entre tool calls cuando:
+- Hay un **cambio de fase** real (root_cause → pattern_search → fix)
+- Hay un **resultado concreto** que comunicar al usuario
+- Se necesita **decisión del usuario** antes de continuar
+
+Si solo estás leyendo archivos o investigando, no emitas texto — lanza las herramientas
+directamente sin narrar cada paso.
 
 **Hook-driven header:** El `UserPromptSubmit` hook inyecta un `DISPLAY RULE` con el
 formato exacto del header **en TODOS los flows** (micro, light, debug, explore, full).

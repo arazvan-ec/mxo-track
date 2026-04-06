@@ -2,7 +2,6 @@ import {
   useRef,
   useState,
   useCallback,
-  useEffect,
   useImperativeHandle,
   useMemo,
   forwardRef,
@@ -61,24 +60,17 @@ export const MapCanvas = forwardRef<MapCanvasHandle, Props>(function MapCanvas(
   const { resolved: theme } = useTheme();
   const mapStyle = useMemo(() => createMapStyle(theme), [theme]);
 
-  // ResizeObserver: call map.resize() whenever the container dimensions change.
-  // Fixes blank tiles on first load — MapLibre initializes before flexbox settles.
-  const containerRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const container = containerRef.current;
-    const map = mapRef.current?.getMap();
-    if (!container || !map) return;
-
-    const ro = new ResizeObserver(() => {
-      map.resize();
-    });
-    ro.observe(container);
-    return () => ro.disconnect();
-  });
-
   const onMapLoad = useCallback(() => {
     const mapInstance = mapRef.current?.getMap();
     if (!mapInstance) return;
+
+    // Workaround: MapLibre sometimes skips rendering vector tiles on initial
+    // paint while GeoJSON layers render fine. A 1px pan + undo forces the
+    // tile rendering pipeline to activate (same code path as user interaction).
+    requestAnimationFrame(() => {
+      mapInstance.panBy([1, 0], { duration: 0 });
+      mapInstance.panBy([-1, 0], { duration: 0 });
+    });
 
     mapInstance.on('error', (e: { sourceId?: string }) => {
       if (e.sourceId === 'protomaps') {
@@ -110,25 +102,23 @@ export const MapCanvas = forwardRef<MapCanvasHandle, Props>(function MapCanvas(
   }));
 
   return (
-    <div ref={containerRef} style={{ width: '100%', height: '100%' }}>
-      <Map
-        ref={mapRef}
-        mapLib={maplibregl}
-        mapStyle={useFallback ? FALLBACK_RASTER_STYLE : mapStyle}
-        onLoad={onMapLoad}
-        initialViewState={{
-          latitude: initialCenter.lat,
-          longitude: initialCenter.lng,
-          zoom: initialZoom,
-        }}
-        style={{ width: '100%', height: '100%' }}
-        interactiveLayerIds={interactiveLayerIds}
-        onClick={onClick}
-        cursor={cursor}
-      >
-        {showControls && <NavigationControl position="top-right" />}
-        {children}
-      </Map>
-    </div>
+    <Map
+      ref={mapRef}
+      mapLib={maplibregl}
+      mapStyle={useFallback ? FALLBACK_RASTER_STYLE : mapStyle}
+      onLoad={onMapLoad}
+      initialViewState={{
+        latitude: initialCenter.lat,
+        longitude: initialCenter.lng,
+        zoom: initialZoom,
+      }}
+      style={{ width: '100%', height: '100%' }}
+      interactiveLayerIds={interactiveLayerIds}
+      onClick={onClick}
+      cursor={cursor}
+    >
+      {showControls && <NavigationControl position="top-right" />}
+      {children}
+    </Map>
   );
 });
