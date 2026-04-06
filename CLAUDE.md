@@ -321,6 +321,15 @@ Así cuando el hook se dispare entre tools, mostrará el estado correcto y no un
 Esto es especialmente importante en pares atómicos como ToolSearch → herramienta MCP,
 donde el hook se dispara entre ambos y muestra el estado al usuario.
 
+**Granularidad:** Actualiza el estado con la mayor frecuencia posible — no solo en cambios
+de fase, sino antes de cada grupo de tool calls significativo. El usuario ve el status line
+entre CADA herramienta, así que cada disparo es una oportunidad de comunicar qué se está
+haciendo. Ejemplo durante debug:
+- Antes de investigar → `current_phase = "root_cause"` con label de qué se investiga
+- Antes de aplicar fix → actualizar `root_cause_identified = true`
+- Antes de correr tests → actualizar a fase de verificación
+- Antes de push → actualizar `tests_passed`, `lint_clean`
+
 **Hook-driven header:** El `UserPromptSubmit` hook inyecta un `DISPLAY RULE` con el
 formato exacto del header **en TODOS los flows** (micro, light, debug, explore, full).
 **Copia el template del hook** al inicio de CADA respuesta sin excepción,
