@@ -310,9 +310,16 @@ haya un resultado concreto nuevo. Esto incluye:
 - Hay un **resultado concreto** que comunicar al usuario
 - Se necesita **decisión del usuario** antes de continuar
 
-**El status line debe reflejar la realidad actual.** Si el trabajo está hecho (PR creado,
-fix mergeado), actualiza `session-state.json` ANTES de responder para que el hook muestre
-el estado correcto. Nunca dejes el estado en "Need: TDD fix + verify" cuando ya se creó el PR.
+**Regla de estado anticipado:** El hook `UserPromptSubmit` inyecta el status line
+automáticamente entre tool calls. Por tanto, actualiza `session-state.json` **ANTES** de
+ejecutar la acción que cambia la fase, no después. Ejemplos:
+- Antes de crear un PR → actualizar `branch_strategy = "pr"` y `current_phase = "finalize"`
+- Antes de hacer push → actualizar `tests_passed`, `lint_clean`
+- Antes de marcar root cause → actualizar `root_cause_identified`
+
+Así cuando el hook se dispare entre tools, mostrará el estado correcto y no uno stale.
+Esto es especialmente importante en pares atómicos como ToolSearch → herramienta MCP,
+donde el hook se dispara entre ambos y muestra el estado al usuario.
 
 **Hook-driven header:** El `UserPromptSubmit` hook inyecta un `DISPLAY RULE` con el
 formato exacto del header **en TODOS los flows** (micro, light, debug, explore, full).
