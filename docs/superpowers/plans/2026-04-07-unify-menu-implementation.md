@@ -5,22 +5,22 @@
 
 ## Phase 1 (v0): Working implementation
 
-### Tarea 1 — Create AppLayout with Context
-- Create `frontend/src/components/layout/AppLayout.tsx`
+### Task 1 — Crear AppLayout with Context
+- Crear `frontend/src/components/layout/AppLayout.tsx`
 - Implements: AppLayoutProvider context, useAppLayout hook, AppLayout component
 - TopBar + NavigationSidebar + Outlet, navOpen state managed internally
 - Context exposes `setExtraControls` for pages that need TopBar extras
 - Test: TypeScript compiles
 - Commit after
 
-### Tarea 2 — Wire AppLayout as layout route
-- Modify `frontend/src/router.tsx`: wrap `/app` children with `<AppLayout />` element
+### Task 2 — Modificar router with layout route
+- Modificar `frontend/src/router.tsx`: wrap `/app` children with `<AppLayout />` element
 - Test: TypeScript compiles
 - Commit after
 
-### [parallel] Tarea 3a-3k — Remove shell boilerplate from 11 pages
+### [parallel] Task 3a-3k — Remove shell boilerplate from 11 pages
 
-Each page: remove `navOpen` state, `NavigationSidebar` import/JSX, `TopBar` import/JSX, outer `<div className="flex flex-col h-screen w-full">` wrapper (AppLayout provides it). Keep only the page content.
+Each page: remove `navOpen` state, `NavigationSidebar` import/JSX, `TopBar` import/JSX, outer `<div className="flex flex-col h-screen w-full">` wrapper (AppLayout provides it). Keep only page content.
 
 - **3a:** FleetMapPage.tsx
 - **3b:** ExceptionMapPage.tsx
@@ -36,12 +36,12 @@ Each page: remove `navOpen` state, `NavigationSidebar` import/JSX, `TopBar` impo
 
 Commit after all pages done (single commit, mechanical change).
 
-### Tarea 4 — Delete DualMenuShell
+### Task 4 — Delete DualMenuShell
 - Delete `frontend/src/components/layout/DualMenuShell.tsx`
 - Verify no imports remain
 - Commit after
 
-### Tarea 5 — Verify
+### Task 5 — Verify
 - `npx tsc --noEmit` passes
 - Build succeeds (`npm run build`)
 
