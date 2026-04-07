@@ -17,7 +17,7 @@ class AdminController extends AbstractController
     #[Route('', name: 'admin_dashboard', methods: ['GET'])]
     public function dashboard(): Response
     {
-        return $this->render('admin/dashboard.html.twig');
+        return $this->redirect('/app/admin/dashboard', Response::HTTP_MOVED_PERMANENTLY);
     }
 
     #[Route('/health', name: 'admin_health', methods: ['GET'])]
