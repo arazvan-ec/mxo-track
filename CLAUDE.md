@@ -182,6 +182,25 @@ tasks average ~15 lines, 1 file, <5 minutes (see Calibration Data section below)
 changes.** Without it, the workflow penalizes exactly the kind of quick fixes that keep
 a codebase healthy.
 
+#### Why the model cannot self-approve deviations
+
+The model has a bias toward action — when given a task, it rationalizes that the change
+is "simple enough" to skip phases. This rationalization is indistinguishable from a
+legitimate assessment because the model genuinely believes both. The failure mode was
+observed directly: the model classified a ~70-line template change as "wiring-only",
+self-approved deviation, skipped brainstorm and plan, and went straight to implementation
+— exactly the cowboy coding that the full flow exists to prevent.
+
+**Self-assessment of complexity is unreliable because the assessor and the beneficiary
+are the same entity.** The model benefits from skipping phases (less work, faster
+completion) and therefore has an incentive to classify changes as simple. This isn't
+malice — it's the same cognitive bias that makes developers say "this is a quick fix"
+before spending 3 hours on it.
+
+The fix is structural, not instructional: **move the approval decision to the user.**
+Instructions saying "be honest about complexity" are suggestions the model can override.
+A gate that requires user confirmation is a physical barrier the model cannot bypass.
+
 #### How deviation mode works
 
 Deviation skips brainstorm and plan but keeps everything else. The phases that remain —
@@ -189,16 +208,26 @@ consult, implement, verify, capture, retrospective, finalize — are the ones th
 errors even in simple changes:
 
 ```
-consult → [skip brainstorm] → [skip plan] → implement → verify → capture → retrospective → finalize
-                                                                                │
-                                                               catches patterns: "this is the 3rd page
-                                                               missing onStopClick" → systemic issue
+consult → [user approves deviation] → implement → verify → capture → retrospective → finalize
+   │              │                                                        │
+   reads past     gate: model                                   catches patterns:
+   decisions      presents evidence,                            "this is the 3rd page
+                  user decides                                   missing onStopClick"
 ```
+
+**Why consult is mandatory even for deviations:** The consult phase reads execution logs
+and decision logs. Without it, the model doesn't know if this "simple" change was already
+attempted and failed, or if a decision log explicitly chose a different approach. Consult
+produces the context that makes the deviation assessment meaningful — skipping it means
+the model evaluates complexity without knowing what it doesn't know.
 
 **The retrospective is the most important phase for wiring changes** — it's where you
 detect that a "simple" change is actually a symptom of a missing abstraction. Three
 similar wiring fixes in a week means the codebase needs a structural fix, not a fourth
-wiring patch.
+wiring patch. The retrospective feeds the learning loop: its output goes to the execution
+log, which consult reads in the next session. Without it, the pattern is invisible.
+
+#### The approval gate: criteria and flow
 
 **Criteria (ALL must be met):**
 - **< 30 lines** changed across all files
@@ -206,24 +235,30 @@ wiring patch.
 - **No new entities, migrations, or API endpoints**
 - **Pattern already exists** in the codebase (copying an established approach)
 
-**Activation requires explicit user confirmation.** The model MUST NOT self-approve
-deviations. Present the 4 criteria with evidence to the user and wait for approval
-before activating. This prevents the model from rationalizing that any change is
-"simple enough" — the bias toward action makes self-assessment unreliable.
+These criteria exist because they are the conditions under which brainstorm produces zero
+value: no alternatives to evaluate (the pattern already exists), no design trade-offs to
+weigh (zero decisions), and not enough code to hide architectural mistakes (< 30 lines).
+If any criterion fails, brainstorm has nonzero value and must not be skipped.
 
 **Activation flow:**
-1. Complete the `consult` phase (read decisions/execution logs)
-2. Present deviation request to user with evidence for each criterion:
+1. Complete the `consult` phase — read decisions/execution logs. This is not optional.
+   Consult produces the context that determines whether deviation is safe.
+2. Present deviation request to the user with **concrete evidence** for each criterion:
    ```
    Propongo desviación (wiring-only):
    - Líneas estimadas: ~15 (< 30 ✓)
    - Decisiones de diseño: 0 — solo conectar X con Y (✓)
    - Nuevas entidades/migraciones/endpoints: ninguna (✓)
-   - Patrón existente: [citar ejemplo concreto del codebase] (✓)
+   - Patrón existente: [citar archivo:línea del ejemplo concreto] (✓)
    ¿Apruebas la desviación?
    ```
-3. Only after user confirms → activate in session-state
-4. If user denies → continue with full flow (brainstorm + plan)
+   The evidence must be specific: "pattern exists" requires a file:line reference to where
+   the pattern is used, not a vague "similar things exist." "< 30 lines" requires a count,
+   not "it's small." Vague evidence is not evidence — it's rationalization wearing a lab coat.
+3. **Wait for explicit user confirmation.** Do not proceed. Do not start "reading files
+   in the meantime." The gate is closed until the user opens it.
+4. If user confirms → activate in session-state and proceed to implement.
+5. If user denies → continue with full flow (brainstorm + plan). No re-requesting.
 
 **Activate (only after user confirmation):**
 ```bash
