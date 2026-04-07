@@ -15,14 +15,10 @@ const queryClient = new QueryClient({
 
 const container = document.getElementById('mxo-dashboard-root');
 if (container) {
-  // Read Mercure URL from the data attribute set by base.html.twig
-  const mercureEl = document.querySelector('[data-mercure-url]');
-  const mercurePublicUrl = mercureEl?.getAttribute('data-mercure-url') ?? undefined;
-
   createRoot(container).render(
     <StrictMode>
       <QueryClientProvider client={queryClient}>
-        <AdminDashboardPage mercurePublicUrl={mercurePublicUrl} />
+        <AdminDashboardPage />
       </QueryClientProvider>
     </StrictMode>,
   );
