@@ -37,11 +37,25 @@ if [ "$FLOW_TYPE" = "full" ] && [ "$CURRENT_PHASE" = "brainstorming" ]; then
 fi
 
 # ── User Approval Detection (Capa 3) ──
-# During brainstorming, detect user approval/rejection patterns in their message.
-# This is the ONLY sanctioned way to set user_approved = true.
+#
+# Philosophy: user_approved represents a HUMAN decision, not a model belief. Only
+# this hook can set it — direct jq writes are reverted by phase-transition-controller.
+# This prevents the model from self-approving designs.
+#
+# Technique: Regex matching on the user's actual text. The .user_prompt field from
+# the hook input may contain injected <system-reminder> blocks with text like
+# "no existe spec document". Without stripping, the rejection regex (no[, ]|...)
+# matches "no existe" and reverts a legitimate "Apruebo" in the same message.
+#
+# Flow: user_prompt → strip <system-reminder> → lowercase → match approval → match rejection
+#       If both match (rare), rejection wins (conservative: false negative costs 1 message,
+#       false positive costs wrong implementation)
+#
+# Rule: NEVER bypass this by setting user_approved directly — it will be reverted.
 if [ "$FLOW_TYPE" = "full" ] && [ -n "$USER_PROMPT" ]; then
   CURRENT_APPROVED=$(echo "$STATE" | jq -r '.evidence.user_approved // false')
-  PROMPT_LOWER=$(echo "$USER_PROMPT" | tr '[:upper:]' '[:lower:]')
+  CLEAN_PROMPT=$(echo "$USER_PROMPT" | sed '/<system-reminder>/,/<\/system-reminder>/d')
+  PROMPT_LOWER=$(echo "$CLEAN_PROMPT" | tr '[:upper:]' '[:lower:]')
 
   # Approval patterns (Spanish + English)
   if echo "$PROMPT_LOWER" | grep -qiE '(^|\s)(sí|si,|si$|yes|ok|dale|adelante|aprobado|apruebo|perfecto|de acuerdo|estoy de acuerdo|me parece bien|prefiero|vamos con|go ahead|approved|lgtm|apruebo el plan|lo apruebo|suena bien|hazlo|implementa|proceed|me gusta|está bien|esta bien|correcto)(\s|$|[,.\!])'; then

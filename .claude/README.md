@@ -39,8 +39,8 @@ it, gates cannot enforce anything.
     "spec_path": null,              // ruta al spec guardado
     "plan_path": null,              // ruta al plan guardado
     "tests_written": 0,
-    "tests_passed": null,
-    "lint_clean": null,
+    "tests_passed": null,           // true|false|"skipped"|null — "skipped" when no test infra
+    "lint_clean": null,             // true|false|"skipped"|null — "skipped" when no lint tooling
     "execution_log_path": null,
     "branch_strategy": null,        // merge|pr|keep|discard
     "root_cause_identified": false, // (debug-flow) true tras Skill 8 Phase 1
@@ -89,9 +89,38 @@ will detect and revert it.
 ```
 
 ### user_approved
-**DO NOT** set `user_approved = true` directly. It is set automatically by the
-`UserPromptSubmit` hook when the user's message matches approval patterns
-(e.g., "sí", "aprobado", "go ahead"). Direct writes are reverted.
+
+#### Why only the hook can set this
+
+`user_approved` represents a real human decision, not a model belief. If the model
+could set it directly, it would rationalize approval ("the user will approve this,
+let me skip ahead"). The `phase-transition-controller.sh` detects any `jq` command
+containing `user_approved = true` and reverts it — this is the enforcement mechanism.
+
+#### How approval detection works
+
+The `UserPromptSubmit` hook (`user-prompt-state.sh`) is the ONLY sanctioned path:
+
+```
+User types message → hook receives .user_prompt → strip <system-reminder> tags
+    → lowercase → match approval regex → set user_approved = true
+    → match rejection regex → set user_approved = false
+```
+
+**Why strip system-reminder tags:** The `.user_prompt` field from the hook input may
+contain injected `<system-reminder>` blocks with text like "no existe spec document".
+Without stripping, the rejection regex `(no[, ]|...)` matches "no existe" and reverts
+a legitimate approval. The `sed '/<system-reminder>/,/<\/system-reminder>/d'` filter
+isolates the actual user text before pattern matching.
+
+**Why rejection runs after approval:** The regex check order matters. If both patterns
+match (unlikely but possible with complex messages), rejection wins — this is
+deliberately conservative. A false negative (missing approval) costs the user one
+extra confirmation message. A false positive (approving when the user rejected) causes
+implementation of the wrong design.
+
+**DO NOT** set `user_approved = true` directly via `jq`. Direct writes are detected
+by `phase-transition-controller.sh` and reverted silently.
 
 **Single evidence field update:**
 ```bash
@@ -145,13 +174,32 @@ failure mode. See "Harness Assumptions" below.
 
 ### Full-Flow Gates by File
 
-| Para editar... | Fases requeridas | Gate |
-|----------------|------------------|------|
-| `docs/superpowers/specs/*` | consult ✓ | HARD |
-| `docs/superpowers/plans/*` | consult ✓, brainstorming ✓ | HARD |
-| `src/*`, `tests/*` | consult ✓, brainstorming ✓, planning ✓ | HARD |
-| `docs/superpowers/execution-logs/*` | (self) | SOFT |
-| `docs/decisions/*` | (self) | SOFT |
+#### Why specs and plans have lighter gates than code
+
+Specs and plans are *products of* brainstorming and planning — they're created
+during those phases. Running the brainstorm-validator when writing a spec creates
+a circular dependency: the validator requires the spec to exist, but you're trying
+to create it. The same applies to plans.
+
+The correct enforcement point is `phase-advance.sh`, which runs the validator when
+*leaving* a phase. This means:
+- Writing a spec during brainstorming → only needs `consult` completed
+- Writing a plan during planning → only needs `brainstorming` completed
+- Advancing from brainstorming to planning → runs brainstorm-validator (checks spec
+  exists, user approved, alternatives proposed)
+- Advancing from planning to implementation → runs planning-validator (checks plan
+  exists with tasks)
+
+This separation follows a principle: **gates on file writes verify prerequisites;
+gates on phase transitions verify phase completion.**
+
+| Para editar... | Validators en Write | Gate | Verified on phase-advance |
+|----------------|---------------------|------|---------------------------|
+| `docs/superpowers/specs/*` | `consult` | HARD | brainstorm-validator (spec exists, approved) |
+| `docs/superpowers/plans/*` | `brainstorm` | HARD | planning-validator (plan exists, has tasks) |
+| `src/*`, `tests/*` | `brainstorm` + `planning` + `spec-compliance` + `implementation` | HARD | — |
+| `docs/superpowers/execution-logs/*` | `capture` | SOFT | — |
+| `docs/decisions/*` | `retrospective` | SOFT | — |
 
 ### Debug-Flow Gates (for `src/*` and `tests/*`)
 
@@ -170,22 +218,35 @@ failure mode. See "Harness Assumptions" below.
 
 ## Validators — Evidence Required per Phase
 
+#### Why evidence, not trust
+
 Each validator encodes the minimum evidence that proves a phase was done honestly,
 not just declared. Evidence fields are set by Claude; hooks verify them mechanically.
+Without this, the model declares "brainstorming done" without having proposed
+alternatives — the validator catches this because `alternatives_proposed` is still
+`false`.
 
-### Two invocation contexts
+### Two invocation contexts — and why they exist
 
-Validators are called from two different places with different signatures:
+Validators serve two roles that must not be confused:
 
 1. **Phase transitions** (`phase-advance.sh`): `validator.sh $STATE_FILE`
+   → Answers: "Is this phase COMPLETE? Can I leave it?"
    Called when advancing between phases. Uses autodiscovery: looks for
    `validators/${phase}-validator.sh` (with `${phase%ing}` fallback for "brainstorming").
    To add a new validator, create `validators/{phase}-validator.sh` — no registration needed.
 
 2. **File edit gates** (`workflow-engine.sh`): `validator.sh $STATE_FILE $FILE_PATH`
+   → Answers: "Are the PREREQUISITES for writing this file met?"
    Called as PreToolUse hook when the model tries to edit a file. The `$FILE_PATH` is used
    by `implementation-validator.sh` (TDD check) and `debug-validator.sh` (code gate).
    Validators must handle `$2` being empty (transition context) or a path (edit context).
+
+**Critical design rule:** A phase's own validator should NOT run as a file gate for
+artifacts produced DURING that phase. The brainstorm-validator checks "is brainstorming
+complete?" — running it when writing a spec (which is the brainstorming output) creates
+a circular dependency. File gates check prerequisites (prior phases); phase-advance
+checks completion (current phase).
 
 | Fase | Evidencia requerida | Nivel |
 |------|---------------------|-------|
@@ -193,10 +254,35 @@ Validators are called from two different places with different signatures:
 | `brainstorming` | `user_turns ≥ 1` (HARD) + SOFT warn if `< 3` + `alternatives_proposed` + `user_approved` + `spec_path` (archivo ≥500B) | MIXED |
 | `planning` | `plan_path` (archivo ≥300B con keywords) | HARD |
 | `implementation` | plan exists (HARD) + `tests_written > 0` (SOFT warning) | MIXED |
-| `verification` | `tests_passed = true` + `lint_clean = true` | HARD |
+| `verification` | `tests_passed` = `true` or `skipped` + `lint_clean` = `true` or `skipped` | MIXED |
 | `capture` | `execution_log_path` exists | SOFT |
 | `retrospective` | `execution_log_path` exists + `## Lessons`/`## Retrospectiva` section ≥100 chars | HARD |
-| `finalize` | `branch_strategy` declared + knowledge module check | SOFT |
+| `finalize` | `branch_strategy` declared (`merge\|pr\|keep\|discard`) + knowledge module check | SOFT |
+
+### Verification: the "skipped" state
+
+#### Why accept incomplete verification
+
+Some environments lack test infrastructure (no `composer install`, no `node_modules`).
+Forcing `tests_passed = true` when tests cannot run teaches the model to lie about
+evidence — the opposite of what the evidence system exists to do. The `"skipped"` value
+is an honest declaration: "I could not verify this, and I know it."
+
+#### How it flows
+
+```
+tests available → run tests → tests_passed = true|false
+tests unavailable → tests_passed = "skipped" → SOFT warning on verification + pre-push
+                                              → reviewer knows to verify before merge
+```
+
+**`"skipped"` propagates through the gate chain:** verification-validator accepts it
+(exit 1 = soft warning), pre-push-gate accepts it (⚠ instead of ✅), but the warning
+travels all the way to the PR reviewer. The gap in verification is never hidden —
+it's escalated to the human who can actually close it.
+
+**Rule:** Never set `tests_passed = true` when tests did not actually run. Use
+`"skipped"` and let the warning propagate.
 | `debug-code` | `decisions_read` OR `logs_scanned` + `root_cause_identified` + `pattern_wide_search_done` | HARD |
 
 ---

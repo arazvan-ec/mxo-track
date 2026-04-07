@@ -19,6 +19,7 @@ export default defineConfig({
         main: path.resolve(__dirname, 'index.html'),
         'sidebar-widget': path.resolve(__dirname, 'sidebar-widget.html'),
         'topbar-widget': path.resolve(__dirname, 'topbar-widget.html'),
+        'dashboard-widget': path.resolve(__dirname, 'dashboard-widget.html'),
       },
       output: {
         entryFileNames: (chunkInfo) => {
@@ -27,6 +28,9 @@ export default defineConfig({
           }
           if (chunkInfo.name === 'topbar-widget') {
             return 'assets/topbar-widget.js';
+          }
+          if (chunkInfo.name === 'dashboard-widget') {
+            return 'assets/dashboard-widget.js';
           }
           return 'assets/[name]-[hash].js';
         },

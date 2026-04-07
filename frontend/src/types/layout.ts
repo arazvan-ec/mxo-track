@@ -8,7 +8,12 @@ export type WidgetType =
   | 'delivery_timeline'
   | 'kpi_pills'
   | 'map_legend'
-  | 'route_comparison';
+  | 'route_comparison'
+  | 'system_health'
+  | 'infrastructure_metrics'
+  | 'dashboard_kpis'
+  | 'mini_reports'
+  | 'activity_feed';
 
 export type SheetStateName = 'collapsed' | 'half' | 'full';
 
@@ -20,7 +25,8 @@ export type PageKey =
   | 'route_detail'
   | 'shipment_tracking'
   | 'driver_route'
-  | 'customer_tracking';
+  | 'customer_tracking'
+  | 'admin_dashboard';
 
 export interface WidgetPlacement {
   type: WidgetType;

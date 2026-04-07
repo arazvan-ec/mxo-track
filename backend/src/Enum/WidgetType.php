@@ -16,4 +16,9 @@ enum WidgetType: string
     case KPI_PILLS = 'kpi_pills';
     case MAP_LEGEND = 'map_legend';
     case ROUTE_COMPARISON = 'route_comparison';
+    case SYSTEM_HEALTH = 'system_health';
+    case INFRASTRUCTURE_METRICS = 'infrastructure_metrics';
+    case DASHBOARD_KPIS = 'dashboard_kpis';
+    case MINI_REPORTS = 'mini_reports';
+    case ACTIVITY_FEED = 'activity_feed';
 }

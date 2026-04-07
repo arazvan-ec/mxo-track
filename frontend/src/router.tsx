@@ -9,6 +9,7 @@ import { OperatorDashboardPage } from './pages/admin/OperatorDashboardPage';
 import { RoutePlannerPage } from './pages/admin/RoutePlannerPage';
 import { WidgetGalleryPage } from './pages/admin/WidgetGalleryPage';
 import { PageLayoutEditorPage } from './pages/admin/PageLayoutEditorPage';
+import { AdminDashboardPage } from './pages/admin/AdminDashboardPage';
 import { CustomerRouteDetailPage } from './pages/customer/CustomerRouteDetailPage';
 import { DriverRoutePage } from './pages/driver/DriverRoutePage';
 
@@ -17,6 +18,7 @@ export const router = createBrowserRouter([
     path: '/app',
     element: <AppLayout />,
     children: [
+      { path: 'admin/dashboard', element: <AdminDashboardPage /> },
       { path: 'admin/fleet-map', element: <FleetMapPage /> },
       { path: 'admin/exception-map', element: <ExceptionMapPage /> },
       { path: 'admin/routes/:publicId', element: <RouteDetailPage /> },
