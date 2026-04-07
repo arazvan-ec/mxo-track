@@ -66,16 +66,32 @@ it, gates cannot enforce anything.
 
 ## How to Update session-state.json
 
-State updates use `jq` for atomic writes. The pre-push gate checks that
-`phase_history` contains the mandatory phases (verification, capture, finalize)
-before allowing pushes to protected paths — so phase transitions must always
-append to it.
+State updates use `jq` for atomic writes. **Phase transitions MUST use
+`phase-advance.sh`** — direct writes to `phase_history` are detected and
+reverted by `phase-transition-controller.sh`.
 
-**Phase transition (append to phase_history first):**
+### Phase transitions (MANDATORY: use phase-advance.sh)
 ```bash
-jq '.phase_history += ["consult"] | .current_phase = "brainstorming"' \
-  .claude/session-state.json > /tmp/ss.json && mv /tmp/ss.json .claude/session-state.json
+.claude/hooks/phase-advance.sh consult
+.claude/hooks/phase-advance.sh brainstorming
+# etc. — enforces legal sequence, adds timestamps automatically
 ```
+
+**DO NOT** write `phase_history` directly via `jq`. The phase-transition-controller
+will detect and revert it.
+
+### phase_history format (new — timestamped objects)
+```json
+"phase_history": [
+  {"phase": "consult", "at": "2026-04-07T10:20:00Z"},
+  {"phase": "brainstorming", "at": "2026-04-07T10:25:00Z"}
+]
+```
+
+### user_approved
+**DO NOT** set `user_approved = true` directly. It is set automatically by the
+`UserPromptSubmit` hook when the user's message matches approval patterns
+(e.g., "sí", "aprobado", "go ahead"). Direct writes are reverted.
 
 **Single evidence field update:**
 ```bash
