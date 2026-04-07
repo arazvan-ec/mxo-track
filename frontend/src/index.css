@@ -27,6 +27,18 @@
   --map-minor: #e2e8f0;
   --map-buildings: #dde3ea;
   --map-park: #bbf7d0;
+
+  /* Card tokens (overridden by presets) */
+  --card-radius: 0.75rem;
+  --card-blur: none;
+  --card-border: 1px solid var(--color-border);
+  --card-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  --card-bg: var(--color-surface-elevated);
+  --card-hover-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  --card-padding: 1.5rem;
+  --section-gap: 2rem;
+  --kpi-font: inherit;
+  --data-font: ui-monospace, monospace;
 }
 
 .dark {
@@ -55,19 +67,175 @@
   --map-minor: #1e293b;
   --map-buildings: #1a2332;
   --map-park: #0d1f1a;
+  --card-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  --card-hover-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+/* ── Preset: Glass ── */
+.preset-glass {
+  --card-bg: rgba(255, 255, 255, 0.55);
+  --card-blur: blur(16px);
+  --card-border: 1px solid rgba(255, 255, 255, 0.25);
+  --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255,255,255,0.4);
+  --card-hover-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
+  --card-radius: 1.25rem;
+  --color-surface: #e8edf5;
+  --color-surface-elevated: rgba(255, 255, 255, 0.55);
+}
+.preset-glass.dark {
+  --card-bg: rgba(15, 23, 42, 0.50);
+  --card-border: 1px solid rgba(255, 255, 255, 0.08);
+  --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255,255,255,0.05);
+  --card-hover-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  --color-surface: #040b18;
+  --color-surface-elevated: rgba(15, 23, 42, 0.50);
+}
+
+/* ── Preset: Command Center ── */
+.preset-command {
+  --color-surface: #060a14;
+  --color-surface-elevated: #0c1425;
+  --color-text-primary: #e0f2fe;
+  --color-text-secondary: #7dd3fc;
+  --color-text-muted: #38bdf8;
+  --color-border: rgba(56, 189, 248, 0.15);
+  --color-border-accent: rgba(34, 211, 238, 0.3);
+  --color-accent: #22d3ee;
+  --color-accent-bg: #06b6d4;
+  --color-accent-hover: #67e8f9;
+  --color-accent-muted: rgba(34, 211, 238, 0.12);
+  --color-success: #4ade80;
+  --color-error: #fb7185;
+  --color-warning: #fbbf24;
+  --card-bg: linear-gradient(135deg, rgba(12, 20, 37, 0.95) 0%, rgba(15, 25, 50, 0.9) 100%);
+  --card-blur: blur(8px);
+  --card-border: 1px solid rgba(56, 189, 248, 0.12);
+  --card-shadow: 0 0 20px rgba(34, 211, 238, 0.05), 0 4px 16px rgba(0,0,0,0.3);
+  --card-hover-shadow: 0 0 30px rgba(34, 211, 238, 0.1), 0 8px 24px rgba(0,0,0,0.4);
+  --card-radius: 0.75rem;
+  --kpi-font: ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
+  --data-font: ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
+}
+.preset-command.dark {
+  --color-surface: #020408;
+  --color-surface-elevated: #080e1c;
+  --card-bg: linear-gradient(135deg, rgba(8, 14, 28, 0.95) 0%, rgba(10, 18, 40, 0.9) 100%);
+  --card-shadow: 0 0 25px rgba(34, 211, 238, 0.08), 0 4px 16px rgba(0,0,0,0.5);
+}
+
+/* ── Preset: Bento ── */
+.preset-bento {
+  --color-surface: #faf8f6;
+  --color-surface-elevated: #ffffff;
+  --color-accent: #7c3aed;
+  --color-accent-bg: #8b5cf6;
+  --color-accent-hover: #6d28d9;
+  --color-accent-muted: rgba(139, 92, 246, 0.1);
+  --color-border: #f0eaff;
+  --card-bg: #ffffff;
+  --card-border: 1px solid #f0eaff;
+  --card-shadow: 0 2px 8px rgba(124, 58, 237, 0.04), 0 1px 2px rgba(0,0,0,0.03);
+  --card-hover-shadow: 0 8px 24px rgba(124, 58, 237, 0.08), 0 2px 4px rgba(0,0,0,0.04);
+  --card-radius: 1.5rem;
+  --card-padding: 1.75rem;
+  --section-gap: 1rem;
+}
+.preset-bento.dark {
+  --color-surface: #0c0a14;
+  --color-surface-elevated: #1a1528;
+  --color-accent: #a78bfa;
+  --color-accent-bg: #8b5cf6;
+  --color-accent-hover: #c4b5fd;
+  --color-border: rgba(139, 92, 246, 0.15);
+  --card-bg: #1a1528;
+  --card-border: 1px solid rgba(139, 92, 246, 0.12);
+  --card-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  --card-hover-shadow: 0 8px 24px rgba(124, 58, 237, 0.15);
+}
+
+/* ── Preset: Data Dense ── */
+.preset-dense {
+  --card-radius: 0.5rem;
+  --card-padding: 0.875rem;
+  --card-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  --card-hover-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  --section-gap: 0.75rem;
+  --kpi-font: ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
+  --data-font: ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
+  --color-surface: #f1f3f5;
+  --color-surface-elevated: #ffffff;
+  --color-border: #dee2e6;
+}
+.preset-dense.dark {
+  --color-surface: #0a0c10;
+  --color-surface-elevated: #141820;
+  --color-border: #2a303c;
+  --card-shadow: 0 1px 2px rgba(0,0,0,0.3);
 }
 
 body {
   margin: 0;
   background-color: var(--color-surface);
   color: var(--color-text-primary);
-  transition: background-color 0.2s, color 0.2s;
+  transition: background-color 0.3s, color 0.3s;
 }
 
 #root {
   width: 100%;
   height: 100vh;
   display: flex;
+}
+
+/* ── Theme Card — universal card styles driven by CSS vars ── */
+.theme-card {
+  background: var(--card-bg);
+  backdrop-filter: var(--card-blur);
+  -webkit-backdrop-filter: var(--card-blur);
+  border: var(--card-border);
+  border-radius: var(--card-radius);
+  box-shadow: var(--card-shadow);
+  transition: box-shadow 0.2s, transform 0.2s, background 0.3s, border 0.3s;
+}
+.theme-card:hover {
+  box-shadow: var(--card-hover-shadow);
+}
+
+/* ── Animations ── */
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes bar-grow {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+
+@keyframes gauge-fill {
+  from { stroke-dashoffset: var(--gauge-circumference, 283); }
+  to { stroke-dashoffset: var(--gauge-offset, 0); }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.4s ease-out both;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-bar-grow {
+  animation: bar-grow 0.6s ease-out both;
+  transform-origin: bottom;
+}
+
+.animate-gauge-fill {
+  animation: gauge-fill 1s ease-out both;
 }
 
 /* MapLibre popups — themed */
