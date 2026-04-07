@@ -46,16 +46,23 @@ final class AlertService
      */
     public function getOfflineVehicles(int $thresholdMinutes = 30): array
     {
-        $vehicles = $this->em->getRepository(Vehicle::class)->findBy(['isActive' => true]);
+        $rows = $this->em->createQueryBuilder()
+            ->select('v', 'vlp')
+            ->from(Vehicle::class, 'v')
+            ->leftJoin(VehicleLastPosition::class, 'vlp', 'WITH', 'vlp.vehicle = v')
+            ->where('v.isActive = true')
+            ->getQuery()
+            ->getResult();
+
         $offline = [];
         $now = new \DateTimeImmutable();
 
-        foreach ($vehicles as $vehicle) {
-            $lastPosition = $this->em->getRepository(VehicleLastPosition::class)->findOneBy([
-                'vehicle' => $vehicle,
-            ]);
+        foreach ($rows as $row) {
+            /** @var Vehicle $vehicle */
+            $vehicle = $row instanceof Vehicle ? $row : $row[0];
+            $lastPosition = $row instanceof Vehicle ? null : ($row[1] ?? null);
 
-            if ($lastPosition === null) {
+            if (!$lastPosition instanceof VehicleLastPosition) {
                 $offline[] = ['vehicle' => $vehicle, 'minutesOffline' => -1];
                 continue;
             }

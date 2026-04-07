@@ -21,7 +21,7 @@ final readonly class DoctrineRouteStopRepository implements RouteStopRepositoryI
         try {
             return $this->em->getRepository(RouteStop::class)
                 ->findOneBy(['publicId' => Ulid::fromString($publicId)]);
-        } catch (\Throwable) {
+        } catch (\InvalidArgumentException) {
             return null;
         }
     }
