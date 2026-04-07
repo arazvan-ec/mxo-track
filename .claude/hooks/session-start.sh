@@ -63,6 +63,18 @@ output_context() {
     done
   fi
 
+  # Pending work items
+  if [ -f "$STATE_FILE" ]; then
+    local pending_count
+    pending_count=$(jq -r '.pending_work // [] | length' "$STATE_FILE" 2>/dev/null || echo "0")
+    if [ "$pending_count" -gt 0 ]; then
+      echo ""
+      echo "⚠ Pending work ($pending_count items):"
+      jq -r '.pending_work[] | "  [\(.priority)] \(.title)"' "$STATE_FILE" 2>/dev/null || true
+      echo "  Spec: $(jq -r '.pending_work[0].spec // "N/A"' "$STATE_FILE" 2>/dev/null)"
+    fi
+  fi
+
   # Last execution log with preview
   if [ -d "$EXEC_LOGS_DIR" ]; then
     local latest_log
@@ -145,11 +157,13 @@ fi
 
 # Build last_work_summary before resetting
 LAST_WORK_SUMMARY='{}'
+PENDING_WORK='[]'
 if [ -f "$STATE_FILE" ]; then
   LAST_WORK_SUMMARY=$(build_last_work_summary)
+  PENDING_WORK=$(jq -c '.pending_work // []' "$STATE_FILE" 2>/dev/null || echo '[]')
 fi
 
-# Create fresh session state with preserved last_work_summary
+# Create fresh session state with preserved last_work_summary and pending_work
 cat > "$STATE_FILE" <<EOJSON
 {
   "session_date": "$TODAY",
@@ -159,6 +173,7 @@ cat > "$STATE_FILE" <<EOJSON
   "interaction_classification": null,
   "phase_history": [],
   "last_work_summary": $LAST_WORK_SUMMARY,
+  "pending_work": $PENDING_WORK,
   "evidence": {
     "interaction_id": 0,
     "decisions_read": false,
