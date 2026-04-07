@@ -8,6 +8,13 @@ Registro de decisiones de diseño significativas. Cada entrada captura el contex
 
 ---
 
+### [2026-04-07] Documentation format: philosophy+technique+flow+rules
+
+- **Problema:** Las secciones de CLAUDE.md eran listas de reglas y comandos ("haz esto") sin explicar por qué existen, cómo funcionan internamente, ni cómo cada paso alimenta al siguiente. El modelo las seguía mecánicamente pero no internalizaba el razonamiento, lo que causaba que racionalizara saltar pasos cuando no entendía su propósito.
+- **Decisión:** Adoptar un formato estándar para toda sección instructiva con 4 capas: (1) **Filosofía** — por qué este sistema y no otro, qué decisión de diseño lo justifica, (2) **Técnica** — cómo funciona el mecanismo interno, no solo el comando, (3) **Flujo causal** — qué produce cada paso (→) y qué lo consume, no solo "ejecuta en orden", (4) **Reglas integradas** — cada regla aparece junto al punto donde aplica, no en sección aparte.
+- **Alternativas descartadas:** (A) Mantener listas de reglas con comentarios breves — fácil de escribir pero el modelo no internaliza el porqué. (B) Documentación filosófica separada de las instrucciones — duplica contenido y se desincroniza. (C) Solo agregar "why" al inicio de cada sección — insuficiente, el flujo causal entre pasos sigue invisible.
+- **Resultado:** 10 secciones de CLAUDE.md reescritas (+289/-75 líneas). El formato se aplicó primero a Parallel-First Planning como prueba, luego se extendió a: Manifest, Session-State, Classify First, Deviation Mode, Fix Invalidation, Workflow Engine, Brainstorming, Evidence Before Claims, Closing the Cycle, Commits and Push. **Este formato debe aplicarse a toda nueva sección instructiva.**
+
 ### [2026-03-23] Completion gate via phase_history[] on pre-push
 
 - **Problema:** Claude podía pushear código sin completar capture/finalize/retrospective. Los validators solo corrían en Edit/Write, no en push.
