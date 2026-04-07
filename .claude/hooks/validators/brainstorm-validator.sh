@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Brainstorm phase validator (SOFT gate — stress-test 2026-03-24)
+# Brainstorm phase validator (HARD gate — hardened 2026-04-07)
 # Checks: user_turns >= 1, alternatives_proposed, user_approved, spec >= 500B
-# Exit 0 = pass, Exit 1 = warn (relaxed from HARD for stress-test)
+# Exit 0 = pass, Exit 2 = block (critical checks), Exit 1 = warn (soft checks)
 set -euo pipefail
 
 STATE_FILE="${1:-.claude/session-state.json}"
@@ -71,10 +71,10 @@ else
 fi
 
 if [ -n "$ERRORS" ]; then
-  echo "WARNING (SOFT — stress-test): Brainstorming incompleto:"
+  echo "BLOCKED: Brainstorming incompleto:"
   echo -e "$ERRORS"
   echo "Completa el brainstorming (Skill 2) antes de continuar."
-  exit 1
+  exit 2
 fi
 
 # Soft warnings (exit 1 = warn but allow)

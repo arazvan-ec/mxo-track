@@ -20,6 +20,10 @@ if [ ! -f "$STATE_FILE" ]; then
   exit 0
 fi
 
+# Read user prompt from stdin (UserPromptSubmit provides it as JSON)
+HOOK_INPUT=$(cat 2>/dev/null || echo "{}")
+USER_PROMPT=$(echo "$HOOK_INPUT" | jq -r '.user_prompt // ""' 2>/dev/null || echo "")
+
 # Read state
 STATE=$(cat "$STATE_FILE" 2>/dev/null || echo "{}")
 FLOW_TYPE=$(echo "$STATE" | jq -r '.flow_type // "null"')
@@ -30,6 +34,30 @@ if [ "$FLOW_TYPE" = "full" ] && [ "$CURRENT_PHASE" = "brainstorming" ]; then
   jq '.evidence.user_turns = (.evidence.user_turns + 1)' "$STATE_FILE" > /tmp/upt.json && mv /tmp/upt.json "$STATE_FILE"
   # Re-read state after update
   STATE=$(cat "$STATE_FILE" 2>/dev/null || echo "{}")
+fi
+
+# ── User Approval Detection (Capa 3) ──
+# During brainstorming, detect user approval/rejection patterns in their message.
+# This is the ONLY sanctioned way to set user_approved = true.
+if [ "$FLOW_TYPE" = "full" ] && [ -n "$USER_PROMPT" ]; then
+  CURRENT_APPROVED=$(echo "$STATE" | jq -r '.evidence.user_approved // false')
+  PROMPT_LOWER=$(echo "$USER_PROMPT" | tr '[:upper:]' '[:lower:]')
+
+  # Approval patterns (Spanish + English)
+  if echo "$PROMPT_LOWER" | grep -qiE '(^|\s)(sí|si,|si$|yes|ok|dale|adelante|aprobado|apruebo|perfecto|de acuerdo|estoy de acuerdo|me parece bien|prefiero|vamos con|go ahead|approved|lgtm|apruebo el plan|lo apruebo)(\s|$|[,.\!])'; then
+    if [ "$CURRENT_APPROVED" != "true" ]; then
+      jq '.evidence.user_approved = true' "$STATE_FILE" > /tmp/upt.json && mv /tmp/upt.json "$STATE_FILE"
+      STATE=$(cat "$STATE_FILE" 2>/dev/null || echo "{}")
+    fi
+  fi
+
+  # Rejection patterns (reset approval)
+  if echo "$PROMPT_LOWER" | grep -qiE '(^|\s)(no[, ]|cambia|modifica|diferente|otra opci|no me convence|rechaz|no estoy de acuerdo)'; then
+    if [ "$CURRENT_APPROVED" = "true" ]; then
+      jq '.evidence.user_approved = false' "$STATE_FILE" > /tmp/upt.json && mv /tmp/upt.json "$STATE_FILE"
+      STATE=$(cat "$STATE_FILE" 2>/dev/null || echo "{}")
+    fi
+  fi
 fi
 INTERACTION_ID=$(echo "$STATE" | jq -r '.interaction_id // 0')
 DEV_ACTIVE=$(echo "$STATE" | jq -r '.deviation.active // false')
