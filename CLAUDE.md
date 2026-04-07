@@ -214,20 +214,40 @@ Plans go to `docs/superpowers/plans/YYYY-MM-DD-<feature>.md` with:
 - **Never create a separate "add tests" task.** Tests are integral to each task via TDD —
   writing the test IS the first step of implementing the task, not a task on its own.
 
-**Parallel execution by default:** Plans MUST identify which tasks can run in parallel
-and group them explicitly. Independent tasks (e.g., backend change + frontend type change,
-or changes to unrelated files/subsystems) should be grouped in a `[parallel]` block.
-Tasks that depend on prior results remain sequential. When executing, use the Agent tool
-to launch parallel tasks concurrently whenever possible.
+**Parallel-first planning (principio de diseño):** Every plan MUST maximize parallelism.
+The planner's job is not just to list tasks — it's to decompose work into the smallest
+independent units and identify which can execute concurrently. This is a design principle,
+not an optimization: parallel decomposition reveals hidden dependencies, forces clearer
+interfaces between tasks, and reduces total execution time.
+
+**How to apply:**
+1. **Decompose first, sequence second.** Start by listing all atomic tasks. Then identify
+   dependencies between them. Everything without a dependency runs in parallel.
+2. **Default is parallel.** A task is sequential only if it REQUIRES output from a prior
+   task. "It's easier to do sequentially" is not a valid reason.
+3. **Group explicitly.** Independent tasks go in `[parallel]` blocks. Tasks that depend
+   on prior results are marked with their dependency.
+4. **Maximize the parallel frontier.** At every point in the plan, ask: "what is the
+   maximum number of tasks that could run right now?" If the answer is 1, look for ways
+   to decompose further.
 
 ```markdown
-### [parallel] Tarea 1a + 1b
+### [parallel] Tarea 1a + 1b + 1c
 - **1a:** Backend — add field to snapshot (backend/src/...)
 - **1b:** Frontend — extend TypeScript type (frontend/src/...)
+- **1c:** Tests — add fixture data for new field (backend/tests/...)
 
 ### Tarea 2 (depends on 1a + 1b)
 - Frontend — use new fields in component
+
+### [parallel] Tarea 3a + 3b (depends on 2)
+- **3a:** Backend — add validation rule
+- **3b:** Frontend — add error display component
 ```
+
+When executing, use the Agent tool to launch parallel tasks concurrently. Each parallel
+group runs its tasks simultaneously; the next group starts only when all dependencies
+from the previous group are met.
 
 **Detail:** TDD rules in `backend/src/CLAUDE.md`, debugging rules in `backend/src/CLAUDE.md`
 

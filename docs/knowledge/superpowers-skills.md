@@ -122,6 +122,10 @@ Write comprehensive implementation plans assuming the engineer has zero context 
 - Map file structure and responsibilities upfront
 - Break work into 2-5 minute steps following TDD pattern
 - Save plans to `docs/superpowers/plans/YYYY-MM-DD-<feature-name>.md`
+- **Parallel-first decomposition:** Every plan maximizes parallelism by default.
+  Decompose into atomic tasks, identify dependencies, and group independent tasks
+  in `[parallel]` blocks. A task is sequential only if it REQUIRES output from a
+  prior task — convenience is not a valid reason for sequencing.
 
 ### Code Quality
 
@@ -146,7 +150,8 @@ or "write tests" task** — the test is step 1 of implementing each task.
 Every plan must include:
 - Header with goal, architecture, tech stack
 - File structure mapping
-- Numbered tasks with exact file paths
+- Numbered tasks with exact file paths, grouped in `[parallel]` blocks where independent
+- Dependency graph: which tasks depend on which (explicit, not implied)
 - Complete code snippets (not pseudocode)
 - Exact commands with expected outputs
 - Checkbox tracking (`- [ ]`)
