@@ -214,40 +214,83 @@ Plans go to `docs/superpowers/plans/YYYY-MM-DD-<feature>.md` with:
 - **Never create a separate "add tests" task.** Tests are integral to each task via TDD —
   writing the test IS the first step of implementing the task, not a task on its own.
 
-**Parallel-first planning (principio de diseño):** Every plan MUST maximize parallelism.
-The planner's job is not just to list tasks — it's to decompose work into the smallest
-independent units and identify which can execute concurrently. This is a design principle,
-not an optimization: parallel decomposition reveals hidden dependencies, forces clearer
-interfaces between tasks, and reduces total execution time.
+### Parallel-First Planning
 
-**How to apply:**
-1. **Decompose first, sequence second.** Start by listing all atomic tasks. Then identify
-   dependencies between them. Everything without a dependency runs in parallel.
-2. **Default is parallel.** A task is sequential only if it REQUIRES output from a prior
-   task. "It's easier to do sequentially" is not a valid reason.
-3. **Group explicitly.** Independent tasks go in `[parallel]` blocks. Tasks that depend
-   on prior results are marked with their dependency.
-4. **Maximize the parallel frontier.** At every point in the plan, ask: "what is the
-   maximum number of tasks that could run right now?" If the answer is 1, look for ways
-   to decompose further.
+#### Why parallel, not sequential
+
+Sequential plans are the natural default — list steps in order, execute top to bottom.
+But sequential plans hide a critical design flaw: **they don't reveal which tasks are
+truly dependent and which are merely ordered by habit.** When you force yourself to
+identify what can run concurrently, you discover the real dependency graph of the work.
+This has three effects:
+
+1. **Surfaces hidden coupling.** If two tasks "feel" sequential but have no data
+   dependency, the sequentiality was masking unclear interfaces between them.
+2. **Forces cleaner task boundaries.** Parallel tasks can't share mutable state, so
+   each task must have well-defined inputs and outputs — this is better design.
+3. **Reduces wall-clock time.** A 6-task plan where 4 tasks are parallel might execute
+   in the time of 3, not 6.
+
+The alternative — "just list tasks in order" — works for small changes but collapses at
+scale: a 12-task plan executed sequentially takes 12x, while the same work decomposed
+into 4 parallel waves takes 4x. **This is why parallel decomposition is a design
+technique, not an optimization to apply later.**
+
+#### How parallel decomposition works
+
+The technique is a three-step analysis that produces a dependency graph:
+
+**Step 1: Atomic decomposition.** List every discrete unit of work without thinking
+about order. Each unit should touch a single concern (one entity, one component, one
+test file). This produces a flat list.
+
+**Step 2: Dependency identification.** For each pair of tasks, ask: "Does task B need
+the *output* (file, type, API) that task A creates?" If yes, B depends on A. If B
+merely comes "after" A by convention, there is no dependency. **"It's easier sequentially"
+is not a dependency.** This produces a directed acyclic graph (DAG).
+
+**Step 3: Wave grouping.** Group tasks into waves (parallel groups). Wave 1 has all
+tasks with zero dependencies. Wave 2 has tasks whose dependencies are all in Wave 1.
+And so on. The **parallel frontier** at each wave is the number of concurrent tasks —
+maximize this number. If a wave has only 1 task, look for ways to split it.
+
+This analysis feeds directly into the plan document:
 
 ```markdown
-### [parallel] Tarea 1a + 1b + 1c
+### [parallel] Wave 1: Tarea 1a + 1b + 1c
 - **1a:** Backend — add field to snapshot (backend/src/...)
+  → produces: updated entity, migration
 - **1b:** Frontend — extend TypeScript type (frontend/src/...)
+  → produces: updated interface
 - **1c:** Tests — add fixture data for new field (backend/tests/...)
+  → produces: test fixtures
 
-### Tarea 2 (depends on 1a + 1b)
+### Wave 2: Tarea 2 (needs 1a outputs + 1b outputs)
 - Frontend — use new fields in component
+  → produces: working component with new data
 
-### [parallel] Tarea 3a + 3b (depends on 2)
+### [parallel] Wave 3: Tarea 3a + 3b (needs Wave 2)
 - **3a:** Backend — add validation rule
 - **3b:** Frontend — add error display component
 ```
 
-When executing, use the Agent tool to launch parallel tasks concurrently. Each parallel
-group runs its tasks simultaneously; the next group starts only when all dependencies
-from the previous group are met.
+Each task declares what it **produces** (→), which makes dependencies explicit and
+auditable. When a new developer reads the plan, they understand *why* Wave 2 waits
+for Wave 1 — not because "it comes next" but because it needs specific artifacts.
+
+#### Execution: waves become Agent dispatches
+
+When executing, each wave maps to a set of concurrent Agent tool calls. Wave 1 launches
+all its tasks simultaneously. When all Wave 1 agents complete, Wave 2 starts. This is
+mechanical — the plan's structure directly dictates the execution pattern.
+
+**Critical rule:** Never dispatch agents from different waves concurrently. The wave
+boundaries exist because of real data dependencies — violating them causes merge
+conflicts or compile errors from missing artifacts.
+
+**Self-check during planning:** At every wave boundary, ask: "What is the maximum
+number of tasks that could run right now?" If the answer is 1 and the plan has > 4
+tasks total, the decomposition likely missed parallelism. Revisit Step 1.
 
 **Detail:** TDD rules in `backend/src/CLAUDE.md`, debugging rules in `backend/src/CLAUDE.md`
 

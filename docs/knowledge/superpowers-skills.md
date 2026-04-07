@@ -122,10 +122,26 @@ Write comprehensive implementation plans assuming the engineer has zero context 
 - Map file structure and responsibilities upfront
 - Break work into 2-5 minute steps following TDD pattern
 - Save plans to `docs/superpowers/plans/YYYY-MM-DD-<feature-name>.md`
-- **Parallel-first decomposition:** Every plan maximizes parallelism by default.
-  Decompose into atomic tasks, identify dependencies, and group independent tasks
-  in `[parallel]` blocks. A task is sequential only if it REQUIRES output from a
-  prior task — convenience is not a valid reason for sequencing.
+
+### Parallel-First Decomposition
+
+Plans are not task lists — they are dependency graphs rendered as text. The planner's
+primary analytical job is to identify which tasks are truly dependent and which are
+independent, then structure the plan into parallel waves.
+
+**The technique (applied during plan writing):**
+1. **Atomic decomposition** — list every discrete unit of work (one concern per task)
+2. **Dependency identification** — for each pair, ask: "Does B need A's output?" If not,
+   they're parallel. Convenience ordering is not a dependency.
+3. **Wave grouping** — group into `[parallel]` waves. Wave N+1 starts only when all its
+   dependencies in Wave N are complete. Maximize tasks per wave.
+
+**Each task in the plan declares what it produces** (→ produces: updated entity, new type),
+making dependencies auditable. A reader should understand WHY Wave 2 waits for Wave 1
+by seeing which specific artifacts it needs.
+
+**Self-check:** If any wave has only 1 task and the plan has > 4 tasks total, the
+decomposition likely missed parallelism. Revisit the atomic decomposition step.
 
 ### Code Quality
 
