@@ -3,7 +3,6 @@ import type {
   HealthStatus,
   LiveData,
   LiveServiceData,
-  DashboardMetrics,
   DailyDelivery,
   TopDriver,
 } from '@/api/types';
@@ -36,7 +35,6 @@ function ServiceHealthCard({
       style={{
         backgroundColor: 'var(--color-surface-elevated)',
         borderColor: 'var(--color-border)',
-        ringColor: 'var(--color-border)',
       }}
     >
       <div className="flex items-center justify-between">
