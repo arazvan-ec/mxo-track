@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Implementation phase validator (SOFT gates — stress-test 2026-03-24)
-# For full/full-flow: requires plan exists AND tests written
-# Exit 0 = pass, Exit 1 = warn (relaxed from HARD for stress-test)
+# Implementation phase validator (HARD for plan, SOFT for TDD — hardened 2026-04-07)
+# For full/full-flow: requires plan exists (HARD) AND tests written (SOFT)
+# Exit 0 = pass, Exit 2 = block (plan missing), Exit 1 = warn (TDD)
 set -euo pipefail
 
 STATE_FILE="${1:-.claude/session-state.json}"
@@ -27,9 +27,9 @@ if [ "$IS_FULL" = true ]; then
   fi
 
   if [ -z "$PLAN_FULL" ] || [ ! -f "$PLAN_FULL" ]; then
-    echo "WARNING (SOFT — stress-test): No hay plan de implementacion para full-flow."
+    echo "BLOCKED: No hay plan de implementacion para full-flow."
     echo "Crea el plan (Skill 3) antes de implementar."
-    exit 1
+    exit 2
   fi
 fi
 

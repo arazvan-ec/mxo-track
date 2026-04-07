@@ -99,6 +99,10 @@ and accumulates technical debt silently.
 
 After classifying, update session-state: `jq '.flow_type = "<type>"' .claude/session-state.json`
 
+**Phase transitions:** Use `.claude/hooks/phase-advance.sh <next_phase>` to advance phases.
+Direct writes to `phase_history` via `jq` are detected and reverted. The script enforces
+legal sequence (no skips, no backwards) and adds timestamps automatically.
+
 ### Deviation for Wiring-Only Changes
 
 Some code changes are pure wiring — connecting an existing callback, passing a prop,

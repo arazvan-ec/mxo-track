@@ -63,6 +63,34 @@ case "$TOOL_NAME" in
     ;;
 
   Write|Edit)
+    # ── TDD Order Tracking (Capa 4) ──
+    # Track edit order: test files vs src files per task
+    CURRENT_TASK=$(echo "$STATE" | jq -r '.evidence.task_progress.current // 0')
+    TDD_TASK=$(echo "$STATE" | jq -r '.evidence.tdd_tracker.current_task // 0')
+
+    # Reset tracker when task changes
+    if [ "$CURRENT_TASK" != "$TDD_TASK" ] && [ "$CURRENT_TASK" -gt 0 ] 2>/dev/null; then
+      update_state ".evidence.tdd_tracker = {\"current_task\": $CURRENT_TASK, \"edits\": []}"
+    fi
+
+    # Classify file as test or src
+    EDIT_TYPE=""
+    case "$FILE_PATH" in
+      */backend/tests/*|*Test.php|*.test.*|*.spec.*) EDIT_TYPE="test" ;;
+      */backend/src/*|*/frontend/src/*) EDIT_TYPE="src" ;;
+    esac
+
+    if [ -n "$EDIT_TYPE" ] && [ "$CURRENT_TASK" -gt 0 ] 2>/dev/null; then
+      TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+      # Ensure tdd_tracker exists before appending
+      HAS_TRACKER=$(echo "$STATE" | jq -r '.evidence.tdd_tracker // null')
+      if [ "$HAS_TRACKER" = "null" ]; then
+        update_state ".evidence.tdd_tracker = {\"current_task\": $CURRENT_TASK, \"edits\": [{\"file\": \"$FILE_PATH\", \"at\": \"$TIMESTAMP\", \"type\": \"$EDIT_TYPE\"}]}"
+      else
+        update_state ".evidence.tdd_tracker.edits += [{\"file\": \"$FILE_PATH\", \"at\": \"$TIMESTAMP\", \"type\": \"$EDIT_TYPE\"}]"
+      fi
+    fi
+
     # spec_path: writing to specs/
     if [[ "$FILE_PATH" == *"docs/superpowers/specs/"*".md" ]]; then
       CURRENT=$(echo "$STATE" | jq -r '.evidence.spec_path // ""')

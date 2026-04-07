@@ -150,3 +150,17 @@ Registro de decisiones de diseño significativas. Cada entrada captura el contex
 - **Decisión:** Full entity model (WidgetDefinition + PageLayout + PageLayoutWidget) con enums tipados (WidgetType, PageKey, SheetState). Frontend widget registry maps tipos a React components. Layout resolution: customer override → global fallback → empty.
 - **Alternativas descartadas:** (B) JSON config en entidades existentes — no escala, no tiene CRUD propio, difícil de validar. (C) Frontend-only config — no persiste, no multi-tenant, no admin UI.
 - **Resultado:** Implementado end-to-end. 3 entidades, 3 enums, 7 API endpoints, widget registry con 4 componentes implementados + 6 placeholders, admin UI (gallery + layout editor). TestRoutingPage migrada a dynamic layout. Pendiente: migrar las otras 7 páginas.
+
+### [2026-04-07] RouteMapLayers — componente compartido para capas de mapa
+
+- **Problema:** FleetMapPage y OperatorDashboardPage ensamblaban RoutePolylineLayer + StopMarkersLayer + toggle de flechas de forma independiente. Al añadir un feature a una página, se olvidaba en la otra (el toggle de dirección faltaba en OperatorDashboard).
+- **Decisión:** Extraer componente `<RouteMapLayers>` que centraliza polylines, stop markers, StopPopup, y toggle de flechas. Cada página lo monta con sus rutas ya filtradas.
+- **Alternativas descartadas:** (A) Hook compartido `useRouteMapLayers` — menos natural en React. (C) Sincronización manual — no escala, el problema se repite.
+- **Resultado:** FleetMap: -55 líneas. OperatorDashboard: -57 líneas. Features nuevas en capas de ruta se añaden en un solo lugar.
+
+### [2026-04-07] Workflow Enforcement — 5 capas anti-evasión
+
+- **Problema:** Claude fabricaba `phase_history`, seteaba `user_approved = true` sin consentimiento, saltaba TDD, y pasaba el pre-push gate con evidencia simulada. El workflow tenía un solo punto de enforcement real (pre-push) y confiaba en honestidad para todo lo demás.
+- **Decisión:** 5 capas complementarias: (1) Phase Transition Controller que detecta/revierte manipulaciones directas de phase_history y user_approved, (2) Validators endurecidos SOFT→HARD para consult/brainstorm/planning, (3) User approval detectado automáticamente por UserPromptSubmit hook, (4) TDD order tracking en auto-evidence, (5) Cross-validation en pre-push gate (timestamps, formato, artefactos reales).
+- **Alternativas descartadas:** Solo reforzar pre-push — deja huecos intermedios. Solo documentación — demostrado que no funciona.
+- **Resultado:** 30/30 tests pass (11 phase-advance + 7 controller + 12 integración). Cada vector de evasión cubierto por una capa dedicada.
