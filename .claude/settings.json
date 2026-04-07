@@ -82,6 +82,12 @@
         "hooks": [
           {
             "type": "command",
+            "command": "/home/user/mxo-track/.claude/hooks/phase-transition-controller.sh",
+            "timeout": 2,
+            "statusMessage": "Verificando integridad de estado..."
+          },
+          {
+            "type": "command",
             "command": "/home/user/mxo-track/.claude/hooks/post-commit-validator.sh",
             "timeout": 5,
             "statusMessage": "Validando formato de commit..."
