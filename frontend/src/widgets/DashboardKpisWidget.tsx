@@ -12,17 +12,19 @@ interface DashboardKpisData {
 interface KpiCardProps {
   label: string;
   value: number;
-  color: string;
+  bgClass: string;
+  textClass: string;
+  barClass: string;
   icon: React.ReactNode;
 }
 
-function KpiCard({ label, value, color, icon }: KpiCardProps) {
+function KpiCard({ label, value, bgClass, textClass, barClass, icon }: KpiCardProps) {
   return (
     <div className="relative overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5">
       <div className="p-6">
         <div className="flex items-center gap-4">
-          <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-${color}-50`}>
-            <span className={`text-${color}-600`}>{icon}</span>
+          <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${bgClass}`}>
+            <span className={textClass}>{icon}</span>
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium text-gray-500 truncate">{label}</p>
@@ -30,7 +32,7 @@ function KpiCard({ label, value, color, icon }: KpiCardProps) {
           </div>
         </div>
       </div>
-      <div className={`absolute bottom-0 left-0 right-0 h-1 bg-${color}-400`} />
+      <div className={`absolute bottom-0 left-0 right-0 h-1 ${barClass}`} />
     </div>
   );
 }
@@ -65,10 +67,10 @@ export function DashboardKpisWidget({ data }: WidgetProps) {
 
   return (
     <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
-      <KpiCard label="Rutas activas" value={metrics.active_routes} color="indigo" icon={<RouteIcon />} />
-      <KpiCard label="Paradas pendientes" value={metrics.pending_stops} color="orange" icon={<ClockIcon />} />
-      <KpiCard label="Imports CSV hoy" value={metrics.import_runs_today} color="violet" icon={<UploadIcon />} />
-      <KpiCard label="Posiciones (última hora)" value={metrics.positions_ingested_last_hour} color="cyan" icon={<SignalIcon />} />
+      <KpiCard label="Rutas activas" value={metrics.active_routes} bgClass="bg-indigo-50" textClass="text-indigo-600" barClass="bg-indigo-400" icon={<RouteIcon />} />
+      <KpiCard label="Paradas pendientes" value={metrics.pending_stops} bgClass="bg-orange-50" textClass="text-orange-600" barClass="bg-orange-400" icon={<ClockIcon />} />
+      <KpiCard label="Imports CSV hoy" value={metrics.import_runs_today} bgClass="bg-violet-50" textClass="text-violet-600" barClass="bg-violet-400" icon={<UploadIcon />} />
+      <KpiCard label="Posiciones (última hora)" value={metrics.positions_ingested_last_hour} bgClass="bg-cyan-50" textClass="text-cyan-600" barClass="bg-cyan-400" icon={<SignalIcon />} />
     </div>
   );
 }
