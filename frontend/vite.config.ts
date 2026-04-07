@@ -18,15 +18,11 @@ export default defineConfig({
       input: {
         main: path.resolve(__dirname, 'index.html'),
         'app-shell-widget': path.resolve(__dirname, 'app-shell-widget.html'),
-        'dashboard-widget': path.resolve(__dirname, 'dashboard-widget.html'),
       },
       output: {
         entryFileNames: (chunkInfo) => {
           if (chunkInfo.name === 'app-shell-widget') {
             return 'assets/app-shell-widget.js';
-          }
-          if (chunkInfo.name === 'dashboard-widget') {
-            return 'assets/dashboard-widget.js';
           }
           return 'assets/[name]-[hash].js';
         },

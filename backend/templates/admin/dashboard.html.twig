@@ -14,16 +14,6 @@
 {% endblock %}
 
 {% block content %}
-{# ── Page header ──────────────────────────────────────────────────── #}
-<div class="mb-8">
-  <h1 class="text-2xl font-bold tracking-tight text-gray-900">Dashboard</h1>
-  <p class="mt-1 text-sm text-gray-500">
-    Vista general del sistema de seguimiento logistico
-  </p>
-</div>
-
-{# ── React Dashboard Widget ─────────────────────────────────────── #}
-<div id="mxo-dashboard-root"></div>
-<script src="{{ asset('app/assets/dashboard-widget.js') }}" defer></script>
-
+{# Admin dashboard is now served by React SPA at /app/admin/dashboard #}
+{# AdminController redirects /admin → /app/admin/dashboard #}
 {% endblock %}

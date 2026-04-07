@@ -48,6 +48,7 @@ class NavigationController extends AbstractController
                 'title' => $this->t('sidebar.main'),
                 'items' => [
                     $this->item('nav.dashboard', '/app/admin/dashboard', 'dashboard'),
+                    $this->item('nav.dashboard_live', '/app/admin/operator-dashboard', 'dashboardLive'),
                     $this->item('nav.notifications', '/notifications', 'notifications'),
                     $this->item('nav.search', '/search', 'search'),
                 ],
