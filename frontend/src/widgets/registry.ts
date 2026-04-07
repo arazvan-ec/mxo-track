@@ -1,6 +1,6 @@
 import type { ComponentType } from 'react';
 import type { WidgetType } from '@/types/layout';
-import type { WidgetProps } from './types';
+import type { WidgetProps, WidgetRegistryMeta } from './types';
 import { MetricPairsWidget } from './MetricPairsWidget';
 import { RouteCardListWidget } from './RouteCardListWidget';
 import { MapLegendWidget } from './MapLegendWidget';
@@ -11,8 +11,13 @@ import { VehicleInfoWidget } from './VehicleInfoWidget';
 import { DriverInfoWidget } from './DriverInfoWidget';
 import { ShipmentDetailsWidget } from './ShipmentDetailsWidget';
 import { DeliveryTimelineWidget } from './DeliveryTimelineWidget';
+import { SystemHealthWidget } from './SystemHealthWidget';
+import { InfrastructureMetricsWidget } from './InfrastructureMetricsWidget';
+import { DashboardKpisWidget } from './DashboardKpisWidget';
+import { MiniReportsWidget } from './MiniReportsWidget';
+import { ActivityFeedWidget } from './ActivityFeedWidget';
 
-export interface WidgetRegistryEntry {
+export interface WidgetRegistryEntry extends WidgetRegistryMeta {
   component: ComponentType<WidgetProps>;
   label: string;
   description: string;
@@ -68,6 +73,41 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetRegistryEntry> = {
     component: DeliveryTimelineWidget,
     label: 'Delivery Timeline',
     description: 'Vertical timeline of delivery events',
+  },
+  system_health: {
+    component: SystemHealthWidget,
+    label: 'System Health',
+    description: '6 service status cards (DB, Redis, Traccar, Mercure, OSRM, VROOM)',
+    collapsible: true,
+    sectionTitle: 'Estado del sistema',
+  },
+  infrastructure_metrics: {
+    component: InfrastructureMetricsWidget,
+    label: 'Infrastructure Metrics',
+    description: '3 metric cards (positions table, DB size, last ingestion)',
+    collapsible: true,
+    sectionTitle: 'Infraestructura',
+  },
+  dashboard_kpis: {
+    component: DashboardKpisWidget,
+    label: 'Dashboard KPIs',
+    description: '4 KPI cards (routes, stops, imports, positions/hour)',
+    collapsible: true,
+    sectionTitle: 'KPIs',
+  },
+  mini_reports: {
+    component: MiniReportsWidget,
+    label: 'Mini Reports',
+    description: 'Chart (7-day deliveries) + top 5 drivers',
+    collapsible: true,
+    sectionTitle: 'Reportes',
+  },
+  activity_feed: {
+    component: ActivityFeedWidget,
+    label: 'Activity Feed',
+    description: 'Live position feed via Mercure SSE',
+    collapsible: true,
+    sectionTitle: 'Actividad en vivo',
   },
 };
 
