@@ -3,15 +3,15 @@
 > **Auto-generated** by `make manifest` (`backend/bin/generate-manifest.sh`).
 > Do not edit manually — regenerate with `make manifest`.
 
-**Generated:** 2026-04-07 20:41
+**Generated:** 2026-04-07 20:45
 **Regenerate:** `make manifest`
 
 ## Project Overview
 
 | Area | Path | Files | Tech |
 |------|------|------:|------|
-| Backend | `backend/` | 516 PHP | Symfony 7.4, PHP 8.4 |
-| Frontend | `frontend/` | 109 JS/TS | React |
+| Backend | `backend/` | 517 PHP | Symfony 7.4, PHP 8.4 |
+| Frontend | `frontend/` | 117 JS/TS | React |
 | ML Service | `ml-service/` | 17 Python | FastAPI |
 | Docker/Infra | `docker/` + `scripts/` | 9 + 5 | Docker, OSRM, VROOM, Traccar |
 | OpenSpec | `openspec/` | 28 specs | YAML specs |
@@ -28,7 +28,7 @@
 | Enums — core (src/Enum/) | 20 |
 | Enums — provider | 4 |
 | **Enums total** | **24** |
-| Controllers | 67 |
+| Controllers | 68 |
 | Application Services (src/Application/) | 23 |
 | Domain/Infra Services (src/Service/) | 73 |
 | Repositories | 21 |
@@ -38,7 +38,7 @@
 | Messenger Messages | 4 |
 | Message Handlers | 4 |
 | Tests | 128 |
-| Migrations | 36 |
+| Migrations | 37 |
 
 ## Entity List
 
@@ -213,7 +213,7 @@ View
 
 | Category | Count |
 |----------|------:|
-| JS/TS files total | 109 |
+| JS/TS files total | 117 |
 | Pages | 12 |
 
 ### Directory Tree
@@ -229,6 +229,7 @@ components/layout
 components/maps
 components/metrics
 components/panels
+components/widgets
 context
 hooks
 pages
@@ -430,6 +431,7 @@ Controller endpoints (auto-extracted from `#[Route]` attributes):
 | GET | `/admin/health/live` | AdminController | healthLive |
 | GET | `/admin/health` | AdminController | health |
 | GET | `/admin` | AdminController | dashboard |
+| GET | `/api/admin/dashboard-reports` | DashboardReportsController | __invoke |
 | GET | `/api/admin/dashboard` | AdminDashboardController | __invoke |
 | DELETE | `/api/admin/page-layouts/{publicId}` | PageLayoutApiController | delete |
 | GET | `/api/admin/page-layouts/{publicId}` | PageLayoutApiController | get |
