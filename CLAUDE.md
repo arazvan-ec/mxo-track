@@ -206,7 +206,26 @@ wiring patch.
 - **No new entities, migrations, or API endpoints**
 - **Pattern already exists** in the codebase (copying an established approach)
 
-**Activate:**
+**Activation requires explicit user confirmation.** The model MUST NOT self-approve
+deviations. Present the 4 criteria with evidence to the user and wait for approval
+before activating. This prevents the model from rationalizing that any change is
+"simple enough" — the bias toward action makes self-assessment unreliable.
+
+**Activation flow:**
+1. Complete the `consult` phase (read decisions/execution logs)
+2. Present deviation request to user with evidence for each criterion:
+   ```
+   Propongo desviación (wiring-only):
+   - Líneas estimadas: ~15 (< 30 ✓)
+   - Decisiones de diseño: 0 — solo conectar X con Y (✓)
+   - Nuevas entidades/migraciones/endpoints: ninguna (✓)
+   - Patrón existente: [citar ejemplo concreto del codebase] (✓)
+   ¿Apruebas la desviación?
+   ```
+3. Only after user confirms → activate in session-state
+4. If user denies → continue with full flow (brainstorm + plan)
+
+**Activate (only after user confirmation):**
 ```bash
 jq '.deviation = {"active": true, "reason": "wiring-only (<30 lines, 0 design decisions)", "skipped_phases": ["brainstorm", "plan"], "return_to_phase": null, "acknowledged_by_user": true}' \
   .claude/session-state.json > /tmp/ss.json && mv /tmp/ss.json .claude/session-state.json
