@@ -107,6 +107,7 @@ gate() {
 }
 
 # Helper: check if a phase is in phase_history or is current_phase
+# Supports both old format (strings) and new format (objects with .phase)
 phase_completed() {
   local phase="$1"
   local current_phase
@@ -116,15 +117,74 @@ phase_completed() {
     return 0
   fi
 
-  local in_history
-  in_history=$(jq -r --arg p "$phase" '.phase_history | if . then map(select(. == $p)) | length else 0 end' "$STATE_FILE" 2>/dev/null || echo "0")
+  # Check new format: objects with .phase field
+  local in_history_obj
+  in_history_obj=$(jq -r --arg p "$phase" '.phase_history | if . then [.[] | if type == "object" then .phase else . end | select(. == $p)] | length else 0 end' "$STATE_FILE" 2>/dev/null || echo "0")
 
-  if [ "$in_history" -gt 0 ]; then
+  if [ "$in_history_obj" -gt 0 ]; then
     return 0
   fi
 
   return 1
 }
+
+# ══════════════════════════════════════════════════════════════
+# Cross-validation (Capa 5): verify evidence matches reality
+# ══════════════════════════════════════════════════════════════
+
+CROSS_WARNINGS=""
+
+# Check: phase_history uses timestamp format (not fabricated strings)
+HISTORY_FORMAT=$(jq '[.phase_history // [] | .[] | select(type == "string")] | length' "$STATE_FILE" 2>/dev/null || echo "0")
+if [ "$HISTORY_FORMAT" -gt 0 ]; then
+  CROSS_WARNINGS="${CROSS_WARNINGS}⚠ phase_history contiene strings planos (formato antiguo). Usa phase-advance.sh. | "
+fi
+
+# Check: phase_history timestamps are chronological (>30s apart)
+HISTORY_LEN=$(jq '.phase_history | length' "$STATE_FILE" 2>/dev/null || echo "0")
+if [ "$HISTORY_LEN" -gt 1 ]; then
+  # Check if all entries have timestamps
+  ENTRIES_WITH_TS=$(jq '[.phase_history[] | select(type == "object" and .at != null)] | length' "$STATE_FILE" 2>/dev/null || echo "0")
+  if [ "$ENTRIES_WITH_TS" -eq "$HISTORY_LEN" ]; then
+    # Check chronological order
+    SORTED_CHECK=$(jq '[.phase_history | [.[].at] | [range(length-1) as $i | {a: .[$i], b: .[$i+1]} | select(.a > .b)] | length] | .[0]' "$STATE_FILE" 2>/dev/null || echo "0")
+    if [ "$SORTED_CHECK" -gt 0 ]; then
+      CROSS_WARNINGS="${CROSS_WARNINGS}⚠ phase_history timestamps no son cronologicos (posible fabricacion). | "
+    fi
+  fi
+fi
+
+# Check: spec_path and plan_path point to real files with content
+if [ "$FLOW_TYPE" = "full" ]; then
+  SPEC_PATH=$(jq -r '.evidence.spec_path // ""' "$STATE_FILE" 2>/dev/null || echo "")
+  PLAN_PATH=$(jq -r '.evidence.plan_path // ""' "$STATE_FILE" 2>/dev/null || echo "")
+
+  for path_var in "$SPEC_PATH" "$PLAN_PATH"; do
+    if [ -n "$path_var" ]; then
+      RESOLVED="$path_var"
+      [ ! -f "$RESOLVED" ] && RESOLVED="$REPO/$path_var"
+      if [ ! -f "$RESOLVED" ]; then
+        CROSS_WARNINGS="${CROSS_WARNINGS}⚠ Artifact path '$path_var' no existe en disco. | "
+      else
+        SIZE=$(wc -c < "$RESOLVED" 2>/dev/null || echo "0")
+        if [ "$SIZE" -lt 300 ]; then
+          CROSS_WARNINGS="${CROSS_WARNINGS}⚠ Artifact '$path_var' demasiado pequeno (${SIZE}B). | "
+        fi
+      fi
+    fi
+  done
+
+  # Check: decisions log has diff vs main (SOFT — informational)
+  DECISIONS_DIFF=$(cd "$REPO" && git diff --name-only origin/main...HEAD -- docs/decisions/log.md 2>/dev/null || echo "")
+  if [ -z "$DECISIONS_DIFF" ]; then
+    CROSS_WARNINGS="${CROSS_WARNINGS}⚠ docs/decisions/log.md no tiene cambios vs main (considerar actualizar). | "
+  fi
+fi
+
+# Emit cross-validation warnings (SOFT — don't block, just inform)
+if [ -n "$CROSS_WARNINGS" ]; then
+  echo "{\"systemMessage\":\"CROSS-VALIDATION: $CROSS_WARNINGS\"}" >&2
+fi
 
 # ══════════════════════════════════════════════════════════════
 # HARD gates: verification, capture, finalize
