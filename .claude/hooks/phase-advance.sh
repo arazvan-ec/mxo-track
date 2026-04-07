@@ -102,6 +102,7 @@ VALIDATOR=""
 case "$CURRENT_PHASE" in
   brainstorming) VALIDATOR="$REPO/.claude/hooks/validators/brainstorm-validator.sh" ;;
   planning) VALIDATOR="$REPO/.claude/hooks/validators/planning-validator.sh" ;;
+  retrospective) VALIDATOR="$REPO/.claude/hooks/validators/retrospective-validator.sh" ;;
 esac
 
 if [ -n "$VALIDATOR" ] && [ -f "$VALIDATOR" ]; then
