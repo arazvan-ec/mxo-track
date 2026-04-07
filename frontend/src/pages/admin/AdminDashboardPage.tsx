@@ -294,7 +294,7 @@ export function AdminDashboardPage() {
   const { health, live, metrics, daily_deliveries, top_drivers } = data;
 
   return (
-    <div className="overflow-y-auto flex-1 p-6 lg:p-8 space-y-8" style={{ backgroundColor: 'var(--color-surface)' }}>
+    <div className="h-full overflow-y-auto p-6 lg:p-8 space-y-8" style={{ backgroundColor: 'var(--color-surface)' }}>
       {/* Page header */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--color-text-primary)' }}>
