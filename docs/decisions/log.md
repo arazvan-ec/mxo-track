@@ -8,6 +8,27 @@ Registro de decisiones de diseño significativas. Cada entrada captura el contex
 
 ---
 
+### [2026-04-07] Validator invocation: prerequisites vs completion
+
+- **Problema:** El workflow-engine ejecutaba brainstorm-validator al escribir specs y planning-validator al escribir plans. Ambos validators verifican que el artefacto exista — pero el Write es lo que lo crea. Dependencia circular.
+- **Decisión:** Separar dos contextos de invocación. **File gates** (workflow-engine) verifican **prerequisitos** — fases anteriores completadas. **Phase-advance** verifica **completitud** — el artefacto de la fase actual existe. Concretamente: spec files solo requieren `consult` validator; plan files solo requieren `brainstorm` validator. Los checks de completitud se ejecutan al avanzar de fase.
+- **Alternativas descartadas:** (A) Detectar "estoy creando el artefacto" y skip el validator — frágil, depende de inferir intención. (B) Permitir Write sin validación para specs/plans — pierde la verificación de prerequisitos. (C) Split brainstorm-validator en pre-requisite y completion parts — over-engineering.
+- **Resultado:** El ciclo Write-durante-brainstorming funciona. El brainstorm-validator sigue ejecutándose al avanzar de fase, manteniendo la verificación de calidad.
+
+### [2026-04-07] Approval detection: strip system-reminder noise
+
+- **Problema:** El regex de rejection `(no[, ]|cambia|...)` matcheaba texto dentro de `<system-reminder>` tags como "no existe spec document", revirtiendo aprobaciones legítimas del usuario.
+- **Decisión:** Stripear `<system-reminder>` tags del `user_prompt` con `sed` antes de aplicar los regex de approval/rejection. El texto del sistema no es input del usuario y no debe influir en la detección de aprobación.
+- **Alternativas descartadas:** (A) Hacer el rejection regex más específico — fragilidad incremental, cada nuevo system message podría romperlo. (B) Dar prioridad a approval sobre rejection — peligroso, un rechazo real se perdería. (C) Pedir al framework que separe user_prompt de system context — no controlamos el formato del hook input.
+- **Resultado:** Approval detection solo analiza texto del usuario. Rejection sigue teniendo prioridad sobre approval (conservador por diseño).
+
+### [2026-04-07] Verification "skipped" state for environments without test infra
+
+- **Problema:** `verification-validator` hard-bloqueaba con `tests_passed=null`. En environments sin composer/npm, el modelo seteaba `tests_passed=true` sin ejecutar tests — minando el sistema de evidencia.
+- **Decisión:** Nuevo valor `"skipped"` aceptado como soft warning (exit 1) en verification-validator y pre-push-gate. El warning se propaga hasta el PR reviewer: ⚠ en vez de ✅.
+- **Alternativas descartadas:** (A) Auto-detectar si test tooling está disponible — complejo, frágil entre environments. (B) Skip verification validator completo — pierde lint_clean check. (C) Permitir null como pass — elimina el incentivo de ejecutar tests cuando sí están disponibles.
+- **Resultado:** El modelo declara honestamente que no verificó. El gap llega visible al reviewer. El incentivo de ejecutar tests reales se mantiene intacto.
+
 ### [2026-04-07] Documentation format: philosophy+technique+flow+rules
 
 - **Problema:** Las secciones de CLAUDE.md eran listas de reglas y comandos ("haz esto") sin explicar por qué existen, cómo funcionan internamente, ni cómo cada paso alimenta al siguiente. El modelo las seguía mecánicamente pero no internalizaba el razonamiento, lo que causaba que racionalizara saltar pasos cuando no entendía su propósito.

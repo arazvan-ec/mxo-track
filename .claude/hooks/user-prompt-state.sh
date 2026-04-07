@@ -37,10 +37,21 @@ if [ "$FLOW_TYPE" = "full" ] && [ "$CURRENT_PHASE" = "brainstorming" ]; then
 fi
 
 # ── User Approval Detection (Capa 3) ──
-# During brainstorming, detect user approval/rejection patterns in their message.
-# This is the ONLY sanctioned way to set user_approved = true.
-# IMPORTANT: Strip <system-reminder> tags before matching — they contain text like
-# "no existe spec" that falsely triggers rejection patterns.
+#
+# Philosophy: user_approved represents a HUMAN decision, not a model belief. Only
+# this hook can set it — direct jq writes are reverted by phase-transition-controller.
+# This prevents the model from self-approving designs.
+#
+# Technique: Regex matching on the user's actual text. The .user_prompt field from
+# the hook input may contain injected <system-reminder> blocks with text like
+# "no existe spec document". Without stripping, the rejection regex (no[, ]|...)
+# matches "no existe" and reverts a legitimate "Apruebo" in the same message.
+#
+# Flow: user_prompt → strip <system-reminder> → lowercase → match approval → match rejection
+#       If both match (rare), rejection wins (conservative: false negative costs 1 message,
+#       false positive costs wrong implementation)
+#
+# Rule: NEVER bypass this by setting user_approved directly — it will be reverted.
 if [ "$FLOW_TYPE" = "full" ] && [ -n "$USER_PROMPT" ]; then
   CURRENT_APPROVED=$(echo "$STATE" | jq -r '.evidence.user_approved // false')
   CLEAN_PROMPT=$(echo "$USER_PROMPT" | sed '/<system-reminder>/,/<\/system-reminder>/d')

@@ -1,7 +1,16 @@
 #!/usr/bin/env bash
-# Verification phase validator (HARD gate)
-# Checks: tests_passed AND lint_clean
-# Accepts "skipped" for environments without test infrastructure (soft warning).
+# Verification phase validator (MIXED gate)
+#
+# Philosophy: Evidence must be honest. Forcing tests_passed=true when tests cannot
+# run teaches the model to lie — the opposite of what evidence exists for. The
+# "skipped" value is an honest declaration that propagates as a soft warning through
+# the entire gate chain (verification → pre-push → PR reviewer), ensuring the gap
+# is never hidden.
+#
+# Flow: tests available → run → true|false (HARD)
+#       tests unavailable → "skipped" → SOFT warning → reviewer verifies before merge
+#
+# Accepts: true (pass), "skipped" (soft warn), null/false (block)
 # Exit 0 = pass, Exit 1 = warn (soft), Exit 2 = block (hard)
 set -euo pipefail
 

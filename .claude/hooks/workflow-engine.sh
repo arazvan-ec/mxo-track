@@ -155,6 +155,16 @@ get_validators_for_flow() {
 
     # ── Full-flow: feature development ──
     # Full phase validation (existing behavior).
+    # ── Full-flow validator routing ──
+    # Design principle: file gates check PREREQUISITES (prior phases complete),
+    # NOT current phase completion. A spec is the OUTPUT of brainstorming — running
+    # brainstorm-validator when writing it creates a circular dependency (validator
+    # requires spec to exist, but we're creating it). Phase completion is enforced
+    # by phase-advance.sh when LEAVING the phase.
+    #
+    # spec → only consult (brainstorm checked on phase advance)
+    # plan → only brainstorm (planning checked on phase advance)
+    # code → full chain (brainstorm + planning must be complete before code)
     full|full-flow)
       case "$file_class" in
         code|test)      echo "brainstorm planning spec-compliance implementation" ;;
