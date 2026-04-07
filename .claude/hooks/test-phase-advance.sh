@@ -88,12 +88,133 @@ jq '.current_phase = "brainstorming"' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.j
 echo "Test 7: brainstorming → consult (illegal backward)"
 assert_fail "should reject going backwards" "$ADVANCE" "consult"
 
-# Test 8: Full sequence walk
+# ── Validator-blocking tests ──
+
+# Test 8: brainstorming → planning blocked without spec file
 reset_state "full"
-echo "Test 8: Full legal sequence walk"
-PHASES=("consult" "brainstorming" "planning" "implementation" "verification" "capture" "retrospective" "finalize")
+jq '.current_phase = "brainstorming" | .evidence = {
+  "user_turns": 3, "alternatives_proposed": true, "user_approved": true,
+  "spec_path": "/tmp/nonexistent-spec.md"
+}' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE"
+echo "Test 8: brainstorming → planning blocked without spec file"
+assert_fail "blocks when spec file missing" "$ADVANCE" "planning"
+
+# Test 9: planning → implementation blocked without plan file
+reset_state "full"
+jq '.current_phase = "planning" | .evidence = {
+  "plan_path": "/tmp/nonexistent-plan.md"
+}' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE"
+echo "Test 9: planning → implementation blocked without plan file"
+assert_fail "blocks when plan file missing" "$ADVANCE" "implementation"
+
+# Test 10: retrospective → finalize blocked without lessons
+TEST_LOG="/tmp/test-pa-log.md"
+echo "## Implementation" > "$TEST_LOG"
+echo "Did some stuff." >> "$TEST_LOG"
+reset_state "full"
+jq --arg log "$TEST_LOG" '.current_phase = "retrospective" | .evidence = {
+  "execution_log_path": $log
+}' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE"
+echo "Test 10: retrospective → finalize blocked without lessons section"
+assert_fail "blocks without retrospective in log" "$ADVANCE" "finalize"
+
+# ── Full walk with artifacts ──
+
+# Test 11: Full sequence walk (with required artifacts)
+TEST_SPEC="/tmp/test-pa-spec.md"
+TEST_PLAN="/tmp/test-pa-plan.md"
+TEST_LOG2="/tmp/test-pa-log2.md"
+
+# Create minimal valid spec
+cat > "$TEST_SPEC" << 'SPECEOF'
+# Test Spec
+## Problem
+Test problem description for the spec that needs to be at least 500 bytes.
+
+## Alternativa A
+Option A description.
+
+## Alternativa B
+Option B description with trade-off analysis.
+
+## Existing Functionality Inventory
+| Element | Decision |
+|---------|----------|
+| Foo     | Keep     |
+
+## Omission Decisions
+| Element | Decision |
+|---------|----------|
+| Bar     | Not touched |
+
+## Architecture
+Some architecture description to reach the 500 byte minimum for the spec validator.
+More content here to pad it out sufficiently for the test to pass the size check.
+SPECEOF
+
+# Create minimal valid plan (must be ≥300 bytes)
+cat > "$TEST_PLAN" << 'PLANEOF'
+# Test Plan
+
+**Spec:** specs/test-spec.md
+**Branch:** test-branch
+
+## Phase 1 (v0)
+
+### Task 1 — Crear something new
+- Crear a new file with the required content
+- Modificar the existing configuration to support the new feature
+- Test that it compiles and works correctly
+
+### Task 2 — Actualizar tests
+- Actualizar existing test files to cover the new behavior
+- Run all tests and verify they pass without regressions
+- Commit after verification
+
+## Phase 2 (Mature): N/A
+PLANEOF
+
+# Create minimal valid execution log with retrospective
+cat > "$TEST_LOG2" << 'LOGEOF'
+# Execution Log
+
+## Implementation
+Did some stuff.
+
+## Lessons
+
+- First lesson learned from the implementation process that was quite informative and educational overall
+- Second lesson about testing that revealed important patterns in the codebase worth documenting for future
+- Third lesson about workflow enforcement that helped identify architectural gaps in the hook system
+LOGEOF
+
+reset_state "full"
+echo "Test 11: Full legal sequence walk (with artifacts)"
 ALL_PASS=true
+PHASES=("consult" "brainstorming" "planning" "implementation" "verification" "capture" "retrospective" "finalize")
 for phase in "${PHASES[@]}"; do
+  # Set required evidence before each gated transition
+  case "$phase" in
+    brainstorming)
+      # consult → brainstorming: no validator
+      ;;
+    planning)
+      # brainstorming → planning: needs spec + evidence
+      jq --arg sp "$TEST_SPEC" '.evidence = {
+        "user_turns": 3, "alternatives_proposed": true, "user_approved": true,
+        "spec_path": $sp
+      }' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE"
+      ;;
+    implementation)
+      # planning → implementation: needs plan
+      jq --arg pp "$TEST_PLAN" '.evidence.plan_path = $pp' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE"
+      ;;
+    finalize)
+      # retrospective → finalize: needs lessons in log
+      jq --arg lp "$TEST_LOG2" '.evidence.execution_log_path = $lp' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE"
+      ;;
+  esac
+
   if ! "$ADVANCE" "$phase" > /dev/null 2>&1; then
     echo "  ❌ Failed to advance to $phase"
     FAIL=$((FAIL + 1))
@@ -102,12 +223,15 @@ for phase in "${PHASES[@]}"; do
   fi
 done
 if [ "$ALL_PASS" = true ]; then
-  echo "  ✅ Full sequence completed"
+  echo "  ✅ Full sequence completed (with validator gates)"
   PASS=$((PASS + 1))
 fi
 
-# Test 9: phase_history has timestamps
-echo "Test 9: phase_history has timestamp format"
+# Cleanup temp files
+rm -f "$TEST_SPEC" "$TEST_PLAN" "$TEST_LOG" "$TEST_LOG2"
+
+# Test 12: phase_history has timestamps
+echo "Test 12: phase_history has timestamp format"
 FIRST_ENTRY=$(jq '.phase_history[0]' "$STATE_FILE")
 HAS_PHASE=$(echo "$FIRST_ENTRY" | jq -r '.phase // "MISSING"')
 HAS_AT=$(echo "$FIRST_ENTRY" | jq -r '.at // "MISSING"')
