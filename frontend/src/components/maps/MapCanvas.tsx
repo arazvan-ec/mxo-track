@@ -2,6 +2,7 @@ import {
   useRef,
   useImperativeHandle,
   useMemo,
+  useCallback,
   forwardRef,
   type ReactNode,
 } from 'react';
@@ -47,6 +48,18 @@ export const MapCanvas = forwardRef<MapCanvasHandle, Props>(function MapCanvas(
   const { resolved: theme } = useTheme();
   const mapStyle = useMemo(() => createMapStyle(theme), [theme]);
 
+  // Workaround: MapLibre may not apply raster paint properties on initial tile load.
+  // Force re-apply after the map finishes loading to ensure dark filter is visible.
+  const handleLoad = useCallback(() => {
+    const map = mapRef.current?.getMap();
+    if (!map || theme !== 'dark') return;
+    requestAnimationFrame(() => {
+      map.setPaintProperty('osm', 'raster-brightness-max', 0.45);
+      map.setPaintProperty('osm', 'raster-saturation', -0.4);
+      map.setPaintProperty('osm', 'raster-contrast', 0.2);
+    });
+  }, [theme]);
+
   useImperativeHandle(ref, () => ({
     flyTo(lng, lat, zoom = 15, padding) {
       mapRef.current?.flyTo({ center: [lng, lat], zoom, duration: 1000, padding });
@@ -70,6 +83,7 @@ export const MapCanvas = forwardRef<MapCanvasHandle, Props>(function MapCanvas(
       ref={mapRef}
       mapLib={maplibregl}
       mapStyle={mapStyle}
+      onLoad={handleLoad}
       initialViewState={{
         latitude: initialCenter.lat,
         longitude: initialCenter.lng,
