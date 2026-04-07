@@ -33,9 +33,8 @@ if [ "$USER_APPROVED" != "true" ]; then
   ERRORS="${ERRORS}- El usuario no ha aprobado el diseno\n"
 fi
 
-# Check spec file exists and has sufficient content
-# Exception: if current_phase is "brainstorming", the spec is being created right now.
-# In that case, only require spec_path is declared (not that the file exists).
+# Check spec file exists and has sufficient content.
+# The spec must exist as a real file before advancing out of brainstorming.
 SPEC_FULL=""
 if [ -n "$SPEC_PATH" ]; then
   if [ -f "$REPO/$SPEC_PATH" ]; then
@@ -46,12 +45,7 @@ if [ -n "$SPEC_PATH" ]; then
 fi
 
 if [ -z "$SPEC_FULL" ] || [ ! -f "$SPEC_FULL" ]; then
-  if [ "$CURRENT_PHASE" = "brainstorming" ] && [ -n "$SPEC_PATH" ]; then
-    # Spec is being created — allow if spec_path is declared and other evidence is valid
-    :
-  else
-    ERRORS="${ERRORS}- No existe spec document (spec_path: $SPEC_PATH)\n"
-  fi
+  ERRORS="${ERRORS}- No existe spec document (spec_path: $SPEC_PATH). Escribe el spec antes de avanzar.\n"
 else
   SIZE=$(wc -c < "$SPEC_FULL")
   if [ "$SIZE" -lt 500 ]; then

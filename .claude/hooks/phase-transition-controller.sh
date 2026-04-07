@@ -89,8 +89,9 @@ NEW_APPROVED=$(jq -r '.evidence.user_approved // false' "$STATE_FILE" 2>/dev/nul
 
 if [ "$OLD_APPROVED" = "false" ] && [ "$NEW_APPROVED" = "true" ]; then
   # user_approved flipped to true — was this via user-prompt-state.sh or direct manipulation?
-  # If the command contains user_approved, it's direct manipulation
-  if echo "$COMMAND" | grep -q 'user_approved'; then
+  # Only flag if the command explicitly assigns user_approved to true (not just reads/introspects it).
+  # The sanctioned path is user-prompt-state.sh which runs as a UserPromptSubmit hook (not a Bash command).
+  if echo "$COMMAND" | grep -qE 'user_approved\s*=\s*true'; then
     jq '.evidence.user_approved = false' "$STATE_FILE" > /tmp/ptc-fix.json && mv /tmp/ptc-fix.json "$STATE_FILE"
     WARNINGS="${WARNINGS}⚠ REVERT: user_approved fue seteado directamente via jq. Solo el hook UserPromptSubmit puede aprobarlo (cuando el usuario da su aprobacion). "
   fi

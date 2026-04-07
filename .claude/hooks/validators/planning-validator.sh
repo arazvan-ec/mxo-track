@@ -21,12 +21,7 @@ if [ -n "$PLAN_PATH" ]; then
 fi
 
 if [ -z "$PLAN_FULL" ] || [ ! -f "$PLAN_FULL" ]; then
-  if [ "$CURRENT_PHASE" = "planning" ] && [ -n "$PLAN_PATH" ]; then
-    # Plan is being created — allow if plan_path is declared
-    exit 0
-  fi
-  echo "BLOCKED: No hay plan de implementacion (plan_path: $PLAN_PATH)."
-  echo "Crea el plan (Skill 3) antes de implementar."
+  echo "BLOCKED: No hay plan de implementacion (plan_path: $PLAN_PATH). Escribe el plan antes de avanzar."
   exit 2
 fi
 
@@ -36,8 +31,8 @@ if [ "$PLAN_SIZE" -lt 300 ]; then
   exit 2
 fi
 
-if ! grep -qiE '(Task|Step|File|Archivo|Crear|Modificar|Actualizar)' "$PLAN_FULL" 2>/dev/null; then
-  echo "BLOCKED: Plan no contiene estructura minima (Task|Step|File|Archivo)."
+if ! grep -qiE '(Task|Tarea|Step|Paso|File|Archivo|Crear|Modificar|Actualizar)' "$PLAN_FULL" 2>/dev/null; then
+  echo "BLOCKED: Plan no contiene estructura minima (Task|Tarea|Step|Paso|File|Archivo)."
   exit 2
 fi
 

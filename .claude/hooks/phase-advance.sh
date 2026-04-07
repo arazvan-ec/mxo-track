@@ -96,6 +96,26 @@ else
   fi
 fi
 
+# Validate evidence for the phase being LEFT (not the target phase)
+# This prevents advancing with incomplete evidence (e.g., missing spec in brainstorming)
+VALIDATOR=""
+case "$CURRENT_PHASE" in
+  brainstorming) VALIDATOR="$REPO/.claude/hooks/validators/brainstorm-validator.sh" ;;
+  planning) VALIDATOR="$REPO/.claude/hooks/validators/planning-validator.sh" ;;
+esac
+
+if [ -n "$VALIDATOR" ] && [ -f "$VALIDATOR" ]; then
+  VALIDATION_OUTPUT=$("$VALIDATOR" "$STATE_FILE" 2>&1) || {
+    EXIT_CODE=$?
+    if [ "$EXIT_CODE" -eq 2 ]; then
+      echo "ERROR: Cannot advance from '$CURRENT_PHASE' — evidence incomplete:" >&2
+      echo "$VALIDATION_OUTPUT" >&2
+      exit 1
+    fi
+    # Exit 1 = soft warning, allow advancement
+  }
+fi
+
 # Perform the transition
 TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 jq --arg phase "$NEXT_PHASE" --arg ts "$TIMESTAMP" --arg prev "$CURRENT_PHASE" \
