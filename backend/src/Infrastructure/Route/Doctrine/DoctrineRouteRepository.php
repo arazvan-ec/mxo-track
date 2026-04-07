@@ -23,7 +23,7 @@ final readonly class DoctrineRouteRepository implements RouteRepositoryInterface
         try {
             return $this->em->getRepository(Route::class)
                 ->findOneBy(['publicId' => Ulid::fromString($publicId)]);
-        } catch (\Throwable) {
+        } catch (\InvalidArgumentException) {
             return null;
         }
     }

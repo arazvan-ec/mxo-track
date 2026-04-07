@@ -20,7 +20,7 @@ final readonly class DoctrineShipmentRepository implements ShipmentRepositoryInt
         try {
             return $this->em->getRepository(Shipment::class)
                 ->findOneBy(['publicId' => Ulid::fromString($publicId)]);
-        } catch (\Throwable) {
+        } catch (\InvalidArgumentException) {
             return null;
         }
     }

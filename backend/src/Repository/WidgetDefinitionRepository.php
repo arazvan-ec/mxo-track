@@ -24,7 +24,7 @@ final class WidgetDefinitionRepository extends ServiceEntityRepository
     {
         try {
             return $this->findOneBy(['publicId' => Ulid::fromString($publicId)]);
-        } catch (\Throwable) {
+        } catch (\InvalidArgumentException) {
             return null;
         }
     }
