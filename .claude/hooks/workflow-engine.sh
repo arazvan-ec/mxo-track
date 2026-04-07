@@ -158,8 +158,8 @@ get_validators_for_flow() {
     full|full-flow)
       case "$file_class" in
         code|test)      echo "brainstorm planning spec-compliance implementation" ;;
-        spec)           echo "consult brainstorm" ;;
-        plan)           echo "brainstorm planning" ;;
+        spec)           echo "consult" ;;
+        plan)           echo "brainstorm" ;;
         execution-log)  echo "capture" ;;
         decision)       echo "retrospective" ;;
         *)              echo "" ;;

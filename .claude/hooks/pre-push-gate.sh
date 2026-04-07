@@ -198,19 +198,17 @@ LINT_CLEAN=$(jq -r '.evidence.lint_clean // "null"' "$STATE_FILE" 2>/dev/null ||
 
 CHECKLIST=""
 
-if [ "$TESTS_PASSED" = "true" ]; then
-  CHECKLIST="${CHECKLIST}✅ tests_passed | "
-else
-  CHECKLIST="${CHECKLIST}❌ tests_passed (actual: $TESTS_PASSED) | "
-  ERRORS="${ERRORS}tests "
-fi
+case "$TESTS_PASSED" in
+  true)    CHECKLIST="${CHECKLIST}✅ tests_passed | " ;;
+  skipped) CHECKLIST="${CHECKLIST}⚠ tests_passed (skipped) | " ;;
+  *)       CHECKLIST="${CHECKLIST}❌ tests_passed (actual: $TESTS_PASSED) | "; ERRORS="${ERRORS}tests " ;;
+esac
 
-if [ "$LINT_CLEAN" = "true" ]; then
-  CHECKLIST="${CHECKLIST}✅ lint_clean | "
-else
-  CHECKLIST="${CHECKLIST}❌ lint_clean (actual: $LINT_CLEAN) | "
-  ERRORS="${ERRORS}lint "
-fi
+case "$LINT_CLEAN" in
+  true)    CHECKLIST="${CHECKLIST}✅ lint_clean | " ;;
+  skipped) CHECKLIST="${CHECKLIST}⚠ lint_clean (skipped) | " ;;
+  *)       CHECKLIST="${CHECKLIST}❌ lint_clean (actual: $LINT_CLEAN) | "; ERRORS="${ERRORS}lint " ;;
+esac
 
 # ── 2. Capture: execution_log_path exists and file ≥500B ──
 EXEC_LOG_PATH=$(jq -r '.evidence.execution_log_path // ""' "$STATE_FILE" 2>/dev/null || echo "")

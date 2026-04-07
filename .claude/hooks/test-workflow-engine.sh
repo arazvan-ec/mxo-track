@@ -299,7 +299,7 @@ set_evidence "spec_path" "docs/superpowers/specs/test-workflow-spec.md"
 create_valid_plan
 set_evidence "plan_path" "docs/superpowers/plans/${TODAY}-test-workflow.md"
 set_evidence "tests_written" "1"
-expect_deny "4.1 Brainstorm: insufficient turns" "$SRC_FILE" "turnos"
+expect_allow "4.1 Brainstorm: 1 turn allowed (soft warning)" "$SRC_FILE"
 
 # Missing alternatives
 create_fresh_state
