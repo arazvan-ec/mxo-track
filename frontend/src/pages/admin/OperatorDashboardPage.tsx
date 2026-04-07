@@ -27,6 +27,7 @@ export function OperatorDashboardPage() {
   const [navOpen, setNavOpen] = useState(false);
   const [sheetState, setSheetState] = useState<BottomSheetState>('collapsed');
   const [expandedRouteId, setExpandedRouteId] = useState<string | null>(null);
+  const [showArrows, setShowArrows] = useState(true);
   const { selection, selectStop, selectVehicle, clear } = useMapSelection();
   const { layout } = usePageLayout('fleet_map');
 
@@ -185,6 +186,7 @@ export function OperatorDashboardPage() {
                 id={route.publicId}
                 polyline={route.polyline}
                 color={route.color}
+                showArrows={showArrows}
               />
             ) : null,
           )}
@@ -236,6 +238,18 @@ export function OperatorDashboardPage() {
             }}
           />
         </MapCanvas>
+        <button
+          type="button"
+          className={`absolute top-4 left-4 z-10 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+            showArrows
+              ? 'bg-slate-800/90 text-slate-200 border-slate-600 hover:bg-slate-700'
+              : 'bg-slate-800/50 text-slate-400 border-slate-700 hover:bg-slate-700/50'
+          }`}
+          onClick={() => setShowArrows((v) => !v)}
+          title={showArrows ? 'Ocultar flechas de direccion' : 'Mostrar flechas de direccion'}
+        >
+          {showArrows ? 'ON' : 'OFF'}
+        </button>
         <BottomSheet
           state={sheetState}
           onStateChange={setSheetState}
