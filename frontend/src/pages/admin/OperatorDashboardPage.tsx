@@ -5,9 +5,7 @@ import { useMe } from '@/api/hooks/useMe';
 import { usePageLayout } from '@/api/hooks/usePageLayout';
 import { MapCanvas, type MapCanvasHandle } from '@/components/maps/MapCanvas';
 import { VehicleLayer, type VehicleData } from '@/components/maps/layers/VehicleLayer';
-import { StopMarkersLayer } from '@/components/maps/layers/StopMarkersLayer';
-import { RoutePolylineLayer } from '@/components/maps/layers/RoutePolylineLayer';
-import { StopPopup } from '@/components/maps/shared/StopPopup';
+import { RouteMapLayers } from '@/components/maps/layers/RouteMapLayers';
 import { VehiclePopup } from '@/components/fleet/VehiclePopup';
 import { EntityActionPanel } from '@/components/panels/EntityActionPanel';
 import { WidgetRenderer } from '@/components/bottom-sheet/WidgetRenderer';
@@ -27,7 +25,6 @@ export function OperatorDashboardPage() {
   const [navOpen, setNavOpen] = useState(false);
   const [sheetState, setSheetState] = useState<BottomSheetState>('collapsed');
   const [expandedRouteId, setExpandedRouteId] = useState<string | null>(null);
-  const [showArrows, setShowArrows] = useState(true);
   const { selection, selectStop, selectVehicle, clear } = useMapSelection();
   const { layout } = usePageLayout('fleet_map');
 
@@ -95,7 +92,7 @@ export function OperatorDashboardPage() {
     [expandedRouteId],
   );
 
-  // Build stop markers for all active routes
+  // Build stop markers for all active routes (used by handleStopClick)
   const allStopMarkers = useMemo(
     () =>
       activeRoutes.flatMap((route) =>
@@ -178,53 +175,12 @@ export function OperatorDashboardPage() {
           initialCenter={initialCenter}
           initialZoom={6}
         >
-          {/* Route polylines — filtered to selected route when one is expanded */}
-          {visibleRoutes.map((route) =>
-            route.polyline ? (
-              <RoutePolylineLayer
-                key={route.publicId}
-                id={route.publicId}
-                polyline={route.polyline}
-                color={route.color}
-                showArrows={showArrows}
-              />
-            ) : null,
-          )}
-
-          {/* Stop markers — filtered to selected route when one is expanded */}
-          {visibleRoutes.map((route) => (
-            <StopMarkersLayer
-              key={`stops-${route.publicId}`}
-              stops={route.stops
-                .filter((s) => s.lat && s.lng)
-                .map((s) => ({
-                  lat: s.lat,
-                  lng: s.lng,
-                  sequence: s.sequence,
-                  status: s.status,
-                  address: s.address,
-                  recipientName: s.recipient,
-                  shipmentPublicId: s.shipmentPublicId,
-                }))}
-              keyPrefix={`op-${route.publicId}-`}
-              onStopClick={(seq) => handleStopClick(route.publicId, seq)}
-              routeColor={route.color}
-              selectedSequence={
-                selection?.type === 'stop' && selection.entityId.includes(route.publicId)
-                  ? (selection.data as { sequence: number }).sequence
-                  : null
-              }
-              renderPopup={(stop) => (
-                <StopPopup
-                  sequence={stop.sequence}
-                  address={stop.address}
-                  status={stop.status}
-                  recipientName={stop.recipientName}
-                  shipmentPublicId={stop.shipmentPublicId}
-                />
-              )}
-            />
-          ))}
+          <RouteMapLayers
+            routes={visibleRoutes}
+            onStopClick={handleStopClick}
+            selection={selection}
+            keyPrefix="op-"
+          />
 
           {/* Vehicle markers */}
           <VehicleLayer
@@ -238,18 +194,6 @@ export function OperatorDashboardPage() {
             }}
           />
         </MapCanvas>
-        <button
-          type="button"
-          className={`absolute top-4 left-4 z-10 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-            showArrows
-              ? 'bg-slate-800/90 text-slate-200 border-slate-600 hover:bg-slate-700'
-              : 'bg-slate-800/50 text-slate-400 border-slate-700 hover:bg-slate-700/50'
-          }`}
-          onClick={() => setShowArrows((v) => !v)}
-          title={showArrows ? 'Ocultar flechas de direccion' : 'Mostrar flechas de direccion'}
-        >
-          {showArrows ? 'ON' : 'OFF'}
-        </button>
         <BottomSheet
           state={sheetState}
           onStateChange={setSheetState}
@@ -281,4 +225,3 @@ export function OperatorDashboardPage() {
     </div>
   );
 }
-
