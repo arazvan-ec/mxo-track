@@ -48,20 +48,16 @@
 </head>
 <body class="h-full" {% block body_attrs %}{% endblock %}>
 {% block body %}
-<div class="min-h-full">
+<div class="flex flex-col min-h-screen" style="background-color: var(--color-surface); color: var(--color-text-primary);">
 
-  {# ── React sidebar widget (unified menu) ─────────────────────────── #}
-  <div id="react-sidebar-root"></div>
-  <script type="module" src="/app/assets/sidebar-widget.js"></script>
+  {# ── React App Shell (unified TopBar + Sidebar, same as SPA) ──── #}
+  <div id="react-shell-root"></div>
+  <script type="module" src="/app/assets/app-shell-widget.js"></script>
 
   {# ── Mercure URL for React notification hook ──────────────────── #}
   {% if app.user %}
   <div data-mercure-url="{{ mercure_public_url }}" style="display:none"></div>
   {% endif %}
-
-  {# ── React TopBar widget (unified top bar) ─────────────────────── #}
-  <div id="react-topbar-root"></div>
-  <script type="module" src="/app/assets/topbar-widget.js"></script>
 
   {# ── Main content area ──────────────────────────────────────────── #}
   <div>

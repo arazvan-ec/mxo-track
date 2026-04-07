@@ -83,8 +83,7 @@ final class NavigationControllerTest extends TestCase
 
         // Routes from spec's Route Registry Inventory
         $expectedHrefs = [
-            '/admin',
-            '/app/admin/operator-dashboard',
+            '/app/admin/dashboard',
             '/notifications',
             '/search',
             '/admin/vehicles',

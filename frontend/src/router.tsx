@@ -30,7 +30,7 @@ export const router = createBrowserRouter([
       { path: 'admin/routes/:publicId/analysis', element: <RouteAnalysisPage /> },
       { path: 'customer/routes/:publicId', element: <CustomerRouteDetailPage /> },
       { path: 'driver/routes/:publicId', element: <DriverRoutePage /> },
-      { index: true, element: <Navigate to="admin/fleet-map" replace /> },
+      { index: true, element: <Navigate to="admin/dashboard" replace /> },
     ],
   },
 ]);

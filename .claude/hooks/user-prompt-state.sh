@@ -80,6 +80,13 @@ DEV_ACTIVE=$(echo "$STATE" | jq -r '.deviation.active // false')
 if [ "$FLOW_TYPE" = "null" ] || [ -z "$FLOW_TYPE" ]; then
   echo "── WORKFLOW STATE ──"
   echo "Flow: not declared | Classify before proceeding"
+  # Show pending work items if any
+  PENDING_COUNT=$(echo "$STATE" | jq -r '.pending_work // [] | length' 2>/dev/null || echo "0")
+  if [ "$PENDING_COUNT" -gt 0 ]; then
+    echo ""
+    echo "⚠ Pending work ($PENDING_COUNT items):"
+    echo "$STATE" | jq -r '.pending_work[] | "  [\(.priority)] \(.title)"' 2>/dev/null || true
+  fi
   echo "────────────────────"
   exit 0
 fi

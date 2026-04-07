@@ -253,3 +253,58 @@ export interface PlannerConfirmResponse {
   assigned: number;
   errors: string[];
 }
+
+/* ── Admin Dashboard ──────────────────────────────────────────────── */
+
+export interface HealthStatus {
+  traccar_ok: boolean;
+  mercure_ok: boolean;
+  db_ok: boolean;
+  redis_ok: boolean;
+  osrm_ok: boolean;
+  vroom_ok: boolean;
+}
+
+export interface LiveServiceData {
+  ok: boolean;
+  latency_ms: number;
+}
+
+export interface LiveData {
+  database: LiveServiceData;
+  redis: LiveServiceData;
+  traccar: LiveServiceData;
+  mercure: LiveServiceData;
+  osrm: LiveServiceData & { has_geometry?: boolean };
+  vroom: LiveServiceData;
+  positions: { row_count: number; warning: boolean };
+  disk: { db_size_mb: number };
+  last_ingestion: { timestamp: string | null; seconds_ago: number | null };
+}
+
+export interface DashboardMetrics {
+  active_routes: number;
+  pending_stops: number;
+  import_runs_today: number;
+  positions_ingested_last_hour: number;
+}
+
+export interface DailyDelivery {
+  date: string;
+  deliveries: number;
+}
+
+export interface TopDriver {
+  driver_name: string;
+  driver_email: string;
+  deliveries: number;
+}
+
+export interface AdminDashboardResponse {
+  health: HealthStatus;
+  live: LiveData;
+  metrics: DashboardMetrics;
+  daily_deliveries: DailyDelivery[];
+  top_drivers: TopDriver[];
+  generated_at: string;
+}
