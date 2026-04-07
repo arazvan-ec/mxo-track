@@ -9,8 +9,7 @@ import { EntityActionPanel } from '@/components/panels/EntityActionPanel';
 import { useMapSelection } from '@/hooks/useMapSelection';
 import { BottomSheet, type BottomSheetState } from '@/components/bottom-sheet/BottomSheet';
 import { WidgetRenderer } from '@/components/bottom-sheet/WidgetRenderer';
-import { TopBar } from '@/components/layout/TopBar';
-import { NavigationSidebar } from '@/components/layout/NavigationSidebar';
+
 import { SHEET_HEIGHTS } from '@/components/bottom-sheet/useBottomSheet';
 import type { FleetVehicle, FleetRoute } from '@/api/types';
 
@@ -21,7 +20,6 @@ export function FleetMapPage() {
   const { layout } = usePageLayout('fleet_map');
   const mapRef = useRef<FleetMapHandle>(null);
 
-  const [navOpen, setNavOpen] = useState(false);
   const [sheetState, setSheetState] = useState<BottomSheetState>('collapsed');
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
@@ -164,11 +162,8 @@ export function FleetMapPage() {
   );
 
   return (
-    <div className="flex flex-col h-screen w-full">
-      {navOpen && <NavigationSidebar mode="overlay" onClose={() => setNavOpen(false)} />}
-      <TopBar compact onMenuClick={() => setNavOpen(true)} />
-      <div className="flex-1 relative overflow-hidden">
-        <FleetMap
+    <>
+      <FleetMap
           ref={mapRef}
           vehicles={vehicles}
           routes={routes}
@@ -213,7 +208,6 @@ export function FleetMapPage() {
             />
           </div>
         </BottomSheet>
-      </div>
-    </div>
+    </>
   );
 }

@@ -4,8 +4,7 @@ import { api } from '@/api/client';
 import type { WidgetType, SheetStateName, LayoutConfig } from '@/types/layout';
 import { ALL_WIDGET_TYPES } from '@/widgets/registry';
 import { WidgetRenderer } from '@/components/bottom-sheet/WidgetRenderer';
-import { TopBar } from '@/components/layout/TopBar';
-import { NavigationSidebar } from '@/components/layout/NavigationSidebar';
+
 
 const PAGE_OPTIONS: { value: string; label: string }[] = [
   { value: 'test_routing', label: 'Test Routing' },
@@ -33,7 +32,6 @@ interface LayoutListItem {
 }
 
 export function PageLayoutEditorPage() {
-  const [navOpen, setNavOpen] = useState(false);
   const [selectedPage, setSelectedPage] = useState('test_routing');
   const [previewState, setPreviewState] = useState<SheetStateName>('half');
   const queryClient = useQueryClient();
@@ -143,13 +141,7 @@ export function PageLayoutEditorPage() {
   };
 
   return (
-    <div className="flex flex-col h-screen w-full bg-slate-900">
-      {navOpen && (
-        <NavigationSidebar mode="overlay" onClose={() => setNavOpen(false)} />
-      )}
-      <TopBar compact onMenuClick={() => setNavOpen(true)} />
-
-      <div className="flex-1 overflow-y-auto p-6">
+    <div className="flex-1 overflow-y-auto p-6 bg-slate-900">
         <div className="max-w-6xl mx-auto">
           <h1 className="text-xl font-bold text-slate-100 mb-1">Page Layout Editor</h1>
           <p className="text-sm text-slate-400 mb-4">
@@ -322,7 +314,6 @@ export function PageLayoutEditorPage() {
             </div>
           </div>
         </div>
-      </div>
     </div>
   );
 }

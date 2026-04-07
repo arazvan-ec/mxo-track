@@ -8,8 +8,7 @@ import { StopPopup } from '@/components/maps/shared/StopPopup';
 import { ROUTE_COLORS } from '@/components/maps/shared/colors';
 import { BottomSheet, type BottomSheetState } from '@/components/bottom-sheet/BottomSheet';
 import { WidgetRenderer } from '@/components/bottom-sheet/WidgetRenderer';
-import { TopBar } from '@/components/layout/TopBar';
-import { NavigationSidebar } from '@/components/layout/NavigationSidebar';
+
 
 const SHEET_HEIGHTS: Record<BottomSheetState, number> = {
   collapsed: 0.15,
@@ -21,7 +20,6 @@ export function TestRoutingPage() {
   const { data, isLoading, error } = useTestRoutingData();
   const { layout } = usePageLayout('test_routing');
   const mapRef = useRef<MapCanvasHandle>(null);
-  const [navOpen, setNavOpen] = useState(false);
   const [sheetState, setSheetState] = useState<BottomSheetState>('half');
   const [highlightedRouteIdx, setHighlightedRouteIdx] = useState<number | null>(null);
 
@@ -97,18 +95,8 @@ export function TestRoutingPage() {
   const sheetHeightPx = window.innerHeight * SHEET_HEIGHTS[sheetState];
 
   return (
-    <div className="flex flex-col h-screen w-full">
-      {/* Navigation sidebar — overlay */}
-      {navOpen && (
-        <NavigationSidebar mode="overlay" onClose={() => setNavOpen(false)} />
-      )}
-
-      {/* Top bar */}
-      <TopBar compact onMenuClick={() => setNavOpen(true)} />
-
-      {/* Map area */}
-      <div className="flex-1 relative overflow-hidden">
-        <MapCanvas
+    <>
+      <MapCanvas
           ref={mapRef}
           initialCenter={origin ? { lat: origin.lat, lng: origin.lng } : undefined}
           initialZoom={12}
@@ -224,7 +212,6 @@ export function TestRoutingPage() {
             pageData={pageData}
           />
         </BottomSheet>
-      </div>
-    </div>
+    </>
   );
 }

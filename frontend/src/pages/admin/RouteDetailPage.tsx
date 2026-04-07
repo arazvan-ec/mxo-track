@@ -14,8 +14,7 @@ import { RouteSummaryBar, EntityActionPanel } from '@/components/panels';
 import { useMapSelection } from '@/hooks/useMapSelection';
 import { BottomSheet, type BottomSheetState } from '@/components/bottom-sheet/BottomSheet';
 import { WidgetRenderer } from '@/components/bottom-sheet/WidgetRenderer';
-import { TopBar } from '@/components/layout/TopBar';
-import { NavigationSidebar } from '@/components/layout/NavigationSidebar';
+
 import { SHEET_HEIGHTS } from '@/components/bottom-sheet/useBottomSheet';
 import type { StopData, RouteData } from '@/api/types';
 
@@ -25,7 +24,6 @@ export function RouteDetailPage() {
   const { layout } = usePageLayout('route_detail');
   const { data: me } = useMe();
   const mapRef = useRef<MapCanvasHandle>(null);
-  const [navOpen, setNavOpen] = useState(false);
   const [sheetState, setSheetState] = useState<BottomSheetState>('collapsed');
   const { selection, selectStop, clear } = useMapSelection();
 
@@ -143,11 +141,8 @@ export function RouteDetailPage() {
   const nextPendingStop = nonOriginStops.find((s) => s.status === 'PENDING');
 
   return (
-    <div className="flex flex-col h-screen w-full">
-      {navOpen && <NavigationSidebar mode="overlay" onClose={() => setNavOpen(false)} />}
-      <TopBar compact onMenuClick={() => setNavOpen(true)} />
-      <div className="flex-1 relative overflow-hidden">
-        <MapCanvas
+    <>
+      <MapCanvas
           ref={mapRef}
           initialCenter={mapData?.origin ?? undefined}
           initialZoom={mapData?.origin ? 13 : 6}
@@ -223,7 +218,6 @@ export function RouteDetailPage() {
             </div>
           )}
         </BottomSheet>
-      </div>
-    </div>
+    </>
   );
 }

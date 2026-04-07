@@ -1,9 +1,7 @@
-import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/client';
 import { WIDGET_REGISTRY, ALL_WIDGET_TYPES } from '@/widgets/registry';
-import { TopBar } from '@/components/layout/TopBar';
-import { NavigationSidebar } from '@/components/layout/NavigationSidebar';
+
 
 interface WidgetDefinitionDto {
   publicId: string;
@@ -15,7 +13,6 @@ interface WidgetDefinitionDto {
 }
 
 export function WidgetGalleryPage() {
-  const [navOpen, setNavOpen] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: widgets, isLoading } = useQuery({
@@ -42,13 +39,7 @@ export function WidgetGalleryPage() {
   });
 
   return (
-    <div className="flex flex-col h-screen w-full bg-slate-900">
-      {navOpen && (
-        <NavigationSidebar mode="overlay" onClose={() => setNavOpen(false)} />
-      )}
-      <TopBar compact onMenuClick={() => setNavOpen(true)} />
-
-      <div className="flex-1 overflow-y-auto p-6">
+    <div className="flex-1 overflow-y-auto p-6 bg-slate-900">
         <div className="max-w-5xl mx-auto">
           <h1 className="text-xl font-bold text-slate-100 mb-1">Widget Gallery</h1>
           <p className="text-sm text-slate-400 mb-6">
@@ -110,7 +101,6 @@ export function WidgetGalleryPage() {
             </div>
           )}
         </div>
-      </div>
     </div>
   );
 }
