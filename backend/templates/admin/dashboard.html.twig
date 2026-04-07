@@ -42,13 +42,7 @@
 
 {# ── System Health Status Cards ───────────────────────────────────── #}
 <div class="mb-8">
-  <button @click="toggleSection('system_health')" class="flex items-center gap-2 group mb-3 cursor-pointer">
-    <svg class="h-4 w-4 text-gray-400 transition-transform duration-200" :class="sections.system_health ? 'rotate-0' : '-rotate-90'" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
-    </svg>
-    <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider group-hover:text-gray-700 transition-colors">Estado del sistema</h2>
-  </button>
-  <div x-show="sections.system_health" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-1">
+  <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Estado del sistema</h2>
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 
     {# Database #}
@@ -178,18 +172,11 @@
     </div>
 
   </div>
-  </div>
 </div>
 
 {# ── Infrastructure Metrics ──────────────────────────────────────── #}
 <div class="mb-8">
-  <button @click="toggleSection('infrastructure')" class="flex items-center gap-2 group mb-3 cursor-pointer">
-    <svg class="h-4 w-4 text-gray-400 transition-transform duration-200" :class="sections.infrastructure ? 'rotate-0' : '-rotate-90'" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
-    </svg>
-    <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider group-hover:text-gray-700 transition-colors">Infraestructura</h2>
-  </button>
-  <div x-show="sections.infrastructure" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-1">
+  <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Infraestructura</h2>
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 
     {# Positions table #}
@@ -249,7 +236,6 @@
     </div>
 
   </div>
-  </div>
 </div>
 
 {# ── Health pills (legacy compact view) ──────────────────────────── #}
@@ -266,14 +252,6 @@
 </div>
 
 {# ── KPI cards grid ───────────────────────────────────────────────── #}
-<div class="mb-8">
-  <button @click="toggleSection('kpis')" class="flex items-center gap-2 group mb-3 cursor-pointer">
-    <svg class="h-4 w-4 text-gray-400 transition-transform duration-200" :class="sections.kpis ? 'rotate-0' : '-rotate-90'" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
-    </svg>
-    <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider group-hover:text-gray-700 transition-colors">Indicadores clave</h2>
-  </button>
-  <div x-show="sections.kpis" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-1">
 <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 
   {# ── Rutas activas ──────────────────────────────────────────────── #}
@@ -349,19 +327,9 @@
   </div>
 
 </div>
-  </div>
-</div>
 
 {# ── Mini Reports Section ───────────────────────────────────────── #}
-<div class="mt-8">
-  <button @click="toggleSection('reports')" class="flex items-center gap-2 group mb-3 cursor-pointer">
-    <svg class="h-4 w-4 text-gray-400 transition-transform duration-200" :class="sections.reports ? 'rotate-0' : '-rotate-90'" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
-    </svg>
-    <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider group-hover:text-gray-700 transition-colors">Reportes</h2>
-  </button>
-  <div x-show="sections.reports" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-1">
-<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+<div class="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
 
   {# Mini trend chart (last 7 days) #}
   <div class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-900/5">
@@ -413,8 +381,6 @@
   </div>
 
 </div>
-  </div>
-</div>
 
 {# Reports link banner #}
 <div class="mt-6 mb-8">
@@ -440,12 +406,7 @@
 {# ── Live Activity Feed ──────────────────────────────────────────── #}
 <div class="mt-8">
   <div class="flex items-center justify-between mb-4">
-    <button @click="toggleSection('activity')" class="flex items-center gap-2 group cursor-pointer">
-      <svg class="h-4 w-4 text-gray-400 transition-transform duration-200" :class="sections.activity ? 'rotate-0' : '-rotate-90'" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
-      </svg>
-      <h2 class="text-lg font-semibold text-gray-900 group-hover:text-gray-700 transition-colors">Actividad en vivo</h2>
-    </button>
+    <h2 class="text-lg font-semibold text-gray-900">Actividad en vivo</h2>
     <div class="flex items-center gap-2">
       <a href="{{ path('fleet_map') }}"
          class="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-brand-500 transition-colors">
@@ -458,7 +419,6 @@
     </div>
   </div>
 
-  <div x-show="sections.activity" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-1">
   <div class="bg-white rounded-xl shadow-sm ring-1 ring-gray-900/5 overflow-hidden">
     <div class="max-h-80 overflow-y-auto divide-y divide-gray-100">
       <template x-if="activityFeed.length === 0">
@@ -493,7 +453,6 @@
         </div>
       </template>
     </div>
-  </div>
   </div>
 </div>
 
@@ -533,38 +492,10 @@ function adminDashboard() {
     sseConnected: false,
     livePositionCount: 0,
     lastRefresh: null,
-    sections: {
-      system_health: true,
-      infrastructure: true,
-      kpis: true,
-      reports: true,
-      activity: true,
-    },
     activityFeed: [],
     _eventSource: null,
     _refreshInterval: null,
     _vehicleNames: {},
-
-    _loadSections() {
-      try {
-        const saved = localStorage.getItem('dashboard_sections');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          Object.keys(this.sections).forEach(k => {
-            if (typeof parsed[k] === 'boolean') this.sections[k] = parsed[k];
-          });
-        }
-      } catch (_) {}
-    },
-
-    _saveSections() {
-      try { localStorage.setItem('dashboard_sections', JSON.stringify(this.sections)); } catch (_) {}
-    },
-
-    toggleSection(key) {
-      this.sections[key] = !this.sections[key];
-      this._saveSections();
-    },
 
     formatSecondsAgo(seconds) {
       if (seconds === null) return 'Sin datos';
@@ -575,7 +506,6 @@ function adminDashboard() {
     },
 
     async init() {
-      this._loadSections();
       // Load vehicle names and Mercure token for the activity feed
       try {
         const tokenRes = await fetch('/api/mercure-token', { credentials: 'include' });
