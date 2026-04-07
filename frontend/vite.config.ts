@@ -17,17 +17,13 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: path.resolve(__dirname, 'index.html'),
-        'sidebar-widget': path.resolve(__dirname, 'sidebar-widget.html'),
-        'topbar-widget': path.resolve(__dirname, 'topbar-widget.html'),
+        'app-shell-widget': path.resolve(__dirname, 'app-shell-widget.html'),
         'dashboard-widget': path.resolve(__dirname, 'dashboard-widget.html'),
       },
       output: {
         entryFileNames: (chunkInfo) => {
-          if (chunkInfo.name === 'sidebar-widget') {
-            return 'assets/sidebar-widget.js';
-          }
-          if (chunkInfo.name === 'topbar-widget') {
-            return 'assets/topbar-widget.js';
+          if (chunkInfo.name === 'app-shell-widget') {
+            return 'assets/app-shell-widget.js';
           }
           if (chunkInfo.name === 'dashboard-widget') {
             return 'assets/dashboard-widget.js';
