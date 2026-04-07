@@ -8,8 +8,7 @@ import { ROUTE_COLORS } from '@/components/maps/shared/colors';
 import { RoutePolylineLayer } from '@/components/maps/layers/RoutePolylineLayer';
 import { BottomSheet, type BottomSheetState } from '@/components/bottom-sheet/BottomSheet';
 import { SHEET_HEIGHTS } from '@/components/bottom-sheet/useBottomSheet';
-import { TopBar } from '@/components/layout/TopBar';
-import { NavigationSidebar } from '@/components/layout/NavigationSidebar';
+
 import {
   usePlannerShipments,
   usePlannerImportShipments,
@@ -43,7 +42,6 @@ const STEP_LABELS = [
 export function RoutePlannerPage() {
   const [step, setStep] = useState<Step>(1);
   const mapRef = useRef<MapCanvasHandle>(null);
-  const [navOpen, setNavOpen] = useState(false);
   const [sheetState, setSheetState] = useState<BottomSheetState>('half');
 
   // Read import_id from URL params
@@ -318,12 +316,9 @@ export function RoutePlannerPage() {
   );
 
   return (
-    <div className="flex flex-col h-screen w-full">
-      {navOpen && <NavigationSidebar mode="overlay" onClose={() => setNavOpen(false)} />}
-      <TopBar compact onMenuClick={() => setNavOpen(true)} />
-      <div className="flex-1 relative overflow-hidden">
-        {/* Map */}
-        <MapCanvas ref={mapRef}>
+    <>
+      {/* Map */}
+      <MapCanvas ref={mapRef}>
           {/* Step 1 & 2: Show shipment markers */}
           {(step === 1 || step === 2) && shipments.length > 0 && (
             <ShipmentClusterLayer
@@ -480,8 +475,7 @@ export function RoutePlannerPage() {
             )}
           </div>
         </BottomSheet>
-      </div>
-    </div>
+    </>
   );
 }
 

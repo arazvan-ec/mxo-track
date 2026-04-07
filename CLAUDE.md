@@ -455,36 +455,40 @@ tasks total, the decomposition likely missed parallelism. Revisit Step 1.
 
 ### Task Progress Tracking
 
-During the implementation phase, update `task_progress` in session-state so the status
-line shows granular progress (e.g., "Tarea 3/5: Verify TypeScript").
+#### Why track progress in session-state, not just in conversation
 
-**When entering implementation:** Count the tasks in the plan, initialize progress:
-```bash
-jq '.evidence.task_progress = {"current": 1, "total": N, "label": "first task name", "completed_labels": []}' \
-  .claude/session-state.json > /tmp/ss.json && mv /tmp/ss.json .claude/session-state.json
-```
+Implementation plans have 3-15 tasks. Without tracking, the model loses its place after
+compaction — it either re-does completed tasks or skips pending ones. The status line
+hook reads `task_progress` from session-state and displays it between every tool call,
+so the user and model both know exactly which task is current even after compaction.
 
-**When starting each new task:** Advance `current`, move previous label to `completed_labels`:
-```bash
-jq '.evidence.task_progress.completed_labels += [.evidence.task_progress.label] | .evidence.task_progress.current = N | .evidence.task_progress.label = "next task name"' \
-  .claude/session-state.json > /tmp/ss.json && mv /tmp/ss.json .claude/session-state.json
-```
+The alternative — counting tasks manually in conversation — fails precisely when plans
+are large enough to need tracking: long sessions compact aggressively.
 
-**When all tasks complete:** Reset before transitioning to verification:
-```bash
-jq '.evidence.task_progress = {"current": 0, "total": 0, "label": null, "completed_labels": []}' \
-  .claude/session-state.json > /tmp/ss.json && mv /tmp/ss.json .claude/session-state.json
-```
+#### How task_progress feeds the status line
 
-This produces status lines like:
-```
-📍 full | Implementation (4/8) | ✅🔄⬚⬚⬚ t2/5: Add toggle button (TDD, commit after each task)
-```
+The model writes task_progress → the UserPromptSubmit hook reads it → the hook injects
+it into the status line → the model sees its position in the next turn.
+
+Three transitions maintain the counter:
+1. **Enter implementation:** Initialize with plan's task count and first label
+2. **Start each new task:** Advance `current`, archive previous label in `completed_labels`
+3. **All tasks done:** Reset to zero before transitioning to verification
+
+This produces: `📍 full | Implementation (4/8) | ✅🔄⬚⬚⬚ t2/5: Add toggle button`
 
 ### Message Progress Display
 
-**Regla obligatoria:** Cada mensaje al usuario DEBE incluir indicador de progreso visible.
-No basta con actualizar `session-state.json` — el progreso se comunica en el texto del mensaje.
+#### Why visible progress, not just internal state
+
+The session-state hook injects a status line between tool calls, but the user only sees
+it as a system annotation — not as a deliberate communication from the model. **The
+progress header in each message is the model's commitment to transparency:** it proves
+the model knows where it is and what it accomplished, not just that a hook read a JSON file.
+
+Without explicit progress, long tool chains appear as silence. The user sees 30 seconds
+of "thinking..." with no indication of whether the model is stuck, working, or lost.
+The progress header breaks this opacity.
 
 **Principio clave: RESULTADO, no proceso.** Los mensajes comunican qué se completó y qué
 sigue — nunca el proceso interno de pensamiento. El usuario no necesita saber "voy a leer
@@ -649,22 +653,35 @@ knowledge module — that's the signal it's a pattern, not an incident.
 <!-- GENERIC-START: Subagent skill triggers -->
 ## Working with Subagents
 
-**Subagent-Driven Development** (Skill 5) — Use when executing plans with independent tasks.
-Fresh subagent per task + two-stage review (spec compliance, then code quality).
-**Full instructions:** `AGENTS.md`
+#### Why subagents instead of doing everything in the main context
 
-**Parallel Agents** (Skill 6) — Use when facing 2+ independent problems. One agent per
-problem domain, working concurrently. Don't use when failures are related.
-**Full instructions:** `AGENTS.md`
+The main context window is finite. A subagent gets a fresh context for its specific task,
+executes it, and returns only the result — not the 50 intermediate tool calls it took.
+This protects the main window from pollution by large searches or multi-file edits.
 
-**Receiving Code Review** (Skill 10) — When receiving feedback: read completely → restate
-requirement → verify against codebase → evaluate technically → respond or push back.
-Never "Great point!" before verification. Never implement unclear feedback — ask first.
-**Full instructions:** `AGENTS.md`
+But subagents have costs: setup overhead (~10s), no access to conversation history, and
+permission constraints (background agents can't prompt for approval). **Use subagents for
+tasks requiring >20 lines of new code. For 1-2 line edits, do them directly** — the setup
+overhead exceeds the benefit.
 
-**Requesting Code Review** (Skill 11) — Mandatory after major features and before merge.
-Get base/head SHAs, dispatch reviewer with context + plan.
-**Full instructions:** `AGENTS.md`
+#### When to use each pattern
+
+| Pattern | When | Why not the alternative |
+|---------|------|----------------------|
+| **Subagent-Driven Dev** (Skill 5) | Plan has 3+ independent tasks | Sequential execution wastes parallelism |
+| **Parallel Agents** (Skill 6) | 2+ independent problems to investigate | Sequential investigation loses context between problems |
+| **Direct edit** | Change is <20 lines, touching 1-2 files | Agent setup overhead > edit time |
+
+#### Permission model for background agents
+
+Background agents inherit your session's auto-approve settings but **cannot prompt for
+manual approval**. If a tool requires confirmation, the agent receives "denied" and fails.
+
+**Mitigation:** Use `isolation: "worktree"` for agents that modify existing files — they
+work on an isolated copy and you merge their changes. For agents creating new files,
+standard mode usually works because Write-to-new-file is typically auto-approved.
+
+**Full instructions:** `AGENTS.md` (Skill 5, 6, 10, 11)
 <!-- GENERIC-END -->
 
 ---
@@ -672,18 +689,31 @@ Get base/head SHAs, dispatch reviewer with context + plan.
 <!-- GENERIC-START: Skills invocation rule -->
 ## Skills: Check Before Every Action
 
-If there's even a 1% chance a skill applies, invoke it. Process skills first
-(brainstorming, debugging), implementation skills second.
+#### Why skills are checked proactively, not reactively
 
-| If you're about to... | Invoke |
-|----------------------|--------|
-| Build something new | Brainstorming (Skill 2) |
-| Create implementation plan | Writing Plans (Skill 3) |
-| Execute a plan | Executing Plans (Skill 4) — see `backend/src/CLAUDE.md` |
-| Fix a bug | Systematic Debugging (Skill 8) — see `backend/src/CLAUDE.md` |
-| Write code | TDD (Skill 7) — see `backend/src/CLAUDE.md` |
-| Claim something works | Verification (Skill 9) |
-| Finish a branch | Finishing Branch (Skill 12) |
+Skills encode process knowledge — the brainstorming skill prevents cowboy coding, the
+debugging skill prevents symptom fixes, the verification skill prevents false claims.
+Without proactive checking, the model defaults to the fastest path (edit code directly)
+and skips the process that catches errors.
+
+**The 1% rule:** If there's even a slight chance a skill applies, invoke it. The cost of
+a false positive (invoking a skill unnecessarily) is minutes. The cost of a false negative
+(skipping brainstorming on a feature) is hours of rework. The asymmetry justifies
+aggressive checking.
+
+#### Skill invocation order
+
+Process skills activate gates — invoke them first so the gates are set before code edits:
+
+| If you're about to... | Invoke | Why first |
+|----------------------|--------|-----------|
+| Build something new | Brainstorming (Skill 2) | Sets spec requirement before implementation |
+| Create implementation plan | Writing Plans (Skill 3) | Structures TDD cycle for each task |
+| Execute a plan | Executing Plans (Skill 4) | Enforces task order and commit cadence |
+| Fix a bug | Systematic Debugging (Skill 8) | Blocks fix until root cause identified |
+| Write code | TDD (Skill 7) | Ensures test exists before production code |
+| Claim something works | Verification (Skill 9) | Circuit breaker against confirmation bias |
+| Finish a branch | Finishing Branch (Skill 12) | Enforces retrospective before merge |
 
 **Complete skill reference:** `docs/knowledge/superpowers-skills.md`
 <!-- GENERIC-END -->
@@ -742,18 +772,38 @@ findable via file path, not buried in conversation history that compacts away.
 <!-- GENERIC-START: Decision principles -->
 ## Decision Principles
 
+#### Why explicit principles instead of "use good judgment"
+
+The model's default judgment optimizes for the current task. Principles override this local
+optimization with global constraints that prevent patterns the model can't see from within
+a single task. Each principle below was extracted from 3+ execution logs where the opposite
+choice caused rework.
+
 ### Scalability Over Convenience
-The best solution is the one that scales best, regardless of how many changes it requires.
-A solution touching 20 files that scales correctly is superior to a 3-line patch that doesn't.
+
+A 3-line patch that doesn't scale creates debt that compounds across every future feature.
+A 20-file change that scales correctly is more work now but zero work later. **The
+evaluation criterion is total lifetime cost, not implementation cost.** This principle
+exists because the model's natural bias is "minimize changes in this PR" — which
+optimizes for the wrong metric.
 
 ### No Redundancy
-Before executing any action: Is it necessary? Was it already done? Will the result differ
-from current state? If not, don't execute.
+
+Every tool call costs context tokens. Before any action: Was this already done? Will the
+result differ from current state? If the manifest already answers the question, don't
+grep. If the file was just read 3 messages ago and hasn't changed, don't re-read. **The
+model's bias toward "let me double-check" is expensive when context is finite.**
 
 ### Context Hygiene
-- Checkpoint after ~50 tool calls or when compaction is noticed
-- Post-compaction: verify access to spec and plan paths before continuing
-- Tasks > 8 steps: consider splitting into separate sessions
+
+Context exhaustion is silent — the model doesn't notice compaction happening. These rules
+make the finite budget explicit:
+- **Checkpoint** after ~50 tool calls or when compaction is noticed — push, update
+  session-state, so recovery is possible
+- **Post-compaction:** verify access to spec and plan paths before continuing — compaction
+  may have lost the file contents that guide implementation
+- **Split large tasks:** >8 steps means the plan won't survive a single compaction cycle.
+  Better to split into 2 sessions with a push between them
 <!-- GENERIC-END -->
 
 ---
@@ -761,7 +811,27 @@ from current state? If not, don't execute.
 <!-- PROJECT-SPECIFIC-START -->
 ## Knowledge Modules
 
-Before working on a subsystem, read the relevant module in `docs/knowledge/`:
+#### Why modules instead of one large document
+
+A single architecture document would load ~5000 tokens in every conversation — even when
+working on a CSS change that needs zero backend context. Knowledge modules split by
+subsystem so only the relevant ~500 tokens load. This is the same principle as the
+CLAUDE.md hierarchy: **pay only for the context you use.**
+
+Modules also have independent freshness — `ui-frontend.md` can be updated weekly while
+`deployment.md` stays stable for months. A monolith document would require reading the
+whole thing to check if any section is stale.
+
+#### How modules feed the workflow
+
+Step 0 of brainstorming ("Consult past decisions") reads both `docs/decisions/log.md` AND
+the relevant knowledge module. The module provides the architectural context that prevents
+re-discovering constraints the codebase already encodes. After any task that changes a
+subsystem, update the relevant module — this is what keeps Step 0 useful for the next
+session.
+
+The `finalize-validator` automatically checks which modules may need updating based on
+changed files (threshold: ≥5 files or new files in a pattern).
 
 | Working on... | Read |
 |--------------|------|
@@ -779,8 +849,7 @@ Before working on a subsystem, read the relevant module in `docs/knowledge/`:
 | UI, Twig, React | `ui-frontend.md` |
 | Full index | `index.md` |
 
-**Freshness:** < 14 days → trust directly. Older → spot-check before trusting.
-After any task that changed a subsystem, update the relevant module.
+**Freshness:** < 14 days → trust directly. Older → spot-check 2-3 claims before trusting.
 <!-- PROJECT-SPECIFIC-END -->
 
 ---
@@ -790,26 +859,41 @@ After any task that changed a subsystem, update the relevant module.
 
 ### This File's Hierarchy
 
-Claude Code loads CLAUDE.md files hierarchically by directory. This project uses:
+#### Why a hierarchy instead of one file
+
+This file loads in every conversation — every token here is paid on every task. Backend
+architecture rules are irrelevant when editing a Twig template. TDD rules are irrelevant
+when answering a question. **The hierarchy ensures each conversation pays only for the
+rules it needs.**
+
+The distribution follows a principle: behavioral instructions (always needed) → this
+file. Domain-specific rules (needed in context) → subdirectory files. Reference data
+(consulted on demand) → `docs/knowledge/`.
 
 ```
-CLAUDE.md          ← Philosophy, workflow, cross-cutting rules (this file, always loaded)
-AGENTS.md          ← Subagent instructions (loaded when dispatching agents)
-backend/CLAUDE.md  ← Architecture, SOLID, DDD, conventions (loaded in backend/)
+CLAUDE.md              ← Philosophy, workflow, cross-cutting rules (always loaded, ~800 lines)
+AGENTS.md              ← Subagent instructions (loaded when dispatching agents)
+backend/CLAUDE.md      ← Architecture, SOLID, DDD, conventions (loaded in backend/)
 backend/src/CLAUDE.md  ← TDD, debugging, critical patterns (loaded in src/)
 backend/tests/CLAUDE.md ← Testing conventions (loaded in tests/)
-docs/CLAUDE.md     ← Documentation rules, knowledge modules (loaded in docs/)
-.claude/README.md  ← Workflow engine technical reference (manual consultation)
+docs/CLAUDE.md         ← Documentation rules, knowledge modules (loaded in docs/)
+.claude/README.md      ← Workflow engine technical reference (manual consultation)
 ```
 
-### What Goes Where
+#### How to decide where new rules go
 
-- **Behavioral instructions** (must be present every time) → this file
-- **Directory-specific rules** (only needed in that context) → subdirectory CLAUDE.md
-- **Reference data** (consulted on demand) → `docs/knowledge/`
-- **Subagent instructions** → `AGENTS.md`
+Ask: "Does this rule need to apply in EVERY conversation?" If yes → this file. If it only
+applies when working in a specific directory → that directory's CLAUDE.md. If it's
+reference data that might be stale → `docs/knowledge/`. If it's a one-time design decision
+→ `docs/decisions/log.md`.
 
 ### Decision Log
+
+#### Why decisions are logged, not just implemented
+
+Code shows what was chosen. It doesn't show what was considered and rejected, or why.
+Without a decision log, future brainstorming re-evaluates alternatives that were already
+tried and discarded — wasting a full brainstorming cycle to re-discover a known conclusion.
 
 Non-trivial design decisions go to `docs/decisions/log.md`:
 ```markdown
@@ -820,5 +904,6 @@ Non-trivial design decisions go to `docs/decisions/log.md`:
 - **Result:** (fill post-implementation) Did it work? What was learned?
 ```
 
-When the same lesson appears 3+ times, update the relevant knowledge module.
+When the same lesson appears 3+ times across execution logs, it graduates to the relevant
+knowledge module — that's the signal it's a pattern, not an incident.
 <!-- GENERIC-END -->

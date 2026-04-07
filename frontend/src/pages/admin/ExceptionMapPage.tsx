@@ -2,8 +2,7 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import { MapCanvas, type MapCanvasHandle } from '@/components/maps/MapCanvas';
 import { ExceptionHeatmapLayer } from '@/components/maps/layers/ExceptionHeatmapLayer';
 import { BottomSheet, type BottomSheetState } from '@/components/bottom-sheet/BottomSheet';
-import { TopBar } from '@/components/layout/TopBar';
-import { NavigationSidebar } from '@/components/layout/NavigationSidebar';
+
 import {
   useExceptionMapData,
   type ExceptionPoint,
@@ -34,7 +33,6 @@ export function ExceptionMapPage() {
   const [from, setFrom] = useState(thirtyDaysAgo);
   const [to, setTo] = useState(today);
   const [viewMode, setViewMode] = useState<'heatmap' | 'points'>('heatmap');
-  const [navOpen, setNavOpen] = useState(false);
   const [sheetState, setSheetState] = useState<BottomSheetState>('collapsed');
 
   const { exceptions, isLoading, error } = useExceptionMapData(from, to);
@@ -49,11 +47,8 @@ export function ExceptionMapPage() {
   }, [exceptions]);
 
   return (
-    <div className="flex flex-col h-screen w-full">
-      {navOpen && <NavigationSidebar mode="overlay" onClose={() => setNavOpen(false)} />}
-      <TopBar compact onMenuClick={() => setNavOpen(true)} />
-      <div className="flex-1 relative overflow-hidden">
-        <MapCanvas ref={mapRef}>
+    <>
+      <MapCanvas ref={mapRef}>
           <ExceptionHeatmapLayer exceptions={exceptions} mode={viewMode} />
         </MapCanvas>
         <BottomSheet
@@ -148,7 +143,6 @@ export function ExceptionMapPage() {
             )}
           </div>
         </BottomSheet>
-      </div>
-    </div>
+    </>
   );
 }

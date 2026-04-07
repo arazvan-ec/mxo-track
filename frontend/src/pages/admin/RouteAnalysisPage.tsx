@@ -5,8 +5,7 @@ import { RoutePolylineLayer } from '@/components/maps/layers/RoutePolylineLayer'
 import { StopMarkersLayer } from '@/components/maps/layers/StopMarkersLayer';
 import { StopPopup } from '@/components/maps/shared/StopPopup';
 import { BottomSheet, type BottomSheetState } from '@/components/bottom-sheet/BottomSheet';
-import { TopBar } from '@/components/layout/TopBar';
-import { NavigationSidebar } from '@/components/layout/NavigationSidebar';
+
 import { SHEET_HEIGHTS } from '@/components/bottom-sheet/useBottomSheet';
 import { useRouteAnalysis } from '@/api/hooks/useRouteAnalysis';
 import { usePageLayout } from '@/api/hooks/usePageLayout';
@@ -33,7 +32,6 @@ export function RouteAnalysisPage() {
   const { publicId } = useParams<{ publicId: string }>();
   const mapRef = useRef<MapCanvasHandle>(null);
   const { route, stops, isLoading, error } = useRouteAnalysis(publicId);
-  const [navOpen, setNavOpen] = useState(false);
   const [sheetState, setSheetState] = useState<BottomSheetState>('collapsed');
 
   const [selectedStopSequence, setSelectedStopSequence] = useState<number | null>(null);
@@ -96,11 +94,8 @@ export function RouteAnalysisPage() {
   );
 
   return (
-    <div className="flex flex-col h-screen w-full">
-      {navOpen && <NavigationSidebar mode="overlay" onClose={() => setNavOpen(false)} />}
-      <TopBar compact onMenuClick={() => setNavOpen(true)} />
-      <div className="flex-1 relative overflow-hidden">
-        <MapCanvas ref={mapRef}>
+    <>
+      <MapCanvas ref={mapRef}>
           {/* Planned route polyline (blue, solid) */}
           {route?.polyline && (
             <RoutePolylineLayer
@@ -149,7 +144,6 @@ export function RouteAnalysisPage() {
             <WidgetRenderer layout={layout} sheetState={sheetState} pageData={pageData} />
           </div>
         </BottomSheet>
-      </div>
-    </div>
+    </>
   );
 }

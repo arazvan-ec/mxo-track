@@ -72,12 +72,79 @@ echo "════════════════════════�
 echo ""
 echo "── Layer 1: Phase Transition Controller ──"
 
-echo "Test 1.1: Legal full walk via phase-advance"
+echo "Test 1.1: Legal full walk via phase-advance (with artifacts)"
 reset_full_flow
+
+# Create artifacts needed by validators
+TEST_SPEC="/tmp/test-el-spec.md"
+TEST_PLAN="/tmp/test-el-plan.md"
+TEST_LOG="/tmp/test-el-log.md"
+
+cat > "$TEST_SPEC" << 'SPECEOF'
+# Spec
+## Problem
+Description of the problem that needs solving in this test scenario.
+## Alternativa A
+First option with trade-offs.
+## Alternativa B
+Second option with different trade-offs and analysis.
+## Existing Functionality Inventory
+| Element | Decision |
+|---------|----------|
+| Foo     | Keep     |
+## Omission Decisions
+| Element | Decision |
+|---------|----------|
+| Bar     | Not touched |
+## Architecture
+Architecture description padding to reach 500 bytes minimum for the validator.
+More content for padding purposes to ensure the size check passes correctly in tests.
+SPECEOF
+
+cat > "$TEST_PLAN" << 'PLANEOF'
+# Plan — Test Plan for Enforcement Layers
+
+**Spec:** specs/test-spec.md
+**Branch:** test-branch
+
+## Phase 1 (v0)
+
+### Task 1 — Crear the new component
+- Crear a new file with the required content and structure
+- Modificar the existing configuration to support the new feature properly
+- Actualizar existing tests to cover the new behavior and edge cases
+- Verify TypeScript compiles cleanly after changes
+
+### Task 2 — Verificar integration
+- Run all tests and verify they pass without regressions
+- Check lint rules are satisfied across all modified files
+- Commit after all verification steps pass successfully
+
+## Phase 2 (Mature): N/A
+PLANEOF
+
+cat > "$TEST_LOG" << 'LOGEOF'
+# Execution Log
+## Implementation
+Did some stuff.
+## Lessons
+- First lesson about the implementation that was educational and informative for the team overall
+- Second lesson about workflow that revealed gaps worth documenting for future reference and improvement
+- Third lesson about testing patterns discovered during this implementation cycle that we should remember
+LOGEOF
+
 PHASES=("consult" "brainstorming" "planning" "implementation" "verification" "capture" "retrospective" "finalize")
 ALL_OK=true
 for p in "${PHASES[@]}"; do
+  case "$p" in
+    brainstorming) jq '.evidence.decisions_read = true' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE" ;;
+    planning) jq --arg sp "$TEST_SPEC" '.evidence = (.evidence + {"user_turns": 3, "alternatives_proposed": true, "user_approved": true, "spec_path": $sp})' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE" ;;
+    implementation) jq --arg pp "$TEST_PLAN" '.evidence.plan_path = $pp' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE" ;;
+    capture) jq '.evidence.tests_passed = true | .evidence.lint_clean = true' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE" ;;
+    retrospective) jq --arg lp "$TEST_LOG" '.evidence.execution_log_path = $lp' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE" ;;
+  esac
   if ! "$ADVANCE" "$p" > /dev/null 2>&1; then
+    echo "  ❌ Failed at $p"
     ALL_OK=false
     break
   fi
@@ -89,6 +156,8 @@ assert_eq "Ends at finalize" "finalize" "$FINAL_PHASE"
 
 HISTORY_LEN=$(jq '.phase_history | length' "$STATE_FILE")
 assert_eq "History has 8 entries" "8" "$HISTORY_LEN"
+
+rm -f "$TEST_SPEC" "$TEST_PLAN" "$TEST_LOG"
 
 echo ""
 echo "Test 1.2: Fabricated phase_history is reverted"
@@ -176,6 +245,58 @@ reset_full_flow
 "$ADVANCE" consult > /dev/null 2>&1
 HISTORY_FORMAT=$(jq '[.phase_history // [] | .[] | select(type == "string")] | length' "$STATE_FILE")
 assert_eq "Timestamp format has 0 string entries" "0" "$HISTORY_FORMAT"
+
+# ── LAYER 2 (continued): New validator scenarios ──
+echo ""
+echo "── Layer 2 (continued): New validator scenarios ──"
+
+echo "Test 2.5: Brainstorm blocks when spec_path set but file missing"
+reset_full_flow
+jq '.evidence.user_turns = 3 | .evidence.alternatives_proposed = true | .evidence.user_approved = true | .evidence.spec_path = "/tmp/nonexistent-spec.md"' \
+  "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE"
+set +e
+"$REPO/.claude/hooks/validators/brainstorm-validator.sh" "$STATE_FILE" > /dev/null 2>&1
+EXIT_CODE=$?
+set -e
+assert_eq "Brainstorm blocks with missing spec file (exit 2)" "2" "$EXIT_CODE"
+
+echo "Test 2.6: Planning validator accepts 'Tarea' keyword"
+TEST_TAREA_PLAN="/tmp/test-el-tarea-plan.md"
+cat > "$TEST_TAREA_PLAN" << 'PLANEOF'
+# Plan de implementacion
+
+## Fase 1
+
+### Tarea 1 — Implementar el widget
+- Desarrollar el componente React
+- Conectar con el backend API
+- Agregar tests unitarios
+
+### Tarea 2 — Verificar integracion
+- Probar flujo completo
+- Revisar estilos responsive
+This plan needs 300 bytes so padding it here to reach the minimum.
+PLANEOF
+jq --arg pp "$TEST_TAREA_PLAN" '.evidence.plan_path = $pp' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE"
+set +e
+"$REPO/.claude/hooks/validators/planning-validator.sh" "$STATE_FILE" > /dev/null 2>&1
+EXIT_CODE=$?
+set -e
+assert_eq "Planning accepts Tarea keyword (exit 0)" "0" "$EXIT_CODE"
+rm -f "$TEST_TAREA_PLAN"
+
+echo "Test 2.7: Retrospective validator blocks without lessons"
+TEST_NOLESSON_LOG="/tmp/test-el-nolesson.md"
+echo -e "# Log\n## Implementation\nDid stuff." > "$TEST_NOLESSON_LOG"
+cat > /tmp/test-el-retro-state.json << STATEEOF
+{"evidence":{"execution_log_path":"$TEST_NOLESSON_LOG"}}
+STATEEOF
+set +e
+"$REPO/.claude/hooks/validators/retrospective-validator.sh" /tmp/test-el-retro-state.json > /dev/null 2>&1
+EXIT_CODE=$?
+set -e
+assert_eq "Retrospective blocks without lessons (exit 2)" "2" "$EXIT_CODE"
+rm -f "$TEST_NOLESSON_LOG" /tmp/test-el-retro-state.json
 
 # ── Summary ──
 echo ""

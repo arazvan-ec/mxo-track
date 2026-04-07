@@ -13,8 +13,7 @@ import { StopPopup } from '@/components/maps/shared/StopPopup';
 import { useMapSelection } from '@/hooks/useMapSelection';
 import { BottomSheet, type BottomSheetState } from '@/components/bottom-sheet/BottomSheet';
 import { WidgetRenderer } from '@/components/bottom-sheet/WidgetRenderer';
-import { TopBar } from '@/components/layout/TopBar';
-import { NavigationSidebar } from '@/components/layout/NavigationSidebar';
+
 import { SHEET_HEIGHTS } from '@/components/bottom-sheet/useBottomSheet';
 import type { StopData } from '@/api/types';
 
@@ -25,7 +24,6 @@ import type { StopData } from '@/api/types';
 export function CustomerRouteDetailPage() {
   const { publicId } = useParams<{ publicId: string }>();
   const mapRef = useRef<MapCanvasHandle>(null);
-  const [navOpen, setNavOpen] = useState(false);
   const [sheetState, setSheetState] = useState<BottomSheetState>('collapsed');
   const { data: me } = useMe();
   const { selection, selectStop, clear } = useMapSelection();
@@ -115,11 +113,8 @@ export function CustomerRouteDetailPage() {
   );
 
   return (
-    <div className="flex flex-col h-screen w-full">
-      {navOpen && <NavigationSidebar mode="overlay" onClose={() => setNavOpen(false)} />}
-      <TopBar compact onMenuClick={() => setNavOpen(true)} />
-      <div className="flex-1 relative overflow-hidden">
-        <MapCanvas ref={mapRef}>
+    <>
+      <MapCanvas ref={mapRef}>
           {route?.polyline && (
             <RoutePolylineLayer
               id={route.publicId}
@@ -183,7 +178,6 @@ export function CustomerRouteDetailPage() {
             <WidgetRenderer layout={layout} sheetState={sheetState} pageData={pageData} />
           </div>}
         </BottomSheet>
-      </div>
-    </div>
+    </>
   );
 }

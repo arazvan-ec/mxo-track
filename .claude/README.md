@@ -173,6 +173,20 @@ failure mode. See "Harness Assumptions" below.
 Each validator encodes the minimum evidence that proves a phase was done honestly,
 not just declared. Evidence fields are set by Claude; hooks verify them mechanically.
 
+### Two invocation contexts
+
+Validators are called from two different places with different signatures:
+
+1. **Phase transitions** (`phase-advance.sh`): `validator.sh $STATE_FILE`
+   Called when advancing between phases. Uses autodiscovery: looks for
+   `validators/${phase}-validator.sh` (with `${phase%ing}` fallback for "brainstorming").
+   To add a new validator, create `validators/{phase}-validator.sh` — no registration needed.
+
+2. **File edit gates** (`workflow-engine.sh`): `validator.sh $STATE_FILE $FILE_PATH`
+   Called as PreToolUse hook when the model tries to edit a file. The `$FILE_PATH` is used
+   by `implementation-validator.sh` (TDD check) and `debug-validator.sh` (code gate).
+   Validators must handle `$2` being empty (transition context) or a path (edit context).
+
 | Fase | Evidencia requerida | Nivel |
 |------|---------------------|-------|
 | `consult` | `decisions_read` OR `logs_scanned` | HARD |
@@ -181,7 +195,7 @@ not just declared. Evidence fields are set by Claude; hooks verify them mechanic
 | `implementation` | plan exists (HARD) + `tests_written > 0` (SOFT warning) | MIXED |
 | `verification` | `tests_passed = true` + `lint_clean = true` | HARD |
 | `capture` | `execution_log_path` exists | SOFT |
-| `retrospective` | must be in `phase_history` (pre-push gate) | HARD |
+| `retrospective` | `execution_log_path` exists + `## Lessons`/`## Retrospectiva` section ≥100 chars | HARD |
 | `finalize` | `branch_strategy` declared + knowledge module check | SOFT |
 | `debug-code` | `decisions_read` OR `logs_scanned` + `root_cause_identified` + `pattern_wide_search_done` | HARD |
 
