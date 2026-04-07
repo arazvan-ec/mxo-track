@@ -2,6 +2,7 @@
 # PostToolUse hook — generates a detailed workflow status for Claude to display.
 # Reads session-state.json evidence fields, writes .claude/workflow-status-line.txt
 # Enhanced 2026-03-24: shows per-phase evidence and current phase needs.
+# Enhanced 2026-04-07: adds tool context suffix to avoid identical repeated lines.
 # Non-blocking: always exits 0.
 
 set -euo pipefail
@@ -9,10 +10,55 @@ set -euo pipefail
 REPO="/home/user/mxo-track"
 STATE_FILE="$REPO/.claude/session-state.json"
 OUTPUT="$REPO/.claude/workflow-status-line.txt"
+# --- Read tool context from stdin (PostToolUse JSON) ---
+TOOL_SUFFIX=""
+if INPUT=$(cat 2>/dev/null) && [ -n "$INPUT" ]; then
+  TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // empty' 2>/dev/null || true)
+  if [ -n "$TOOL_NAME" ]; then
+    # Extract a short descriptor based on tool type
+    case "$TOOL_NAME" in
+      Read|Write|Edit)
+        TOOL_TARGET=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null || true)
+        if [ -n "$TOOL_TARGET" ]; then
+          # Show last 2 path components (e.g. "Entity/Vehicle.php")
+          TOOL_TARGET=$(echo "$TOOL_TARGET" | awk -F/ '{if(NF>=2) print $(NF-1)"/"$NF; else print $NF}')
+          TOOL_SUFFIX=" · ${TOOL_NAME} ${TOOL_TARGET}"
+        else
+          TOOL_SUFFIX=" · ${TOOL_NAME}"
+        fi
+        ;;
+      Bash)
+        TOOL_CMD=$(echo "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null || true)
+        if [ -n "$TOOL_CMD" ]; then
+          # First 30 chars of command
+          TOOL_CMD="${TOOL_CMD:0:30}"
+          TOOL_SUFFIX=" · Bash: ${TOOL_CMD}"
+        else
+          TOOL_SUFFIX=" · Bash"
+        fi
+        ;;
+      Grep)
+        TOOL_PATTERN=$(echo "$INPUT" | jq -r '.tool_input.pattern // empty' 2>/dev/null || true)
+        [ -n "$TOOL_PATTERN" ] && TOOL_SUFFIX=" · Grep: ${TOOL_PATTERN:0:25}" || TOOL_SUFFIX=" · Grep"
+        ;;
+      Glob)
+        TOOL_PATTERN=$(echo "$INPUT" | jq -r '.tool_input.pattern // empty' 2>/dev/null || true)
+        [ -n "$TOOL_PATTERN" ] && TOOL_SUFFIX=" · Glob: ${TOOL_PATTERN:0:25}" || TOOL_SUFFIX=" · Glob"
+        ;;
+      Agent)
+        TOOL_DESC=$(echo "$INPUT" | jq -r '.tool_input.description // empty' 2>/dev/null || true)
+        [ -n "$TOOL_DESC" ] && TOOL_SUFFIX=" · Agent: ${TOOL_DESC:0:25}" || TOOL_SUFFIX=" · Agent"
+        ;;
+      *)
+        TOOL_SUFFIX=" · ${TOOL_NAME}"
+        ;;
+    esac
+  fi
+fi
 
 # Graceful fallback
 if [ ! -f "$STATE_FILE" ]; then
-  echo "📍 status unavailable" > "$OUTPUT"
+  echo "📍 status unavailable${TOOL_SUFFIX}" > "$OUTPUT"
   cat "$OUTPUT"
   exit 0
 fi
@@ -158,7 +204,7 @@ phase_needs() {
 
 # No flow declared
 if [ "$FLOW_TYPE" = "null" ] || [ -z "$FLOW_TYPE" ]; then
-  echo "📍 no flow declared${DEVIATION_SUFFIX}" > "$OUTPUT"
+  echo "📍 no flow declared${DEVIATION_SUFFIX}${TOOL_SUFFIX}" > "$OUTPUT"
   cat "$OUTPUT"
   exit 0
 fi
@@ -166,17 +212,17 @@ fi
 # Simple flows
 case "$FLOW_TYPE" in
   micro)
-    echo "📍 micro | Responder${DEVIATION_SUFFIX}" > "$OUTPUT"
+    echo "📍 micro | Responder${DEVIATION_SUFFIX}${TOOL_SUFFIX}" > "$OUTPUT"
     cat "$OUTPUT"
     exit 0
     ;;
   light)
-    echo "📍 light | Documentar${DEVIATION_SUFFIX}" > "$OUTPUT"
+    echo "📍 light | Documentar${DEVIATION_SUFFIX}${TOOL_SUFFIX}" > "$OUTPUT"
     cat "$OUTPUT"
     exit 0
     ;;
   explore)
-    echo "📍 explore | Investigar${DEVIATION_SUFFIX}" > "$OUTPUT"
+    echo "📍 explore | Investigar${DEVIATION_SUFFIX}${TOOL_SUFFIX}" > "$OUTPUT"
     cat "$OUTPUT"
     exit 0
     ;;
@@ -197,7 +243,7 @@ if [ "$FLOW_TYPE" = "full" ]; then
   done
 
   if [ "$CURRENT_INDEX" -eq 0 ]; then
-    echo "📍 full | ${CURRENT_PHASE} | ⚠ fase no reconocida${DEVIATION_SUFFIX}" > "$OUTPUT"
+    echo "📍 full | ${CURRENT_PHASE} | ⚠ fase no reconocida${DEVIATION_SUFFIX}${TOOL_SUFFIX}" > "$OUTPUT"
     cat "$OUTPUT"
     exit 0
   fi
@@ -264,7 +310,7 @@ if [ "$FLOW_TYPE" = "full" ]; then
   if [ -n "$PENDING" ]; then
     LINE="${LINE} | Pendiente: ${PENDING}"
   fi
-  LINE="${LINE}${DEVIATION_SUFFIX}"
+  LINE="${LINE}${DEVIATION_SUFFIX}${TOOL_SUFFIX}"
 
   echo "$LINE" > "$OUTPUT"
   cat "$OUTPUT"
@@ -360,7 +406,7 @@ if [ "$FLOW_TYPE" = "debug" ]; then
   if [ -n "$PENDING" ]; then
     LINE="${LINE} | Pendiente: ${PENDING}"
   fi
-  LINE="${LINE}${DEVIATION_SUFFIX}"
+  LINE="${LINE}${DEVIATION_SUFFIX}${TOOL_SUFFIX}"
 
   echo "$LINE" > "$OUTPUT"
   cat "$OUTPUT"
@@ -368,6 +414,6 @@ if [ "$FLOW_TYPE" = "debug" ]; then
 fi
 
 # Unknown flow type — show raw
-echo "📍 ${FLOW_TYPE} | ${CURRENT_PHASE}${DEVIATION_SUFFIX}" > "$OUTPUT"
+echo "📍 ${FLOW_TYPE} | ${CURRENT_PHASE}${DEVIATION_SUFFIX}${TOOL_SUFFIX}" > "$OUTPUT"
 cat "$OUTPUT"
 exit 0
