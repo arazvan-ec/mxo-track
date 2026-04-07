@@ -53,27 +53,69 @@ This way, answering a question costs ~400 tokens of instructions, not ~2000.
 
 ### The Manifest as Codebase Cache
 
-Exploring the codebase with Grep/Glob to discover what's already documented is a
-direct waste of context. `docs/codebase-manifest.md` is a pre-computed snapshot:
-entity list, service map, route map, metrics. Regenerated with `make manifest` (~1 second).
+#### Why a pre-computed snapshot, not live search
 
-**The flow:** Read manifest → answer directly (0 tool calls). If the data isn't there →
-directed search (1-3 calls) → update manifest. This feeds everything else: brainstorming
-uses it to inventory existing functionality, planning uses it for exact file paths,
-verification regenerates it post-push.
+Every Grep call consumes context tokens — a search returning 50 results costs ~2000
+tokens. Reading the manifest costs ~500 tokens for the same information. Over a session
+with 10+ lookups, that's 15,000 tokens saved — tokens that become available for reasoning
+about your code instead of storing search results. **The manifest exists because context
+is a zero-sum budget: every token spent on discovery is a token unavailable for thinking.**
 
-Before exploring, check if the answer is already in `docs/codebase-manifest.md` or
-the relevant knowledge module in `docs/knowledge/`. Explore only when these don't answer.
+The alternative — grepping the codebase each time — also has a hidden cost: search results
+lack structure. A grep for "Route" returns entity files, controllers, templates, tests,
+and config mixed together. The manifest pre-organizes this into entity list, service map,
+route map, and metrics, so the answer is immediately usable without further filtering.
+
+#### How the manifest stays current
+
+The manifest is regenerated with `make manifest` (~1 second). The flow has two paths:
+
+**Fast path (0 tool calls):** Read `docs/codebase-manifest.md` or the relevant
+`docs/knowledge/` module → the answer is there → use it directly. This is the common
+case and the reason the manifest exists.
+
+**Update path (1-3 tool calls):** The answer isn't in the manifest → directed search
+(Grep/Glob with specific terms) → find the answer → **update the manifest before
+continuing.** This last step is critical: if you found something the manifest didn't
+know, the manifest is stale and must be fixed. Otherwise the next session hits the
+same gap and wastes the same tokens rediscovering it.
+
+This feeds everything downstream: brainstorming reads the manifest to inventory existing
+functionality (Step 3 of the checklist), planning reads it for exact file paths,
+verification regenerates it post-push to capture what changed.
 
 ### Session-State: Memory That Survives Compaction
 
-Claude Code compacts old messages when the context window fills up. When that happens,
-the model loses track of which workflow phases it completed. `.claude/session-state.json`
-is external memory — hooks read it to enforce phase progression, and it survives
-compaction because it's a file, not a conversation message.
+#### Why a file, not conversation markers
 
-Update it with `jq` after each phase transition. The SessionStart hook resets it daily
-but preserves a `last_work_summary` field with previous session context.
+Claude Code compacts old messages when the context window fills up. Compaction is
+lossy — the model loses track of which phases it completed, what evidence it gathered,
+and where it is in a plan. Any state stored only in conversation messages is volatile.
+
+The alternative — keeping state in conversation — fails precisely when you need it most:
+long sessions with many tool calls compact aggressively, which is exactly when tracking
+"where was I?" matters. **`.claude/session-state.json` is external memory because disk
+is persistent and conversation is not.**
+
+#### How the feedback loop works
+
+The session-state participates in a loop that runs every turn:
+
+```
+Model updates session-state (jq) → Hook reads session-state → Hook injects status line
+    → Model sees its own state in the next turn → Model knows where it is
+```
+
+1. **Model writes state** with `jq` after each phase transition. `jq` is used because
+   it's atomic (read-transform-write) — a manual Edit risks corrupting JSON mid-write.
+2. **SessionStart hook** resets state daily but preserves `last_work_summary` so the
+   model has previous session context on startup.
+3. **UserPromptSubmit hook** reads the file and injects a status line between every
+   tool call. This is how the model "remembers" across compaction — even if old messages
+   are gone, the hook re-injects the current state into every new prompt.
+4. **Phase-advance script** (`.claude/hooks/phase-advance.sh`) enforces legal phase
+   transitions — no skips, no backwards. This prevents the model from writing arbitrary
+   state that doesn't match the workflow.
 
 **Full schema and update patterns:** `.claude/README.md`
 <!-- GENERIC-END -->
@@ -89,40 +131,86 @@ and accumulates technical debt silently.
 
 ### Classify First (before any response)
 
-| Type | Signal | Flow |
-|------|--------|------|
-| **Informational** | "what does X do?", "explain Y" | Micro — consult docs → answer → capture gaps |
-| **Documentation** | Edit docs, knowledge modules | Light — check overlap → propose → execute → verify |
-| **Bug fix** | Error, test failure, unexpected behavior | Debug — consult → root cause → pattern-wide → TDD fix |
-| **Code change** | New feature, refactor, enhancement | Full — consult → brainstorm → plan → implement → verify → capture → retrospective → finalize |
-| **Exploration** | "audit X", "how does Z work?" | Explore — consult manifest → explore → answer → capture findings |
+#### Why classify before anything else
 
-After classifying, update session-state: `jq '.flow_type = "<type>"' .claude/session-state.json`
+Without classification, the model defaults to the path of least resistance: read a file,
+edit it, move on. This skips brainstorming for features, skips root cause analysis for
+bugs, and skips verification for everything. **Classification is the mechanism that
+activates the right gates** — it writes a flow type to session-state, and hooks use that
+flow type to decide which phases are required before code edits are allowed.
 
-**Phase transitions:** Use `.claude/hooks/phase-advance.sh <next_phase>` to advance phases.
+The alternative — "just start working and I'll figure out the flow as I go" — produces
+a consistent failure pattern: the model does 80% of the work, skips verification, and
+the user discovers the remaining 20% is broken. Classification front-loads the structure
+so the workflow engine can enforce it.
+
+#### How classification produces the right flow
+
+Classification writes to session-state → hooks read session-state → hooks block premature
+code edits. Each type activates a different gate chain:
+
+| Type | Signal | Flow activated | What the gates enforce |
+|------|--------|----------------|----------------------|
+| **Informational** | "what does X do?" | Micro — consult → answer → capture gaps | No code edits allowed (must reclassify if needed) |
+| **Documentation** | Edit docs | Light — check overlap → execute → verify | No `src/` edits (must reclassify if scope grows) |
+| **Bug fix** | Error, unexpected behavior | Debug — root cause → pattern-wide → TDD fix | Blocks fix until root cause + pattern-wide search done |
+| **Code change** | New feature, refactor | Full — consult → brainstorm → plan → implement → verify → capture → retrospective → finalize | Blocks `src/` edits until consult + brainstorm + plan complete |
+| **Exploration** | "audit X", "how does Z?" | Explore — manifest → explore → capture | No code edits allowed (must reclassify if needed) |
+
+After classifying: `jq '.flow_type = "<type>"' .claude/session-state.json`
+
+**Why "Exploration" is separate from "Informational":** Informational answers from existing
+docs (0-1 tool calls). Exploration actively investigates the codebase (5-20 tool calls)
+and captures findings. The distinction matters because exploration produces artifacts
+(updated knowledge modules) while informational does not.
+
+**Phase transitions:** Use `.claude/hooks/phase-advance.sh <next_phase>` to advance.
 Direct writes to `phase_history` via `jq` are detected and reverted. The script enforces
 legal sequence (no skips, no backwards) and adds timestamps automatically.
 
 ### Deviation for Wiring-Only Changes
 
-Some code changes are pure wiring — connecting an existing callback, passing a prop,
-adding an import. These don't involve design decisions and the full brainstorm+plan
-overhead is counterproductive. Use deviation mode when ALL criteria are met:
+#### Why an escape valve exists
 
+The full flow (brainstorm + plan) adds 10-15 minutes of overhead. For a feature with
+design decisions, that overhead prevents rework worth hours. But for wiring changes —
+connecting an existing callback, passing a prop, adding an import — there are zero design
+decisions, so the overhead produces zero value. Calibration data confirms this: wiring
+tasks average ~15 lines, 1 file, <5 minutes (see Calibration Data section below).
+
+**The escape valve exists because the cost-benefit of the full flow inverts for trivial
+changes.** Without it, the workflow penalizes exactly the kind of quick fixes that keep
+a codebase healthy.
+
+#### How deviation mode works
+
+Deviation skips brainstorm and plan but keeps everything else. The phases that remain —
+consult, implement, verify, capture, retrospective, finalize — are the ones that catch
+errors even in simple changes:
+
+```
+consult → [skip brainstorm] → [skip plan] → implement → verify → capture → retrospective → finalize
+                                                                                │
+                                                               catches patterns: "this is the 3rd page
+                                                               missing onStopClick" → systemic issue
+```
+
+**The retrospective is the most important phase for wiring changes** — it's where you
+detect that a "simple" change is actually a symptom of a missing abstraction. Three
+similar wiring fixes in a week means the codebase needs a structural fix, not a fourth
+wiring patch.
+
+**Criteria (ALL must be met):**
 - **< 30 lines** changed across all files
-- **0 design decisions** — no new abstractions, no new patterns, no trade-offs
+- **0 design decisions** — no new abstractions, patterns, or trade-offs
 - **No new entities, migrations, or API endpoints**
 - **Pattern already exists** in the codebase (copying an established approach)
 
-**How:** Activate deviation, skip brainstorm+plan, go straight to implement:
+**Activate:**
 ```bash
 jq '.deviation = {"active": true, "reason": "wiring-only (<30 lines, 0 design decisions)", "skipped_phases": ["brainstorm", "plan"], "return_to_phase": null, "acknowledged_by_user": true}' \
   .claude/session-state.json > /tmp/ss.json && mv /tmp/ss.json .claude/session-state.json
 ```
-
-**Still mandatory:** consult, implement, verify, capture, retrospective, finalize.
-The retrospective is especially important for wiring changes — it's where you catch
-patterns that indicate a systemic issue (e.g., "this is the 3rd page missing onStopClick").
 
 ### Full-Flow: The 8 Phases
 
@@ -146,27 +234,58 @@ it's a new interaction. Increment `interaction_id`, reclassify, restart the flow
 
 ### Fix Invalidation
 
-When the user reports a fix didn't work ("sigue sin funcionar", "no mejoró", "same problem",
-"still broken", etc.), this is a **new debug interaction** — not a continuation of the previous
-fix phase. Reset immediately:
+#### Why "still broken" means start over, not continue
+
+When a fix doesn't work, the natural instinct is to build on the previous analysis: "the
+root cause was X, my fix just didn't address it completely, let me adjust." This is almost
+always wrong. **If the fix didn't work, the root cause analysis was incorrect** — the model
+anchored to a plausible-but-wrong explanation and the fix followed logically from a false
+premise.
+
+Continuing from the same analysis inherits the same false premise. The model will propose
+variations of the same wrong fix, each one "almost right," consuming time without progress.
+This is the sunk cost fallacy applied to debugging: "I've already invested in this root
+cause analysis, I can't abandon it."
+
+**Reset completely.** Treat it as a new debug interaction with fresh eyes:
 
 ```bash
 jq '.interaction_id = (.interaction_id + 1) | .evidence.root_cause_identified = false | .evidence.pattern_wide_search_done = false | .evidence.tests_passed = null | .current_phase = "root_cause"' \
   .claude/session-state.json > /tmp/ss.json && mv /tmp/ss.json .claude/session-state.json
 ```
 
-The previous root cause was wrong. Start fresh: re-examine, don't assume the previous analysis
-was correct.
+The reset forces re-examination without anchoring bias. The previous analysis is not
+consulted — if it was right, fresh analysis will rediscover it. If it was wrong, fresh
+analysis won't be poisoned by it. This is the same principle as Skill 8's rule: "if 3+
+fixes failed, STOP — question the architecture."
 
 ### Workflow Engine (summary)
 
-The hooks mechanically enforce the flow. Without them, phases get skipped.
+#### Why mechanical enforcement, not just instructions
 
-| Flow | Can edit `src/`, `tests/` | Gate |
-|------|--------------------------|------|
-| micro/light/explore | DENY (must reclassify) | — |
-| debug | HARD: needs root_cause + pattern-wide | — |
-| full | HARD: needs consult + brainstorm + plan | — |
+The model has a bias toward action — when given a task, the impulse is to edit code
+immediately. Instructions saying "brainstorm first" are suggestions; the model can
+rationalize skipping them ("this is simple enough," "I already know the approach").
+**Hooks are gates, not suggestions.** They physically reject `Edit` calls to `src/`
+or `tests/` when prerequisite phases aren't completed in session-state.
+
+The alternative — trusting the model to self-enforce discipline — was the original
+approach. It failed consistently: ~70% of sessions skipped at least one phase when
+gates weren't present. The hooks exist because **the model cannot reliably judge when
+it's safe to skip phases.** The phases it most wants to skip (brainstorm, verification)
+are exactly the ones that catch the most errors.
+
+#### What each gate blocks and why
+
+| Flow | Gate | What it prevents |
+|------|------|-----------------|
+| micro/light/explore | DENY edits to `src/`, `tests/` | Scope creep — a "quick look" turning into unplanned code changes without design review |
+| debug | HARD: needs root_cause + pattern-wide | Symptom fixes — patching what's visible without understanding what's broken |
+| full | HARD: needs consult + brainstorm + plan | Cowboy coding — implementing the first idea without evaluating alternatives or checking existing patterns |
+
+The gates are deliberately strict. A false negative (blocking a legitimate edit) costs
+minutes to reclassify. A false positive (allowing an unreviewed edit) costs hours to
+debug the resulting regression.
 
 **Full reference:** `.claude/README.md` (gates, validators, deviation mode, harness assumptions)
 <!-- GENERIC-END -->
@@ -178,19 +297,59 @@ The hooks mechanically enforce the flow. Without them, phases get skipped.
 
 ### Why Brainstorming Is Not Bureaucracy
 
-Brainstorming is preventive QA — it's cheaper to discover a design flaw in conversation
-than to debug it in code. Every code change goes through this, no matter how "simple."
+#### The cost asymmetry that justifies the overhead
 
-**The checklist:**
-0. **Consult past decisions** — Read `docs/decisions/log.md` and recent execution logs. Declare what you found.
-1. **Classify bounded context** — Is this critical (DDD pure) or pragmatic (Symfony)? Declare it.
-2. **Explore project context** — Check files, docs, recent commits
-3. **Inventory existing functionality** — Enumerate what exists in the affected area. Every element gets an explicit decision: Include / Omit / Transform. No silent omissions.
+In conversation, changing approach costs zero: no lines deleted, no tests broken, no
+commits reverted. In code, every approach change is a `git reset` — tests rewritten,
+interfaces re-designed, dependent code updated. **Brainstorming exploits this asymmetry:
+it moves design failures from code-time (expensive) to conversation-time (free).**
+
+The model's natural bias is "I understand the problem, let me code." But understanding
+and designing are different activities. The model can understand a problem perfectly and
+still choose a suboptimal approach because it didn't inventory existing functionality,
+didn't consider alternatives, or didn't check how similar problems were solved before.
+
+#### How the checklist produces a validated design
+
+Each step produces an artifact that the next step needs. The order is not arbitrary —
+it's a dependency chain:
+
+0. **Consult past decisions** — Read `docs/decisions/log.md` and recent execution logs.
+   → produces: context about what was tried before and why.
+   This prevents re-discovering lessons the codebase already learned. Without it, the
+   model proposes approaches that were previously tried and rejected.
+
+1. **Classify bounded context** — Is this critical (DDD pure) or pragmatic (Symfony)?
+   → produces: the architectural style for this change.
+   This determines whether to use value objects or primitives, domain events or direct
+   calls, repository interfaces or Doctrine queries. Getting it wrong means rewriting
+   after review.
+
+2. **Explore project context** — Check files, docs, recent commits.
+   → produces: awareness of recent changes that might conflict or overlap.
+
+3. **Inventory existing functionality** — Enumerate what exists in the affected area.
+   → produces: a map of every element with an explicit decision: Include / Omit / Transform.
+   **Why explicit decisions?** Silent omissions are the #1 brainstorming bug. The model
+   "forgets" that a component exists, designs without it, and the implementation collides
+   with it. The Include/Omit/Transform decision forces acknowledgment of every element.
+
 4. **Ask clarifying questions** — One at a time. Multiple choice when possible.
-5. **Propose 2-3 approaches** — With trade-offs and recommendation
-6. **Present design, get approval** — Section by section
+   → produces: resolved ambiguities. Multiple choice is preferred because it constrains
+   the answer space — "Do you want A, B, or C?" gets a decision faster than "What do
+   you want?"
+
+5. **Propose 2-3 approaches** — With trade-offs and recommendation.
+   → produces: evaluated alternatives. This is where the consult (step 0) and inventory
+   (step 3) pay off — the approaches account for past decisions and existing code.
+
+6. **Present design, get approval** — Section by section.
+   → produces: validated design with user sign-off.
+
 7. **Write spec** — Save to `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md`
-8. **Transition to planning**
+   → produces: persistent artifact that planning and implementation reference.
+
+8. **Transition to planning** — The spec feeds directly into the planning phase.
 
 **The spec must include:**
 ```markdown
@@ -420,33 +579,69 @@ para que el estado sea visible de un vistazo. Idioma: español.
 
 ### Evidence Before Claims
 
-**Why:** "Should work" is not evidence. "Tests pass" without running them is a lie.
+#### The cognitive trap this prevents
 
-Before claiming anything is done:
-1. **Identify** what command proves the claim
-2. **Run** the full command (fresh, not cached)
-3. **Read** complete output, check exit code
-4. **Only then** make the claim
+After writing code, the model has a confirmation bias — it "believes" the code works
+because it wrote it with intent. This bias produces claims like "tests pass" based on
+expectation rather than evidence. The model reasons: "I wrote correct code → therefore
+tests pass" — but this syllogism skips the step where reality might disagree.
+
+**The verification command is a circuit breaker against confirmation bias.** It forces
+the model to consult reality (command output) instead of consulting its own confidence.
+
+#### Why "fresh, not cached"
+
+A previous test result may have been invalidated by subsequent changes. Reading old
+output and claiming "tests pass" is not verification — it's memory. **Freshness is the
+difference between evidence and recollection.** The command must run in the current
+message, after the latest code changes, with full output read.
+
+#### The gate function
+
+1. **Identify** — What command proves this specific claim?
+2. **Run** — Execute the full command (fresh, not cached, not partial)
+3. **Read** — Complete output, check exit code, count failures
+4. **Only then** — Make the claim
+
+Skip any step = the claim is unverified. "Should work," "probably passes," and "seems
+fine" are all synonyms for "I didn't check."
 
 ### Closing the Cycle
 
-**Finish the branch** (Skill 12): verify tests → validate merge with base → present options
-(merge/PR/keep/discard) → design retrospective → cleanup.
+#### Why capture matters: the learning loop
 
-**Capture to execution log:** `docs/superpowers/execution-logs/YYYY-MM-DD-<feature>.md`
-with data from each phase (alternatives, blockers, test results, lessons).
-**One log per feature/interaction, not per session.** If a session implements 3 features,
-create 3 separate files so each is independently consultable in future brainstorming.
+Without capture, each session starts from zero. The model re-discovers the same lessons,
+re-evaluates the same alternatives, re-encounters the same blockers. **Capture is what
+makes iteration N+1 better than iteration N** — it converts ephemeral session knowledge
+into persistent artifacts that brainstorming reads at the start of the next session.
 
-**Update decision log:** If design decisions were made, add entry to `docs/decisions/log.md`.
+The mechanism is specific: Step 0 of the brainstorming checklist ("Consult past decisions")
+reads execution logs and decision logs. If those logs don't exist or are poorly structured,
+Step 0 produces nothing and the brainstorming proceeds blind. **The quality of today's
+capture determines the quality of tomorrow's brainstorming.**
 
-**The learning loop:** Execution logs and decision logs are read at the START of the next
-brainstorming session. This is what makes each iteration better than the last:
 ```
 brainstorm → spec → plan → implement → verify → capture
      ↑                                            │
      └────────── learning loop ───────────────────┘
 ```
+
+#### Why one log per feature, not per session
+
+When future brainstorming searches for "how did we solve something similar?", it needs
+the log for *that specific feature* — not a session log mixing 3 unrelated features where
+the relevant one is buried on page 4. **Granularity determines searchability.** One log
+per feature means each is independently consultable with a single file read.
+
+**Finish the branch** (Skill 12): verify tests → validate merge with base → present options
+(merge/PR/keep/discard) → design retrospective → cleanup.
+
+**Capture to execution log:** `docs/superpowers/execution-logs/YYYY-MM-DD-<feature>.md`
+with data from each phase (alternatives considered, blockers hit, test results, lessons).
+
+**Update decision log:** If design decisions were made, add entry to `docs/decisions/log.md`.
+When the same lesson appears 3+ times across execution logs, it graduates to the relevant
+knowledge module — that's the signal it's a pattern, not an incident.
 <!-- GENERIC-END -->
 
 ---
@@ -498,25 +693,44 @@ If there's even a 1% chance a skill applies, invoke it. Process skills first
 <!-- GENERIC-START: Commits -->
 ## Commits and Push
 
-**Why push frequently:** Claude Code sessions can crash, context compacts, tool_use errors
-can corrupt the conversation. Every commit is a checkpoint. Every push is insurance.
+#### Why commit frequency equals risk management
+
+Claude Code sessions are fragile: context compacts, tool_use errors corrupt conversations,
+network failures kill sessions. **Every commit is a savepoint. Every push is a backup.**
+The frequency of commits is inversely proportional to the amount of work lost on crash.
+
+A commit after each completed task means a crash loses at most one task's work. A commit
+only at the end of a feature means a crash loses everything. The choice isn't about git
+hygiene — it's about recovery cost.
+
+**Why push before launching subagents:** Subagents operate on the repository's state at
+the time they're dispatched. If uncommitted changes exist, the subagent doesn't see them.
+Worse, if the subagent modifies the same files, you get merge conflicts on return. Push
+first = clean handoff.
 
 ### When to commit
+
+Each commit marks a point where the codebase is internally consistent:
 - After each file that works (compiles, doesn't break tests)
 - After each completed task in a plan
-- After writing a test (even if it fails — commit test alone)
-- After making a test pass (commit implementation)
+- After writing a test (even if it fails — the test alone is a valid checkpoint)
+- After making a test pass (commit the implementation that greened it)
 
 ### When to push
 - After each commit (or max 2-3 if part of same logical step)
-- **Always** before launching subagents
-- **Always** run `make manifest` before final push
+- **Always** before launching subagents (ensures clean handoff)
+- **Always** run `make manifest` before final push (captures codebase changes)
 
 ### Commit format
 Prefixes: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`
 Short, descriptive. One logical change per commit.
 
 ### Work artifacts go to the repo
+
+Plans, specs, and execution logs are part of the codebase — not ephemeral session data.
+They're read by future brainstorming sessions (Step 0 of the checklist) and must be
+findable via file path, not buried in conversation history that compacts away.
+
 - Plans → `docs/superpowers/plans/`
 - Specs → `docs/superpowers/specs/`
 - Execution logs → `docs/superpowers/execution-logs/`
