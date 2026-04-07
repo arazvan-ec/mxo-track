@@ -1,4 +1,5 @@
 import { createBrowserRouter, Navigate } from 'react-router';
+import { AppLayout } from './components/layout/AppLayout';
 import { FleetMapPage } from './pages/admin/FleetMapPage';
 import { ExceptionMapPage } from './pages/admin/ExceptionMapPage';
 import { RouteAnalysisPage } from './pages/admin/RouteAnalysisPage';
@@ -14,25 +15,20 @@ import { DriverRoutePage } from './pages/driver/DriverRoutePage';
 export const router = createBrowserRouter([
   {
     path: '/app',
+    element: <AppLayout />,
     children: [
-      // Fleet map is full-screen with its own sidebar — no AppShell
       { path: 'admin/fleet-map', element: <FleetMapPage /> },
-      // Exception heatmap — full-screen with sidebar
       { path: 'admin/exception-map', element: <ExceptionMapPage /> },
       { path: 'admin/routes/:publicId', element: <RouteDetailPage /> },
       { path: 'admin/test-routing', element: <TestRoutingPage /> },
       { path: 'admin/operator-dashboard', element: <OperatorDashboardPage /> },
       { path: 'admin/route-planner', element: <RoutePlannerPage /> },
-      // Widget system configuration
       { path: 'admin/widgets', element: <WidgetGalleryPage /> },
       { path: 'admin/page-layouts', element: <PageLayoutEditorPage /> },
-      // Route analysis — full-screen with sidebar
       { path: 'admin/routes/:publicId/analysis', element: <RouteAnalysisPage /> },
-      // Customer route detail — full-screen with sidebar + map
       { path: 'customer/routes/:publicId', element: <CustomerRouteDetailPage /> },
-      // Driver route — full-screen with sidebar + map, delivery execution focus
       { path: 'driver/routes/:publicId', element: <DriverRoutePage /> },
-{ index: true, element: <Navigate to="admin/fleet-map" replace /> },
+      { index: true, element: <Navigate to="admin/fleet-map" replace /> },
     ],
   },
 ]);
