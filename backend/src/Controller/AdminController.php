@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Service\AdminMetricsService;
-use App\Service\ReportingService;
 use App\Service\SystemHealthService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
@@ -17,35 +15,9 @@ use Symfony\Component\Routing\Annotation\Route;
 class AdminController extends AbstractController
 {
     #[Route('', name: 'admin_dashboard', methods: ['GET'])]
-    public function dashboard(
-        AdminMetricsService $metricsService,
-        SystemHealthService $systemHealthService,
-        ReportingService $reportingService,
-        #[Autowire('%env(MERCURE_PUBLIC_URL)%')] string $mercurePublicUrl,
-    ): Response {
-        $metrics = $metricsService->collect();
-        $health = $systemHealthService->check();
-        $live = $systemHealthService->checkLive();
-
-        $dailyDeliveries = $reportingService->getDailyDeliveries(7);
-        $topDrivers = $reportingService->getTopDrivers(5, 7);
-
-        return $this->render('admin/dashboard.html.twig', [
-            'kpis' => [
-                'shipments_by_status' => [],
-                'vehicles_without_signal' => 0,
-                'active_routes' => $metrics['active_routes'],
-                'pending_stops' => $metrics['pending_stops'],
-                'pods_today' => 0,
-                'import_runs_today' => $metrics['import_runs_today'],
-                'positions_ingested_last_hour' => $metrics['positions_ingested_last_hour'],
-            ],
-            'health' => $health,
-            'live' => $live,
-            'mercure_public_url' => $mercurePublicUrl,
-            'daily_deliveries' => $dailyDeliveries,
-            'top_drivers' => $topDrivers,
-        ]);
+    public function dashboard(): Response
+    {
+        return $this->render('admin/dashboard.html.twig');
     }
 
     #[Route('/health', name: 'admin_health', methods: ['GET'])]
