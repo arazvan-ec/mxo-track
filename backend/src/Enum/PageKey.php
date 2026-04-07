@@ -14,4 +14,5 @@ enum PageKey: string
     case SHIPMENT_TRACKING = 'shipment_tracking';
     case DRIVER_ROUTE = 'driver_route';
     case CUSTOMER_TRACKING = 'customer_tracking';
+    case ADMIN_DASHBOARD = 'admin_dashboard';
 }
