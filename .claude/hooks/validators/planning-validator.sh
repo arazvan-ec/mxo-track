@@ -36,4 +36,13 @@ if ! grep -qiE '(Task|Tarea|Step|Paso|File|Archivo|Crear|Modificar|Actualizar)' 
   exit 2
 fi
 
+# Sub-check: spec-compliance (SOFT — warn only)
+SPEC_COMPLIANCE="$REPO/.claude/hooks/validators/spec-compliance-validator.sh"
+if [ -f "$SPEC_COMPLIANCE" ]; then
+  COMPLIANCE_OUTPUT=$("$SPEC_COMPLIANCE" "$STATE_FILE" 2>&1) || {
+    # Spec-compliance is soft — emit warning but don't block
+    echo "$COMPLIANCE_OUTPUT"
+  }
+fi
+
 exit 0

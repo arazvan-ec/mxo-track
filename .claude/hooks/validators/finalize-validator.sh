@@ -24,44 +24,42 @@ CHANGED_FILES=$(cd "$REPO" && git diff --name-only origin/main...HEAD 2>/dev/nul
 
 if [ -n "$CHANGED_FILES" ]; then
   SUGGESTED_MODULES=""
+  NEW_FILES=$(cd "$REPO" && git diff --diff-filter=A --name-only origin/main...HEAD 2>/dev/null || echo "")
 
-  # Map directory patterns to knowledge modules
-  if echo "$CHANGED_FILES" | grep -q "backend/src/Controller/"; then
-    SUGGESTED_MODULES="${SUGGESTED_MODULES}api-surface.md "
-  fi
-  if echo "$CHANGED_FILES" | grep -qE "backend/src/Entity/|backend/src/Enum/"; then
-    SUGGESTED_MODULES="${SUGGESTED_MODULES}domain-model.md "
-  fi
-  if echo "$CHANGED_FILES" | grep -q "frontend/src/"; then
-    SUGGESTED_MODULES="${SUGGESTED_MODULES}ui-frontend.md "
-  fi
-  if echo "$CHANGED_FILES" | grep -qiE "backend/src/Service/.*Provider|backend/src/Service/.*Factory"; then
-    SUGGESTED_MODULES="${SUGGESTED_MODULES}provider-framework.md "
-  fi
-  if echo "$CHANGED_FILES" | grep -qiE "backend/src/Service/.*Gps|backend/src/Service/.*Traccar"; then
-    SUGGESTED_MODULES="${SUGGESTED_MODULES}gps-tracking.md "
-  fi
-  if echo "$CHANGED_FILES" | grep -qiE "backend/src/Service/.*Optim|backend/src/Service/.*Routing"; then
-    SUGGESTED_MODULES="${SUGGESTED_MODULES}route-optimization.md "
-  fi
-  if echo "$CHANGED_FILES" | grep -qiE "backend/src/Service/.*Mercure|backend/src/Service/.*Realtime"; then
-    SUGGESTED_MODULES="${SUGGESTED_MODULES}realtime.md "
-  fi
-  if echo "$CHANGED_FILES" | grep -q "backend/src/Security/"; then
-    SUGGESTED_MODULES="${SUGGESTED_MODULES}security.md "
-  fi
-  if echo "$CHANGED_FILES" | grep -q "backend/tests/"; then
-    SUGGESTED_MODULES="${SUGGESTED_MODULES}testing.md "
-  fi
-  if echo "$CHANGED_FILES" | grep -qE "docker/|Dockerfile|railway"; then
-    SUGGESTED_MODULES="${SUGGESTED_MODULES}deployment.md "
-  fi
-  if echo "$CHANGED_FILES" | grep -qiE "backend/src/Service/.*Notification|backend/src/Service/.*Sms"; then
-    SUGGESTED_MODULES="${SUGGESTED_MODULES}notifications.md "
-  fi
-  if echo "$CHANGED_FILES" | grep -qiE "\.claude/hooks/|session-state"; then
-    SUGGESTED_MODULES="${SUGGESTED_MODULES}superpowers-skills.md "
-  fi
+  # Helper: suggest module only if ≥5 files match OR new files were added
+  check_pattern() {
+    local pattern="$1" module="$2"
+    local count new_count
+    count=$(echo "$CHANGED_FILES" | grep -c "$pattern" 2>/dev/null || echo "0")
+    new_count=$(echo "$NEW_FILES" | grep -c "$pattern" 2>/dev/null || echo "0")
+    if [ "$count" -ge 5 ] || [ "$new_count" -gt 0 ]; then
+      SUGGESTED_MODULES="${SUGGESTED_MODULES}${module} "
+    fi
+  }
+
+  check_pattern_i() {
+    local pattern="$1" module="$2"
+    local count new_count
+    count=$(echo "$CHANGED_FILES" | grep -ciE "$pattern" 2>/dev/null || echo "0")
+    new_count=$(echo "$NEW_FILES" | grep -ciE "$pattern" 2>/dev/null || echo "0")
+    if [ "$count" -ge 5 ] || [ "$new_count" -gt 0 ]; then
+      SUGGESTED_MODULES="${SUGGESTED_MODULES}${module} "
+    fi
+  }
+
+  # Map directory patterns to knowledge modules (threshold: ≥5 files OR new files)
+  check_pattern "backend/src/Controller/" "api-surface.md"
+  check_pattern_i "backend/src/Entity/|backend/src/Enum/" "domain-model.md"
+  check_pattern "frontend/src/" "ui-frontend.md"
+  check_pattern_i "backend/src/Service/.*Provider|backend/src/Service/.*Factory" "provider-framework.md"
+  check_pattern_i "backend/src/Service/.*Gps|backend/src/Service/.*Traccar" "gps-tracking.md"
+  check_pattern_i "backend/src/Service/.*Optim|backend/src/Service/.*Routing" "route-optimization.md"
+  check_pattern_i "backend/src/Service/.*Mercure|backend/src/Service/.*Realtime" "realtime.md"
+  check_pattern "backend/src/Security/" "security.md"
+  check_pattern "backend/tests/" "testing.md"
+  check_pattern_i "docker/|Dockerfile|railway" "deployment.md"
+  check_pattern_i "backend/src/Service/.*Notification|backend/src/Service/.*Sms" "notifications.md"
+  check_pattern_i "\.claude/hooks/|session-state" "superpowers-skills.md"
 
   if [ -n "$SUGGESTED_MODULES" ]; then
     # Check which of these were NOT modified in the branch
