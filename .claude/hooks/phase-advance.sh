@@ -98,12 +98,15 @@ fi
 
 # Validate evidence for the phase being LEFT (not the target phase)
 # This prevents advancing with incomplete evidence (e.g., missing spec in brainstorming)
+# Autodiscovery: looks for validators/${phase}-validator.sh by convention.
+# Handles "brainstorming" → "brainstorm-validator.sh" via suffix stripping fallback.
+VALIDATORS_DIR="$REPO/.claude/hooks/validators"
 VALIDATOR=""
-case "$CURRENT_PHASE" in
-  brainstorming) VALIDATOR="$REPO/.claude/hooks/validators/brainstorm-validator.sh" ;;
-  planning) VALIDATOR="$REPO/.claude/hooks/validators/planning-validator.sh" ;;
-  retrospective) VALIDATOR="$REPO/.claude/hooks/validators/retrospective-validator.sh" ;;
-esac
+if [ -f "$VALIDATORS_DIR/${CURRENT_PHASE}-validator.sh" ]; then
+  VALIDATOR="$VALIDATORS_DIR/${CURRENT_PHASE}-validator.sh"
+elif [ -f "$VALIDATORS_DIR/${CURRENT_PHASE%ing}-validator.sh" ]; then
+  VALIDATOR="$VALIDATORS_DIR/${CURRENT_PHASE%ing}-validator.sh"
+fi
 
 if [ -n "$VALIDATOR" ] && [ -f "$VALIDATOR" ]; then
   VALIDATION_OUTPUT=$("$VALIDATOR" "$STATE_FILE" 2>&1) || {

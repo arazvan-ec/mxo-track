@@ -137,9 +137,11 @@ PHASES=("consult" "brainstorming" "planning" "implementation" "verification" "ca
 ALL_OK=true
 for p in "${PHASES[@]}"; do
   case "$p" in
-    planning) jq --arg sp "$TEST_SPEC" '.evidence.user_turns = 3 | .evidence.alternatives_proposed = true | .evidence.user_approved = true | .evidence.spec_path = $sp' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE" ;;
+    brainstorming) jq '.evidence.decisions_read = true' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE" ;;
+    planning) jq --arg sp "$TEST_SPEC" '.evidence = (.evidence + {"user_turns": 3, "alternatives_proposed": true, "user_approved": true, "spec_path": $sp})' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE" ;;
     implementation) jq --arg pp "$TEST_PLAN" '.evidence.plan_path = $pp' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE" ;;
-    finalize) jq --arg lp "$TEST_LOG" '.evidence.execution_log_path = $lp' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE" ;;
+    capture) jq '.evidence.tests_passed = true | .evidence.lint_clean = true' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE" ;;
+    retrospective) jq --arg lp "$TEST_LOG" '.evidence.execution_log_path = $lp' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE" ;;
   esac
   if ! "$ADVANCE" "$p" > /dev/null 2>&1; then
     echo "  ❌ Failed at $p"

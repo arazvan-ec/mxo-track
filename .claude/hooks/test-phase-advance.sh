@@ -196,22 +196,33 @@ for phase in "${PHASES[@]}"; do
   # Set required evidence before each gated transition
   case "$phase" in
     brainstorming)
-      # consult → brainstorming: no validator
+      # consult validator: decisions_read or logs_scanned
+      jq '.evidence.decisions_read = true' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE"
       ;;
     planning)
-      # brainstorming → planning: needs spec + evidence
-      jq --arg sp "$TEST_SPEC" '.evidence = {
+      # brainstorm validator: spec + approval + turns + alternatives
+      jq --arg sp "$TEST_SPEC" '.evidence = (.evidence + {
         "user_turns": 3, "alternatives_proposed": true, "user_approved": true,
         "spec_path": $sp
-      }' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE"
+      })' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE"
       ;;
     implementation)
-      # planning → implementation: needs plan
+      # planning validator: plan file ≥300B with keywords
       jq --arg pp "$TEST_PLAN" '.evidence.plan_path = $pp' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE"
       ;;
-    finalize)
-      # retrospective → finalize: needs lessons in log
+    verification)
+      # implementation validator: plan exists (HARD), TDD (SOFT — exit 1 allowed)
+      ;;
+    capture)
+      # verification validator: tests_passed + lint_clean
+      jq '.evidence.tests_passed = true | .evidence.lint_clean = true' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE"
+      ;;
+    retrospective)
+      # capture validator: execution_log_path (SOFT — exit 1 allowed)
       jq --arg lp "$TEST_LOG2" '.evidence.execution_log_path = $lp' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE"
+      ;;
+    finalize)
+      # retrospective validator: lessons section in log
       ;;
   esac
 
