@@ -24,11 +24,11 @@ function Pill({
   className?: string;
 }) {
   return (
-    <div className="bg-slate-800/80 rounded-lg px-2.5 py-2 text-center border border-slate-700/50">
-      <div className={`font-bold text-lg leading-none ${className}`}>
+    <div className="theme-card-overlay px-2.5 py-2 text-center">
+      <div className="font-bold text-lg leading-none" style={{ color: className === 'text-white' ? 'var(--color-text-primary)' : className === 'text-blue-400' ? 'var(--color-accent)' : 'var(--color-warning)' }}>
         {value ?? '--'}
       </div>
-      <div className="text-slate-500 text-[9px] uppercase tracking-wider mt-1">
+      <div className="text-[9px] uppercase tracking-wider mt-1" style={{ color: 'var(--color-text-muted)' }}>
         {label}
       </div>
     </div>

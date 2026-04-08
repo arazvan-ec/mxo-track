@@ -62,26 +62,28 @@ export function ExceptionMapPage() {
           <div className="px-4 pb-4 space-y-4">
             {/* Date filters */}
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1.5">
+              <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
                 Desde
               </label>
               <input
                 type="date"
                 value={from}
                 onChange={(e) => setFrom(e.target.value)}
-                className="w-full bg-slate-800/80 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/30"
+                className="w-full theme-card-overlay border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/30"
+                style={{ borderColor: 'var(--color-border-subtle)', color: 'var(--color-text-primary)' }}
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1.5">
+              <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
                 Hasta
               </label>
               <input
                 type="date"
                 value={to}
                 onChange={(e) => setTo(e.target.value)}
-                className="w-full bg-slate-800/80 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/30"
+                className="w-full theme-card-overlay border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/30"
+                style={{ borderColor: 'var(--color-border-subtle)', color: 'var(--color-text-primary)' }}
               />
             </div>
 
@@ -92,8 +94,9 @@ export function ExceptionMapPage() {
                 className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
                   viewMode === 'heatmap'
                     ? 'bg-red-500/20 text-red-400 border border-red-500/50'
-                    : 'bg-slate-800/50 text-slate-400 border border-slate-700/30 hover:text-slate-200'
+                    : 'theme-card-overlay border'
                 }`}
+                style={viewMode !== 'heatmap' ? { color: 'var(--color-text-secondary)', borderColor: 'var(--color-border-subtle)' } : undefined}
               >
                 Heatmap
               </button>
@@ -102,37 +105,39 @@ export function ExceptionMapPage() {
                 className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
                   viewMode === 'points'
                     ? 'bg-red-500/20 text-red-400 border border-red-500/50'
-                    : 'bg-slate-800/50 text-slate-400 border border-slate-700/30 hover:text-slate-200'
+                    : 'theme-card-overlay border'
                 }`}
+                style={viewMode !== 'points' ? { color: 'var(--color-text-secondary)', borderColor: 'var(--color-border-subtle)' } : undefined}
               >
                 Puntos
               </button>
             </div>
 
             {/* Summary */}
-            <div className="bg-slate-800/60 rounded-lg p-3 border border-slate-700/40">
-              <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">
+            <div className="theme-card-overlay rounded-lg p-3 border" style={{ borderColor: 'var(--color-border-subtle)' }}>
+              <div className="text-[10px] uppercase tracking-wider mb-2" style={{ color: 'var(--color-text-muted)' }}>
                 Resumen
               </div>
               <div className="text-lg font-bold text-white">
                 {exceptions.length}
               </div>
-              <div className="text-xs text-slate-400">excepciones encontradas</div>
+              <div className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>excepciones encontradas</div>
             </div>
 
             {/* Grouped by type */}
             {grouped.length > 0 && (
-              <div className="border-t border-slate-700/50 pt-4">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-3">
+              <div className="border-t pt-4" style={{ borderColor: 'var(--color-border-subtle)' }}>
+                <p className="text-[10px] font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--color-text-muted)' }}>
                   Por tipo
                 </p>
                 <div className="space-y-1.5">
                   {grouped.map((g) => (
                     <div
                       key={g.type}
-                      className="flex items-center justify-between bg-slate-800/50 rounded-lg px-3 py-2 border border-slate-700/30"
+                      className="flex items-center justify-between theme-card-overlay rounded-lg px-3 py-2 border"
+                      style={{ borderColor: 'var(--color-border-subtle)' }}
                     >
-                      <span className="text-sm text-slate-200">{g.type}</span>
+                      <span className="text-sm" style={{ color: 'var(--color-text-primary)' }}>{g.type}</span>
                       <span className="bg-red-500/20 text-red-400 text-xs font-bold px-2 py-0.5 rounded-full">
                         {g.count}
                       </span>

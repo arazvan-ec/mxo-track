@@ -14,6 +14,8 @@ export type WidgetType =
   | 'dashboard_kpis'
   | 'mini_reports'
   | 'activity_feed'
+  | 'customer_kpis'
+  | 'customer_optimization'
   | 'reports_banner';
 
 export type SheetStateName = 'collapsed' | 'half' | 'full';
@@ -27,7 +29,8 @@ export type PageKey =
   | 'shipment_tracking'
   | 'driver_route'
   | 'customer_tracking'
-  | 'admin_dashboard';
+  | 'admin_dashboard'
+  | 'customer_dashboard';
 
 export interface WidgetPlacement {
   type: WidgetType;

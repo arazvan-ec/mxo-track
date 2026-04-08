@@ -42,7 +42,7 @@ export function HeaderBar({ sseConnected }: Props) {
           Demo
         </a>
 
-        <span className="text-slate-400 text-sm font-mono">{time}</span>
+        <span className="text-sm font-mono" style={{ color: 'var(--color-text-secondary)' }}>{time}</span>
 
         <div className="flex items-center gap-1.5">
           <span className="relative flex h-2.5 w-2.5">

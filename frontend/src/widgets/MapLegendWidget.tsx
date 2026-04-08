@@ -32,8 +32,8 @@ export function MapLegendWidget({ data }: WidgetProps) {
 
   return (
     <div className="px-4 pb-3">
-      <div className="bg-slate-800/60 rounded-lg px-3 py-2 space-y-1.5">
-        <h4 className="text-[10px] font-semibold text-slate-400 uppercase mb-1">Legend</h4>
+      <div className="theme-card-overlay px-3 py-2 space-y-1.5">
+        <h4 className="text-[10px] font-semibold uppercase mb-1" style={{ color: 'var(--color-text-muted)' }}>Legend</h4>
         {legendItems.map((item) => (
           <div key={item.name} className="flex items-center gap-2">
             <div
@@ -47,7 +47,7 @@ export function MapLegendWidget({ data }: WidgetProps) {
                   : { backgroundColor: item.color }
               }
             />
-            <span className="text-xs text-slate-300">{item.name}</span>
+            <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>{item.name}</span>
           </div>
         ))}
       </div>

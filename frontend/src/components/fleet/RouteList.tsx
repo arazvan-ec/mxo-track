@@ -9,7 +9,7 @@ interface Props {
 export function RouteList({ routes, selectedId, onSelect }: Props) {
   if (routes.length === 0) {
     return (
-      <div className="text-center py-8 text-slate-600 text-sm">
+      <div className="text-center py-8 text-sm" style={{ color: 'var(--color-text-muted)' }}>
         No active routes
       </div>
     );
@@ -24,11 +24,11 @@ export function RouteList({ routes, selectedId, onSelect }: Props) {
           className={`w-full text-left p-3 rounded-lg transition-all border ${
             selectedId === r.publicId
               ? 'bg-blue-600/20 border-blue-500/40 shadow-lg shadow-blue-500/10'
-              : 'bg-slate-800/50 border-slate-700/30 hover:bg-slate-800/80 hover:border-slate-600/50'
+              : 'theme-card-overlay hover:opacity-90'
           }`}
         >
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-sm font-medium text-slate-200 truncate">
+            <span className="text-sm font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>
               {r.name}
             </span>
             <span
@@ -42,18 +42,18 @@ export function RouteList({ routes, selectedId, onSelect }: Props) {
             </span>
           </div>
           <div className="flex items-center justify-between text-[11px]">
-            <span className="text-slate-500">
+            <span style={{ color: 'var(--color-text-muted)' }}>
               {r.vehicleName ?? 'No vehicle'}
             </span>
             <div className="flex items-center gap-1.5">
               <span className="text-emerald-400">{r.deliveredStops}</span>
-              <span className="text-slate-600">/</span>
-              <span className="text-slate-400">{r.totalStops}</span>
-              <span className="text-slate-600 text-[10px]">stops</span>
+              <span style={{ color: 'var(--color-text-muted)' }}>/</span>
+              <span style={{ color: 'var(--color-text-secondary)' }}>{r.totalStops}</span>
+              <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>stops</span>
             </div>
           </div>
           {r.driverName && (
-            <div className="mt-1 text-[10px] text-slate-500 truncate">
+            <div className="mt-1 text-[10px] truncate" style={{ color: 'var(--color-text-muted)' }}>
               {r.driverName}
             </div>
           )}

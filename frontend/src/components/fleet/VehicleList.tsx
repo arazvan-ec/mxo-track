@@ -17,7 +17,7 @@ export function VehicleList({ vehicles, searchQuery, selectedId, onSelect }: Pro
 
   if (filtered.length === 0) {
     return (
-      <div className="text-center py-8 text-slate-600 text-sm">
+      <div className="text-center py-8 text-sm" style={{ color: 'var(--color-text-muted)' }}>
         No vehicles found
       </div>
     );
@@ -32,7 +32,7 @@ export function VehicleList({ vehicles, searchQuery, selectedId, onSelect }: Pro
           className={`w-full text-left p-3 rounded-lg transition-all border ${
             selectedId === v.public_id
               ? 'bg-blue-600/20 border-blue-500/40 shadow-lg shadow-blue-500/10'
-              : 'bg-slate-800/50 border-slate-700/30 hover:bg-slate-800/80 hover:border-slate-600/50'
+              : 'theme-card-overlay hover:opacity-90'
           }`}
         >
           <div className="flex items-center justify-between mb-1">
@@ -42,17 +42,16 @@ export function VehicleList({ vehicles, searchQuery, selectedId, onSelect }: Pro
                   <span className="absolute inline-flex h-full w-full rounded-full opacity-75 bg-emerald-400 animate-ping" />
                 )}
                 <span
-                  className={`relative inline-flex rounded-full h-2 w-2 ${
-                    v.last_position ? 'bg-emerald-500' : 'bg-slate-600'
-                  }`}
+                  className="relative inline-flex rounded-full h-2 w-2"
+                  style={{ backgroundColor: v.last_position ? '#10b981' : 'var(--color-text-muted)' }}
                 />
               </span>
-              <span className="text-sm font-medium text-slate-200 truncate">
+              <span className="text-sm font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>
                 {v.name}
               </span>
             </div>
             {v.last_position?.device_time && (
-              <span className="text-[10px] text-slate-500">
+              <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>
                 {v.last_position.device_time}
               </span>
             )}
@@ -60,14 +59,14 @@ export function VehicleList({ vehicles, searchQuery, selectedId, onSelect }: Pro
 
           <div className="flex items-center gap-3 text-[11px]">
             {v.last_position ? (
-              <span className="text-slate-400">
+              <span style={{ color: 'var(--color-text-secondary)' }}>
                 {Math.round(v.last_position.speed ?? 0)} km/h
               </span>
             ) : (
-              <span className="text-slate-600">No signal</span>
+              <span style={{ color: 'var(--color-text-muted)' }}>No signal</span>
             )}
             {v.route_name && (
-              <span className="text-slate-500 truncate">{v.route_name}</span>
+              <span className="truncate" style={{ color: 'var(--color-text-muted)' }}>{v.route_name}</span>
             )}
           </div>
 

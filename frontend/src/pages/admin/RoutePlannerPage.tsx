@@ -498,8 +498,9 @@ function StepIndicator({ currentStep }: { currentStep: Step }) {
                     ? 'bg-green-500 text-white'
                     : isActive
                       ? 'bg-blue-600 text-white'
-                      : 'bg-slate-700 text-slate-400'
+                      : ''
                 }`}
+                style={!isCompleted && !isActive ? { backgroundColor: 'var(--color-border)', color: 'var(--color-text-secondary)' } : undefined}
               >
                 {isCompleted ? (
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
@@ -511,14 +512,15 @@ function StepIndicator({ currentStep }: { currentStep: Step }) {
               </div>
               <span
                 className={`text-xs font-medium ${
-                  isActive ? 'text-white' : 'text-slate-500'
+                  isActive ? 'text-white' : ''
                 }`}
+                style={!isActive ? { color: 'var(--color-text-muted)' } : undefined}
               >
                 {label}
               </span>
             </div>
             {idx < STEP_LABELS.length - 1 && (
-              <svg className="w-4 h-4 mx-1 text-slate-600" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <svg className="w-4 h-4 mx-1" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" style={{ color: 'var(--color-text-muted)' }}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
               </svg>
             )}
@@ -581,7 +583,8 @@ function Step1Panel({
           value={customerId}
           onChange={(e) => onCustomerIdChange(e.target.value)}
           placeholder="Customer ID (optional)"
-          className="flex-1 bg-slate-800/80 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500/50"
+          className="flex-1 theme-card-overlay border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
+          style={{ color: 'var(--color-text-primary)', borderColor: 'var(--color-border-subtle)' }}
         />
         <button
           onClick={onLoadShipments}
@@ -603,7 +606,8 @@ function Step1Panel({
               onChange={(e) => onNumClustersChange(Math.max(2, Math.min(10, Number(e.target.value))))}
               min={2}
               max={10}
-              className="w-14 bg-slate-800 border border-purple-700/50 rounded px-2 py-1 text-sm text-white focus:outline-none"
+              className="w-14 border border-purple-700/50 rounded px-2 py-1 text-sm text-white focus:outline-none"
+              style={{ backgroundColor: 'var(--color-surface-elevated)' }}
             />
             <button
               onClick={onCluster}
@@ -615,7 +619,8 @@ function Step1Panel({
             {clusters.length > 0 && (
               <button
                 onClick={onClearClusters}
-                className="px-3 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-medium rounded transition-colors"
+                className="px-3 py-1 hover:opacity-80 text-xs font-medium rounded transition-colors"
+                style={{ backgroundColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
               >
                 Clear
               </button>
@@ -648,22 +653,23 @@ function Step1Panel({
                 type="checkbox"
                 checked={allSelected}
                 onChange={(e) => onToggleAll(e.target.checked)}
-                className="rounded border-slate-600 bg-slate-800 text-blue-600 focus:ring-blue-500/30"
+                className="rounded text-blue-600 focus:ring-blue-500/30"
+                style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface-elevated)' }}
               />
-              <span className="text-xs font-medium text-slate-300">Select all</span>
+              <span className="text-xs font-medium" style={{ color: 'var(--color-text-primary)' }}>Select all</span>
             </label>
-            <span className="text-xs text-slate-500">
+            <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
               {selectedShipmentIds.size} / {shipments.length}
             </span>
           </div>
 
-          <div className="max-h-[calc(100vh-420px)] overflow-y-auto rounded-lg border border-slate-700/50 divide-y divide-slate-700/30">
+          <div className="max-h-[calc(100vh-420px)] overflow-y-auto rounded-lg border divide-y divide-[var(--color-border-subtle)]" style={{ borderColor: 'var(--color-border-subtle)' }}>
             {shipments.map((shipment) => {
               const clusterColor = getClusterColor(shipment.publicId);
               return (
                 <div
                   key={shipment.publicId}
-                  className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-800/60 transition-colors cursor-pointer"
+                  className="flex items-center gap-3 px-3 py-2.5 hover:bg-white/5 transition-colors cursor-pointer"
                   onClick={() => onToggleShipment(shipment.publicId)}
                 >
                   <input
@@ -671,17 +677,18 @@ function Step1Panel({
                     checked={selectedShipmentIds.has(shipment.publicId)}
                     onChange={() => onToggleShipment(shipment.publicId)}
                     onClick={(e) => e.stopPropagation()}
-                    className="rounded border-slate-600 bg-slate-800 text-blue-600 focus:ring-blue-500/30"
+                    className="rounded text-blue-600 focus:ring-blue-500/30"
+                    style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface-elevated)' }}
                   />
                   {clusterColor && (
                     <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: clusterColor }} />
                   )}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-white truncate">{shipment.recipientName}</p>
-                    <p className="text-xs text-slate-400 truncate">{shipment.address}</p>
+                    <p className="text-xs truncate" style={{ color: 'var(--color-text-secondary)' }}>{shipment.address}</p>
                   </div>
                   {shipment.totalWeightKg != null && (
-                    <span className="text-xs text-slate-500 flex-shrink-0">{shipment.totalWeightKg} kg</span>
+                    <span className="text-xs flex-shrink-0" style={{ color: 'var(--color-text-muted)' }}>{shipment.totalWeightKg} kg</span>
                   )}
                   {shipment.addressRisk?.is_risky && (
                     <span className="text-xs bg-red-900/50 text-red-400 px-1.5 py-0.5 rounded-full flex-shrink-0">
@@ -698,7 +705,7 @@ function Step1Panel({
       {/* Empty state */}
       {shipments.length === 0 && !isLoading && (
         <div className="text-center py-8">
-          <p className="text-sm text-slate-500">Load shipments to begin planning routes.</p>
+          <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>Load shipments to begin planning routes.</p>
         </div>
       )}
 
@@ -767,7 +774,7 @@ function Step2Panel({
 
       {isLoading ? (
         <div className="text-center py-8">
-          <p className="text-sm text-slate-500">Loading vehicles...</p>
+          <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>Loading vehicles...</p>
         </div>
       ) : (
         <>
@@ -778,20 +785,21 @@ function Step2Panel({
                 type="checkbox"
                 checked={allSelected}
                 onChange={(e) => onToggleAll(e.target.checked)}
-                className="rounded border-slate-600 bg-slate-800 text-blue-600 focus:ring-blue-500/30"
+                className="rounded text-blue-600 focus:ring-blue-500/30"
+                style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface-elevated)' }}
               />
-              <span className="text-xs font-medium text-slate-300">Select all vehicles</span>
+              <span className="text-xs font-medium" style={{ color: 'var(--color-text-primary)' }}>Select all vehicles</span>
             </label>
-            <span className="text-xs text-slate-500">
+            <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
               {selectedVehicleIds.size} / {vehicles.length}
             </span>
           </div>
 
-          <div className="max-h-52 overflow-y-auto rounded-lg border border-slate-700/50 divide-y divide-slate-700/30">
+          <div className="max-h-52 overflow-y-auto rounded-lg border divide-y divide-[var(--color-border-subtle)]" style={{ borderColor: 'var(--color-border-subtle)' }}>
             {vehicles.map((vehicle) => (
               <div
                 key={vehicle.publicId}
-                className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-800/60 transition-colors cursor-pointer"
+                className="flex items-center gap-3 px-3 py-2.5 hover:bg-white/5 transition-colors cursor-pointer"
                 onClick={() => onToggleVehicle(vehicle.publicId)}
               >
                 <input
@@ -799,11 +807,12 @@ function Step2Panel({
                   checked={selectedVehicleIds.has(vehicle.publicId)}
                   onChange={() => onToggleVehicle(vehicle.publicId)}
                   onClick={(e) => e.stopPropagation()}
-                  className="rounded border-slate-600 bg-slate-800 text-blue-600 focus:ring-blue-500/30"
+                  className="rounded text-blue-600 focus:ring-blue-500/30"
+                  style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface-elevated)' }}
                 />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-white">{vehicle.name}</p>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
                     {vehicle.maxWeightKg != null ? `${vehicle.maxWeightKg} kg` : '-'}
                     {' / '}
                     {vehicle.maxVolumeM3 != null ? `${vehicle.maxVolumeM3} m\u00b3` : '-'}
@@ -818,11 +827,12 @@ function Step2Panel({
           {/* Origin + Max stops */}
           <div className="space-y-3">
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">Origin location</label>
+              <label className="block text-xs font-medium mb-1" style={{ color: 'var(--color-text-primary)' }}>Origin location</label>
               <select
                 value={originPublicId}
                 onChange={(e) => onOriginChange(e.target.value)}
-                className="w-full bg-slate-800/80 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500/50"
+                className="w-full theme-card-overlay border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
+                style={{ color: 'var(--color-text-primary)', borderColor: 'var(--color-border-subtle)' }}
               >
                 <option value="">-- No origin --</option>
                 {locations.map((loc) => (
@@ -833,23 +843,25 @@ function Step2Panel({
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">Max stops per route</label>
+              <label className="block text-xs font-medium mb-1" style={{ color: 'var(--color-text-primary)' }}>Max stops per route</label>
               <input
                 type="number"
                 value={maxStopsPerRoute}
                 onChange={(e) => onMaxStopsChange(Math.max(1, Math.min(100, Number(e.target.value))))}
                 min={1}
                 max={100}
-                className="w-full bg-slate-800/80 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500/50"
+                className="w-full theme-card-overlay border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500/50"
+                style={{ borderColor: 'var(--color-border-subtle)' }}
               />
             </div>
             {optimizers.length > 0 && (
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">Optimizer</label>
+                <label className="block text-xs font-medium mb-1" style={{ color: 'var(--color-text-primary)' }}>Optimizer</label>
                 <select
                   value={optimizerName}
                   onChange={(e) => onOptimizerChange(e.target.value)}
-                  className="w-full bg-slate-800/80 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500/50"
+                  className="w-full theme-card-overlay border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
+                  style={{ color: 'var(--color-text-primary)', borderColor: 'var(--color-border-subtle)' }}
                 >
                   <option value="">Automatic (recommended)</option>
                   {optimizers.map((opt) => (
@@ -869,7 +881,8 @@ function Step2Panel({
                     type="checkbox"
                     checked={useCalibration}
                     onChange={(e) => onCalibrationToggle(e.target.checked)}
-                    className="rounded border-emerald-600 bg-slate-800 text-emerald-600 focus:ring-emerald-500/30"
+                    className="rounded border-emerald-600 text-emerald-600 focus:ring-emerald-500/30"
+                    style={{ backgroundColor: 'var(--color-surface-elevated)' }}
                   />
                   <span className="text-xs font-medium text-emerald-300">
                     Use calibrated service times
@@ -882,17 +895,17 @@ function Step2Panel({
                   <div className="max-h-28 overflow-y-auto space-y-1">
                     {calibrations.slice(0, 10).map((cal) => (
                       <div key={cal.address} className="flex items-center justify-between text-[11px]">
-                        <span className="text-slate-400 truncate flex-1 mr-2">{cal.address}</span>
+                        <span className="truncate flex-1 mr-2" style={{ color: 'var(--color-text-secondary)' }}>{cal.address}</span>
                         <span className="text-emerald-300 font-medium flex-shrink-0">
                           {Math.round(cal.avgSeconds / 60)}m
                         </span>
-                        <span className="text-slate-500 ml-1 flex-shrink-0">
+                        <span className="ml-1 flex-shrink-0" style={{ color: 'var(--color-text-muted)' }}>
                           ({cal.sampleCount}x)
                         </span>
                       </div>
                     ))}
                     {calibrations.length > 10 && (
-                      <p className="text-[10px] text-slate-500">
+                      <p className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>
                         +{calibrations.length - 10} more addresses
                       </p>
                     )}
@@ -908,7 +921,8 @@ function Step2Panel({
       <div className="flex gap-2">
         <button
           onClick={onBack}
-          className="flex-1 py-2.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm font-medium rounded-lg transition-colors"
+          className="flex-1 py-2.5 hover:opacity-80 text-sm font-medium rounded-lg transition-colors"
+          style={{ backgroundColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
         >
           Back
         </button>
@@ -952,20 +966,20 @@ function Step3Panel({
   return (
     <div className="space-y-4">
       <h2 className="text-sm font-semibold text-white">Step 3: Preview & Assign Drivers</h2>
-      <p className="text-xs text-slate-400">
+      <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
         Review routes and assign drivers. The system suggests the best driver based on zone, rating, availability.
       </p>
 
       {loadingDrivers && (
         <div className="flex items-center justify-center gap-2 py-6">
           <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-          <span className="text-sm text-slate-400">Loading driver suggestions...</span>
+          <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>Loading driver suggestions...</span>
         </div>
       )}
 
       {!loadingDrivers && routes.length === 0 && (
         <div className="text-center py-8">
-          <p className="text-sm text-slate-500">No routes generated. Go back to configure.</p>
+          <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>No routes generated. Go back to configure.</p>
         </div>
       )}
 
@@ -995,7 +1009,8 @@ function Step3Panel({
       <div className="flex gap-2">
         <button
           onClick={onBack}
-          className="py-2.5 px-4 bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm font-medium rounded-lg transition-colors"
+          className="py-2.5 px-4 hover:opacity-80 text-sm font-medium rounded-lg transition-colors"
+          style={{ backgroundColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
         >
           Back
         </button>
@@ -1032,13 +1047,13 @@ function RouteCard({ routeData, color, suggestions, selectedDriverId, onDriverAs
   const selectedDriver = suggestions.find((s) => s.driver_public_id === selectedDriverId);
 
   return (
-    <div className="rounded-lg border border-slate-700/50 bg-slate-800/60 p-4 space-y-3">
+    <div className="rounded-lg border theme-card-overlay p-4 space-y-3" style={{ borderColor: 'var(--color-border-subtle)' }}>
       {/* Route header */}
       <div className="flex items-center gap-2">
         <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
         <div className="flex-1 min-w-0">
           <h3 className="text-sm font-semibold text-white">{routeData.route.name}</h3>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
             {routeData.stopsCount} stops
             {routeData.route.totalDistanceKm != null && (
               <> &middot; {routeData.route.totalDistanceKm.toFixed(1)} km</>
@@ -1110,7 +1125,8 @@ function RouteCard({ routeData, color, suggestions, selectedDriverId, onDriverAs
         <select
           value={selectedDriverId}
           onChange={(e) => onDriverAssign(e.target.value)}
-          className="w-full bg-slate-800/80 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500/50"
+          className="w-full theme-card-overlay border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
+          style={{ borderColor: 'var(--color-border-subtle)', color: 'var(--color-text-primary)' }}
         >
           <option value="">-- Select driver --</option>
           {suggestions.map((s) => (
@@ -1124,9 +1140,9 @@ function RouteCard({ routeData, color, suggestions, selectedDriverId, onDriverAs
         {selectedDriver && (
           <div className="grid grid-cols-4 gap-1.5 mt-2">
             {(['zone', 'rating', 'workload', 'skills'] as const).map((key) => (
-              <div key={key} className="text-center bg-slate-800/80 rounded p-1.5">
-                <div className="text-[10px] text-slate-500 capitalize">{key}</div>
-                <div className="text-xs font-semibold text-slate-200">{selectedDriver.breakdown[key]}</div>
+              <div key={key} className="text-center theme-card-overlay rounded p-1.5">
+                <div className="text-[10px] capitalize" style={{ color: 'var(--color-text-muted)' }}>{key}</div>
+                <div className="text-xs font-semibold" style={{ color: 'var(--color-text-primary)' }}>{selectedDriver.breakdown[key]}</div>
               </div>
             ))}
           </div>
@@ -1157,18 +1173,18 @@ function CapacityBar({
   return (
     <div>
       <div className="flex items-center justify-between mb-0.5">
-        <span className="text-[10px] font-medium text-slate-400">{label}</span>
-        <span className="text-[10px] text-slate-500">
+        <span className="text-[10px] font-medium" style={{ color: 'var(--color-text-secondary)' }}>{label}</span>
+        <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>
           {current?.toFixed(label === 'Volume' ? 2 : 0) ?? '0'} / {max ?? '?'} {unit}
         </span>
       </div>
-      <div className="w-full bg-slate-700 rounded-full h-1.5">
+      <div className="w-full rounded-full h-1.5" style={{ backgroundColor: 'var(--color-border)' }}>
         <div
           className={`h-1.5 rounded-full transition-all ${barColor}`}
           style={{ width: `${Math.min(100, pct)}%` }}
         />
       </div>
-      <div className="text-right text-[10px] text-slate-500 mt-0.5">{pct.toFixed(0)}%</div>
+      <div className="text-right text-[10px] mt-0.5" style={{ color: 'var(--color-text-muted)' }}>{pct.toFixed(0)}%</div>
     </div>
   );
 }

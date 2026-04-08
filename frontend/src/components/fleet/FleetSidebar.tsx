@@ -32,11 +32,12 @@ export function FleetSidebar({
   const [searchQuery, setSearchQuery] = useState('');
 
   return (
-    <div className="flex flex-col w-80 bg-slate-900/95 backdrop-blur-xl border-r border-slate-700/50">
+    <div className="flex flex-col w-80 border-r" style={{ backgroundColor: 'var(--color-surface-glass)', backdropFilter: 'blur(16px)', borderColor: 'var(--color-border-subtle)' }}>
       {/* Back link */}
       <a
         href="/admin"
-        className="flex-shrink-0 flex items-center gap-2 px-5 pt-4 pb-2 text-slate-400 hover:text-white transition-colors text-sm font-medium"
+        className="flex-shrink-0 flex items-center gap-2 px-5 pt-4 pb-2 transition-colors text-sm font-medium"
+        style={{ color: 'var(--color-text-secondary)' }}
       >
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
@@ -54,8 +55,8 @@ export function FleetSidebar({
             </svg>
           </div>
           <div>
-            <h1 className="text-white font-bold text-base tracking-tight">MXO Track</h1>
-            <p className="text-slate-500 text-[10px] uppercase tracking-widest">Fleet Overview</p>
+            <h1 className="font-bold text-base tracking-tight" style={{ color: 'var(--color-text-primary)' }}>MXO Track</h1>
+            <p className="text-[10px] uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Fleet Overview</p>
           </div>
         </div>
 
@@ -64,13 +65,13 @@ export function FleetSidebar({
         </div>
 
         {/* Tabs */}
-        <div className="flex bg-slate-800/60 rounded-lg p-0.5 mb-3">
+        <div className="flex theme-card-overlay p-0.5 mb-3">
           <button
             onClick={() => setActiveTab('vehicles')}
             className={`flex-1 text-xs font-medium py-1.5 px-3 rounded-md transition-all ${
               activeTab === 'vehicles'
                 ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
+                : ''
             }`}
           >
             Vehicles
@@ -80,7 +81,7 @@ export function FleetSidebar({
             className={`flex-1 text-xs font-medium py-1.5 px-3 rounded-md transition-all ${
               activeTab === 'routes'
                 ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
+                : ''
             }`}
           >
             Routes
@@ -91,7 +92,8 @@ export function FleetSidebar({
         {activeTab === 'vehicles' && (
           <div className="relative">
             <svg
-              className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500"
+              className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5"
+              style={{ color: 'var(--color-text-muted)' }}
               fill="none"
               viewBox="0 0 24 24"
               strokeWidth={2}
@@ -108,7 +110,12 @@ export function FleetSidebar({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search vehicles..."
-              className="w-full bg-slate-800/80 border border-slate-700/50 rounded-lg pl-8 pr-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/30"
+              className="w-full rounded-lg pl-8 pr-3 py-2 text-sm focus:outline-none focus:ring-1"
+              style={{
+                backgroundColor: 'var(--color-surface-glass)',
+                border: '1px solid var(--color-border-subtle)',
+                color: 'var(--color-text-primary)',
+              }}
             />
           </div>
         )}

@@ -2,17 +2,22 @@ import { createContext, useContext, useEffect, useState, useCallback, type React
 
 type ThemeMode = 'light' | 'dark' | 'system';
 type ResolvedTheme = 'light' | 'dark';
+type ThemePreset = 'default' | 'glass' | 'command' | 'bento' | 'dense';
 
 interface ThemeContextValue {
   mode: ThemeMode;
   resolved: ResolvedTheme;
+  preset: ThemePreset;
   setMode: (mode: ThemeMode) => void;
+  setPreset: (preset: ThemePreset) => void;
   toggle: () => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 const STORAGE_KEY = 'mxo-theme';
+const PRESET_KEY = 'mxo-theme-preset';
+const ALL_PRESETS: ThemePreset[] = ['default', 'glass', 'command', 'bento', 'dense'];
 
 function getSystemTheme(): ResolvedTheme {
   if (typeof window === 'undefined') return 'dark';
@@ -29,6 +34,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     return (localStorage.getItem(STORAGE_KEY) as ThemeMode) ?? 'system';
   });
 
+  const [preset, setPresetState] = useState<ThemePreset>(() => {
+    if (typeof window === 'undefined') return 'default';
+    const stored = localStorage.getItem(PRESET_KEY) as ThemePreset | null;
+    return stored && ALL_PRESETS.includes(stored) ? stored : 'default';
+  });
+
   const resolved = resolveTheme(mode);
 
   const setMode = useCallback((m: ThemeMode) => {
@@ -36,19 +47,32 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(STORAGE_KEY, m);
   }, []);
 
+  const setPreset = useCallback((p: ThemePreset) => {
+    setPresetState(p);
+    localStorage.setItem(PRESET_KEY, p);
+  }, []);
+
   const toggle = useCallback(() => {
     setMode(resolved === 'dark' ? 'light' : 'dark');
   }, [resolved, setMode]);
 
-  // Apply dark class to <html>
+  // Apply dark class and preset class on <html>
   useEffect(() => {
     const root = document.documentElement;
+
+    // Dark mode
     if (resolved === 'dark') {
       root.classList.add('dark');
     } else {
       root.classList.remove('dark');
     }
-  }, [resolved]);
+
+    // Preset class — remove all, then add current
+    ALL_PRESETS.forEach((p) => root.classList.remove(`preset-${p}`));
+    if (preset !== 'default') {
+      root.classList.add(`preset-${preset}`);
+    }
+  }, [resolved, preset]);
 
   // Listen for system theme changes when in 'system' mode
   useEffect(() => {
@@ -60,7 +84,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [mode]);
 
   return (
-    <ThemeContext.Provider value={{ mode, resolved, setMode, toggle }}>
+    <ThemeContext.Provider value={{ mode, resolved, preset, setMode, setPreset, toggle }}>
       {children}
     </ThemeContext.Provider>
   );
@@ -71,3 +95,5 @@ export function useTheme(): ThemeContextValue {
   if (!ctx) throw new Error('useTheme must be used within ThemeProvider');
   return ctx;
 }
+
+export { ALL_PRESETS, type ThemePreset, type ThemeMode, type ResolvedTheme };

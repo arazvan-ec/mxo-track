@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/api/client';
 import type { WidgetProps } from './types';
+import { AnimatedCounter } from '@/components/ui/AnimatedCounter';
 
 interface DailyDelivery {
   date: string;
@@ -18,19 +19,29 @@ interface ReportsResponse {
   top_drivers: TopDriver[];
 }
 
-function SimpleBarChart({ data }: { data: DailyDelivery[] }) {
+function AnimatedBarChart({ data }: { data: DailyDelivery[] }) {
   if (data.length === 0) return <p className="text-sm text-center py-4" style={{ color: 'var(--color-text-muted)' }}>Sin datos</p>;
 
   const max = Math.max(...data.map((d) => d.deliveries), 1);
 
   return (
     <div className="flex items-end gap-2 h-36">
-      {data.map((d) => (
+      {data.map((d, i) => (
         <div key={d.date} className="flex-1 flex flex-col items-center gap-1">
-          <span className="text-xs tabular-nums" style={{ color: 'var(--color-text-secondary)' }}>{d.deliveries}</span>
+          <span
+            className="text-xs tabular-nums"
+            style={{ color: 'var(--color-text-muted)', fontFamily: 'var(--data-font)' }}
+          >
+            {d.deliveries}
+          </span>
           <div
-            className="w-full rounded-t transition-all duration-300 min-h-[2px]"
-            style={{ height: `${(d.deliveries / max) * 100}%`, backgroundColor: 'var(--color-accent)' }}
+            className="w-full rounded-t animate-bar-grow"
+            style={{
+              height: `${(d.deliveries / max) * 100}%`,
+              minHeight: 2,
+              background: `linear-gradient(to top, var(--color-accent), var(--color-accent-hover))`,
+              animationDelay: `${i * 80}ms`,
+            }}
           />
           <span className="text-[10px] truncate w-full text-center" style={{ color: 'var(--color-text-muted)' }}>
             {d.date.slice(5)}
@@ -43,28 +54,35 @@ function SimpleBarChart({ data }: { data: DailyDelivery[] }) {
 
 function TopDriversList({ drivers }: { drivers: TopDriver[] }) {
   if (drivers.length === 0) {
-    return <p className="text-sm text-center py-4" style={{ color: 'var(--color-text-muted)' }}>Sin datos de entregas esta semana.</p>;
+    return <p className="text-sm text-center py-4" style={{ color: 'var(--color-text-muted)' }}>Sin datos esta semana.</p>;
   }
 
-  const medalColors = ['bg-amber-100 text-amber-700', 'bg-gray-100 text-gray-600', 'bg-orange-100 text-orange-700'];
+  const medalColors = ['var(--color-warning)', '#94a3b8', '#f97316'];
 
   return (
-    <div>
+    <div className="space-y-1">
       {drivers.map((driver, i) => (
         <div
           key={driver.driver_email}
-          className="flex items-center gap-4 py-3 border-b last:border-b-0"
-          style={{ borderColor: 'var(--color-border)' }}
+          className="flex items-center gap-3 py-2 px-2 rounded-lg transition-colors"
+          style={{ backgroundColor: i === 0 ? 'var(--color-accent-muted)' : 'transparent' }}
         >
-          <span className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${medalColors[i] ?? 'bg-gray-50 text-gray-500'}`}>
+          <span
+            className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold"
+            style={{
+              backgroundColor: medalColors[i] ? `${medalColors[i]}20` : 'var(--color-accent-muted)',
+              color: medalColors[i] ?? 'var(--color-text-secondary)',
+            }}
+          >
             {i + 1}
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>{driver.driver_name}</p>
-            <p className="text-xs truncate" style={{ color: 'var(--color-text-secondary)' }}>{driver.driver_email}</p>
+            <p className="text-sm font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>
+              {driver.driver_name}
+            </p>
           </div>
-          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium" style={{ backgroundColor: 'rgba(16,185,129,0.1)', color: 'var(--color-success)' }}>
-            {driver.deliveries} entregas
+          <span className="text-xs font-bold tabular-nums" style={{ color: 'var(--color-accent)', fontFamily: 'var(--data-font)' }}>
+            <AnimatedCounter value={driver.deliveries} />
           </span>
         </div>
       ))}
@@ -72,7 +90,8 @@ function TopDriversList({ drivers }: { drivers: TopDriver[] }) {
   );
 }
 
-export function MiniReportsWidget({ data: _data }: WidgetProps) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function MiniReportsWidget({ data }: WidgetProps) {
   const { data: reports } = useQuery({
     queryKey: ['dashboard-reports'],
     queryFn: () => api.get<ReportsResponse>('/api/admin/dashboard-reports'),
@@ -81,25 +100,23 @@ export function MiniReportsWidget({ data: _data }: WidgetProps) {
   });
 
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2" style={{ gap: 'var(--section-gap, 1rem)' }}>
       {/* Delivery trend chart */}
-      <div
-        className="rounded-xl p-6 shadow-sm ring-1"
-        style={{ backgroundColor: 'var(--color-surface-elevated)', borderColor: 'var(--color-border)' }}
-      >
-        <h3 className="text-base font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>Entregas (últimos 7 días)</h3>
-        <SimpleBarChart data={reports?.daily_deliveries ?? []} />
+      <div className="theme-card animate-fade-in-up" style={{ padding: 'var(--card-padding)' }}>
+        <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
+          Entregas (ultimos 7 dias)
+        </h3>
+        <AnimatedBarChart data={reports?.daily_deliveries ?? []} />
       </div>
 
       {/* Top drivers */}
-      <div
-        className="rounded-xl shadow-sm ring-1 overflow-hidden"
-        style={{ backgroundColor: 'var(--color-surface-elevated)', borderColor: 'var(--color-border)' }}
-      >
-        <div className="px-6 py-4 border-b" style={{ borderColor: 'var(--color-border)' }}>
-          <h3 className="text-base font-semibold" style={{ color: 'var(--color-text-primary)' }}>Top transportistas (esta semana)</h3>
+      <div className="theme-card animate-fade-in-up overflow-hidden" style={{ animationDelay: '60ms' }}>
+        <div className="px-4 py-3 border-b" style={{ borderColor: 'var(--color-border)', padding: 'var(--card-padding)' }}>
+          <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+            Top transportistas
+          </h3>
         </div>
-        <div className="px-6">
+        <div style={{ padding: 'var(--card-padding)' }}>
           <TopDriversList drivers={reports?.top_drivers ?? []} />
         </div>
       </div>

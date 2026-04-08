@@ -41,22 +41,17 @@ export function CollapsibleWidget({
   }, [storageKey]);
 
   return (
-    <div
-      className="rounded-xl shadow-sm ring-1 overflow-hidden"
-      style={{ backgroundColor: 'var(--color-surface-elevated)', borderColor: 'var(--color-border)' }}
-    >
+    <div className="theme-card overflow-hidden">
       {/* Header — always visible, clickable to toggle */}
       <button
         type="button"
         onClick={toggle}
-        className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:opacity-80"
+        className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors"
+        style={{ borderBottom: expanded ? `1px solid var(--color-border)` : 'none' }}
       >
         <div className="flex items-center gap-2">
           {icon && <span style={{ color: 'var(--color-text-muted)' }}>{icon}</span>}
-          <h2
-            className="text-sm font-semibold uppercase tracking-wider"
-            style={{ color: 'var(--color-text-muted)' }}
-          >
+          <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>
             {title}
           </h2>
         </div>
@@ -78,7 +73,7 @@ export function CollapsibleWidget({
           expanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
         }`}
       >
-        <div className="px-4 pb-4">{children}</div>
+        <div className="px-4 pb-4 pt-3">{children}</div>
       </div>
     </div>
   );

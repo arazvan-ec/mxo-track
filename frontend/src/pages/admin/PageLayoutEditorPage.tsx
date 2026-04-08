@@ -141,18 +141,19 @@ export function PageLayoutEditorPage() {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 bg-slate-900">
+    <div className="flex-1 overflow-y-auto p-6" style={{ backgroundColor: 'var(--color-surface)' }}>
         <div className="max-w-6xl mx-auto">
-          <h1 className="text-xl font-bold text-slate-100 mb-1">Page Layout Editor</h1>
-          <p className="text-sm text-slate-400 mb-4">
+          <h1 className="text-xl font-bold mb-1" style={{ color: 'var(--color-text-primary)' }}>Page Layout Editor</h1>
+          <p className="text-sm mb-4" style={{ color: 'var(--color-text-secondary)' }}>
             Configure which widgets appear in each bottom sheet state
           </p>
 
           {/* Page selector */}
           <div className="flex items-center gap-4 mb-6">
-            <label className="text-sm text-slate-300">Page:</label>
+            <label className="text-sm" style={{ color: 'var(--color-text-primary)' }}>Page:</label>
             <select
-              className="bg-slate-800 border border-slate-600 rounded px-3 py-1.5 text-sm text-slate-200"
+              className="theme-card rounded px-3 py-1.5 text-sm"
+              style={{ color: 'var(--color-text-primary)' }}
               value={selectedPage}
               onChange={(e) => setSelectedPage(e.target.value)}
             >
@@ -178,24 +179,25 @@ export function PageLayoutEditorPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Left: State columns */}
             <div>
-              <h2 className="text-sm font-semibold text-slate-300 mb-3">Widget Placement</h2>
+              <h2 className="text-sm font-semibold mb-3" style={{ color: 'var(--color-text-primary)' }}>Widget Placement</h2>
 
               {/* Available widgets */}
               <div className="mb-4">
-                <p className="text-xs text-slate-400 mb-2">Click to add widget to a state:</p>
+                <p className="text-xs mb-2" style={{ color: 'var(--color-text-secondary)' }}>Click to add widget to a state:</p>
                 <div className="flex flex-wrap gap-1">
                   {ALL_WIDGET_TYPES.map((wt) => (
                     <div key={wt.type} className="relative group">
-                      <span className="text-[10px] bg-slate-800 border border-slate-600 text-slate-300 px-2 py-1 rounded cursor-default">
+                      <span className="text-[10px] theme-card px-2 py-1 rounded cursor-default" style={{ color: 'var(--color-text-primary)' }}>
                         {wt.label}
                       </span>
                       {/* Dropdown on hover */}
-                      <div className="hidden group-hover:flex absolute top-full left-0 mt-1 bg-slate-700 rounded shadow-lg z-20 flex-col">
+                      <div className="hidden group-hover:flex absolute top-full left-0 mt-1 rounded shadow-lg z-20 flex-col" style={{ backgroundColor: 'var(--color-border)' }}>
                         {SHEET_STATES.map((ss) => (
                           <button
                             key={ss.value}
                             type="button"
-                            className="text-[10px] text-slate-200 px-3 py-1 hover:bg-slate-600 whitespace-nowrap text-left"
+                            className="text-[10px] px-3 py-1 hover:bg-[var(--color-surface-elevated)] whitespace-nowrap text-left"
+                            style={{ color: 'var(--color-text-primary)' }}
                             onClick={() => addWidget(ss.value, wt.type)}
                           >
                             + {ss.label}
@@ -210,12 +212,12 @@ export function PageLayoutEditorPage() {
               {/* State columns */}
               <div className="space-y-4">
                 {SHEET_STATES.map((ss) => (
-                  <div key={ss.value} className="bg-slate-800 rounded-lg border border-slate-700 p-3">
-                    <h3 className="text-xs font-semibold text-slate-400 uppercase mb-2">
+                  <div key={ss.value} className="theme-card rounded-lg p-3">
+                    <h3 className="text-xs font-semibold uppercase mb-2" style={{ color: 'var(--color-text-secondary)' }}>
                       {ss.label}
                     </h3>
                     {widgetsByState[ss.value].length === 0 ? (
-                      <p className="text-xs text-slate-500 italic">No widgets</p>
+                      <p className="text-xs italic" style={{ color: 'var(--color-text-muted)' }}>No widgets</p>
                     ) : (
                       <div className="space-y-1">
                         {widgetsByState[ss.value].map((type, idx) => {
@@ -223,15 +225,17 @@ export function PageLayoutEditorPage() {
                           return (
                             <div
                               key={`${type}-${idx}`}
-                              className="flex items-center gap-2 bg-slate-700/50 rounded px-2 py-1"
+                              className="flex items-center gap-2 rounded px-2 py-1"
+                              style={{ backgroundColor: 'var(--color-border)' }}
                             >
-                              <span className="text-[10px] text-slate-500 w-4">{idx}</span>
-                              <span className="text-xs text-slate-200 flex-1">
+                              <span className="text-[10px] w-4" style={{ color: 'var(--color-text-muted)' }}>{idx}</span>
+                              <span className="text-xs flex-1" style={{ color: 'var(--color-text-primary)' }}>
                                 {info?.label ?? type}
                               </span>
                               <button
                                 type="button"
-                                className="text-slate-500 hover:text-slate-300 text-xs"
+                                className="hover:text-[var(--color-text-primary)] text-xs"
+                                style={{ color: 'var(--color-text-muted)' }}
                                 onClick={() => moveWidget(ss.value, idx, 'up')}
                                 disabled={idx === 0}
                               >
@@ -239,7 +243,8 @@ export function PageLayoutEditorPage() {
                               </button>
                               <button
                                 type="button"
-                                className="text-slate-500 hover:text-slate-300 text-xs"
+                                className="hover:text-[var(--color-text-primary)] text-xs"
+                                style={{ color: 'var(--color-text-muted)' }}
                                 onClick={() => moveWidget(ss.value, idx, 'down')}
                                 disabled={idx === widgetsByState[ss.value].length - 1}
                               >
@@ -264,7 +269,7 @@ export function PageLayoutEditorPage() {
 
             {/* Right: Live preview */}
             <div>
-              <h2 className="text-sm font-semibold text-slate-300 mb-3">Live Preview</h2>
+              <h2 className="text-sm font-semibold mb-3" style={{ color: 'var(--color-text-primary)' }}>Live Preview</h2>
 
               {/* State tabs */}
               <div className="flex gap-1 mb-3">
@@ -275,8 +280,9 @@ export function PageLayoutEditorPage() {
                     className={`text-xs px-3 py-1 rounded transition-colors ${
                       previewState === ss.value
                         ? 'bg-blue-600 text-white'
-                        : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                        : 'hover:text-[var(--color-text-primary)]'
                     }`}
+                    style={previewState !== ss.value ? { backgroundColor: 'var(--color-surface-elevated)', color: 'var(--color-text-secondary)' } : undefined}
                     onClick={() => setPreviewState(ss.value)}
                   >
                     {ss.label}
@@ -285,10 +291,10 @@ export function PageLayoutEditorPage() {
               </div>
 
               {/* Preview container */}
-              <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
-                <div className="py-2 px-4 border-b border-slate-700">
-                  <div className="w-10 h-1 bg-slate-600 rounded-full mx-auto mb-1" />
-                  <p className="text-xs font-semibold text-slate-200 text-center">
+              <div className="theme-card rounded-lg overflow-hidden">
+                <div className="py-2 px-4 border-b" style={{ borderColor: 'var(--color-border)' }}>
+                  <div className="w-10 h-1 rounded-full mx-auto mb-1" style={{ backgroundColor: 'var(--color-border)' }} />
+                  <p className="text-xs font-semibold text-center" style={{ color: 'var(--color-text-primary)' }}>
                     {PAGE_OPTIONS.find((p) => p.value === selectedPage)?.label} Results
                   </p>
                 </div>
@@ -299,7 +305,7 @@ export function PageLayoutEditorPage() {
                   }}
                 >
                   {widgetsByState[previewState].length === 0 ? (
-                    <p className="text-xs text-slate-500 italic p-4 text-center">
+                    <p className="text-xs italic p-4 text-center" style={{ color: 'var(--color-text-muted)' }}>
                       No widgets in this state
                     </p>
                   ) : (

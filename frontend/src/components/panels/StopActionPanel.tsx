@@ -36,7 +36,8 @@ export function StopActionPanel({ stop, userRole, onClose }: Props) {
         </div>
         <button
           onClick={onClose}
-          className="text-slate-400 hover:text-slate-200 transition-colors p-1"
+          className="transition-colors p-1"
+          style={{ color: 'var(--color-text-muted)' }}
           type="button"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -81,7 +82,8 @@ export function StopActionPanel({ stop, userRole, onClose }: Props) {
 
         <button
           onClick={handleCopyAddress}
-          className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-medium bg-slate-500/20 text-slate-300 hover:bg-slate-500/30 transition-colors"
+          className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-medium transition-colors"
+          style={{ backgroundColor: 'var(--color-accent-muted)', color: 'var(--color-text-secondary)' }}
           type="button"
         >
           <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
