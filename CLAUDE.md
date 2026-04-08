@@ -154,7 +154,7 @@ code edits. Each type activates a different gate chain:
 | **Informational** | "what does X do?" | Micro — consult → answer → capture gaps | No code edits allowed (must reclassify if needed) |
 | **Documentation** | Edit docs | Light — check overlap → execute → verify | No `src/` edits (must reclassify if scope grows) |
 | **Bug fix** | Error, unexpected behavior | Debug — root cause → pattern-wide → TDD fix | Blocks fix until root cause + pattern-wide search done |
-| **Code change** | New feature, refactor | Full — consult → brainstorm → plan → implement → verify → capture → retrospective → finalize | Blocks `src/` edits until consult + brainstorm + plan complete |
+| **Code change** | New feature, refactor | Full — consult → brainstorming → planning → implementation → verification → capture → retrospective → finalize | Blocks `src/` edits until consult + brainstorming + planning complete |
 | **Exploration** | "audit X", "how does Z?" | Explore — manifest → explore → capture | No code edits allowed (must reclassify if needed) |
 
 After classifying: `jq '.flow_type = "<type>"' .claude/session-state.json`
@@ -172,7 +172,7 @@ legal sequence (no skips, no backwards) and adds timestamps automatically.
 
 #### Why an escape valve exists
 
-The full flow (brainstorm + plan) adds 10-15 minutes of overhead. For a feature with
+The full flow (brainstorming + planning) adds 10-15 minutes of overhead. For a feature with
 design decisions, that overhead prevents rework worth hours. But for wiring changes —
 connecting an existing callback, passing a prop, adding an import — there are zero design
 decisions, so the overhead produces zero value. Calibration data confirms this: wiring
@@ -208,7 +208,7 @@ consult, implement, verify, capture, retrospective, finalize — are the ones th
 errors even in simple changes:
 
 ```
-consult → [user approves deviation] → implement → verify → capture → retrospective → finalize
+consult → [user approves deviation] → implementation → verification → capture → retrospective → finalize
    │              │                                                        │
    reads past     gate: model                                   catches patterns:
    decisions      presents evidence,                            "this is the 3rd page
@@ -257,12 +257,12 @@ If any criterion fails, brainstorm has nonzero value and must not be skipped.
    not "it's small." Vague evidence is not evidence — it's rationalization wearing a lab coat.
 3. **Wait for explicit user confirmation.** Do not proceed. Do not start "reading files
    in the meantime." The gate is closed until the user opens it.
-4. If user confirms → activate in session-state and proceed to implement.
-5. If user denies → continue with full flow (brainstorm + plan). No re-requesting.
+4. If user confirms → activate in session-state and proceed to implementation.
+5. If user denies → continue with full flow (brainstorming + planning). No re-requesting.
 
 **Activate (only after user confirmation):**
 ```bash
-jq '.deviation = {"active": true, "reason": "wiring-only (<30 lines, 0 design decisions)", "skipped_phases": ["brainstorm", "plan"], "return_to_phase": null, "acknowledged_by_user": true}' \
+jq '.deviation = {"active": true, "reason": "wiring-only (<30 lines, 0 design decisions)", "skipped_phases": ["brainstorming", "planning"], "return_to_phase": null, "acknowledged_by_user": true}' \
   .claude/session-state.json > /tmp/ss.json && mv /tmp/ss.json .claude/session-state.json
 ```
 
@@ -272,9 +272,9 @@ Each phase produces something that feeds the next. The workflow engine (hooks in
 `.claude/hooks/`) blocks code edits if prior phases aren't completed.
 
 ```
-consult → brainstorm → plan → implement → verify → capture → retrospective → finalize
-   │           │          │         │          │        │            │            │
-   │     produces spec  produces  follows    runs    writes     reflects    merges/
+consult → brainstorming → planning → implementation → verification → capture → retrospective → finalize
+   │           │              │           │              │          │            │            │
+   │     produces spec  produces    follows          runs       writes     reflects    merges/
    │     with design    plan with  TDD       tests   execution  on what     creates PR
    │     + approval     tasks      cycle     + lint  log        worked
    │                                                            
@@ -335,7 +335,7 @@ are exactly the ones that catch the most errors.
 |------|------|-----------------|
 | micro/light/explore | DENY edits to `src/`, `tests/` | Scope creep — a "quick look" turning into unplanned code changes without design review |
 | debug | HARD: needs root_cause + pattern-wide | Symptom fixes — patching what's visible without understanding what's broken |
-| full | HARD: needs consult + brainstorm + plan | Cowboy coding — implementing the first idea without evaluating alternatives or checking existing patterns |
+| full | HARD: needs consult + brainstorming + planning | Cowboy coding — implementing the first idea without evaluating alternatives or checking existing patterns |
 
 The gates are deliberately strict. A false negative (blocking a legitimate edit) costs
 minutes to reclassify. A false positive (allowing an unreviewed edit) costs hours to
@@ -679,7 +679,7 @@ Step 0 produces nothing and the brainstorming proceeds blind. **The quality of t
 capture determines the quality of tomorrow's brainstorming.**
 
 ```
-brainstorm → spec → plan → implement → verify → capture
+brainstorming → spec → planning → implementation → verification → capture
      ↑                                            │
      └────────── learning loop ───────────────────┘
 ```
