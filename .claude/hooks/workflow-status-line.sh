@@ -233,6 +233,23 @@ if [ "$FLOW_TYPE" = "full" ]; then
   PHASES=("consult" "brainstorming" "planning" "implementation" "verification" "capture" "retrospective" "finalize")
   TOTAL=8
 
+  # Handle null/undeclared phase: flow declared but phase-advance not yet called
+  if [ "$CURRENT_PHASE" = "null" ] || [ -z "$CURRENT_PHASE" ]; then
+    echo "📍 full | Pendiente: avanzar a consult | ⬚⬚⬚⬚⬚⬚⬚⬚${DEVIATION_SUFFIX}${TOOL_SUFFIX}" > "$OUTPUT"
+    cat "$OUTPUT"
+    exit 0
+  fi
+
+  # Normalize common phase variants to canonical names
+  case "$CURRENT_PHASE" in
+    implement)      CURRENT_PHASE="implementation" ;;
+    brainstorm)     CURRENT_PHASE="brainstorming" ;;
+    plan)           CURRENT_PHASE="planning" ;;
+    verify|verif*)  CURRENT_PHASE="verification" ;;
+    retro)          CURRENT_PHASE="retrospective" ;;
+    final*)         CURRENT_PHASE="finalize" ;;
+  esac
+
   # Find current phase index (1-based)
   CURRENT_INDEX=0
   for i in "${!PHASES[@]}"; do
@@ -243,7 +260,7 @@ if [ "$FLOW_TYPE" = "full" ]; then
   done
 
   if [ "$CURRENT_INDEX" -eq 0 ]; then
-    echo "📍 full | ${CURRENT_PHASE} | ⚠ fase no reconocida${DEVIATION_SUFFIX}${TOOL_SUFFIX}" > "$OUTPUT"
+    echo "📍 full | ${CURRENT_PHASE} | ⚠ fase no reconocida — usar phase-advance.sh${DEVIATION_SUFFIX}${TOOL_SUFFIX}" > "$OUTPUT"
     cat "$OUTPUT"
     exit 0
   fi
