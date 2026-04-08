@@ -38,15 +38,19 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /app
 
-# Copy backend code
+# Install PHP dependencies first (layer cached unless lock files change)
+COPY backend/composer.json backend/composer.lock backend/symfony.lock /app/
+ENV APP_ENV=prod COMPOSER_ALLOW_SUPERUSER=1
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
+
+# Copy backend code (invalidates cache on any PHP change, but deps are cached above)
 COPY backend/ /app/
 
 # Copy built React SPA into public/app/
 COPY --from=frontend-builder /backend/public/app/ /app/public/app/
 
-# Install dependencies (production, deterministic)
-ENV APP_ENV=prod COMPOSER_ALLOW_SUPERUSER=1
-RUN composer install --no-dev --optimize-autoloader --no-interaction
+# Rebuild autoloader with full codebase (scripts need all files present)
+RUN composer dump-autoload --optimize --classmap-authoritative --no-interaction
 
 # Generate Doctrine proxy classes at build time
 RUN php bin/console doctrine:proxy:create-proxy-classes --env=prod 2>/dev/null || \
