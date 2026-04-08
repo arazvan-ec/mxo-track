@@ -1,11 +1,17 @@
 #!/usr/bin/env bash
-# PostToolUse:Bash — Consolidated validator for Bash commands.
-# Combines: phase-transition-controller + post-commit-validator + post-push-validator
+# PostToolUse:Bash — Single consolidated hook for ALL Bash post-processing.
+# Combines: auto-evidence(Bash) + workflow-status-line + phase-transition-controller
+#           + post-commit-validator + post-push-validator
+#
+# This is the ONLY PostToolUse hook that fires on Bash commands,
+# reducing UI events from 3+ to 1 per Bash call.
 #
 # Routes internally based on command content:
-# 1. session-state.json manipulation → phase transition integrity check
-# 2. git commit → commit message validation
-# 3. git push → manifest update + push tasks
+# 0a. Auto-evidence: detect phpunit/lint results → update session-state
+# 0b. Workflow status line: generate status display
+# 1.  session-state.json manipulation → phase transition integrity check
+# 2.  git commit → commit message validation
+# 3.  git push → manifest update + push tasks
 #
 # Non-blocking: always exits 0.
 
@@ -22,6 +28,54 @@ COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // ""')
 # Safety check
 if [ "$TOOL_NAME" != "Bash" ]; then
   exit 0
+fi
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Route 0a: Auto-Evidence (Bash)
+# Detect test/lint results and update session-state evidence fields
+# ══════════════════════════════════════════════════════════════════════════════
+
+if [ -f "$STATE_FILE" ]; then
+  STATE=$(cat "$STATE_FILE" 2>/dev/null || echo "{}")
+  FLOW_TYPE=$(echo "$STATE" | jq -r '.flow_type // "null"')
+  TOOL_EXIT=$(echo "$INPUT" | jq -r '.tool_response.exit_code // ""')
+
+  # Only detect evidence during active flows
+  if [ "$FLOW_TYPE" != "null" ] && [ -n "$FLOW_TYPE" ]; then
+    # Helper: atomic update of session-state.json
+    update_evidence() {
+      local filter="$1"
+      jq "$filter" "$STATE_FILE" > /tmp/auto-ev.json && mv /tmp/auto-ev.json "$STATE_FILE"
+    }
+
+    # tests_passed: phpunit command
+    if [[ "$COMMAND" == *"phpunit"* ]]; then
+      if [ "$TOOL_EXIT" = "0" ]; then
+        update_evidence '.evidence.tests_passed = true'
+      else
+        update_evidence '.evidence.tests_passed = false'
+      fi
+    fi
+
+    # lint_clean: lint commands
+    if [[ "$COMMAND" == *"make lint"* ]] || [[ "$COMMAND" == *"php -l"* ]] || [[ "$COMMAND" == *"phpcs"* ]]; then
+      if [ "$TOOL_EXIT" = "0" ]; then
+        update_evidence '.evidence.lint_clean = true'
+      else
+        update_evidence '.evidence.lint_clean = false'
+      fi
+    fi
+  fi
+fi
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Route 0b: Workflow Status Line
+# Generate status display (delegates to workflow-status-line.sh)
+# ══════════════════════════════════════════════════════════════════════════════
+
+STATUS_SCRIPT="$REPO/.claude/hooks/workflow-status-line.sh"
+if [ -x "$STATUS_SCRIPT" ]; then
+  echo "$INPUT" | "$STATUS_SCRIPT" 2>/dev/null || true
 fi
 
 # ══════════════════════════════════════════════════════════════════════════════

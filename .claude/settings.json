@@ -52,7 +52,7 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "Read|Write|Edit|Bash",
+        "matcher": "Read|Write|Edit",
         "hooks": [
           {
             "type": "command",
@@ -63,7 +63,7 @@
         ]
       },
       {
-        "matcher": "Read|Write|Edit|Bash|Agent",
+        "matcher": "Read|Write|Edit|Agent",
         "hooks": [
           {
             "type": "command",
