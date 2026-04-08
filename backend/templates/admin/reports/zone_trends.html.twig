@@ -71,12 +71,12 @@
 </div>
 
 {# Detailed table #}
-<div class="rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5 overflow-hidden">
-  <div class="px-6 py-4 border-b border-gray-100">
-    <h3 class="text-base font-semibold text-gray-900">Detalle semanal por zona</h3>
+<div class="rounded-xl shadow-sm ring-1 ring-gray-900/5 overflow-hidden" style="background: var(--color-surface-elevated);">
+  <div class="px-6 py-4" style="border-bottom: 1px solid var(--color-border);">
+    <h3 class="text-base font-semibold" style="color: var(--color-text-primary);">Detalle semanal por zona</h3>
   </div>
   <div id="trendsTableContainer">
-    <div class="px-6 py-12 text-center text-sm text-gray-500">
+    <div class="px-6 py-12 text-center text-sm" style="color: var(--color-text-secondary);">
       Cargando datos...
     </div>
   </div>
@@ -180,31 +180,31 @@ function renderTable(trends) {
   const container = document.getElementById('trendsTableContainer');
 
   if (!trends || trends.length === 0) {
-    container.innerHTML = '<div class="px-6 py-12 text-center text-sm text-gray-500">No hay datos disponibles para el periodo seleccionado.</div>';
+    container.innerHTML = '<div class="px-6 py-12 text-center text-sm" style="color: var(--color-text-secondary);">No hay datos disponibles para el periodo seleccionado.</div>';
     return;
   }
 
-  let html = '<div class="overflow-x-auto"><table class="min-w-full divide-y divide-gray-200">';
-  html += '<thead class="bg-gray-50"><tr>';
-  html += '<th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Zona</th>';
-  html += '<th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Semana</th>';
-  html += '<th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Total</th>';
-  html += '<th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Exitosas</th>';
-  html += '<th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Excepciones</th>';
-  html += '<th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Tasa exito</th>';
-  html += '<th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Tiempo prom. (min)</th>';
-  html += '</tr></thead><tbody class="divide-y divide-gray-100">';
+  let html = '<div class="overflow-x-auto"><table class="min-w-full divide-y" style="border-color: var(--color-border);">';
+  html += '<thead style="background: var(--color-surface);"><tr>';
+  html += '<th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Zona</th>';
+  html += '<th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Semana</th>';
+  html += '<th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Total</th>';
+  html += '<th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Exitosas</th>';
+  html += '<th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Excepciones</th>';
+  html += '<th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Tasa exito</th>';
+  html += '<th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Tiempo prom. (min)</th>';
+  html += '</tr></thead><tbody class="divide-y" style="border-color: var(--color-border);">';
 
   trends.forEach(function(row) {
     var rateClass = row.success_rate >= 90 ? 'text-emerald-600' : (row.success_rate >= 70 ? 'text-amber-600' : 'text-red-600');
-    html += '<tr class="hover:bg-gray-50 transition-colors">';
-    html += '<td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">' + escapeHtml(row.zone_name) + '</td>';
-    html += '<td class="whitespace-nowrap px-6 py-4 text-sm text-gray-700">' + escapeHtml(row.week) + '</td>';
-    html += '<td class="whitespace-nowrap px-6 py-4 text-right text-sm text-gray-700">' + row.total_deliveries + '</td>';
+    html += '<tr class="transition-colors">';
+    html += '<td class="whitespace-nowrap px-6 py-4 text-sm font-medium" style="color: var(--color-text-primary);">' + escapeHtml(row.zone_name) + '</td>';
+    html += '<td class="whitespace-nowrap px-6 py-4 text-sm" style="color: var(--color-text-secondary);">' + escapeHtml(row.week) + '</td>';
+    html += '<td class="whitespace-nowrap px-6 py-4 text-right text-sm" style="color: var(--color-text-secondary);">' + row.total_deliveries + '</td>';
     html += '<td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium text-emerald-600">' + row.successful_deliveries + '</td>';
     html += '<td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium text-red-600">' + row.exceptions + '</td>';
     html += '<td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium ' + rateClass + '">' + row.success_rate + '%</td>';
-    html += '<td class="whitespace-nowrap px-6 py-4 text-right text-sm text-gray-700">' + row.avg_delivery_time_minutes + '</td>';
+    html += '<td class="whitespace-nowrap px-6 py-4 text-right text-sm" style="color: var(--color-text-secondary);">' + row.avg_delivery_time_minutes + '</td>';
     html += '</tr>';
   });
 
@@ -242,7 +242,7 @@ function zoneTrendsFilter() {
         loading.style.display = 'none';
         document.getElementById('chartEmpty').style.display = 'flex';
         document.getElementById('zoneTrendsChart').style.display = 'none';
-        document.getElementById('trendsTableContainer').innerHTML = '<div class="px-6 py-12 text-center text-sm text-red-500">Error al cargar datos.</div>';
+        document.getElementById('trendsTableContainer').innerHTML = '<div class="px-6 py-12 text-center text-sm text-red-500" style="color: var(--color-text-secondary);">Error al cargar datos.</div>';
       }
     }
   };

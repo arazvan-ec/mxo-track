@@ -5,18 +5,18 @@
 {% block breadcrumbs %}
   <li>
     <div class="flex items-center">
-      <svg class="h-5 w-5 shrink-0 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+      <svg class="h-5 w-5 shrink-0" style="color: var(--color-text-muted);" viewBox="0 0 20 20" fill="currentColor">
         <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd"/>
       </svg>
-      <a href="{{ path('admin_reports_index') }}" class="ml-2 text-sm font-medium text-gray-500 hover:text-gray-700">Reportes</a>
+      <a href="{{ path('admin_reports_index') }}" class="ml-2 text-sm font-medium hover:opacity-80" style="color: var(--color-text-secondary);">Reportes</a>
     </div>
   </li>
   <li>
     <div class="flex items-center">
-      <svg class="h-5 w-5 shrink-0 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+      <svg class="h-5 w-5 shrink-0" style="color: var(--color-text-muted);" viewBox="0 0 20 20" fill="currentColor">
         <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd"/>
       </svg>
-      <span class="ml-2 text-sm font-medium text-gray-500">SLA & Cumplimiento</span>
+      <span class="ml-2 text-sm font-medium" style="color: var(--color-text-secondary);">SLA & Cumplimiento</span>
     </div>
   </li>
 {% endblock %}
@@ -27,12 +27,12 @@
   {# Header #}
   <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
     <div>
-      <h1 class="text-2xl font-bold tracking-tight text-gray-900">SLA & Cumplimiento</h1>
-      <p class="mt-1 text-sm text-gray-500">Indicadores de nivel de servicio, tendencias y ranking de transportistas.</p>
+      <h1 class="text-2xl font-bold tracking-tight" style="color: var(--color-text-primary);">SLA & Cumplimiento</h1>
+      <p class="mt-1 text-sm" style="color: var(--color-text-secondary);">Indicadores de nivel de servicio, tendencias y ranking de transportistas.</p>
     </div>
     <div class="flex items-center gap-2">
       <a :href="exportUrl()"
-         class="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50 transition-colors">
+         class="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium shadow-sm ring-1 ring-gray-300 transition-colors" style="background: var(--color-surface-elevated); color: var(--color-text-secondary); border-color: var(--color-border);">
         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
         </svg>
@@ -44,9 +44,9 @@
   {# Filters #}
   <form method="get" class="mb-8 flex flex-wrap items-end gap-3" @submit.prevent="applyFilters()">
     <div>
-      <label for="customer_id" class="block text-xs font-medium text-gray-600 mb-1">Cliente</label>
+      <label for="customer_id" class="block text-xs font-medium mb-1" style="color: var(--color-text-secondary);">Cliente</label>
       <select id="customer_id" name="customer_id" x-model="customerId"
-              class="rounded-lg border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-brand-500">
+              class="rounded-lg px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-brand-500" style="border-color: var(--color-border);">
         <option value="">Todos los clientes</option>
         {% for c in customers %}
           <option value="{{ c.id }}" {{ selected_customer_id == c.id ? 'selected' : '' }}>{{ c.name }}</option>
@@ -54,25 +54,25 @@
       </select>
     </div>
     <div>
-      <label for="period" class="block text-xs font-medium text-gray-600 mb-1">Periodo</label>
+      <label for="period" class="block text-xs font-medium mb-1" style="color: var(--color-text-secondary);">Periodo</label>
       <select id="period" name="period" x-model="period" @change="onPeriodChange()"
-              class="rounded-lg border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-brand-500">
+              class="rounded-lg px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-brand-500" style="border-color: var(--color-border);">
         <option value="week">Ultima semana</option>
         <option value="month" selected>Ultimo mes</option>
         <option value="custom">Personalizado</option>
       </select>
     </div>
     <div x-show="period === 'custom'" x-transition>
-      <label for="from" class="block text-xs font-medium text-gray-600 mb-1">Desde</label>
+      <label for="from" class="block text-xs font-medium mb-1" style="color: var(--color-text-secondary);">Desde</label>
       <input type="date" id="from" name="from" x-model="fromDate"
              value="{{ from|date('Y-m-d') }}"
-             class="rounded-lg border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-brand-500">
+             class="rounded-lg px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-brand-500" style="border-color: var(--color-border);">
     </div>
     <div x-show="period === 'custom'" x-transition>
-      <label for="to" class="block text-xs font-medium text-gray-600 mb-1">Hasta</label>
+      <label for="to" class="block text-xs font-medium mb-1" style="color: var(--color-text-secondary);">Hasta</label>
       <input type="date" id="to" name="to" x-model="toDate"
              value="{{ to|date('Y-m-d') }}"
-             class="rounded-lg border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-brand-500">
+             class="rounded-lg px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-brand-500" style="border-color: var(--color-border);">
     </div>
     <button type="submit"
             class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-500 transition-colors"
@@ -84,41 +84,41 @@
 
   {# KPI Cards #}
   <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-    <div class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-900/5">
-      <p class="text-sm font-medium text-gray-500">OTIF (On Time In Full)</p>
+    <div class="rounded-xl p-6 shadow-sm ring-1 ring-gray-900/5" style="background: var(--color-surface-elevated);">
+      <p class="text-sm font-medium" style="color: var(--color-text-secondary);">OTIF (On Time In Full)</p>
       <p class="mt-2 text-3xl font-bold text-brand-600" x-text="data.otif_rate + '%'">{{ sla.otif_rate }}%</p>
-      <p class="mt-1 text-xs text-gray-400">Entregado a tiempo y completo</p>
+      <p class="mt-1 text-xs" style="color: var(--color-text-muted);">Entregado a tiempo y completo</p>
     </div>
-    <div class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-900/5">
-      <p class="text-sm font-medium text-gray-500">Tasa a tiempo</p>
+    <div class="rounded-xl p-6 shadow-sm ring-1 ring-gray-900/5" style="background: var(--color-surface-elevated);">
+      <p class="text-sm font-medium" style="color: var(--color-text-secondary);">Tasa a tiempo</p>
       <p class="mt-2 text-3xl font-bold text-emerald-600" x-text="data.on_time_rate + '%'">{{ sla.on_time_rate }}%</p>
-      <p class="mt-1 text-xs text-gray-400">Dentro de ventana de entrega</p>
+      <p class="mt-1 text-xs" style="color: var(--color-text-muted);">Dentro de ventana de entrega</p>
     </div>
-    <div class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-900/5">
-      <p class="text-sm font-medium text-gray-500">Primera entrega exitosa</p>
+    <div class="rounded-xl p-6 shadow-sm ring-1 ring-gray-900/5" style="background: var(--color-surface-elevated);">
+      <p class="text-sm font-medium" style="color: var(--color-text-secondary);">Primera entrega exitosa</p>
       <p class="mt-2 text-3xl font-bold text-indigo-600" x-text="data.first_attempt_rate + '%'">{{ sla.first_attempt_rate }}%</p>
-      <p class="mt-1 text-xs text-gray-400">Sin intentos previos fallidos</p>
+      <p class="mt-1 text-xs" style="color: var(--color-text-muted);">Sin intentos previos fallidos</p>
     </div>
-    <div class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-900/5">
-      <p class="text-sm font-medium text-gray-500">Tiempo promedio</p>
-      <p class="mt-2 text-3xl font-bold text-gray-900" x-text="data.avg_delivery_time_minutes + ' min'">{{ sla.avg_delivery_time_minutes }} min</p>
-      <p class="mt-1 text-xs text-gray-400">Desde inicio de ruta a entrega</p>
+    <div class="rounded-xl p-6 shadow-sm ring-1 ring-gray-900/5" style="background: var(--color-surface-elevated);">
+      <p class="text-sm font-medium" style="color: var(--color-text-secondary);">Tiempo promedio</p>
+      <p class="mt-2 text-3xl font-bold" style="color: var(--color-text-primary);" x-text="data.avg_delivery_time_minutes + ' min'">{{ sla.avg_delivery_time_minutes }} min</p>
+      <p class="mt-1 text-xs" style="color: var(--color-text-muted);">Desde inicio de ruta a entrega</p>
     </div>
   </div>
 
   {# Charts row #}
   <div class="grid grid-cols-1 gap-6 lg:grid-cols-2 mb-8">
     {# SLA Trend line chart #}
-    <div class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-900/5">
-      <h3 class="text-base font-semibold text-gray-900 mb-4">Tendencia SLA</h3>
+    <div class="rounded-xl p-6 shadow-sm ring-1 ring-gray-900/5" style="background: var(--color-surface-elevated);">
+      <h3 class="text-base font-semibold mb-4" style="color: var(--color-text-primary);">Tendencia SLA</h3>
       <div class="relative" style="height: 300px;">
         <canvas id="slaTrendChart"></canvas>
       </div>
     </div>
 
     {# Exception breakdown bar chart #}
-    <div class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-900/5">
-      <h3 class="text-base font-semibold text-gray-900 mb-4">Excepciones por tipo</h3>
+    <div class="rounded-xl p-6 shadow-sm ring-1 ring-gray-900/5" style="background: var(--color-surface-elevated);">
+      <h3 class="text-base font-semibold mb-4" style="color: var(--color-text-primary);">Excepciones por tipo</h3>
       <div class="relative" style="height: 300px;">
         <canvas id="exceptionChart"></canvas>
       </div>
@@ -127,38 +127,38 @@
 
   {# Additional KPI: Stops per hour #}
   <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 mb-8">
-    <div class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-900/5">
-      <p class="text-sm font-medium text-gray-500">Paradas por hora</p>
+    <div class="rounded-xl p-6 shadow-sm ring-1 ring-gray-900/5" style="background: var(--color-surface-elevated);">
+      <p class="text-sm font-medium" style="color: var(--color-text-secondary);">Paradas por hora</p>
       <p class="mt-2 text-3xl font-bold text-amber-600" x-text="data.avg_stops_per_hour">{{ sla.avg_stops_per_hour }}</p>
-      <p class="mt-1 text-xs text-gray-400">Promedio de entregas completadas por hora de ruta</p>
+      <p class="mt-1 text-xs" style="color: var(--color-text-muted);">Promedio de entregas completadas por hora de ruta</p>
     </div>
   </div>
 
   {# Driver ranking table #}
-  <div class="rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5 overflow-hidden">
-    <div class="px-6 py-4 border-b border-gray-100">
-      <h3 class="text-base font-semibold text-gray-900">Ranking de transportistas</h3>
+  <div class="rounded-xl shadow-sm ring-1 ring-gray-900/5 overflow-hidden" style="background: var(--color-surface-elevated);">
+    <div class="px-6 py-4" style="border-bottom: 1px solid var(--color-border);">
+      <h3 class="text-base font-semibold" style="color: var(--color-text-primary);">Ranking de transportistas</h3>
     </div>
     <template x-if="data.driver_ranking && data.driver_ranking.length > 0">
       <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200">
-          <thead class="bg-gray-50">
+        <table class="min-w-full divide-y" style="border-color: var(--color-border);">
+          <thead style="background: var(--color-surface);">
             <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">#</th>
-              <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Transportista</th>
-              <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Entregas</th>
-              <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Excepciones</th>
-              <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Tasa exito</th>
-              <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Paradas/hora</th>
+              <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">#</th>
+              <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Transportista</th>
+              <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Entregas</th>
+              <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Excepciones</th>
+              <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Tasa exito</th>
+              <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Paradas/hora</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-100">
+          <tbody class="divide-y" style="border-color: var(--color-border);">
             <template x-for="(driver, index) in data.driver_ranking" :key="driver.driver_email">
-              <tr class="hover:bg-gray-50 transition-colors">
-                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500" x-text="index + 1"></td>
+              <tr class="transition-colors">
+                <td class="whitespace-nowrap px-6 py-4 text-sm" style="color: var(--color-text-secondary);" x-text="index + 1"></td>
                 <td class="whitespace-nowrap px-6 py-4">
-                  <div class="text-sm font-medium text-gray-900" x-text="driver.driver_name"></div>
-                  <div class="text-xs text-gray-500" x-text="driver.driver_email"></div>
+                  <div class="text-sm font-medium" style="color: var(--color-text-primary);" x-text="driver.driver_name"></div>
+                  <div class="text-xs" style="color: var(--color-text-secondary);" x-text="driver.driver_email"></div>
                 </td>
                 <td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium text-emerald-600" x-text="driver.deliveries"></td>
                 <td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium text-red-600" x-text="driver.exceptions"></td>

@@ -61,23 +61,23 @@
 
           {# Date from #}
           <div>
-            <label for="date_from" class="block text-xs font-medium text-gray-600 mb-1">Fecha desde</label>
+            <label for="date_from" class="block text-xs font-medium mb-1" style="color: var(--color-text-secondary);">Fecha desde</label>
             <input type="date" name="date_from" id="date_from" value="{{ dateFrom }}"
-                   class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500">
+                   class="block w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500" style="border-color: var(--color-border);">
           </div>
 
           {# Date to #}
           <div>
-            <label for="date_to" class="block text-xs font-medium text-gray-600 mb-1">Fecha hasta</label>
+            <label for="date_to" class="block text-xs font-medium mb-1" style="color: var(--color-text-secondary);">Fecha hasta</label>
             <input type="date" name="date_to" id="date_to" value="{{ dateTo }}"
-                   class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500">
+                   class="block w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500" style="border-color: var(--color-border);">
           </div>
 
           {# Driver #}
           <div>
-            <label for="driver" class="block text-xs font-medium text-gray-600 mb-1">Transportista</label>
+            <label for="driver" class="block text-xs font-medium mb-1" style="color: var(--color-text-secondary);">Transportista</label>
             <select name="driver" id="driver"
-                    class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500">
+                    class="block w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500" style="border-color: var(--color-border);">
               <option value="">Todos</option>
               {% for driver in drivers %}
                 <option value="{{ driver.id }}" {% if driverId == driver.id %}selected{% endif %}>
@@ -89,9 +89,9 @@
 
           {# Customer #}
           <div>
-            <label for="customer" class="block text-xs font-medium text-gray-600 mb-1">Cliente</label>
+            <label for="customer" class="block text-xs font-medium mb-1" style="color: var(--color-text-secondary);">Cliente</label>
             <select name="customer" id="customer"
-                    class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500">
+                    class="block w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500" style="border-color: var(--color-border);">
               <option value="">Todos</option>
               {% for customer in customers %}
                 <option value="{{ customer.id }}" {% if customerId == customer.id %}selected{% endif %}>
@@ -108,7 +108,7 @@
               Aplicar
             </button>
             <a href="{{ path('admin_routes_index', currentStatus ? {status: currentStatus} : {}) }}"
-               class="inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+               class="theme-card inline-flex items-center rounded-md px-4 py-2 text-sm font-medium" style="color: var(--color-text-secondary);">
               Limpiar
             </a>
           </div>
@@ -117,33 +117,33 @@
     </div>
 
     {# Table #}
-    <div class="bg-white shadow rounded-lg overflow-x-auto">
-      <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
+    <div class="theme-card overflow-x-auto">
+      <table class="min-w-full divide-y" style="border-color: var(--color-border);">
+        <thead style="background: var(--color-surface);">
           <tr>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Nombre</th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Cliente</th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Vehiculo</th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Transportista</th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Estado</th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Progreso</th>
-            <th scope="col" class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Acciones</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Nombre</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Cliente</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Vehiculo</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Transportista</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Estado</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Progreso</th>
+            <th scope="col" class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Acciones</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-200 bg-white">
+        <tbody class="divide-y" style="border-color: var(--color-border); background: var(--color-surface-elevated);">
           {% for route in routes %}
             {% set counts = stopCounts[route.id] ?? {total: 0, delivered: 0} %}
             <tr>
-              <td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
+              <td class="whitespace-nowrap px-6 py-4 text-sm font-medium" style="color: var(--color-text-primary);">
                 {{ route.name }}
               </td>
-              <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+              <td class="whitespace-nowrap px-6 py-4 text-sm" style="color: var(--color-text-secondary);">
                 {{ route.customer ? route.customer.name : '-' }}
               </td>
-              <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+              <td class="whitespace-nowrap px-6 py-4 text-sm" style="color: var(--color-text-secondary);">
                 {{ route.vehicle ? route.vehicle.name : '-' }}
               </td>
-              <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+              <td class="whitespace-nowrap px-6 py-4 text-sm" style="color: var(--color-text-secondary);">
                 {{ route.driver ? route.driver.email : '-' }}
               </td>
               <td class="whitespace-nowrap px-6 py-4 text-sm">
@@ -157,40 +157,40 @@
                   <span class="inline-flex rounded-full bg-red-100 px-2 text-xs font-semibold leading-5 text-red-800">Cancelada</span>
                 {% endif %}
               </td>
-              <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+              <td class="whitespace-nowrap px-6 py-4 text-sm" style="color: var(--color-text-secondary);">
                 {% if counts.total > 0 %}
                   <div class="flex items-center space-x-2">
-                    <div class="w-24 bg-gray-200 rounded-full h-2">
+                    <div class="w-24 rounded-full h-2" style="background: var(--color-surface);">
                       <div class="bg-green-500 h-2 rounded-full" style="width: {{ (counts.delivered / counts.total * 100)|round }}%"></div>
                     </div>
-                    <span class="text-xs text-gray-600">{{ counts.delivered }}/{{ counts.total }} entregas</span>
+                    <span class="text-xs" style="color: var(--color-text-secondary);">{{ counts.delivered }}/{{ counts.total }} entregas</span>
                   </div>
                 {% else %}
-                  <span class="text-xs text-gray-400">Sin paradas</span>
+                  <span class="text-xs" style="color: var(--color-text-muted);">Sin paradas</span>
                 {% endif %}
               </td>
               <td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
                 <a href="{{ path('admin_routes_show', {publicId: route.publicIdString}) }}"
-                   class="text-emerald-600 hover:text-emerald-900 mr-3">Ver</a>
+                   class="text-emerald-600 hover:opacity-80 mr-3">Ver</a>
                 <a href="{{ path('admin_routes_edit', {publicId: route.publicIdString}) }}"
-                   class="text-blue-600 hover:text-blue-900 mr-3">Editar</a>
+                   class="text-blue-600 hover:opacity-80 mr-3">Editar</a>
                 {% if route.status.value == 'DONE' %}
                   <a href="{{ path('admin_routes_analysis', {publicId: route.publicIdString}) }}"
-                     class="text-emerald-600 hover:text-emerald-900 mr-3"
+                     class="text-emerald-600 hover:opacity-80 mr-3"
                      title="Ver analisis de ruta planificada vs ejecutada">Analisis</a>
                 {% endif %}
                 {% if route.status.value != 'CANCELLED' %}
                   <form method="post" action="{{ path('admin_routes_delete', {publicId: route.publicIdString}) }}" class="inline"
                         onsubmit="return confirm('Cancelar esta ruta?');">
                     <input type="hidden" name="_token" value="{{ csrf_token('delete-route-' ~ route.publicIdString) }}">
-                    <button type="submit" class="text-red-600 hover:text-red-900">Cancelar</button>
+                    <button type="submit" class="text-red-600 hover:opacity-80">Cancelar</button>
                   </form>
                 {% endif %}
               </td>
             </tr>
           {% else %}
             <tr>
-              <td colspan="7" class="px-6 py-8 text-center text-sm text-gray-500">
+              <td colspan="7" class="px-6 py-8 text-center text-sm" style="color: var(--color-text-secondary);">
                 No hay rutas registradas.
               </td>
             </tr>
@@ -202,19 +202,19 @@
     {# Pagination #}
     {% if totalPages > 1 %}
       <nav class="mt-6 flex items-center justify-between">
-        <div class="text-sm text-gray-700">
+        <div class="text-sm" style="color: var(--color-text-secondary);">
           Pagina {{ page }} de {{ totalPages }}
         </div>
         <div class="flex space-x-2">
           {% if page > 1 %}
             <a href="{{ path('admin_routes_index', filterParams|merge({page: page - 1})) }}"
-               class="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+               class="theme-card inline-flex items-center px-3 py-2 text-sm font-medium" style="color: var(--color-text-secondary);">
               Anterior
             </a>
           {% endif %}
           {% if page < totalPages %}
             <a href="{{ path('admin_routes_index', filterParams|merge({page: page + 1})) }}"
-               class="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+               class="theme-card inline-flex items-center px-3 py-2 text-sm font-medium" style="color: var(--color-text-secondary);">
               Siguiente
             </a>
           {% endif %}

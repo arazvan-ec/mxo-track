@@ -58,9 +58,9 @@
                                         {% elseif notification.type starts with 'route_assigned' %}
                                             bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-600/20
                                         {% else %}
-                                            text-gray-700 ring-1 ring-inset ring-gray-600/20
+                                            ring-1 ring-inset ring-gray-600/20
                                         {% endif %}
-                                    ">{{ notification.type }}</span>
+                                    " {% if not (notification.type starts with 'shipment_delivered' or notification.type starts with 'shipment_exception' or notification.type starts with 'vehicle_offline' or notification.type starts with 'route_assigned') %}style="color: var(--color-text-secondary);"{% endif %}>{{ notification.type }}</span>
                                 </div>
                                 <p class="mt-1 text-sm leading-5" style="color: var(--color-text-secondary);">{{ notification.message }}</p>
                                 <p class="mt-1 text-xs" style="color: var(--color-text-muted);">{{ notification.createdAt|date('d/m/Y H:i') }}</p>
