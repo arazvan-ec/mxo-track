@@ -14,25 +14,17 @@ export default defineConfig({
   build: {
     outDir: '../backend/public/app',
     emptyOutDir: true,
+    manifest: true,
     rollupOptions: {
       input: {
         main: path.resolve(__dirname, 'index.html'),
         'app-shell-widget': path.resolve(__dirname, 'app-shell-widget.html'),
       },
       output: {
-        entryFileNames: (chunkInfo) => {
-          if (chunkInfo.name === 'app-shell-widget') {
-            return 'assets/app-shell-widget.js';
-          }
-          return 'assets/[name]-[hash].js';
-        },
-        assetFileNames: (assetInfo) => {
-          // Predictable CSS name so base.html.twig can link it
-          if (assetInfo.names?.some((n: string) => n.endsWith('.css'))) {
-            return 'assets/[name][extname]';
-          }
-          return 'assets/[name]-[hash][extname]';
-        },
+        // All entries get content-hashed filenames for proper cache busting.
+        // Symfony resolves them via ViteAssetExtension + .vite/manifest.json.
+        entryFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash][extname]',
       },
     },
   },

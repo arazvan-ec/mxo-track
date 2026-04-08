@@ -3,14 +3,14 @@
 > **Auto-generated** by `make manifest` (`backend/bin/generate-manifest.sh`).
 > Do not edit manually — regenerate with `make manifest`.
 
-**Generated:** 2026-04-08 19:23
+**Generated:** 2026-04-08 23:40
 **Regenerate:** `make manifest`
 
 ## Project Overview
 
 | Area | Path | Files | Tech |
 |------|------|------:|------|
-| Backend | `backend/` | 517 PHP | Symfony 7.4, PHP 8.4 |
+| Backend | `backend/` | 518 PHP | Symfony 7.4, PHP 8.4 |
 | Frontend | `frontend/` | 130 JS/TS | React |
 | ML Service | `ml-service/` | 17 Python | FastAPI |
 | Docker/Infra | `docker/` + `scripts/` | 9 + 5 | Docker, OSRM, VROOM, Traccar |
@@ -203,6 +203,7 @@ Security
 Security/Voter
 Service
 Tracking
+Twig
 Validator
 View
 ```
