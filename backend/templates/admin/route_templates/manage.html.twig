@@ -8,8 +8,8 @@
   {# Header #}
   <div class="sm:flex sm:items-center sm:justify-between">
     <div>
-      <h1 class="text-2xl font-bold text-gray-900">Plantillas de Ruta</h1>
-      <p class="mt-1 text-sm text-gray-500">Gestiona plantillas reutilizables para la planificacion de rutas.</p>
+      <h1 class="text-2xl font-bold" style="color: var(--color-text-primary);">Plantillas de Ruta</h1>
+      <p class="mt-1 text-sm" style="color: var(--color-text-secondary);">Gestiona plantillas reutilizables para la planificacion de rutas.</p>
     </div>
     <div class="mt-4 sm:mt-0">
       <a href="{{ path('admin_route_planner_index') }}"
@@ -23,27 +23,27 @@
   </div>
 
   {# Templates table #}
-  <div class="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
+  <div class="overflow-x-auto rounded-xl shadow-sm" style="border: 1px solid var(--color-border); background: var(--color-surface-elevated);">
     {% if templates|length > 0 %}
-    <table class="min-w-full divide-y divide-gray-200">
-      <thead class="bg-gray-50">
+    <table class="min-w-full divide-y" style="border-color: var(--color-border);">
+      <thead style="background: var(--color-surface);">
         <tr>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Nombre</th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Paradas</th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Creada</th>
-          <th scope="col" class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Acciones</th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider" style="color: var(--color-text-secondary);">Nombre</th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider" style="color: var(--color-text-secondary);">Paradas</th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider" style="color: var(--color-text-secondary);">Creada</th>
+          <th scope="col" class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider" style="color: var(--color-text-secondary);">Acciones</th>
         </tr>
       </thead>
-      <tbody class="divide-y divide-gray-200">
+      <tbody class="divide-y" style="border-color: var(--color-border);">
         {% for template in templates %}
-        <tr class="hover:bg-gray-50 transition-colors" id="row-{{ template.publicIdString }}">
-          <td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">{{ template.name }}</td>
-          <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+        <tr class="transition-colors" id="row-{{ template.publicIdString }}">
+          <td class="whitespace-nowrap px-6 py-4 text-sm font-medium" style="color: var(--color-text-primary);">{{ template.name }}</td>
+          <td class="whitespace-nowrap px-6 py-4 text-sm" style="color: var(--color-text-secondary);">
             <span class="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
               {{ template.templateData|length }} paradas
             </span>
           </td>
-          <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500">{{ template.createdAt|date('d/m/Y H:i') }}</td>
+          <td class="whitespace-nowrap px-6 py-4 text-sm" style="color: var(--color-text-secondary);">{{ template.createdAt|date('d/m/Y H:i') }}</td>
           <td class="whitespace-nowrap px-6 py-4 text-right text-sm">
             <div class="flex items-center justify-end gap-2">
               <a href="{{ path('admin_route_planner_index') }}?template={{ template.publicIdString }}"

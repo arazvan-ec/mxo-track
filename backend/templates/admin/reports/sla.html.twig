@@ -332,7 +332,7 @@ function slaApp() {
       const colors = ['#ef4444', '#f97316', '#eab308', '#8b5cf6', '#64748b', '#94a3b8'];
 
       if (exceptions.length === 0) {
-        ctx.parentElement.innerHTML = '<div class="flex items-center justify-center h-full text-sm text-gray-400">Sin excepciones en el periodo</div>';
+        ctx.parentElement.innerHTML = '<div class="flex items-center justify-center h-full text-sm" style="color: var(--color-text-muted);">Sin excepciones en el periodo</div>';
         return;
       }
 
