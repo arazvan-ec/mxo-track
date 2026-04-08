@@ -13,7 +13,8 @@ export type WidgetType =
   | 'infrastructure_metrics'
   | 'dashboard_kpis'
   | 'mini_reports'
-  | 'activity_feed';
+  | 'activity_feed'
+  | 'reports_banner';
 
 export type SheetStateName = 'collapsed' | 'half' | 'full';
 

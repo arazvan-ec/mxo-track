@@ -16,6 +16,7 @@ import { InfrastructureMetricsWidget } from './InfrastructureMetricsWidget';
 import { DashboardKpisWidget } from './DashboardKpisWidget';
 import { MiniReportsWidget } from './MiniReportsWidget';
 import { ActivityFeedWidget } from './ActivityFeedWidget';
+import { ReportsBannerWidget } from './ReportsBannerWidget';
 
 export interface WidgetRegistryEntry extends WidgetRegistryMeta {
   component: ComponentType<WidgetProps>;
@@ -108,6 +109,13 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetRegistryEntry> = {
     description: 'Live position feed via Mercure SSE',
     collapsible: true,
     sectionTitle: 'Actividad en vivo',
+  },
+  reports_banner: {
+    component: ReportsBannerWidget,
+    label: 'Reports Banner',
+    description: 'CTA banner linking to reports and analytics',
+    collapsible: true,
+    sectionTitle: 'Reportes y Analítica',
   },
 };
 
