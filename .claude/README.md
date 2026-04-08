@@ -102,12 +102,12 @@ containing `user_approved = true` and reverts it — this is the enforcement mec
 The `UserPromptSubmit` hook (`user-prompt-state.sh`) is the ONLY sanctioned path:
 
 ```
-User types message → hook receives .user_prompt → strip <system-reminder> tags
+User types message → hook receives .prompt → strip <system-reminder> tags
     → lowercase → match approval regex → set user_approved = true
     → match rejection regex → set user_approved = false
 ```
 
-**Why strip system-reminder tags:** The `.user_prompt` field from the hook input may
+**Why strip system-reminder tags:** The `.prompt` field from the hook input may
 contain injected `<system-reminder>` blocks with text like "no existe spec document".
 Without stripping, the rejection regex `(no[, ]|...)` matches "no existe" and reverts
 a legitimate approval. The `sed '/<system-reminder>/,/<\/system-reminder>/d'` filter

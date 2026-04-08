@@ -4,6 +4,7 @@
 > Do not edit manually — regenerate with `make manifest`.
 
 **Generated:** 2026-04-08 00:36
+**Generated:** 2026-04-08 00:38
 **Regenerate:** `make manifest`
 
 ## Project Overview
