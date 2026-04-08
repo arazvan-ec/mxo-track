@@ -86,17 +86,6 @@ verification regenerates it post-push to capture what changed.
 
 ### Session-State: Memory That Survives Compaction
 
-#### Why a file, not conversation markers
-
-Claude Code compacts old messages when the context window fills up. Compaction is
-lossy — the model loses track of which phases it completed, what evidence it gathered,
-and where it is in a plan. Any state stored only in conversation messages is volatile.
-
-The alternative — keeping state in conversation — fails precisely when you need it most:
-long sessions with many tool calls compact aggressively, which is exactly when tracking
-"where was I?" matters. **`.claude/session-state.json` is external memory because disk
-is persistent and conversation is not.**
-
 #### How the feedback loop works
 
 The session-state participates in a loop that runs every turn:
@@ -131,19 +120,6 @@ and accumulates technical debt silently.
 
 ### Classify First (before any response)
 
-#### Why classify before anything else
-
-Without classification, the model defaults to the path of least resistance: read a file,
-edit it, move on. This skips brainstorming for features, skips root cause analysis for
-bugs, and skips verification for everything. **Classification is the mechanism that
-activates the right gates** — it writes a flow type to session-state, and hooks use that
-flow type to decide which phases are required before code edits are allowed.
-
-The alternative — "just start working and I'll figure out the flow as I go" — produces
-a consistent failure pattern: the model does 80% of the work, skips verification, and
-the user discovers the remaining 20% is broken. Classification front-loads the structure
-so the workflow engine can enforce it.
-
 #### How classification produces the right flow
 
 Classification writes to session-state → hooks read session-state → hooks block premature
@@ -169,37 +145,6 @@ Direct writes to `phase_history` via `jq` are detected and reverted. The script 
 legal sequence (no skips, no backwards) and adds timestamps automatically.
 
 ### Deviation for Wiring-Only Changes
-
-#### Why an escape valve exists
-
-The full flow (brainstorming + planning) adds 10-15 minutes of overhead. For a feature with
-design decisions, that overhead prevents rework worth hours. But for wiring changes —
-connecting an existing callback, passing a prop, adding an import — there are zero design
-decisions, so the overhead produces zero value. Calibration data confirms this: wiring
-tasks average ~15 lines, 1 file, <5 minutes (see Calibration Data section below).
-
-**The escape valve exists because the cost-benefit of the full flow inverts for trivial
-changes.** Without it, the workflow penalizes exactly the kind of quick fixes that keep
-a codebase healthy.
-
-#### Why the model cannot self-approve deviations
-
-The model has a bias toward action — when given a task, it rationalizes that the change
-is "simple enough" to skip phases. This rationalization is indistinguishable from a
-legitimate assessment because the model genuinely believes both. The failure mode was
-observed directly: the model classified a ~70-line template change as "wiring-only",
-self-approved deviation, skipped brainstorm and plan, and went straight to implementation
-— exactly the cowboy coding that the full flow exists to prevent.
-
-**Self-assessment of complexity is unreliable because the assessor and the beneficiary
-are the same entity.** The model benefits from skipping phases (less work, faster
-completion) and therefore has an incentive to classify changes as simple. This isn't
-malice — it's the same cognitive bias that makes developers say "this is a quick fix"
-before spending 3 hours on it.
-
-The fix is structural, not instructional: **move the approval decision to the user.**
-Instructions saying "be honest about complexity" are suggestions the model can override.
-A gate that requires user confirmation is a physical barrier the model cannot bypass.
 
 #### How deviation mode works
 
@@ -288,48 +233,17 @@ it's a new interaction. Increment `interaction_id`, reclassify, restart the flow
 
 ### Fix Invalidation
 
-#### Why "still broken" means start over, not continue
-
-When a fix doesn't work, the natural instinct is to build on the previous analysis: "the
-root cause was X, my fix just didn't address it completely, let me adjust." This is almost
-always wrong. **If the fix didn't work, the root cause analysis was incorrect** — the model
-anchored to a plausible-but-wrong explanation and the fix followed logically from a false
-premise.
-
-Continuing from the same analysis inherits the same false premise. The model will propose
-variations of the same wrong fix, each one "almost right," consuming time without progress.
-This is the sunk cost fallacy applied to debugging: "I've already invested in this root
-cause analysis, I can't abandon it."
-
-**Reset completely.** Treat it as a new debug interaction with fresh eyes:
+If a fix doesn't work, the root cause analysis was wrong. Don't iterate on a failed
+hypothesis — reset completely and re-examine with fresh eyes:
 
 ```bash
 jq '.interaction_id = (.interaction_id + 1) | .evidence.root_cause_identified = false | .evidence.pattern_wide_search_done = false | .evidence.tests_passed = null | .current_phase = "root_cause"' \
   .claude/session-state.json > /tmp/ss.json && mv /tmp/ss.json .claude/session-state.json
 ```
 
-The reset forces re-examination without anchoring bias. The previous analysis is not
-consulted — if it was right, fresh analysis will rediscover it. If it was wrong, fresh
-analysis won't be poisoned by it. This is the same principle as Skill 8's rule: "if 3+
-fixes failed, STOP — question the architecture."
-
 ### Workflow Engine (summary)
 
-#### Why mechanical enforcement, not just instructions
-
-The model has a bias toward action — when given a task, the impulse is to edit code
-immediately. Instructions saying "brainstorm first" are suggestions; the model can
-rationalize skipping them ("this is simple enough," "I already know the approach").
-**Hooks are gates, not suggestions.** They physically reject `Edit` calls to `src/`
-or `tests/` when prerequisite phases aren't completed in session-state.
-
-The alternative — trusting the model to self-enforce discipline — was the original
-approach. It failed consistently: ~70% of sessions skipped at least one phase when
-gates weren't present. The hooks exist because **the model cannot reliably judge when
-it's safe to skip phases.** The phases it most wants to skip (brainstorm, verification)
-are exactly the ones that catch the most errors.
-
-#### What each gate blocks and why
+#### What each gate blocks
 
 | Flow | Gate | What it prevents |
 |------|------|-----------------|
@@ -509,16 +423,6 @@ tasks total, the decomposition likely missed parallelism. Revisit Step 1.
 
 ### Task Progress Tracking
 
-#### Why track progress in session-state, not just in conversation
-
-Implementation plans have 3-15 tasks. Without tracking, the model loses its place after
-compaction — it either re-does completed tasks or skips pending ones. The status line
-hook reads `task_progress` from session-state and displays it between every tool call,
-so the user and model both know exactly which task is current even after compaction.
-
-The alternative — counting tasks manually in conversation — fails precisely when plans
-are large enough to need tracking: long sessions compact aggressively.
-
 #### How task_progress feeds the status line
 
 The model writes task_progress → the UserPromptSubmit hook reads it → the hook injects
@@ -614,8 +518,8 @@ haciendo. Ejemplo durante debug:
 - Antes de correr tests → actualizar a fase de verificación
 - Antes de push → actualizar `tests_passed`, `lint_clean`
 
-**Header de respuesta:** Inicia CADA respuesta con un header de progreso que resuma
-qué se completó con datos concretos. Formato por flow:
+**Header de respuesta:** Inicia CADA respuesta con el header que el hook inyecta en la
+línea `Header:`. Reemplaza `[...]` con datos concretos de lo completado. Ejemplos:
 ```
 💬 El endpoint devuelve 404 porque falta la ruta en routing.yaml
 📝 Light — Eliminados 2 imports no usados en RoutePlannerPage, TS limpio
@@ -623,6 +527,28 @@ qué se completó con datos concretos. Formato por flow:
 🔍 Explore — 8 controllers encontrados, 3 usan HubInterface directamente
 ✅✅🔄⬚⬚⬚⬚⬚ Planning (3/8) — Spec aprobado, 12 tareas en plan
 ```
+
+#### Why the status line is compact (not verbose)
+
+The hook output is deliberately minimal (~36 tokens/turn). Previous versions used a
+verbose format with decorators, `Evidence: key=value` pairs, and a full `DISPLAY RULE`
+template (~88 tokens/turn). Over 20 turns, that's 1,760 vs 720 tokens — a 1,000-token
+difference spent on status alone, tokens unavailable for reasoning.
+
+**Why no DISPLAY RULE per turn:** This file already instructs the response format (loaded
+once). Repeating it every turn was redundant. A one-line `Header:` template (~8 tokens)
+in the hook output serves as post-compaction reminder without the verbosity.
+
+**Why readable done/todo instead of key=value:** `Evidence: decisions=Y user_turns=2`
+is opaque — the model must decode it, the user can't read it. `✅ consult, dialogo(2)`
+communicates the same state directly. Same information, zero decoding overhead.
+
+**Why no decorators:** `── WORKFLOW STATE ──` and `────` cost ~10 tokens/turn with zero
+information. The `📍` prefix already signals status.
+
+**NUNCA revertir a formato verbose.** Si necesitas agregar información al status line,
+agrégala como una línea done/todo legible, no como key=value. Si necesitas una instrucción
+de formato, usa la línea `Header:`, no un bloque DISPLAY RULE multilínea.
 
 **Formato:** Usar prefijos emoji (✅ completado, 🔄 en curso, ⬚ pendiente, ❌ fallo)
 para que el estado sea visible de un vistazo. Idioma: español.
@@ -911,17 +837,6 @@ changed files (threshold: ≥5 files or new files in a pattern).
 
 ### This File's Hierarchy
 
-#### Why a hierarchy instead of one file
-
-This file loads in every conversation — every token here is paid on every task. Backend
-architecture rules are irrelevant when editing a Twig template. TDD rules are irrelevant
-when answering a question. **The hierarchy ensures each conversation pays only for the
-rules it needs.**
-
-The distribution follows a principle: behavioral instructions (always needed) → this
-file. Domain-specific rules (needed in context) → subdirectory files. Reference data
-(consulted on demand) → `docs/knowledge/`.
-
 ```
 CLAUDE.md              ← Philosophy, workflow, cross-cutting rules (always loaded, ~800 lines)
 AGENTS.md              ← Subagent instructions (loaded when dispatching agents)
@@ -941,11 +856,8 @@ reference data that might be stale → `docs/knowledge/`. If it's a one-time des
 
 ### Decision Log
 
-#### Why decisions are logged, not just implemented
-
-Code shows what was chosen. It doesn't show what was considered and rejected, or why.
-Without a decision log, future brainstorming re-evaluates alternatives that were already
-tried and discarded — wasting a full brainstorming cycle to re-discover a known conclusion.
+Decision logs feed future brainstorming (Step 0) — without them, the model re-evaluates
+alternatives already tried and discarded.
 
 Non-trivial design decisions go to `docs/decisions/log.md`:
 ```markdown
