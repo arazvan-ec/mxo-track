@@ -41,19 +41,28 @@ export function CollapsibleWidget({
   }, [storageKey]);
 
   return (
-    <div className="rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5 overflow-hidden">
+    <div
+      className="rounded-xl shadow-sm ring-1 overflow-hidden"
+      style={{ backgroundColor: 'var(--color-surface-elevated)', borderColor: 'var(--color-border)' }}
+    >
       {/* Header — always visible, clickable to toggle */}
       <button
         type="button"
         onClick={toggle}
-        className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-gray-50 transition-colors"
+        className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:opacity-80"
       >
         <div className="flex items-center gap-2">
-          {icon && <span className="text-gray-400">{icon}</span>}
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">{title}</h2>
+          {icon && <span style={{ color: 'var(--color-text-muted)' }}>{icon}</span>}
+          <h2
+            className="text-sm font-semibold uppercase tracking-wider"
+            style={{ color: 'var(--color-text-muted)' }}
+          >
+            {title}
+          </h2>
         </div>
         <svg
-          className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
+          className={`h-4 w-4 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
+          style={{ color: 'var(--color-text-muted)' }}
           fill="none"
           viewBox="0 0 24 24"
           strokeWidth={2}

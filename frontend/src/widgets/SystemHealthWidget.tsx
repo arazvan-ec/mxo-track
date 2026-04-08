@@ -34,20 +34,29 @@ interface ServiceCardProps {
 
 function ServiceCard({ name, ok, latencyMs, latencyThreshold, icon }: ServiceCardProps) {
   return (
-    <div className="rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5 p-4">
+    <div
+      className="rounded-xl p-4 shadow-sm ring-1"
+      style={{ backgroundColor: 'var(--color-surface-elevated)', borderColor: 'var(--color-border)' }}
+    >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${ok ? 'bg-emerald-50' : 'bg-red-50'}`}>
-            <span className={ok ? 'text-emerald-600' : 'text-red-600'}>{icon}</span>
+          <div
+            className="flex h-10 w-10 items-center justify-center rounded-lg"
+            style={{ backgroundColor: ok ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)' }}
+          >
+            <span style={{ color: ok ? 'var(--color-success)' : 'var(--color-error)' }}>{icon}</span>
           </div>
           <div>
-            <p className="text-sm font-medium text-gray-900">{name}</p>
-            <p className={`text-xs ${ok ? 'text-emerald-600' : 'text-red-600'}`}>
+            <p className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>{name}</p>
+            <p className="text-xs" style={{ color: ok ? 'var(--color-success)' : 'var(--color-error)' }}>
               {ok ? 'Conectado' : 'Sin conexión'}
             </p>
           </div>
         </div>
-        <span className={`text-xs font-mono tabular-nums ${latencyMs > latencyThreshold ? 'text-amber-600' : 'text-gray-400'}`}>
+        <span
+          className="text-xs font-mono tabular-nums"
+          style={{ color: latencyMs > latencyThreshold ? 'var(--color-warning)' : 'var(--color-text-muted)' }}
+        >
           {latencyMs}ms
         </span>
       </div>

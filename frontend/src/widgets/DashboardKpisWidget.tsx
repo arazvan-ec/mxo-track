@@ -20,15 +20,18 @@ interface KpiCardProps {
 
 function KpiCard({ label, value, bgClass, textClass, barClass, icon }: KpiCardProps) {
   return (
-    <div className="relative overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5">
+    <div
+      className="relative overflow-hidden rounded-xl shadow-sm ring-1"
+      style={{ backgroundColor: 'var(--color-surface-elevated)', borderColor: 'var(--color-border)' }}
+    >
       <div className="p-6">
         <div className="flex items-center gap-4">
           <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${bgClass}`}>
             <span className={textClass}>{icon}</span>
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-gray-500 truncate">{label}</p>
-            <p className="mt-1 text-2xl font-bold tracking-tight text-gray-900 tabular-nums">{value}</p>
+            <p className="text-sm font-medium truncate" style={{ color: 'var(--color-text-secondary)' }}>{label}</p>
+            <p className="mt-1 text-2xl font-bold tracking-tight tabular-nums" style={{ color: 'var(--color-text-primary)' }}>{value}</p>
           </div>
         </div>
       </div>
