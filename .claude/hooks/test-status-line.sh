@@ -90,8 +90,8 @@ echo "6. Full flow - consult phase"
 write_state '{"flow_type": "full", "current_phase": "consult", "deviation": {"active": false}, "evidence": {}}'
 $HOOK
 assert_contains "consult is phase 1/8" "Consult (1/8)"
-assert_contains "consult is active" "🔄 consult"
-assert_contains "pending includes brainstorming" "Pendiente: brainstorming"
+assert_contains "consult is active (emoji bar)" "🔄⬚⬚⬚⬚⬚⬚⬚"
+assert_contains "needs shown on line 2" "Need: read decisions or logs"
 
 # --- Test 7: Full flow - brainstorming ---
 echo "7. Full flow - brainstorming phase"
@@ -99,7 +99,7 @@ write_state '{"flow_type": "full", "current_phase": "brainstorming", "deviation"
 $HOOK
 assert_contains "brainstorming is phase 2/8" "Brainstorming (2/8)"
 assert_contains "consult completed" "✅ consult"
-assert_contains "brainstorming active" "🔄 brainstorming"
+assert_contains "brainstorming active (emoji bar)" "✅🔄⬚⬚⬚⬚⬚⬚"
 
 # --- Test 8: Full flow - implementation ---
 echo "8. Full flow - implementation phase"
@@ -108,7 +108,7 @@ $HOOK
 assert_contains "implementation is phase 4/8" "Implementation (4/8)"
 assert_contains "3 prior phases completed" "✅ consult"
 assert_contains "planning completed" "✅ planning"
-assert_contains "pending has verification" "Pendiente: verification"
+assert_contains "expanded: history on line 3" "✅ consult"
 
 # --- Test 9: Full flow - finalize ---
 echo "9. Full flow - finalize phase"
@@ -122,7 +122,7 @@ echo "10. Debug flow - consult phase"
 write_state '{"flow_type": "debug", "current_phase": "consult", "deviation": {"active": false}, "evidence": {"root_cause_identified": false, "pattern_wide_search_done": false}}'
 $HOOK
 assert_contains "debug consult is 1/4" "Consult (1/4)"
-assert_contains "pending has root_cause" "Pendiente: root_cause"
+assert_contains "debug bar shows active" "🔄⬚⬚⬚"
 
 # --- Test 11: Debug flow - root_cause phase ---
 echo "11. Debug flow - root_cause phase"
