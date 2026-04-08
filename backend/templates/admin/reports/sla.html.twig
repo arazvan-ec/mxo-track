@@ -162,8 +162,8 @@
                 </td>
                 <td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium text-emerald-600" x-text="driver.deliveries"></td>
                 <td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium text-red-600" x-text="driver.exceptions"></td>
-                <td class="whitespace-nowrap px-6 py-4 text-right text-sm text-gray-700" x-text="driver.success_rate + '%'"></td>
-                <td class="whitespace-nowrap px-6 py-4 text-right text-sm text-gray-700" x-text="driver.avg_stops_per_hour"></td>
+                <td class="whitespace-nowrap px-6 py-4 text-right text-sm" style="color: var(--color-text-secondary);" x-text="driver.success_rate + '%'"></td>
+                <td class="whitespace-nowrap px-6 py-4 text-right text-sm" style="color: var(--color-text-secondary);" x-text="driver.avg_stops_per_hour"></td>
               </tr>
             </template>
           </tbody>
@@ -171,7 +171,7 @@
       </div>
     </template>
     <template x-if="!data.driver_ranking || data.driver_ranking.length === 0">
-      <div class="px-6 py-12 text-center text-sm text-gray-500">
+      <div class="px-6 py-12 text-center text-sm" style="color: var(--color-text-secondary);">
         No hay datos de transportistas para el periodo seleccionado.
       </div>
     </template>
