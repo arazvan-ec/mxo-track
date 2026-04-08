@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # PostToolUse:Read|Write|Edit|Agent — Single consolidated hook.
-# Combines: auto-evidence (Read/Write/Edit) + workflow-status-line
+# Combines: auto-evidence (Read/Write/Edit) + plan-persistence + workflow-status-line
 #
 # This is the ONLY PostToolUse hook that fires on Read/Write/Edit/Agent,
 # reducing UI events from 2-3 to 1 per tool call.
@@ -94,7 +94,27 @@ if [ -f "$STATE_FILE" ]; then
 fi
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Route 2: Workflow Status Line
+# Route 2: Plan Persistence (Write/Edit only)
+# ══════════════════════════════════════════════════════════════════════════════
+
+if [[ "$TOOL_NAME" == "Write" || "$TOOL_NAME" == "Edit" ]]; then
+  PLAN_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // ""' 2>/dev/null || true)
+  if [[ "$PLAN_PATH" == /root/.claude/plans/* ]] && [ -f "$PLAN_PATH" ]; then
+    BASENAME=$(basename "$PLAN_PATH")
+    DATE=$(date +%Y-%m-%d)
+    DEST_DIR="$REPO/docs/superpowers/plans/conversation"
+    mkdir -p "$DEST_DIR"
+    DEST="$DEST_DIR/${DATE}-${BASENAME}"
+    cp "$PLAN_PATH" "$DEST" && \
+    cd "$REPO" && \
+    git add "$DEST" && \
+    git commit -m "docs: persist conversation plan ${DATE}-${BASENAME}" && \
+    git push 2>/dev/null || true
+  fi
+fi
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Route 3: Workflow Status Line
 # ══════════════════════════════════════════════════════════════════════════════
 
 STATUS_SCRIPT="$REPO/.claude/hooks/workflow-status-line.sh"
