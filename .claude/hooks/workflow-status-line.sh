@@ -70,6 +70,15 @@ fi
 STATE=$(cat "$STATE_FILE" 2>/dev/null || echo "{}")
 FLOW_TYPE=$(echo "$STATE" | jq -r '.flow_type // "null"')
 CURRENT_PHASE=$(echo "$STATE" | jq -r '.current_phase // "null"')
+
+# Suppress repeated output: compute state signature, skip cat if unchanged
+SIG_FILE="$REPO/.claude/.workflow-status-sig"
+STATE_SIG=$(echo "$STATE" | jq -Sc '[.flow_type, .current_phase, .interaction_id, .deviation.active, .evidence]' | md5sum | cut -d' ' -f1)
+PREV_SIG=""
+[ -f "$SIG_FILE" ] && PREV_SIG=$(cat "$SIG_FILE" 2>/dev/null)
+echo "$STATE_SIG" > "$SIG_FILE"
+STATE_CHANGED=true
+[ "$STATE_SIG" = "$PREV_SIG" ] && STATE_CHANGED=false
 DEV_ACTIVE=$(echo "$STATE" | jq -r '.deviation.active // false')
 
 # Evidence fields
@@ -306,7 +315,7 @@ if [ "$FLOW_TYPE" = "null" ] || [ -z "$FLOW_TYPE" ]; then
   { echo "📍 no flow declared | i#${INTERACTION_ID}${DEVIATION_SUFFIX}"
     echo "  Clasificar antes de continuar${TOOL_SUFFIX}"
   } > "$OUTPUT"
-  cat "$OUTPUT"
+  [ "$STATE_CHANGED" = true ] && cat "$OUTPUT"
   exit 0
 fi
 
@@ -470,7 +479,7 @@ if [ "$FLOW_TYPE" = "full" ]; then
     [ -n "$LINE4" ] && echo "$LINE4"
     [ -n "$LINE5" ] && echo "$LINE5"
   } > "$OUTPUT"
-  cat "$OUTPUT"
+  [ "$STATE_CHANGED" = true ] && cat "$OUTPUT"
   exit 0
 fi
 
@@ -603,7 +612,7 @@ if [ "$FLOW_TYPE" = "debug" ]; then
     [ -n "$LINE4" ] && echo "$LINE4"
     [ -n "$LINE5" ] && echo "$LINE5"
   } > "$OUTPUT"
-  cat "$OUTPUT"
+  [ "$STATE_CHANGED" = true ] && cat "$OUTPUT"
   exit 0
 fi
 
@@ -611,5 +620,5 @@ fi
 { echo "📍 ${FLOW_TYPE} | ${CURRENT_PHASE}${DEVIATION_SUFFIX}"
   echo "  ${TOOL_SUFFIX:---}"
 } > "$OUTPUT"
-cat "$OUTPUT"
+[ "$STATE_CHANGED" = true ] && cat "$OUTPUT"
 exit 0
