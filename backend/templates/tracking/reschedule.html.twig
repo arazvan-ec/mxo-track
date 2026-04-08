@@ -11,10 +11,10 @@
     }
   </script>
 </head>
-<body class="min-h-full bg-gray-50">
+<body class="min-h-full" style="background: var(--color-surface);">
 
   {# -- Header --------------------------------------------------------- #}
-  <header class="bg-white border-b border-gray-200">
+  <header style="background: var(--color-surface-elevated); border-color: var(--color-border);" class="border-b">
     <div class="mx-auto max-w-2xl px-4 py-4 flex items-center gap-3">
       <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600">
         <svg class="h-5 w-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -22,8 +22,8 @@
         </svg>
       </div>
       <div>
-        <h1 class="text-lg font-bold text-gray-900">MXO Track</h1>
-        <p class="text-xs text-gray-500">Reprogramar entrega</p>
+        <h1 class="text-lg font-bold" style="color: var(--color-text-primary);">MXO Track</h1>
+        <p class="text-xs" style="color: var(--color-text-secondary);">Reprogramar entrega</p>
       </div>
     </div>
   </header>
@@ -41,29 +41,29 @@
     {% endfor %}
 
     {# -- Shipment info ------------------------------------------------- #}
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
-      <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Referencia</p>
-      <p class="mt-1 text-xl font-bold text-gray-900">{{ shipment.reference }}</p>
-      <p class="mt-1 text-sm text-gray-500">{{ shipment.recipientName }}</p>
+    <div class="theme-card rounded-xl shadow-sm p-5 mb-6" style="border-color: var(--color-border);">
+      <p class="text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Referencia</p>
+      <p class="mt-1 text-xl font-bold" style="color: var(--color-text-primary);">{{ shipment.reference }}</p>
+      <p class="mt-1 text-sm" style="color: var(--color-text-secondary);">{{ shipment.recipientName }}</p>
     </div>
 
     {# -- Reschedule form ----------------------------------------------- #}
     <form method="post" action="{{ path('public_tracking_reschedule_submit', {trackingToken: trackingToken}) }}">
 
       {# -- Time slot cards --------------------------------------------- #}
-      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
-        <h2 class="text-sm font-semibold text-gray-900 mb-4">Selecciona una nueva franja horaria</h2>
+      <div class="theme-card rounded-xl shadow-sm p-5 mb-6" style="border-color: var(--color-border);">
+        <h2 class="text-sm font-semibold mb-4" style="color: var(--color-text-primary);">Selecciona una nueva franja horaria</h2>
 
         <div class="space-y-3">
           {% for slot in slots %}
-            <label class="relative flex items-center gap-4 rounded-lg border border-gray-200 p-4 cursor-pointer hover:border-brand-500 hover:bg-blue-50 transition-colors has-[:checked]:border-brand-600 has-[:checked]:bg-blue-50 has-[:checked]:ring-1 has-[:checked]:ring-brand-600">
+            <label class="relative flex items-center gap-4 rounded-lg border p-4 cursor-pointer hover:border-brand-500 hover:bg-blue-50 transition-colors has-[:checked]:border-brand-600 has-[:checked]:bg-blue-50 has-[:checked]:ring-1 has-[:checked]:ring-brand-600" style="border-color: var(--color-border);">
               <input type="radio" name="slot_id" value="{{ slot.publicIdString }}"
-                     class="h-4 w-4 text-brand-600 border-gray-300 focus:ring-brand-500">
+                     class="h-4 w-4 text-brand-600 focus:ring-brand-500" style="border-color: var(--color-border);">
               <div class="flex-1 min-w-0">
-                <p class="text-sm font-medium text-gray-900">
+                <p class="text-sm font-medium" style="color: var(--color-text-primary);">
                   {{ slot.slotDate|date('l d/m/Y') }}
                 </p>
-                <p class="text-sm text-gray-500">
+                <p class="text-sm" style="color: var(--color-text-secondary);">
                   {{ slot.slotStart|date('H:i') }} - {{ slot.slotEnd|date('H:i') }}
                   {% if slot.slotStart|date('H') < 13 %}
                     <span class="ml-1 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">Manana</span>
@@ -72,7 +72,7 @@
                   {% endif %}
                 </p>
               </div>
-              <svg class="w-5 h-5 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <svg class="w-5 h-5" style="color: var(--color-text-muted);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
               </svg>
             </label>
@@ -81,32 +81,34 @@
       </div>
 
       {# -- Alternative options ----------------------------------------- #}
-      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
-        <h2 class="text-sm font-semibold text-gray-900 mb-4">O elige una alternativa</h2>
+      <div class="theme-card rounded-xl shadow-sm p-5 mb-6" style="border-color: var(--color-border);">
+        <h2 class="text-sm font-semibold mb-4" style="color: var(--color-text-primary);">O elige una alternativa</h2>
 
         <div class="space-y-3">
-          <label class="relative flex items-center gap-4 rounded-lg border border-gray-200 p-4 cursor-pointer hover:border-brand-500 hover:bg-blue-50 transition-colors has-[:checked]:border-brand-600 has-[:checked]:bg-blue-50 has-[:checked]:ring-1 has-[:checked]:ring-brand-600">
+          <label class="relative flex items-center gap-4 rounded-lg border p-4 cursor-pointer hover:border-brand-500 hover:bg-blue-50 transition-colors has-[:checked]:border-brand-600 has-[:checked]:bg-blue-50 has-[:checked]:ring-1 has-[:checked]:ring-brand-600" style="border-color: var(--color-border);">
             <input type="radio" name="alternative_option" value="porteria"
-                   class="h-4 w-4 text-brand-600 border-gray-300 focus:ring-brand-500"
+                   class="h-4 w-4 text-brand-600 focus:ring-brand-500"
+                   style="border-color: var(--color-border);"
                    onclick="document.querySelectorAll('input[name=slot_id]').forEach(r => r.checked = false)">
             <div class="flex-1 min-w-0">
-              <p class="text-sm font-medium text-gray-900">Dejar en porteria</p>
-              <p class="text-sm text-gray-500">El paquete se dejara con el portero del edificio</p>
+              <p class="text-sm font-medium" style="color: var(--color-text-primary);">Dejar en porteria</p>
+              <p class="text-sm" style="color: var(--color-text-secondary);">El paquete se dejara con el portero del edificio</p>
             </div>
-            <svg class="w-5 h-5 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg class="w-5 h-5" style="color: var(--color-text-muted);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z"/>
             </svg>
           </label>
 
-          <label class="relative flex items-center gap-4 rounded-lg border border-gray-200 p-4 cursor-pointer hover:border-brand-500 hover:bg-blue-50 transition-colors has-[:checked]:border-brand-600 has-[:checked]:bg-blue-50 has-[:checked]:ring-1 has-[:checked]:ring-brand-600">
+          <label class="relative flex items-center gap-4 rounded-lg border p-4 cursor-pointer hover:border-brand-500 hover:bg-blue-50 transition-colors has-[:checked]:border-brand-600 has-[:checked]:bg-blue-50 has-[:checked]:ring-1 has-[:checked]:ring-brand-600" style="border-color: var(--color-border);">
             <input type="radio" name="alternative_option" value="vecino"
-                   class="h-4 w-4 text-brand-600 border-gray-300 focus:ring-brand-500"
+                   class="h-4 w-4 text-brand-600 focus:ring-brand-500"
+                   style="border-color: var(--color-border);"
                    onclick="document.querySelectorAll('input[name=slot_id]').forEach(r => r.checked = false)">
             <div class="flex-1 min-w-0">
-              <p class="text-sm font-medium text-gray-900">Dejar con vecino</p>
-              <p class="text-sm text-gray-500">El paquete se entregara a un vecino cercano</p>
+              <p class="text-sm font-medium" style="color: var(--color-text-primary);">Dejar con vecino</p>
+              <p class="text-sm" style="color: var(--color-text-secondary);">El paquete se entregara a un vecino cercano</p>
             </div>
-            <svg class="w-5 h-5 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg class="w-5 h-5" style="color: var(--color-text-muted);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"/>
             </svg>
           </label>
@@ -116,7 +118,8 @@
       {# -- Submit ------------------------------------------------------ #}
       <div class="flex gap-3">
         <a href="{{ path('public_tracking', {trackingToken: trackingToken}) }}"
-           class="flex-1 inline-flex justify-center rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50">
+           class="flex-1 inline-flex justify-center rounded-lg border px-4 py-3 text-sm font-semibold shadow-sm"
+           style="border-color: var(--color-border); background: var(--color-surface-elevated); color: var(--color-text-secondary);">
           Volver
         </a>
         <button type="submit"
@@ -129,7 +132,7 @@
   </main>
 
   <footer class="text-center py-6">
-    <p class="text-xs text-gray-400">MXO Track - Plataforma de seguimiento logistico</p>
+    <p class="text-xs" style="color: var(--color-text-muted);">MXO Track - Plataforma de seguimiento logistico</p>
   </footer>
 
   <script>

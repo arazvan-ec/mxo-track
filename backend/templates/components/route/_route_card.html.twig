@@ -14,21 +14,21 @@
 {% set showValidation = showValidation|default(false) %}
 {% set showOriginalOrder = showOriginalOrder|default(false) %}
 
-<div class="rounded-lg border border-gray-200 bg-white overflow-hidden" x-data="{ expanded: true }">
+<div class="rounded-lg border overflow-hidden" style="border-color: var(--color-border); background: var(--color-surface-elevated);" x-data="{ expanded: true }">
   {# Header #}
-  <div class="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-50"
+  <div class="flex items-center justify-between px-4 py-3 cursor-pointer hover:opacity-80"
        @click="expanded = !expanded">
     <div class="flex items-center gap-3">
       {# Color indicator #}
       <div class="w-3 h-3 rounded-full flex-shrink-0" style="background-color: {{ route.color|default('#3b82f6') }};"></div>
-      <h4 class="text-sm font-semibold text-gray-900">{{ route.name|default('Ruta') }}</h4>
+      <h4 class="text-sm font-semibold" style="color: var(--color-text-primary);">{{ route.name|default('Ruta') }}</h4>
       {% if route.vehicleName is defined and route.vehicleName %}
-        <span class="text-xs text-gray-500">{{ route.vehicleName }}</span>
+        <span class="text-xs" style="color: var(--color-text-secondary);">{{ route.vehicleName }}</span>
       {% endif %}
 
       {# Toggle visibility on map #}
       {% if mapId is defined and routeIndex is defined %}
-      <label class="flex items-center gap-1 text-xs text-gray-500 cursor-pointer" @click.stop>
+      <label class="flex items-center gap-1 text-xs cursor-pointer" style="color: var(--color-text-secondary);" @click.stop>
         <input type="checkbox" checked class="w-3.5 h-3.5"
                onchange="window['mxoMap_{{ mapId }}'] && window['mxoMap_{{ mapId }}'].toggleRoute({{ routeIndex }}, this.checked)">
         Mapa
@@ -37,29 +37,29 @@
     </div>
 
     <div class="flex items-center gap-2">
-      <span class="text-xs text-gray-500">{{ route.stops|default([])|length }} paradas</span>
-      <svg class="h-4 w-4 text-gray-400 transition-transform" :class="expanded ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+      <span class="text-xs" style="color: var(--color-text-secondary);">{{ route.stops|default([])|length }} paradas</span>
+      <svg class="h-4 w-4 transition-transform" style="color: var(--color-text-muted);" :class="expanded ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
       </svg>
     </div>
   </div>
 
   <div x-show="expanded" x-collapse>
-    <div class="border-t border-gray-100 px-4 py-3 space-y-4">
+    <div class="border-t px-4 py-3 space-y-4" style="border-color: var(--color-border);">
 
       {# Metrics #}
       {% if showMetrics and route.metrics is defined and route.metrics %}
       <div class="grid grid-cols-3 gap-3">
         <div>
-          <p class="text-xs text-gray-500">Dist. antes</p>
-          <p class="text-sm font-semibold text-gray-700">{{ route.metrics.distanceBeforeKm is defined ? route.metrics.distanceBeforeKm|number_format(1) : '—' }} km</p>
+          <p class="text-xs" style="color: var(--color-text-secondary);">Dist. antes</p>
+          <p class="text-sm font-semibold" style="color: var(--color-text-secondary);">{{ route.metrics.distanceBeforeKm is defined ? route.metrics.distanceBeforeKm|number_format(1) : '—' }} km</p>
         </div>
         <div>
-          <p class="text-xs text-gray-500">Dist. despues</p>
+          <p class="text-xs" style="color: var(--color-text-secondary);">Dist. despues</p>
           <p class="text-sm font-semibold text-blue-600">{{ route.metrics.distanceAfterKm is defined ? route.metrics.distanceAfterKm|number_format(1) : '—' }} km</p>
         </div>
         <div>
-          <p class="text-xs text-gray-500">Ahorro</p>
+          <p class="text-xs" style="color: var(--color-text-secondary);">Ahorro</p>
           <p class="text-sm font-semibold text-green-600">{{ route.metrics.savingsPercent is defined ? route.metrics.savingsPercent|number_format(1) : '0' }}%</p>
         </div>
       </div>
@@ -69,16 +69,16 @@
       {% if showTiming and route.timing is defined and route.timing %}
       <div class="grid grid-cols-3 gap-3">
         <div>
-          <p class="text-xs text-gray-500">Conduccion</p>
-          <p class="text-sm font-semibold text-gray-700">{{ route.timing.drivingTimeMinutes|default(0) }} min</p>
+          <p class="text-xs" style="color: var(--color-text-secondary);">Conduccion</p>
+          <p class="text-sm font-semibold" style="color: var(--color-text-secondary);">{{ route.timing.drivingTimeMinutes|default(0) }} min</p>
         </div>
         <div>
-          <p class="text-xs text-gray-500">Entregas</p>
-          <p class="text-sm font-semibold text-gray-700">{{ route.timing.deliveryTimeMinutes|default(0) }} min</p>
+          <p class="text-xs" style="color: var(--color-text-secondary);">Entregas</p>
+          <p class="text-sm font-semibold" style="color: var(--color-text-secondary);">{{ route.timing.deliveryTimeMinutes|default(0) }} min</p>
         </div>
         <div>
-          <p class="text-xs text-gray-500">Total</p>
-          <p class="text-sm font-semibold text-gray-900">{{ route.timing.totalTimeMinutes|default(0) }} min</p>
+          <p class="text-xs" style="color: var(--color-text-secondary);">Total</p>
+          <p class="text-sm font-semibold" style="color: var(--color-text-primary);">{{ route.timing.totalTimeMinutes|default(0) }} min</p>
         </div>
       </div>
       {% endif %}
@@ -105,8 +105,8 @@
             {% if stop.status|default('PENDING') == 'DELIVERED' %}{% set statusColor = 'text-green-600' %}
             {% elseif stop.status|default('PENDING') == 'EXCEPTION' %}{% set statusColor = 'text-red-600' %}{% endif %}
             <span class="{{ statusColor }} font-mono font-bold w-5 text-right">{{ stop.sequence }}</span>
-            <span class="text-gray-700 truncate flex-1">{{ stop.recipientName|default(stop.address) }}</span>
-            <span class="text-gray-400 truncate max-w-[200px]">{{ stop.address }}</span>
+            <span class="truncate flex-1" style="color: var(--color-text-secondary);">{{ stop.recipientName|default(stop.address) }}</span>
+            <span class="truncate max-w-[200px]" style="color: var(--color-text-muted);">{{ stop.address }}</span>
           </div>
           {% endif %}
         {% endfor %}
@@ -115,13 +115,13 @@
       {# Original order comparison #}
       {% if showOriginalOrder and route.originalStops is defined and route.originalStops %}
       <details class="text-xs">
-        <summary class="cursor-pointer text-gray-500 hover:text-gray-700">Ver orden original</summary>
-        <div class="mt-2 space-y-1 pl-2 border-l-2 border-gray-200">
+        <summary class="cursor-pointer hover:opacity-80" style="color: var(--color-text-secondary);">Ver orden original</summary>
+        <div class="mt-2 space-y-1 pl-2 border-l-2" style="border-color: var(--color-border);">
           {% for os in route.originalStops %}
             {% if not os.isOrigin|default(false) %}
             <div class="flex items-center gap-2">
-              <span class="text-gray-400 font-mono w-5 text-right">{{ os.sequence }}</span>
-              <span class="text-gray-600">{{ os.recipientName|default(os.address) }}</span>
+              <span class="font-mono w-5 text-right" style="color: var(--color-text-muted);">{{ os.sequence }}</span>
+              <span style="color: var(--color-text-secondary);">{{ os.recipientName|default(os.address) }}</span>
             </div>
             {% endif %}
           {% endfor %}

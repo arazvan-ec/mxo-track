@@ -9,55 +9,55 @@
       </a>
     </div>
 
-    <h1 class="text-2xl font-bold text-gray-900 mb-6">
+    <h1 class="text-2xl font-bold mb-6" style="color: var(--color-text-primary);">
       {{ editedUser.id ? 'Editar usuario' : 'Nuevo usuario' }}
     </h1>
 
-    <div class="bg-white shadow sm:rounded-lg">
+    <div class="theme-card">
       {{ form_start(form, {attr: {class: 'space-y-6 p-6'}}) }}
 
         <div>
-          {{ form_label(form.name, null, {label_attr: {class: 'block text-sm font-medium text-gray-700 mb-1'}}) }}
+          {{ form_label(form.name, null, {label_attr: {class: 'block text-sm font-medium mb-1', style: 'color: var(--color-text-secondary);'}}) }}
           {{ form_widget(form.name) }}
           {{ form_errors(form.name) }}
         </div>
 
         <div>
-          {{ form_label(form.email, null, {label_attr: {class: 'block text-sm font-medium text-gray-700 mb-1'}}) }}
+          {{ form_label(form.email, null, {label_attr: {class: 'block text-sm font-medium mb-1', style: 'color: var(--color-text-secondary);'}}) }}
           {{ form_widget(form.email) }}
           {{ form_errors(form.email) }}
         </div>
 
         <div>
-          {{ form_label(form.plainPassword, null, {label_attr: {class: 'block text-sm font-medium text-gray-700 mb-1'}}) }}
+          {{ form_label(form.plainPassword, null, {label_attr: {class: 'block text-sm font-medium mb-1', style: 'color: var(--color-text-secondary);'}}) }}
           {{ form_widget(form.plainPassword) }}
           {{ form_errors(form.plainPassword) }}
           {% if editedUser.id %}
-            <p class="mt-1 text-xs text-gray-500">Dejar vacio para mantener la contrasena actual.</p>
+            <p class="mt-1 text-xs" style="color: var(--color-text-secondary);">Dejar vacio para mantener la contrasena actual.</p>
           {% endif %}
         </div>
 
         <div>
-          {{ form_label(form.role, null, {label_attr: {class: 'block text-sm font-medium text-gray-700 mb-1'}}) }}
+          {{ form_label(form.role, null, {label_attr: {class: 'block text-sm font-medium mb-1', style: 'color: var(--color-text-secondary);'}}) }}
           {{ form_widget(form.role) }}
           {{ form_errors(form.role) }}
         </div>
 
         <div>
-          {{ form_label(form.customer, null, {label_attr: {class: 'block text-sm font-medium text-gray-700 mb-1'}}) }}
+          {{ form_label(form.customer, null, {label_attr: {class: 'block text-sm font-medium mb-1', style: 'color: var(--color-text-secondary);'}}) }}
           {{ form_widget(form.customer) }}
           {{ form_errors(form.customer) }}
         </div>
 
         <div class="flex items-center">
-          {{ form_widget(form.isActive, {attr: {class: 'h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500'}}) }}
-          {{ form_label(form.isActive, null, {label_attr: {class: 'ml-2 block text-sm text-gray-700'}}) }}
+          {{ form_widget(form.isActive, {attr: {class: 'h-4 w-4 rounded text-blue-600 focus:ring-blue-500', style: 'border-color: var(--color-border);'}}) }}
+          {{ form_label(form.isActive, null, {label_attr: {class: 'ml-2 block text-sm', style: 'color: var(--color-text-secondary);'}}) }}
           {{ form_errors(form.isActive) }}
         </div>
 
-        <div class="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200">
+        <div class="flex items-center justify-end space-x-3 pt-4 border-t" style="border-color: var(--color-border);">
           <a href="{{ path('admin_users_index') }}"
-             class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+             class="rounded-md border px-4 py-2 text-sm font-medium" style="border-color: var(--color-border); background: var(--color-surface-elevated); color: var(--color-text-secondary);">
             Cancelar
           </a>
           <button type="submit"

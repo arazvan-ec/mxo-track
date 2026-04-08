@@ -96,13 +96,13 @@
         <div class="flex space-x-2">
           {% if page > 1 %}
             <a href="{{ path('admin_vehicles_index', {page: page - 1}) }}"
-               class="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+               class="theme-card inline-flex items-center px-3 py-2 text-sm font-medium" style="color: var(--color-text-secondary);">
               Anterior
             </a>
           {% endif %}
           {% if page < totalPages %}
             <a href="{{ path('admin_vehicles_index', {page: page + 1}) }}"
-               class="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+               class="theme-card inline-flex items-center px-3 py-2 text-sm font-medium" style="color: var(--color-text-secondary);">
               Siguiente
             </a>
           {% endif %}

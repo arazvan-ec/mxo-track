@@ -5,10 +5,10 @@
 {% block breadcrumbs %}
   <li>
     <div class="flex items-center">
-      <svg class="h-5 w-5 shrink-0 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+      <svg class="h-5 w-5 shrink-0" style="color: var(--color-text-muted);" viewBox="0 0 20 20" fill="currentColor">
         <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd"/>
       </svg>
-      <span class="ml-2 text-sm font-medium text-gray-500">Panel de control</span>
+      <span class="ml-2 text-sm font-medium" style="color: var(--color-text-secondary);">Panel de control</span>
     </div>
   </li>
 {% endblock %}
@@ -19,31 +19,31 @@
   {# ── Header ──────────────────────────────────────────────────────── #}
   <div class="mb-8 flex items-center justify-between">
     <div>
-      <h1 class="text-2xl font-bold text-gray-900">Panel de control</h1>
-      <p class="mt-1 text-sm text-gray-500">{{ customer.name }}</p>
+      <h1 class="text-2xl font-bold" style="color: var(--color-text-primary);">Panel de control</h1>
+      <p class="mt-1 text-sm" style="color: var(--color-text-secondary);">{{ customer.name }}</p>
     </div>
     <div class="flex items-center gap-3">
-      <div class="flex items-center gap-2 rounded-full bg-gray-50 px-3 py-1.5 ring-1 ring-gray-200">
+      <div class="flex items-center gap-2 rounded-full px-3 py-1.5 ring-1" style="background: var(--color-surface); border-color: var(--color-border);">
         <span class="relative flex h-2 w-2">
           <span class="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"
                 :class="sseConnected ? 'bg-emerald-400' : 'bg-gray-400'"></span>
           <span class="relative inline-flex h-2 w-2 rounded-full"
                 :class="sseConnected ? 'bg-emerald-500' : 'bg-gray-400'"></span>
         </span>
-        <span class="text-xs font-medium text-gray-600" x-text="sseConnected ? 'En vivo' : 'Conectando...'"></span>
+        <span class="text-xs font-medium" style="color: var(--color-text-secondary);" x-text="sseConnected ? 'En vivo' : 'Conectando...'"></span>
       </div>
-      <span class="text-xs text-gray-400" x-text="lastRefresh ? 'Actualizado ' + lastRefresh : ''"></span>
+      <span class="text-xs" style="color: var(--color-text-muted);" x-text="lastRefresh ? 'Actualizado ' + lastRefresh : ''"></span>
     </div>
   </div>
 
   {# ── KPI Cards ───────────────────────────────────────────────────── #}
   <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 mb-8">
 
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+    <div class="theme-card rounded-xl p-6">
       <div class="flex items-center justify-between">
         <div>
-          <p class="text-sm font-medium text-gray-500">Envios totales</p>
-          <p class="text-3xl font-bold text-gray-900 mt-1 transition-all duration-500" x-text="kpis.total_shipments"></p>
+          <p class="text-sm font-medium" style="color: var(--color-text-secondary);">Envios totales</p>
+          <p class="text-3xl font-bold mt-1 transition-all duration-500" style="color: var(--color-text-primary);" x-text="kpis.total_shipments"></p>
         </div>
         <div class="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
           <svg class="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -53,11 +53,11 @@
       </div>
     </div>
 
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+    <div class="theme-card rounded-xl p-6">
       <div class="flex items-center justify-between">
         <div>
-          <p class="text-sm font-medium text-gray-500">Rutas activas</p>
-          <p class="text-3xl font-bold text-gray-900 mt-1 transition-all duration-500" x-text="kpis.active_routes"></p>
+          <p class="text-sm font-medium" style="color: var(--color-text-secondary);">Rutas activas</p>
+          <p class="text-3xl font-bold mt-1 transition-all duration-500" style="color: var(--color-text-primary);" x-text="kpis.active_routes"></p>
         </div>
         <div class="w-12 h-12 bg-amber-50 rounded-lg flex items-center justify-center">
           <svg class="w-6 h-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -67,11 +67,11 @@
       </div>
     </div>
 
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+    <div class="theme-card rounded-xl p-6">
       <div class="flex items-center justify-between">
         <div>
-          <p class="text-sm font-medium text-gray-500">Entregas pendientes</p>
-          <p class="text-3xl font-bold text-gray-900 mt-1 transition-all duration-500" x-text="kpis.pending_deliveries"></p>
+          <p class="text-sm font-medium" style="color: var(--color-text-secondary);">Entregas pendientes</p>
+          <p class="text-3xl font-bold mt-1 transition-all duration-500" style="color: var(--color-text-primary);" x-text="kpis.pending_deliveries"></p>
         </div>
         <div class="w-12 h-12 bg-slate-50 rounded-lg flex items-center justify-center">
           <svg class="w-6 h-6 text-slate-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -81,11 +81,11 @@
       </div>
     </div>
 
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+    <div class="theme-card rounded-xl p-6">
       <div class="flex items-center justify-between">
         <div>
-          <p class="text-sm font-medium text-gray-500">Completadas hoy</p>
-          <p class="text-3xl font-bold text-gray-900 mt-1 transition-all duration-500" x-text="kpis.completed_today"></p>
+          <p class="text-sm font-medium" style="color: var(--color-text-secondary);">Completadas hoy</p>
+          <p class="text-3xl font-bold mt-1 transition-all duration-500" style="color: var(--color-text-primary);" x-text="kpis.completed_today"></p>
         </div>
         <div class="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
           <svg class="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -95,11 +95,11 @@
       </div>
     </div>
 
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+    <div class="theme-card rounded-xl p-6">
       <div class="flex items-center justify-between">
         <div>
-          <p class="text-sm font-medium text-gray-500">Excepciones</p>
-          <p class="text-3xl font-bold text-gray-900 mt-1 transition-all duration-500" x-text="kpis.exceptions"></p>
+          <p class="text-sm font-medium" style="color: var(--color-text-secondary);">Excepciones</p>
+          <p class="text-3xl font-bold mt-1 transition-all duration-500" style="color: var(--color-text-primary);" x-text="kpis.exceptions"></p>
         </div>
         <div class="w-12 h-12 bg-rose-50 rounded-lg flex items-center justify-center">
           <svg class="w-6 h-6 text-rose-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -115,12 +115,12 @@
   {% if optimizationKpis.routes_with_metrics > 0 %}
   <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
 
-    <div class="bg-white rounded-xl shadow-sm border border-emerald-100 p-6">
+    <div class="rounded-xl shadow-sm border border-emerald-100 p-6" style="background: var(--color-surface-elevated);">
       <div class="flex items-center justify-between">
         <div>
-          <p class="text-sm font-medium text-gray-500">Km ahorrados (mes)</p>
+          <p class="text-sm font-medium" style="color: var(--color-text-secondary);">Km ahorrados (mes)</p>
           <p class="text-3xl font-bold text-emerald-700 mt-1 transition-all duration-500" x-text="optKpis.monthly_km_saved ? parseFloat(optKpis.monthly_km_saved).toFixed(1) : '0'"></p>
-          <p class="text-xs text-gray-400 mt-1">Total: <span x-text="optKpis.total_km_saved ? parseFloat(optKpis.total_km_saved).toFixed(1) + ' km' : 'N/A'"></span></p>
+          <p class="text-xs mt-1" style="color: var(--color-text-muted);">Total: <span x-text="optKpis.total_km_saved ? parseFloat(optKpis.total_km_saved).toFixed(1) + ' km' : 'N/A'"></span></p>
         </div>
         <div class="w-12 h-12 bg-emerald-50 rounded-lg flex items-center justify-center">
           <svg class="w-6 h-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -130,12 +130,12 @@
       </div>
     </div>
 
-    <div class="bg-white rounded-xl shadow-sm border border-emerald-100 p-6">
+    <div class="rounded-xl shadow-sm border border-emerald-100 p-6" style="background: var(--color-surface-elevated);">
       <div class="flex items-center justify-between">
         <div>
-          <p class="text-sm font-medium text-gray-500">Tiempo ahorrado (mes)</p>
+          <p class="text-sm font-medium" style="color: var(--color-text-secondary);">Tiempo ahorrado (mes)</p>
           <p class="text-3xl font-bold text-emerald-700 mt-1 transition-all duration-500" x-text="optKpis.monthly_time_saved_minutes ? Math.round(optKpis.monthly_time_saved_minutes / 60) + 'h' : '0h'"></p>
-          <p class="text-xs text-gray-400 mt-1">Total: <span x-text="optKpis.total_time_saved_minutes ? Math.round(optKpis.total_time_saved_minutes / 60) + ' hrs' : 'N/A'"></span></p>
+          <p class="text-xs mt-1" style="color: var(--color-text-muted);">Total: <span x-text="optKpis.total_time_saved_minutes ? Math.round(optKpis.total_time_saved_minutes / 60) + ' hrs' : 'N/A'"></span></p>
         </div>
         <div class="w-12 h-12 bg-emerald-50 rounded-lg flex items-center justify-center">
           <svg class="w-6 h-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -145,10 +145,10 @@
       </div>
     </div>
 
-    <div class="bg-white rounded-xl shadow-sm border border-emerald-100 p-6">
+    <div class="rounded-xl shadow-sm border border-emerald-100 p-6" style="background: var(--color-surface-elevated);">
       <div class="flex items-center justify-between">
         <div>
-          <p class="text-sm font-medium text-gray-500">Tasa de entrega</p>
+          <p class="text-sm font-medium" style="color: var(--color-text-secondary);">Tasa de entrega</p>
           <p class="text-3xl font-bold text-emerald-700 mt-1 transition-all duration-500" x-text="optKpis.avg_delivery_success_rate ? parseFloat(optKpis.avg_delivery_success_rate).toFixed(1) + '%' : 'N/A'"></p>
         </div>
         <div class="w-12 h-12 bg-emerald-50 rounded-lg flex items-center justify-center">
@@ -159,12 +159,12 @@
       </div>
     </div>
 
-    <div class="bg-white rounded-xl shadow-sm border border-emerald-100 p-6">
+    <div class="rounded-xl shadow-sm border border-emerald-100 p-6" style="background: var(--color-surface-elevated);">
       <div class="flex items-center justify-between">
         <div>
-          <p class="text-sm font-medium text-gray-500">Ahorro promedio</p>
+          <p class="text-sm font-medium" style="color: var(--color-text-secondary);">Ahorro promedio</p>
           <p class="text-3xl font-bold text-emerald-700 mt-1 transition-all duration-500" x-text="optKpis.avg_savings_percent ? parseFloat(optKpis.avg_savings_percent).toFixed(1) + '%' : 'N/A'"></p>
-          <p class="text-xs text-gray-400 mt-1"><span x-text="optKpis.routes_with_metrics"></span> rutas analizadas</p>
+          <p class="text-xs mt-1" style="color: var(--color-text-muted);"><span x-text="optKpis.routes_with_metrics"></span> rutas analizadas</p>
         </div>
         <div class="w-12 h-12 bg-emerald-50 rounded-lg flex items-center justify-center">
           <svg class="w-6 h-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -180,7 +180,7 @@
   {# ── Active Routes Section ───────────────────────────────────────── #}
   <div class="mb-8">
     <div class="flex items-center justify-between mb-4">
-      <h2 class="text-lg font-semibold text-gray-900">Rutas activas</h2>
+      <h2 class="text-lg font-semibold" style="color: var(--color-text-primary);">Rutas activas</h2>
       <a href="{{ path('customer_routes_index', {status: 'ACTIVE'}) }}"
          class="text-sm font-medium text-brand-600 hover:text-brand-500">
         Ver todas
@@ -192,11 +192,11 @@
         {% for route in activeRoutes %}
           {% set progress = activeRouteProgress[route.id] ?? {total: 0, delivered: 0} %}
           <a href="{{ path('customer_routes_show', {publicId: route.publicIdString}) }}"
-             class="block bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow">
+             class="block theme-card rounded-xl p-5 hover:shadow-md transition-shadow">
             <div class="flex items-start justify-between mb-3">
               <div>
-                <h3 class="text-sm font-semibold text-gray-900">{{ route.name }}</h3>
-                <p class="text-xs text-gray-500 mt-0.5">
+                <h3 class="text-sm font-semibold" style="color: var(--color-text-primary);">{{ route.name }}</h3>
+                <p class="text-xs mt-0.5" style="color: var(--color-text-secondary);">
                   {% if route.vehicle %}{{ route.vehicle.name }}{% else %}Sin vehiculo{% endif %}
                   {% if route.driver %} &middot; {{ route.driver.email }}{% endif %}
                 </p>
@@ -206,63 +206,63 @@
 
             {% if progress.total > 0 %}
               <div class="mt-3">
-                <div class="flex items-center justify-between text-xs text-gray-500 mb-1">
+                <div class="flex items-center justify-between text-xs mb-1" style="color: var(--color-text-secondary);"
                   <span>Progreso</span>
                   <span>{{ progress.delivered }}/{{ progress.total }} entregas</span>
                 </div>
-                <div class="w-full bg-gray-200 rounded-full h-2">
+                <div class="w-full rounded-full h-2" style="background: var(--color-surface);"
                   <div class="bg-green-500 h-2 rounded-full transition-all" style="width: {{ (progress.delivered / progress.total * 100)|round }}%"></div>
                 </div>
               </div>
             {% else %}
-              <p class="mt-3 text-xs text-gray-400">Sin paradas asignadas</p>
+              <p class="mt-3 text-xs" style="color: var(--color-text-muted);">Sin paradas asignadas</p>
             {% endif %}
           </a>
         {% endfor %}
       </div>
     {% else %}
-      <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
-        <svg class="mx-auto h-10 w-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+      <div class="theme-card rounded-xl p-8 text-center">
+        <svg class="mx-auto h-10 w-10" style="color: var(--color-text-muted);" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"/>
         </svg>
-        <p class="mt-2 text-sm text-gray-500">No hay rutas activas en este momento.</p>
+        <p class="mt-2 text-sm" style="color: var(--color-text-secondary);">No hay rutas activas en este momento.</p>
       </div>
     {% endif %}
   </div>
 
   {# ── Quick Links ─────────────────────────────────────────────────── #}
   <div>
-    <h2 class="text-lg font-semibold text-gray-900 mb-4">Acceso rapido</h2>
+    <h2 class="text-lg font-semibold mb-4" style="color: var(--color-text-primary);">Acceso rapido</h2>
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
 
       <a href="{{ path('customer_routes_index') }}"
-         class="flex items-center gap-4 bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow">
+         class="flex items-center gap-4 theme-card rounded-xl p-5 hover:shadow-md transition-shadow">
         <div class="w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center shrink-0">
           <svg class="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z"/>
           </svg>
         </div>
         <div>
-          <p class="text-sm font-semibold text-gray-900">Ver rutas</p>
-          <p class="text-xs text-gray-500">Todas las rutas asignadas</p>
+          <p class="text-sm font-semibold" style="color: var(--color-text-primary);">Ver rutas</p>
+          <p class="text-xs" style="color: var(--color-text-secondary);">Todas las rutas asignadas</p>
         </div>
       </a>
 
       <a href="{{ path('customer_shipments_index') }}"
-         class="flex items-center gap-4 bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow">
+         class="flex items-center gap-4 theme-card rounded-xl p-5 hover:shadow-md transition-shadow">
         <div class="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center shrink-0">
           <svg class="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"/>
           </svg>
         </div>
         <div>
-          <p class="text-sm font-semibold text-gray-900">Ver envios</p>
-          <p class="text-xs text-gray-500">Historial de envios</p>
+          <p class="text-sm font-semibold" style="color: var(--color-text-primary);">Ver envios</p>
+          <p class="text-xs" style="color: var(--color-text-secondary);">Historial de envios</p>
         </div>
       </a>
 
       <a href="{{ path('fleet_map') }}"
-         class="flex items-center gap-4 bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow">
+         class="flex items-center gap-4 theme-card rounded-xl p-5 hover:shadow-md transition-shadow">
         <div class="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center shrink-0">
           <svg class="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -270,8 +270,8 @@
           </svg>
         </div>
         <div>
-          <p class="text-sm font-semibold text-gray-900">Mapa en vivo</p>
-          <p class="text-xs text-gray-500">Posicion de vehiculos</p>
+          <p class="text-sm font-semibold" style="color: var(--color-text-primary);">Mapa en vivo</p>
+          <p class="text-xs" style="color: var(--color-text-secondary);">Posicion de vehiculos</p>
         </div>
       </a>
 

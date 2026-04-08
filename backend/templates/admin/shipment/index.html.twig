@@ -6,8 +6,8 @@
     {# Header #}
     <div class="mb-6 flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">Envios</h1>
-        <p class="mt-1 text-sm text-gray-500">{{ total }} envio{{ total != 1 ? 's' : '' }} en total</p>
+        <h1 class="text-2xl font-bold" style="color: var(--color-text-primary);">Envios</h1>
+        <p class="mt-1 text-sm" style="color: var(--color-text-secondary);">{{ total }} envio{{ total != 1 ? 's' : '' }} en total</p>
       </div>
       <a href="{{ path('admin_shipments_new') }}"
          class="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
@@ -18,9 +18,9 @@
     {# Customer filter #}
     <div class="mb-4">
       <form method="get" action="{{ path('admin_shipments_index') }}" class="flex items-center gap-3">
-        <label for="customer" class="text-sm font-medium text-gray-700">Filtrar por cliente:</label>
+        <label for="customer" class="text-sm font-medium" style="color: var(--color-text-secondary);">Filtrar por cliente:</label>
         <select name="customer" id="customer" onchange="this.form.submit()"
-                class="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                class="rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" style="border-color: var(--color-border);">
           <option value="">Todos los clientes</option>
           {% for c in customers %}
             <option value="{{ c.publicIdString }}" {% if customerFilter == c.publicIdString %}selected{% endif %}>
@@ -32,33 +32,33 @@
     </div>
 
     {# Table #}
-    <div class="bg-white shadow rounded-lg overflow-x-auto">
-      <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
+    <div class="theme-card overflow-x-auto">
+      <table class="min-w-full divide-y" style="border-color: var(--color-border);">
+        <thead style="background: var(--color-surface);">
           <tr>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Referencia</th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Cliente</th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Destinatario</th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Direccion</th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Prioridad</th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Carga</th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Creado</th>
-            <th scope="col" class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Acciones</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Referencia</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Cliente</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Destinatario</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Direccion</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Prioridad</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Carga</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Creado</th>
+            <th scope="col" class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Acciones</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-200 bg-white">
+        <tbody class="divide-y" style="border-color: var(--color-border); background: var(--color-surface-elevated);">
           {% for shipment in shipments %}
             <tr>
-              <td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
+              <td class="whitespace-nowrap px-6 py-4 text-sm font-medium" style="color: var(--color-text-primary);">
                 {{ shipment.reference }}
               </td>
-              <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+              <td class="whitespace-nowrap px-6 py-4 text-sm" style="color: var(--color-text-secondary);">
                 {{ shipment.customer.name }}
               </td>
-              <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+              <td class="whitespace-nowrap px-6 py-4 text-sm" style="color: var(--color-text-secondary);">
                 {{ shipment.recipientName ?? '-' }}
               </td>
-              <td class="px-6 py-4 text-sm text-gray-500 max-w-xs truncate" title="{{ shipment.address }}">
+              <td class="px-6 py-4 text-sm max-w-xs truncate" style="color: var(--color-text-secondary);" title="{{ shipment.address }}">
                 {{ shipment.address ?? '-' }}
               </td>
               <td class="whitespace-nowrap px-6 py-4 text-sm">
@@ -73,31 +73,31 @@
                   {{ shipment.priority.label }}
                 </span>
               </td>
-              <td class="px-6 py-4 text-sm text-gray-500">
+              <td class="px-6 py-4 text-sm" style="color: var(--color-text-secondary);">
                 <div class="space-y-0.5 text-xs">
                   {% if shipment.totalWeightKg %}<div>{{ shipment.totalWeightKg }} kg</div>{% endif %}
                   {% if shipment.totalVolumeM3 %}<div>{{ shipment.totalVolumeM3 }} m3</div>{% endif %}
                   <div>{{ shipment.totalParcels }} bulto{{ shipment.totalParcels != 1 ? 's' : '' }}</div>
                 </div>
               </td>
-              <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+              <td class="whitespace-nowrap px-6 py-4 text-sm" style="color: var(--color-text-secondary);">
                 {{ shipment.createdAt|date('d/m/Y H:i') }}
               </td>
               <td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
                 <a href="{{ path('admin_shipments_edit', {publicId: shipment.publicIdString}) }}"
-                   class="text-blue-600 hover:text-blue-900 mr-3">Editar</a>
+                   class="text-blue-600 hover:opacity-80 mr-3">Editar</a>
                 {% if not shipment.deleted %}
                   <form method="post" action="{{ path('admin_shipments_delete', {publicId: shipment.publicIdString}) }}" class="inline"
                         onsubmit="return confirm('Eliminar este envio?');">
                     <input type="hidden" name="_token" value="{{ csrf_token('delete-shipment-' ~ shipment.publicIdString) }}">
-                    <button type="submit" class="text-red-600 hover:text-red-900">Eliminar</button>
+                    <button type="submit" class="text-red-600 hover:opacity-80">Eliminar</button>
                   </form>
                 {% endif %}
               </td>
             </tr>
           {% else %}
             <tr>
-              <td colspan="8" class="px-6 py-8 text-center text-sm text-gray-500">
+              <td colspan="8" class="px-6 py-8 text-center text-sm" style="color: var(--color-text-secondary);">
                 No hay envios registrados.
               </td>
             </tr>
@@ -109,19 +109,19 @@
     {# Pagination #}
     {% if totalPages > 1 %}
       <nav class="mt-6 flex items-center justify-between">
-        <div class="text-sm text-gray-700">
+        <div class="text-sm" style="color: var(--color-text-secondary);">
           Pagina {{ page }} de {{ totalPages }}
         </div>
         <div class="flex space-x-2">
           {% if page > 1 %}
             <a href="{{ path('admin_shipments_index', {page: page - 1, customer: customerFilter}) }}"
-               class="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+               class="theme-card inline-flex items-center px-3 py-2 text-sm font-medium" style="color: var(--color-text-secondary);">
               Anterior
             </a>
           {% endif %}
           {% if page < totalPages %}
             <a href="{{ path('admin_shipments_index', {page: page + 1, customer: customerFilter}) }}"
-               class="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+               class="theme-card inline-flex items-center px-3 py-2 text-sm font-medium" style="color: var(--color-text-secondary);">
               Siguiente
             </a>
           {% endif %}

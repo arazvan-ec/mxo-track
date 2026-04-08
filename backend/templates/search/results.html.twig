@@ -5,19 +5,19 @@
 {% block breadcrumbs %}
   <li>
     <div class="flex items-center">
-      <svg class="h-5 w-5 shrink-0 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+      <svg class="h-5 w-5 shrink-0" style="color: var(--color-text-muted);" viewBox="0 0 20 20" fill="currentColor">
         <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd"/>
       </svg>
-      <span class="ml-2 text-sm font-medium text-gray-500">Resultados de busqueda</span>
+      <span class="ml-2 text-sm font-medium" style="color: var(--color-text-secondary);">Resultados de busqueda</span>
     </div>
   </li>
 {% endblock %}
 
 {% block content %}
   <div class="mb-6">
-    <h1 class="text-2xl font-bold text-gray-900">Resultados de busqueda</h1>
+    <h1 class="text-2xl font-bold" style="color: var(--color-text-primary);">Resultados de busqueda</h1>
     {% if query is not empty %}
-      <p class="mt-1 text-sm text-gray-500">{{ results|length }} resultado{{ results|length != 1 ? 's' : '' }} para "<span class="font-medium text-gray-700">{{ query }}</span>"</p>
+      <p class="mt-1 text-sm" style="color: var(--color-text-secondary);">{{ results|length }} resultado{{ results|length != 1 ? 's' : '' }} para "<span class="font-medium" style="color: var(--color-text-secondary);">{{ query }}</span>"</p>
     {% endif %}
   </div>
 
@@ -26,20 +26,21 @@
     <form action="{{ path('app_search') }}" method="GET" class="max-w-lg">
       <div class="relative">
         <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-          <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+          <svg class="h-5 w-5" style="color: var(--color-text-muted);" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>
           </svg>
         </div>
         <input type="text" name="q" value="{{ query }}" placeholder="Buscar envios, rutas, vehiculos..."
-               class="block w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-10 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+               class="block w-full rounded-lg border py-2.5 pl-10 pr-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+               style="background: var(--color-surface-elevated); color: var(--color-text-primary); border-color: var(--color-border);">
       </div>
     </form>
   </div>
 
   {% if results|length > 0 %}
-    <div class="bg-white shadow rounded-lg overflow-hidden divide-y divide-gray-100">
+    <div class="theme-card rounded-lg overflow-hidden divide-y" style="border-color: var(--color-border);">
       {% for result in results %}
-        <a href="{{ result.url }}" class="flex items-center gap-4 px-6 py-4 hover:bg-gray-50 transition-colors">
+        <a href="{{ result.url }}" class="flex items-center gap-4 px-6 py-4 transition-colors hover:opacity-80">
           {# Type icon #}
           <div class="shrink-0">
             {% if result.type == 'shipment' %}
@@ -65,9 +66,9 @@
 
           {# Content #}
           <div class="min-w-0 flex-1">
-            <p class="text-sm font-medium text-gray-900">{{ result.label }}</p>
+            <p class="text-sm font-medium" style="color: var(--color-text-primary);">{{ result.label }}</p>
             {% if result.extra is not empty %}
-              <p class="text-xs text-gray-500">{{ result.extra }}</p>
+              <p class="text-xs" style="color: var(--color-text-secondary);">{{ result.extra }}</p>
             {% endif %}
           </div>
 
@@ -83,19 +84,19 @@
           </div>
 
           {# Arrow #}
-          <svg class="h-5 w-5 shrink-0 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+          <svg class="h-5 w-5 shrink-0" style="color: var(--color-text-muted);" viewBox="0 0 20 20" fill="currentColor">
             <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd"/>
           </svg>
         </a>
       {% endfor %}
     </div>
   {% elseif query is not empty %}
-    <div class="rounded-lg bg-white px-6 py-12 text-center shadow">
-      <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+    <div class="rounded-lg px-6 py-12 text-center shadow" style="background: var(--color-surface-elevated);">
+      <svg class="mx-auto h-12 w-12" style="color: var(--color-text-muted);" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>
       </svg>
-      <h3 class="mt-4 text-sm font-semibold text-gray-900">Sin resultados</h3>
-      <p class="mt-1 text-sm text-gray-500">No se encontraron resultados para "{{ query }}". Intenta con otros terminos.</p>
+      <h3 class="mt-4 text-sm font-semibold" style="color: var(--color-text-primary);">Sin resultados</h3>
+      <p class="mt-1 text-sm" style="color: var(--color-text-secondary);">No se encontraron resultados para "{{ query }}". Intenta con otros terminos.</p>
     </div>
   {% endif %}
 {% endblock %}

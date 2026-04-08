@@ -7,14 +7,14 @@
 
 {# ── Page header ──────────────────────────────────────────────────── #}
 <div class="mb-6">
-  <h1 class="text-2xl font-bold tracking-tight text-gray-900">Asistente IA</h1>
-  <p class="mt-1 text-sm text-gray-500">
+  <h1 class="text-2xl font-bold tracking-tight" style="color: var(--color-text-primary);">Asistente IA</h1>
+  <p class="mt-1 text-sm" style="color: var(--color-text-secondary);">
     Pregunta sobre envios, rutas, alertas y reportes en lenguaje natural.
   </p>
 </div>
 
 {# ── Chat container ──────────────────────────────────────────────── #}
-<div class="rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5 flex flex-col" style="height: calc(100vh - 220px); min-height: 400px;">
+<div class="rounded-xl shadow-sm ring-1 ring-gray-900/5 flex flex-col" style="background: var(--color-surface-elevated); height: calc(100vh - 220px); min-height: 400px;">
 
   {# ── Messages area ─────────────────────────────────────────────── #}
   <div class="flex-1 overflow-y-auto p-6 space-y-4" id="chat-messages" x-ref="messagesContainer">
@@ -27,25 +27,25 @@
             <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z"/>
           </svg>
         </div>
-        <h3 class="text-lg font-semibold text-gray-900 mb-2">Hola, soy tu asistente de logistica</h3>
-        <p class="text-sm text-gray-500 max-w-md mb-6">
+        <h3 class="text-lg font-semibold mb-2" style="color: var(--color-text-primary);">Hola, soy tu asistente de logistica</h3>
+        <p class="text-sm max-w-md mb-6" style="color: var(--color-text-secondary);">
           Puedo ayudarte a consultar envios, ver reportes de entregas, detectar alertas y analizar excepciones.
         </p>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-lg">
           <button @click="sendSuggestion('Cuantas entregas hubo esta semana?')"
-                  class="text-left rounded-lg border border-gray-200 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                  class="text-left rounded-lg border px-4 py-3 text-sm transition-colors" style="border-color: var(--color-border); color: var(--color-text-secondary);">
             Cuantas entregas hubo esta semana?
           </button>
           <button @click="sendSuggestion('Hay vehiculos offline?')"
-                  class="text-left rounded-lg border border-gray-200 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                  class="text-left rounded-lg border px-4 py-3 text-sm transition-colors" style="border-color: var(--color-border); color: var(--color-text-secondary);">
             Hay vehiculos offline?
           </button>
           <button @click="sendSuggestion('Cuales son las excepciones mas comunes?')"
-                  class="text-left rounded-lg border border-gray-200 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                  class="text-left rounded-lg border px-4 py-3 text-sm transition-colors" style="border-color: var(--color-border); color: var(--color-text-secondary);">
             Cuales son las excepciones mas comunes?
           </button>
           <button @click="sendSuggestion('Dame el reporte de entregas del ultimo mes')"
-                  class="text-left rounded-lg border border-gray-200 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                  class="text-left rounded-lg border px-4 py-3 text-sm transition-colors" style="border-color: var(--color-border); color: var(--color-text-secondary);">
             Reporte de entregas del ultimo mes
           </button>
         </div>
@@ -57,7 +57,8 @@
       <div :class="msg.role === 'user' ? 'flex justify-end' : 'flex justify-start'">
         <div :class="msg.role === 'user'
               ? 'max-w-[75%] rounded-2xl rounded-br-md bg-brand-600 px-4 py-3 text-white'
-              : 'max-w-[85%] rounded-2xl rounded-bl-md bg-gray-100 px-4 py-3 text-gray-900'">
+              : 'max-w-[85%] rounded-2xl rounded-bl-md px-4 py-3'"
+              :style="msg.role !== 'user' ? 'background: var(--color-surface); color: var(--color-text-primary);' : ''"
 
           {# Message text #}
           <div class="text-sm whitespace-pre-wrap leading-relaxed" x-html="formatMessage(msg.content)"></div>
@@ -67,7 +68,8 @@
             <div class="mt-2 flex flex-wrap gap-1.5">
               <template x-for="tool in msg.tools_used" :key="tool">
                 <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium"
-                      :class="msg.role === 'user' ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-600'">
+                      :class="msg.role === 'user' ? 'bg-white/20 text-white' : ''"
+                      :style="msg.role !== 'user' ? 'background: var(--color-surface-elevated); color: var(--color-text-secondary);' : ''"
                   <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17l-5.384-3.19m0 0l-.002-.003m.002.003L6 12m5.42 3.17l5.384-3.19m0 0l.002-.003m-.002.003L17 12m-5.58 3.17V21M7.504 4.883L12 2.25l4.496 2.633m-8.992 0L12 7.516m-4.496-2.633L3 7.516m4.504-2.633L12 7.516m0 0l4.496-2.633M12 7.516L12 2.25m0 5.266L17 4.883m0 0L21 7.516"/>
                   </svg>
@@ -83,14 +85,14 @@
     {# Loading indicator #}
     <template x-if="loading">
       <div class="flex justify-start">
-        <div class="rounded-2xl rounded-bl-md bg-gray-100 px-4 py-3">
+        <div class="rounded-2xl rounded-bl-md px-4 py-3" style="background: var(--color-surface);">
           <div class="flex items-center gap-2">
             <div class="flex space-x-1">
-              <div class="h-2 w-2 rounded-full bg-gray-400 animate-bounce" style="animation-delay: 0ms;"></div>
-              <div class="h-2 w-2 rounded-full bg-gray-400 animate-bounce" style="animation-delay: 150ms;"></div>
-              <div class="h-2 w-2 rounded-full bg-gray-400 animate-bounce" style="animation-delay: 300ms;"></div>
+              <div class="h-2 w-2 rounded-full animate-bounce" style="background: var(--color-text-muted); animation-delay: 0ms;"></div>
+              <div class="h-2 w-2 rounded-full animate-bounce" style="background: var(--color-text-muted); animation-delay: 150ms;"></div>
+              <div class="h-2 w-2 rounded-full animate-bounce" style="background: var(--color-text-muted); animation-delay: 300ms;"></div>
             </div>
-            <span class="text-xs text-gray-500">Procesando...</span>
+            <span class="text-xs" style="color: var(--color-text-secondary);">Procesando...</span>
           </div>
         </div>
       </div>
@@ -98,7 +100,7 @@
   </div>
 
   {# ── Input area ────────────────────────────────────────────────── #}
-  <div class="border-t border-gray-200 p-4">
+  <div class="border-t p-4" style="border-color: var(--color-border);">
     <form @submit.prevent="sendMessage()" class="flex items-end gap-3">
       <div class="flex-1">
         <textarea x-ref="messageInput"
@@ -106,7 +108,8 @@
                   @keydown.enter.prevent="if (!$event.shiftKey) sendMessage()"
                   placeholder="Escribe tu pregunta..."
                   rows="1"
-                  class="block w-full resize-none rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                  class="block w-full resize-none rounded-xl border px-4 py-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                  style="border-color: var(--color-border); background: var(--color-surface-elevated); color: var(--color-text-primary);"
                   :disabled="loading"
                   style="max-height: 120px; overflow-y: auto;"
                   @input="$el.style.height = 'auto'; $el.style.height = Math.min($el.scrollHeight, 120) + 'px'"></textarea>
@@ -205,7 +208,7 @@ function aiAssistant() {
         .replace(/>/g, '&gt;')
         .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
         .replace(/\*(.+?)\*/g, '<em>$1</em>')
-        .replace(/`(.+?)`/g, '<code class="rounded bg-gray-200 px-1 py-0.5 text-xs font-mono">$1</code>');
+        .replace(/`(.+?)`/g, '<code class="rounded px-1 py-0.5 text-xs font-mono" style="background: var(--color-surface);">$1</code>');
       return html;
     },
 

@@ -5,7 +5,7 @@
 {% block content %}
     {# Header #}
     <div class="mb-6 flex items-center justify-between">
-      <h1 class="text-2xl font-bold text-gray-900">Rutas</h1>
+      <h1 class="text-2xl font-bold" style="color: var(--color-text-primary);">Rutas</h1>
       <a href="{{ path('admin_routes_new') }}"
          class="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
         Nueva ruta
@@ -13,27 +13,27 @@
     </div>
 
     {# Status filter tabs #}
-    <div class="mb-6 border-b border-gray-200">
+    <div class="mb-6 border-b" style="border-color: var(--color-border);">
       <nav class="-mb-px flex space-x-6" aria-label="Filtros">
         {% set tabParams = filterParams|filter((v, k) => k != 'status') %}
         <a href="{{ path('admin_routes_index', tabParams) }}"
-           class="whitespace-nowrap border-b-2 pb-3 px-1 text-sm font-medium {% if currentStatus == '' %}border-blue-500 text-blue-600{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{% endif %}">
+           class="whitespace-nowrap border-b-2 pb-3 px-1 text-sm font-medium {% if currentStatus == '' %}border-blue-500 text-blue-600{% else %}border-transparent hover:opacity-80{% endif %}">
           Todas
         </a>
         <a href="{{ path('admin_routes_index', tabParams|merge({status: 'PLANNED'})) }}"
-           class="whitespace-nowrap border-b-2 pb-3 px-1 text-sm font-medium {% if currentStatus == 'PLANNED' %}border-blue-500 text-blue-600{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{% endif %}">
+           class="whitespace-nowrap border-b-2 pb-3 px-1 text-sm font-medium {% if currentStatus == 'PLANNED' %}border-blue-500 text-blue-600{% else %}border-transparent hover:opacity-80{% endif %}">
           Planificadas
         </a>
         <a href="{{ path('admin_routes_index', tabParams|merge({status: 'ACTIVE'})) }}"
-           class="whitespace-nowrap border-b-2 pb-3 px-1 text-sm font-medium {% if currentStatus == 'ACTIVE' %}border-amber-500 text-amber-600{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{% endif %}">
+           class="whitespace-nowrap border-b-2 pb-3 px-1 text-sm font-medium {% if currentStatus == 'ACTIVE' %}border-amber-500 text-amber-600{% else %}border-transparent hover:opacity-80{% endif %}">
           Activas
         </a>
         <a href="{{ path('admin_routes_index', tabParams|merge({status: 'DONE'})) }}"
-           class="whitespace-nowrap border-b-2 pb-3 px-1 text-sm font-medium {% if currentStatus == 'DONE' %}border-green-500 text-green-600{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{% endif %}">
+           class="whitespace-nowrap border-b-2 pb-3 px-1 text-sm font-medium {% if currentStatus == 'DONE' %}border-green-500 text-green-600{% else %}border-transparent hover:opacity-80{% endif %}">
           Completadas
         </a>
         <a href="{{ path('admin_routes_index', tabParams|merge({status: 'CANCELLED'})) }}"
-           class="whitespace-nowrap border-b-2 pb-3 px-1 text-sm font-medium {% if currentStatus == 'CANCELLED' %}border-red-500 text-red-600{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{% endif %}">
+           class="whitespace-nowrap border-b-2 pb-3 px-1 text-sm font-medium {% if currentStatus == 'CANCELLED' %}border-red-500 text-red-600{% else %}border-transparent hover:opacity-80{% endif %}">
           Canceladas
         </a>
       </nav>
@@ -42,7 +42,7 @@
     {# Advanced filters #}
     <div x-data="{ filtersOpen: {{ (dateFrom or dateTo or driverId or customerId) ? 'true' : 'false' }} }" class="mb-6">
       <button @click="filtersOpen = !filtersOpen" type="button"
-              class="inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
+              class="inline-flex items-center gap-2 text-sm font-medium hover:opacity-80 transition-colors" style="color: var(--color-text-secondary);">
         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z"/>
         </svg>
@@ -52,7 +52,7 @@
         </svg>
       </button>
 
-      <div x-show="filtersOpen" x-cloak x-transition class="mt-4 rounded-lg bg-white p-4 shadow ring-1 ring-gray-200">
+      <div x-show="filtersOpen" x-cloak x-transition class="mt-4 rounded-lg p-4 shadow ring-1" style="background: var(--color-surface-elevated); border-color: var(--color-border);">
         <form action="{{ path('admin_routes_index') }}" method="GET" class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {# Preserve status #}
           {% if currentStatus %}
