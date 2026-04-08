@@ -97,13 +97,13 @@
                   <div class="w-24 rounded-full h-2" style="background: var(--color-surface);">
                     <div class="bg-green-500 h-2 rounded-full" style="width: {{ (counts.delivered / counts.total * 100)|round }}%"></div>
                   </div>
-                  <span class="text-xs text-gray-600">{{ counts.delivered }}/{{ counts.total }} entregas</span>
+                  <span class="text-xs" style="color: var(--color-text-secondary);">{{ counts.delivered }}/{{ counts.total }} entregas</span>
                 </div>
               {% else %}
-                <span class="text-xs text-gray-400">Sin paradas</span>
+                <span class="text-xs" style="color: var(--color-text-muted);">Sin paradas</span>
               {% endif %}
             </td>
-            <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+            <td class="whitespace-nowrap px-6 py-4 text-sm" style="color: var(--color-text-secondary);">
               {% set metric = routeMetrics[route.id] ?? null %}
               {% if metric %}
                 <div class="flex flex-col space-y-1">
