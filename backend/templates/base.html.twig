@@ -8,44 +8,18 @@
   <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}">
 
   {# Preconnect to external CDNs for faster resource loading #}
-  <link rel="preconnect" href="https://cdn.tailwindcss.com">
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 
   <style>[x-cloak] { display: none !important; }</style>
 
-  {# Tailwind CSS via CDN (TODO: replace with compiled build via npm run build:css) #}
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            brand: {
-              50: '#eff6ff',
-              100: '#dbeafe',
-              200: '#bfdbfe',
-              300: '#93c5fd',
-              400: '#60a5fa',
-              500: '#3b82f6',
-              600: '#2563eb',
-              700: '#1d4ed8',
-              800: '#1e40af',
-              900: '#1e3a8a',
-            },
-            sidebar: {
-              DEFAULT: '#1e293b',
-              hover: '#334155',
-              active: '#0f172a',
-            }
-          }
-        }
-      }
-    }
-  </script>
+  {# Tailwind CSS is now fully compiled by Vite (v4) — no CDN needed.
+     Brand colors + Twig template utilities are included via @source + @theme in index.css. #}
 
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
   {# React App Shell CSS (theme variables, shared Tailwind utilities) #}
-  <link rel="stylesheet" href="/app/assets/index.css">
+  {% for href in vite_entry_styles('app-shell-widget') %}
+  <link rel="stylesheet" href="{{ href }}">
+  {% endfor %}
   {% block styles %}{% endblock %}
 </head>
 <body class="h-full" {% block body_attrs %}{% endblock %}>
@@ -54,7 +28,7 @@
 
   {# ── React App Shell (unified TopBar + Sidebar, same as SPA) ──── #}
   <div id="react-shell-root"></div>
-  <script type="module" src="/app/assets/app-shell-widget.js"></script>
+  <script type="module" src="{{ vite_entry_script('app-shell-widget') }}"></script>
 
   {# ── Mercure URL for React notification hook ──────────────────── #}
   {% if app.user %}
