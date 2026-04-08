@@ -14,17 +14,17 @@ export function VehiclePopup({ vehicle, routeName }: Props) {
 
   return (
     <div className="min-w-[180px] text-xs leading-relaxed">
-      <div className="font-bold text-sm mb-1">{vehicle.name}</div>
-      <div className="text-slate-400 mb-1.5">
+      <div className="font-bold text-sm mb-1" style={{ color: 'var(--color-text-primary)' }}>{vehicle.name}</div>
+      <div className="mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
         {speed} km/h &middot; {time}
       </div>
       <div className="flex gap-1.5 mb-0.5">
-        <span className="text-slate-500 w-16">Ruta:</span>
-        <span className="text-slate-200">{routeName ?? 'Sin ruta'}</span>
+        <span className="w-16" style={{ color: 'var(--color-text-muted)' }}>Ruta:</span>
+        <span style={{ color: 'var(--color-text-primary)' }}>{routeName ?? 'Sin ruta'}</span>
       </div>
       <div className="flex gap-1.5 mb-0.5">
-        <span className="text-slate-500 w-16">Conductor:</span>
-        <span className="text-slate-200">{vehicle.driver_name ?? 'Sin conductor'}</span>
+        <span className="w-16" style={{ color: 'var(--color-text-muted)' }}>Conductor:</span>
+        <span style={{ color: 'var(--color-text-primary)' }}>{vehicle.driver_name ?? 'Sin conductor'}</span>
       </div>
       {vehicle.skills && vehicle.skills.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-1.5">

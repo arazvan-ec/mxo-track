@@ -23,7 +23,8 @@ export function VehicleActionPanel({ vehicle, userRole, onClose }: Props) {
         </div>
         <button
           onClick={onClose}
-          className="text-slate-400 hover:text-slate-200 transition-colors p-1"
+          className="transition-colors p-1"
+          style={{ color: 'var(--color-text-muted)' }}
           type="button"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

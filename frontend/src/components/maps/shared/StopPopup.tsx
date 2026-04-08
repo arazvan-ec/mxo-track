@@ -27,12 +27,12 @@ export function StopPopup({ sequence, address, status, recipientName, shipmentPu
           {status}
         </span>
       </div>
-      <div className="text-slate-200 text-[11px] mb-0.5 line-clamp-2">{address}</div>
+      <div className="text-[11px] mb-0.5 line-clamp-2" style={{ color: 'var(--color-text-primary)' }}>{address}</div>
       {recipientName && (
-        <div className="text-slate-400 text-[10px]">{recipientName}</div>
+        <div className="text-[10px]" style={{ color: 'var(--color-text-secondary)' }}>{recipientName}</div>
       )}
       {shipmentPublicId && (
-        <div className="text-slate-500 text-[9px] mt-1 font-mono truncate">
+        <div className="text-[9px] mt-1 font-mono truncate" style={{ color: 'var(--color-text-muted)' }}>
           Envio: {shipmentPublicId.slice(0, 12)}...
         </div>
       )}

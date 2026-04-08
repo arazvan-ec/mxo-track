@@ -89,11 +89,11 @@ export function RouteMapLayers({
 
       <button
         type="button"
-        className={`absolute top-4 left-4 z-10 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-          showArrows
-            ? 'bg-slate-800/90 text-slate-200 border-slate-600 hover:bg-slate-700'
-            : 'bg-slate-800/50 text-slate-400 border-slate-700 hover:bg-slate-700/50'
-        }`}
+        className="absolute top-4 left-4 z-10 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors theme-card-overlay"
+        style={{
+          color: showArrows ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
+          borderColor: 'var(--color-border-subtle)',
+        }}
         onClick={() => setShowArrows((v) => !v)}
         title={showArrows ? 'Ocultar flechas de direccion' : 'Mostrar flechas de direccion'}
       >

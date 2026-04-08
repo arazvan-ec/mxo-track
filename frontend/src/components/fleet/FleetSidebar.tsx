@@ -36,7 +36,8 @@ export function FleetSidebar({
       {/* Back link */}
       <a
         href="/admin"
-        className="flex-shrink-0 flex items-center gap-2 px-5 pt-4 pb-2 text-slate-400 hover:text-white transition-colors text-sm font-medium"
+        className="flex-shrink-0 flex items-center gap-2 px-5 pt-4 pb-2 transition-colors text-sm font-medium"
+        style={{ color: 'var(--color-text-secondary)' }}
       >
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
@@ -54,8 +55,8 @@ export function FleetSidebar({
             </svg>
           </div>
           <div>
-            <h1 className="text-white font-bold text-base tracking-tight">MXO Track</h1>
-            <p className="text-slate-500 text-[10px] uppercase tracking-widest">Fleet Overview</p>
+            <h1 className="font-bold text-base tracking-tight" style={{ color: 'var(--color-text-primary)' }}>MXO Track</h1>
+            <p className="text-[10px] uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Fleet Overview</p>
           </div>
         </div>
 
@@ -70,7 +71,7 @@ export function FleetSidebar({
             className={`flex-1 text-xs font-medium py-1.5 px-3 rounded-md transition-all ${
               activeTab === 'vehicles'
                 ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
+                : ''
             }`}
           >
             Vehicles
@@ -80,7 +81,7 @@ export function FleetSidebar({
             className={`flex-1 text-xs font-medium py-1.5 px-3 rounded-md transition-all ${
               activeTab === 'routes'
                 ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
+                : ''
             }`}
           >
             Routes
@@ -91,7 +92,8 @@ export function FleetSidebar({
         {activeTab === 'vehicles' && (
           <div className="relative">
             <svg
-              className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500"
+              className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5"
+              style={{ color: 'var(--color-text-muted)' }}
               fill="none"
               viewBox="0 0 24 24"
               strokeWidth={2}

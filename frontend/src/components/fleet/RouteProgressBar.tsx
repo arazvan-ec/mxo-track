@@ -11,16 +11,16 @@ export function RouteProgressBar({ route }: Props) {
       : 0;
 
   return (
-    <div className="px-4 py-3 border-t border-slate-700/50">
+    <div className="px-4 py-3 border-t" style={{ borderColor: 'var(--color-border-subtle)' }}>
       <div className="flex items-center justify-between mb-1.5">
-        <span className="text-xs font-medium text-slate-300 truncate">
+        <span className="text-xs font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>
           {route.name}
         </span>
-        <span className="text-xs text-slate-400">
+        <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
           {route.deliveredStops}/{route.totalStops} stops
         </span>
       </div>
-      <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+      <div className="w-full h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--color-border)' }}>
         <div
           className="h-full bg-emerald-500 rounded-full transition-all duration-500"
           style={{ width: `${pct}%` }}

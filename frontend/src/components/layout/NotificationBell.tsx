@@ -6,7 +6,8 @@ export function NotificationBell() {
   return (
     <a
       href="/notifications"
-      className="relative -m-2.5 p-2.5 text-gray-400 hover:text-gray-500 transition-colors"
+      className="relative -m-2.5 p-2.5 transition-colors"
+      style={{ color: 'var(--color-text-muted)' }}
     >
       <span className="sr-only">Ver notificaciones</span>
       <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">

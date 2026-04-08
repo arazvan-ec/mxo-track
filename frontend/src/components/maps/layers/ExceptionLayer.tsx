@@ -49,7 +49,8 @@ export function ExceptionLayer({ exceptions }: Props) {
             {/* Hover tooltip */}
             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10">
               <div
-                className="whitespace-nowrap rounded-md px-2.5 py-1.5 text-xs text-slate-200 border border-red-500/50"
+                className="whitespace-nowrap rounded-md px-2.5 py-1.5 text-xs border border-red-500/50"
+                style={{ color: 'var(--color-text-primary)' }}
                 style={{
                   backgroundColor: 'rgba(15, 23, 42, 0.92)',
                   boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
@@ -65,7 +66,8 @@ export function ExceptionLayer({ exceptions }: Props) {
             {selectedIdx === idx && (
               <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-20">
                 <div
-                  className="rounded-lg px-3 py-2 text-xs text-slate-200 border border-red-500/50 min-w-[200px]"
+                  className="rounded-lg px-3 py-2 text-xs border border-red-500/50 min-w-[200px]"
+                  style={{ color: 'var(--color-text-primary)' }}
                   style={{
                     backgroundColor: 'rgba(15, 23, 42, 0.95)',
                     boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
@@ -74,12 +76,12 @@ export function ExceptionLayer({ exceptions }: Props) {
                   <div className="font-semibold text-red-400 mb-1">
                     {ex.type}
                   </div>
-                  <div className="text-slate-300 mb-0.5">{ex.address}</div>
-                  <div className="text-slate-500">
+                  <div className="mb-0.5" style={{ color: 'var(--color-text-secondary)' }}>{ex.address}</div>
+                  <div style={{ color: 'var(--color-text-muted)' }}>
                     Ruta: {ex.routeName}
                   </div>
                   {ex.date && (
-                    <div className="text-slate-500">Fecha: {ex.date}</div>
+                    <div style={{ color: 'var(--color-text-muted)' }}>Fecha: {ex.date}</div>
                   )}
                 </div>
               </div>

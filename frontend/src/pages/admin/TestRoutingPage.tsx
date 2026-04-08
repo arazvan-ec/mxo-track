@@ -166,7 +166,8 @@ export function TestRoutingPage() {
         {data && (
           <button
             type="button"
-            className="absolute top-4 right-4 bg-slate-800/90 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-slate-700 transition-colors border border-slate-600 z-10"
+            className="absolute top-4 right-4 theme-card-overlay px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border z-10"
+            style={{ color: 'var(--color-text-primary)', borderColor: 'var(--color-border)' }}
             onClick={() => mapRef.current?.fitBounds(allPoints)}
           >
             Fit all
@@ -176,12 +177,12 @@ export function TestRoutingPage() {
         {/* Map overlay legend */}
         {routesData && (
           <div
-            className="absolute left-4 bg-slate-800/90 border border-slate-700 rounded-lg px-3 py-2 space-y-1.5 z-10 transition-all duration-300"
-            style={{ bottom: sheetHeightPx + 16 }}
+            className="absolute left-4 theme-card-overlay border rounded-lg px-3 py-2 space-y-1.5 z-10 transition-all duration-300"
+            style={{ bottom: sheetHeightPx + 16, borderColor: 'var(--color-border)' }}
           >
             <div className="flex items-center gap-2">
               <div className="w-6 h-0.5 border-t-2 border-dashed border-red-500" />
-              <span className="text-xs text-slate-300">Original</span>
+              <span className="text-xs" style={{ color: 'var(--color-text-primary)' }}>Original</span>
             </div>
             {routesData.map((route, idx) => (
               <div key={route.name} className="flex items-center gap-2">
@@ -191,7 +192,7 @@ export function TestRoutingPage() {
                     backgroundColor: ROUTE_COLORS[idx % ROUTE_COLORS.length],
                   }}
                 />
-                <span className="text-xs text-slate-300">{route.name}</span>
+                <span className="text-xs" style={{ color: 'var(--color-text-primary)' }}>{route.name}</span>
               </div>
             ))}
           </div>

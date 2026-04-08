@@ -57,7 +57,8 @@ export function SearchBar({ compact = false }: SearchBarProps) {
       <button
         type="button"
         onClick={() => setExpanded(true)}
-        className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+        className="p-2 transition-colors"
+        style={{ color: 'var(--color-text-muted)' }}
         title="Buscar"
       >
         <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
@@ -71,7 +72,7 @@ export function SearchBar({ compact = false }: SearchBarProps) {
     <div ref={wrapperRef} className="relative w-full max-w-md">
       <form action="/search" method="GET" className="relative">
         <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-          <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+          <svg className="h-4 w-4" style={{ color: 'var(--color-text-muted)' }} fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
           </svg>
         </div>
@@ -80,7 +81,12 @@ export function SearchBar({ compact = false }: SearchBarProps) {
           type="text"
           name="q"
           placeholder="Buscar envios, rutas, vehiculos..."
-          className="block w-full rounded-lg border border-gray-200 bg-gray-50 py-2 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="block w-full rounded-lg border py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+          style={{
+            backgroundColor: 'var(--color-surface-elevated)',
+            borderColor: 'var(--color-border)',
+            color: 'var(--color-text-primary)',
+          }}
           value={query}
           onChange={(e) => search(e.target.value)}
           autoComplete="off"
@@ -88,14 +94,15 @@ export function SearchBar({ compact = false }: SearchBarProps) {
       </form>
 
       {isOpen && results.length > 0 && (
-        <div className="absolute left-0 top-full z-50 mt-1 w-full rounded-lg bg-white shadow-lg ring-1 ring-gray-200 max-h-80 overflow-y-auto">
+        <div className="absolute left-0 top-full z-50 mt-1 w-full rounded-lg shadow-lg max-h-80 overflow-y-auto theme-card">
           {results.map((result) => {
             const icon = typeIcons[result.type];
             return (
               <a
                 key={result.url}
                 href={result.url}
-                className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0"
+                className="flex items-center gap-3 px-4 py-2.5 transition-colors border-b last:border-0"
+                style={{ borderColor: 'var(--color-border)' }}
               >
                 {icon && (
                   <span className={`inline-flex h-6 w-6 items-center justify-center rounded ${icon.bg} ${icon.color}`}>
@@ -105,10 +112,10 @@ export function SearchBar({ compact = false }: SearchBarProps) {
                   </span>
                 )}
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-gray-900 truncate">{result.label}</p>
-                  <p className="text-xs text-gray-500 truncate">{result.extra}</p>
+                  <p className="text-sm font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>{result.label}</p>
+                  <p className="text-xs truncate" style={{ color: 'var(--color-text-muted)' }}>{result.extra}</p>
                 </div>
-                <span className="shrink-0 text-[10px] font-medium uppercase tracking-wider text-gray-400">
+                <span className="shrink-0 text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>
                   {typeLabels[result.type] ?? result.type}
                 </span>
               </a>
