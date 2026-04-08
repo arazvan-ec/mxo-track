@@ -1,50 +1,50 @@
-# Execution Log — 2026-04-08 — Unify Menu Styling
+# Execution Log — 2026-04-08 — Unified Menu/Layout System
 
-**Type:** bug fix
+**Type:** refactor (layout unification)
 **Branch:** `claude/unify-menu-styling-eDVus`
 
-## Root Cause
+## Problem
 
-The React app shell CSS (`index.css`) was NOT linked in `base.html.twig`. This file
-contains all theme CSS variables (`--color-surface-overlay`, `--color-surface-elevated`,
-etc.) and shared Tailwind utilities. Without it:
+The sidebar menu behaved differently between React SPA pages (`AppLayout.tsx`) and
+Twig server-rendered pages (`base.html.twig`) because the surrounding layout structure
+differed:
+- SPA: `h-screen` + `flex-1 overflow-hidden` (viewport-bound, content scrolls within area)
+- Twig: `min-h-screen` + plain `<div>` (page grows beyond viewport, whole page scrolls)
 
-1. The sidebar backdrop had `backgroundColor: var(--color-surface-overlay)` which was
-   **undefined** → transparent backdrop → page content visible behind sidebar
-2. The sidebar panel had `backgroundColor: var(--color-surface-elevated)` also undefined
-3. Z-index classes from React CSS were absent (though Tailwind CDN partially compensated)
+Additionally, the React CSS bundle (`index.css`) containing theme variables was not
+linked in Twig pages, making the sidebar backdrop transparent.
 
-The Vite build extracts CSS into `index-[hash].css` but `base.html.twig` only loaded
-the JS entry point. The built `app-shell-widget.html` correctly links the CSS, but
-Twig pages never consumed that reference.
+## Solution
 
-## Pattern-Wide Search
+### Phase 1: CSS fix (bug fix)
+1. **vite.config.ts**: Predictable CSS filenames (no hash) for Twig reference
+2. **base.html.twig**: Link `index.css` in `<head>` (theme variables + Tailwind utilities)
+3. **NavigationSidebar.tsx**: Body scroll lock + responsive width (`w-[85vw] max-w-[18rem]`)
+4. **base.html.twig**: Flash messages z-[60] > sidebar z-50
+5. **base.html.twig**: Remove hardcoded `bg-gray-50` from `<html>`
 
-- 54 of 59 Twig templates use hardcoded Tailwind colors (bg-white, text-gray-900, etc.)
-- No duplicate sidebar/navigation implementations found — single React NavigationSidebar
-- Z-index conflict: flash messages (z-50) same level as sidebar (z-50)
+### Phase 2: Layout unification (refactor)
+1. **base.html.twig**: `min-h-screen` → `h-screen w-full` (match AppLayout)
+2. **base.html.twig**: Content wrapper `<div>` → `<div class="flex-1 overflow-auto">`
+3. Result: identical layout structure between SPA and Twig
 
-## Fix Applied
+## Brainstorming
 
-1. **vite.config.ts**: Added `assetFileNames` to produce predictable CSS names (no hash)
-2. **base.html.twig**: Added `<link rel="stylesheet" href="/app/assets/index.css">` in `<head>`
-3. **base.html.twig**: Removed hardcoded `bg-gray-50` from `<html>`, use `var(--color-surface)`
-4. **base.html.twig**: Flash messages z-index raised to `z-[60]` to avoid sidebar conflict
-5. **NavigationSidebar.tsx**: Added body scroll lock (`overflow: hidden`) when overlay open
-6. **NavigationSidebar.tsx**: Responsive sidebar width (`w-[85vw] max-w-[18rem]`) for mobile
-7. **admin/report/index.html.twig**: Migrated from hardcoded colors to theme CSS variables
+- **Rejected:** CSS-only color migration (hybrid inline styles) — user wanted unified system, not color patches
+- **Rejected:** Custom CSS utility classes — adds infrastructure without solving the layout problem
+- **Approved:** Structural alignment — make Twig layout match AppLayout, zero new components
 
 ## Verification
 
-- TypeScript: clean (0 errors)
-- PHP lint: clean
-- Twig lint: clean
-- PHPUnit: 602 tests, pre-existing failures only (DemoSetupCommand, PostRouteAnalysisHandler, PageSmokeTest)
-- Vite build: successful
+- Twig lint: ✅ (59 files)
+- TypeScript: ✅ (0 errors)
+- Vite build: ✅
+- PHPUnit: 602 tests, 0 new failures (6 errors + 5 failures pre-existing)
 
 ## Lessons
 
-- When adding React widgets to server-rendered pages, the CSS bundle must be explicitly
-  linked — Vite's JS entry point does NOT auto-load extracted CSS
-- Predictable asset names (no hash) are needed when server templates reference build outputs
-- The 54 remaining templates with hardcoded colors are tech debt for a future migration
+- The menu "looking different" was a layout problem, not a styling problem — fixing
+  the container structure (`h-screen` + `flex-1 overflow-auto`) was the real fix
+- CSS variables being undefined (transparent backdrop) was caused by missing `<link>`
+  to the React CSS bundle — Vite doesn't auto-load extracted CSS from JS entry points
+- 53 Twig templates still use hardcoded Tailwind colors — separate tech debt from layout
