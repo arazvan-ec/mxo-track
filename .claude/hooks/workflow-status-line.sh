@@ -10,7 +10,6 @@ set -euo pipefail
 
 REPO="/home/user/mxo-track"
 STATE_FILE="$REPO/.claude/session-state.json"
-OUTPUT="$REPO/.claude/workflow-status-line.txt"
 # --- Read tool context from stdin (PostToolUse JSON) ---
 TOOL_SUFFIX=""
 if INPUT=$(cat 2>/dev/null) && [ -n "$INPUT" ]; then
@@ -59,10 +58,8 @@ fi
 
 # Graceful fallback
 if [ ! -f "$STATE_FILE" ]; then
-  { echo "📍 status unavailable"
-    echo "  session-state.json not found${TOOL_SUFFIX}"
-  } > "$OUTPUT"
-  cat "$OUTPUT"
+  echo "📍 status unavailable"
+  echo "  session-state.json not found${TOOL_SUFFIX}"
   exit 0
 fi
 
@@ -79,6 +76,9 @@ PREV_SIG=""
 echo "$STATE_SIG" > "$SIG_FILE"
 STATE_CHANGED=true
 [ "$STATE_SIG" = "$PREV_SIG" ] && STATE_CHANGED=false
+
+# Output helper: only emit to stdout if state changed
+emit() { if [ "$STATE_CHANGED" = true ]; then cat; else cat > /dev/null; fi; }
 DEV_ACTIVE=$(echo "$STATE" | jq -r '.deviation.active // false')
 
 # Evidence fields
@@ -314,8 +314,7 @@ phase_needs() {
 if [ "$FLOW_TYPE" = "null" ] || [ -z "$FLOW_TYPE" ]; then
   { echo "📍 no flow declared | i#${INTERACTION_ID}${DEVIATION_SUFFIX}"
     echo "  Clasificar antes de continuar${TOOL_SUFFIX}"
-  } > "$OUTPUT"
-  [ "$STATE_CHANGED" = true ] && cat "$OUTPUT"
+  } | emit
   exit 0
 fi
 
@@ -324,22 +323,19 @@ case "$FLOW_TYPE" in
   micro)
     { echo "📍 micro | Responder | i#${INTERACTION_ID}${DEVIATION_SUFFIX}"
       echo "  ${TOOL_SUFFIX:+${TOOL_SUFFIX} · }i#$(echo "$STATE" | jq -r '.interaction_id // 0')"
-    } > "$OUTPUT"
-    cat "$OUTPUT"
+    } | emit
     exit 0
     ;;
   light)
     { echo "📍 light | Documentar | i#${INTERACTION_ID}${DEVIATION_SUFFIX}"
       echo "  ${TOOL_SUFFIX:+${TOOL_SUFFIX} · }i#$(echo "$STATE" | jq -r '.interaction_id // 0')"
-    } > "$OUTPUT"
-    cat "$OUTPUT"
+    } | emit
     exit 0
     ;;
   explore)
     { echo "📍 explore | Investigar | i#${INTERACTION_ID}${DEVIATION_SUFFIX}"
       echo "  ${TOOL_SUFFIX:+${TOOL_SUFFIX} · }i#$(echo "$STATE" | jq -r '.interaction_id // 0')"
-    } > "$OUTPUT"
-    cat "$OUTPUT"
+    } | emit
     exit 0
     ;;
 esac
@@ -353,8 +349,7 @@ if [ "$FLOW_TYPE" = "full" ]; then
   if [ "$CURRENT_PHASE" = "null" ] || [ -z "$CURRENT_PHASE" ]; then
     { echo "📍 full | Pendiente: avanzar a consult | ⬚⬚⬚⬚⬚⬚⬚⬚${DEVIATION_SUFFIX}"
       echo "  Next: phase-advance.sh consult${TOOL_SUFFIX}"
-    } > "$OUTPUT"
-    cat "$OUTPUT"
+    } | emit
     exit 0
   fi
 
@@ -380,8 +375,7 @@ if [ "$FLOW_TYPE" = "full" ]; then
   if [ "$CURRENT_INDEX" -eq 0 ]; then
     { echo "📍 full | ${CURRENT_PHASE} | ⚠ fase no reconocida${DEVIATION_SUFFIX}"
       echo "  Usar: phase-advance.sh <fase>${TOOL_SUFFIX}"
-    } > "$OUTPUT"
-    cat "$OUTPUT"
+    } | emit
     exit 0
   fi
 
@@ -478,8 +472,7 @@ if [ "$FLOW_TYPE" = "full" ]; then
     echo "$LINE3"
     [ -n "$LINE4" ] && echo "$LINE4"
     [ -n "$LINE5" ] && echo "$LINE5"
-  } > "$OUTPUT"
-  [ "$STATE_CHANGED" = true ] && cat "$OUTPUT"
+  } | emit
   exit 0
 fi
 
@@ -611,14 +604,12 @@ if [ "$FLOW_TYPE" = "debug" ]; then
     echo "$LINE3"
     [ -n "$LINE4" ] && echo "$LINE4"
     [ -n "$LINE5" ] && echo "$LINE5"
-  } > "$OUTPUT"
-  [ "$STATE_CHANGED" = true ] && cat "$OUTPUT"
+  } | emit
   exit 0
 fi
 
 # Unknown flow type — show raw
 { echo "📍 ${FLOW_TYPE} | ${CURRENT_PHASE}${DEVIATION_SUFFIX}"
   echo "  ${TOOL_SUFFIX:---}"
-} > "$OUTPUT"
-[ "$STATE_CHANGED" = true ] && cat "$OUTPUT"
+} | emit
 exit 0
