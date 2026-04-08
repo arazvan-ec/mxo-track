@@ -11,7 +11,7 @@
 | Area | Path | Files | Tech |
 |------|------|------:|------|
 | Backend | `backend/` | 517 PHP | Symfony 7.4, PHP 8.4 |
-| Frontend | `frontend/` | 129 JS/TS | React |
+| Frontend | `frontend/` | 117 JS/TS | React |
 | ML Service | `ml-service/` | 17 Python | FastAPI |
 | Docker/Infra | `docker/` + `scripts/` | 9 + 5 | Docker, OSRM, VROOM, Traccar |
 | OpenSpec | `openspec/` | 28 specs | YAML specs |
@@ -38,7 +38,7 @@
 | Messenger Messages | 4 |
 | Message Handlers | 4 |
 | Tests | 128 |
-| Migrations | 37 |
+| Migrations | 38 |
 
 ## Entity List
 
@@ -213,8 +213,8 @@ View
 
 | Category | Count |
 |----------|------:|
-| JS/TS files total | 129 |
-| Pages | 13 |
+| JS/TS files total | 117 |
+| Pages | 12 |
 
 ### Directory Tree
 
@@ -229,7 +229,6 @@ components/layout
 components/maps
 components/metrics
 components/panels
-components/ui
 components/widgets
 context
 hooks

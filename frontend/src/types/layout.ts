@@ -15,7 +15,8 @@ export type WidgetType =
   | 'mini_reports'
   | 'activity_feed'
   | 'customer_kpis'
-  | 'customer_optimization';
+  | 'customer_optimization'
+  | 'reports_banner';
 
 export type SheetStateName = 'collapsed' | 'half' | 'full';
 

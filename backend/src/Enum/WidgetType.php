@@ -21,4 +21,5 @@ enum WidgetType: string
     case DASHBOARD_KPIS = 'dashboard_kpis';
     case MINI_REPORTS = 'mini_reports';
     case ACTIVITY_FEED = 'activity_feed';
+    case REPORTS_BANNER = 'reports_banner';
 }

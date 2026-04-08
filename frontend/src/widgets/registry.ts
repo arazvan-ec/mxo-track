@@ -18,6 +18,7 @@ import { MiniReportsWidget } from './MiniReportsWidget';
 import { ActivityFeedWidget } from './ActivityFeedWidget';
 import { CustomerKpisWidget } from './CustomerKpisWidget';
 import { CustomerOptimizationWidget } from './CustomerOptimizationWidget';
+import { ReportsBannerWidget } from './ReportsBannerWidget';
 
 export interface WidgetRegistryEntry extends WidgetRegistryMeta {
   component: ComponentType<WidgetProps>;
@@ -124,6 +125,13 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetRegistryEntry> = {
     description: 'Optimization value cards (km saved, time saved, success rate, savings %)',
     collapsible: true,
     sectionTitle: 'Valor de optimizacion',
+  },
+  reports_banner: {
+    component: ReportsBannerWidget,
+    label: 'Reports Banner',
+    description: 'CTA banner linking to reports and analytics',
+    collapsible: true,
+    sectionTitle: 'Reportes y Analítica',
   },
 };
 
