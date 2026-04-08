@@ -8,7 +8,6 @@ import type {
 import { AnimatedCounter } from '@/components/ui/AnimatedCounter';
 import { SparklineSVG } from '@/components/ui/SparklineSVG';
 import { RadialGauge } from '@/components/ui/RadialGauge';
-import { ThemeSwitcher } from '@/components/ui/ThemeSwitcher';
 
 /* ── Helpers ─────────────────────────────────────────────────────── */
 
@@ -356,8 +355,6 @@ export function AdminDashboardPage() {
         </a>
       </div>
 
-      {/* Theme Switcher */}
-      <ThemeSwitcher />
     </div>
   );
 }

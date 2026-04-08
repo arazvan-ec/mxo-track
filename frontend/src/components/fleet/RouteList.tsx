@@ -24,7 +24,7 @@ export function RouteList({ routes, selectedId, onSelect }: Props) {
           className={`w-full text-left p-3 rounded-lg transition-all border ${
             selectedId === r.publicId
               ? 'bg-blue-600/20 border-blue-500/40 shadow-lg shadow-blue-500/10'
-              : 'bg-slate-800/50 border-slate-700/30 hover:bg-slate-800/80 hover:border-slate-600/50'
+              : 'theme-card-overlay hover:opacity-90'
           }`}
         >
           <div className="flex items-center justify-between mb-1.5">

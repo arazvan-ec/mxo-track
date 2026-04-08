@@ -32,7 +32,7 @@ export function FleetSidebar({
   const [searchQuery, setSearchQuery] = useState('');
 
   return (
-    <div className="flex flex-col w-80 bg-slate-900/95 backdrop-blur-xl border-r border-slate-700/50">
+    <div className="flex flex-col w-80 border-r" style={{ backgroundColor: 'var(--color-surface-glass)', backdropFilter: 'blur(16px)', borderColor: 'var(--color-border-subtle)' }}>
       {/* Back link */}
       <a
         href="/admin"
@@ -64,7 +64,7 @@ export function FleetSidebar({
         </div>
 
         {/* Tabs */}
-        <div className="flex bg-slate-800/60 rounded-lg p-0.5 mb-3">
+        <div className="flex theme-card-overlay p-0.5 mb-3">
           <button
             onClick={() => setActiveTab('vehicles')}
             className={`flex-1 text-xs font-medium py-1.5 px-3 rounded-md transition-all ${
@@ -108,7 +108,12 @@ export function FleetSidebar({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search vehicles..."
-              className="w-full bg-slate-800/80 border border-slate-700/50 rounded-lg pl-8 pr-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/30"
+              className="w-full rounded-lg pl-8 pr-3 py-2 text-sm focus:outline-none focus:ring-1"
+              style={{
+                backgroundColor: 'var(--color-surface-glass)',
+                border: '1px solid var(--color-border-subtle)',
+                color: 'var(--color-text-primary)',
+              }}
             />
           </div>
         )}

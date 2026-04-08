@@ -23,18 +23,18 @@ export function MetricPairs({ metrics, expanded = false }: MetricPairsProps) {
   return (
     <div className="grid grid-cols-3 gap-2 px-4 pb-3">
       {/* Scope pair */}
-      <div className="bg-slate-800/60 rounded-lg p-3">
-        <p className="text-lg font-bold text-slate-200">
+      <div className="theme-card-overlay p-3">
+        <p className="text-lg font-bold" style={{ color: 'var(--color-text-primary)' }}>
           {metrics.routeCount}{' '}
           <span className="text-sm font-medium">rutas</span>
         </p>
-        <p className="text-xs text-slate-400">
+        <p className="text-xs">
           {metrics.stopCount} paradas
         </p>
       </div>
 
       {/* Distance pair */}
-      <div className="bg-slate-800/60 rounded-lg p-3">
+      <div className="theme-card-overlay p-3">
         <p className="text-lg font-bold text-blue-400">
           {metrics.distanceAfterKm}{' '}
           <span className="text-sm font-medium">km</span>
@@ -43,13 +43,13 @@ export function MetricPairs({ metrics, expanded = false }: MetricPairsProps) {
           <span className="inline-block mr-0.5">▼</span>
           {metrics.savedPercent}%
           {expanded && (
-            <span className="text-slate-500"> · -{distanceSavedKm} km</span>
+            <span className="opacity-60"> · -{distanceSavedKm} km</span>
           )}
         </p>
       </div>
 
       {/* Time pair */}
-      <div className="bg-slate-800/60 rounded-lg p-3">
+      <div className="theme-card-overlay p-3">
         <p className="text-lg font-bold text-purple-400">
           {formatDuration(metrics.totalDurationMinutes)}
         </p>
@@ -57,7 +57,7 @@ export function MetricPairs({ metrics, expanded = false }: MetricPairsProps) {
           <span className="inline-block mr-0.5">▼</span>
           {metrics.timeSavedPercent}%
           {expanded && (
-            <span className="text-slate-500">
+            <span className="opacity-60">
               {' '}
               · -{formatDuration(timeSavedMin)}
             </span>

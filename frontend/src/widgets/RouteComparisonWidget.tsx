@@ -33,9 +33,9 @@ export function RouteComparisonWidget({ data }: WidgetProps) {
   if (comparison) {
     return (
       <div className="px-4 pb-3">
-        <div className="bg-slate-800/60 rounded-lg overflow-hidden">
-          <div className="px-3 py-2 border-b border-slate-700">
-            <h4 className="text-[10px] font-semibold text-slate-400 uppercase">
+        <div className="theme-card overflow-hidden">
+          <div className="px-3 py-2 border-b">
+            <h4 className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase">
               Planned vs Actual
             </h4>
           </div>
@@ -72,30 +72,30 @@ export function RouteComparisonWidget({ data }: WidgetProps) {
   return (
     <div className="px-4 pb-3">
       <div className="bg-slate-800/60 rounded-lg overflow-hidden">
-        <div className="px-3 py-2 border-b border-slate-700">
-          <h4 className="text-[10px] font-semibold text-slate-400 uppercase">
+        <div className="px-3 py-2 border-b">
+          <h4 className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase">
             Original vs Optimized
           </h4>
         </div>
         <table className="w-full text-xs">
           <thead>
-            <tr className="text-slate-400">
+            <tr className="text-[var(--color-text-muted)]">
               <th className="px-3 py-1.5 text-left font-medium" />
               <th className="px-3 py-1.5 text-right font-medium">Before</th>
               <th className="px-3 py-1.5 text-right font-medium">After</th>
               <th className="px-3 py-1.5 text-right font-medium">Saved</th>
             </tr>
           </thead>
-          <tbody className="text-slate-200">
-            <tr className="border-t border-slate-700/50">
-              <td className="px-3 py-1.5 text-slate-400">Distance</td>
+          <tbody className="text-[var(--color-text-primary)]">
+            <tr className="border-t border-[var(--color-border)]">
+              <td className="px-3 py-1.5 text-[var(--color-text-muted)]">Distance</td>
               <td className="px-3 py-1.5 text-right">{metrics.distanceBeforeKm} km</td>
               <td className="px-3 py-1.5 text-right text-blue-400">{metrics.distanceAfterKm} km</td>
               <td className="px-3 py-1.5 text-right text-emerald-400">{metrics.savedPercent ?? metrics.savingsPercent}%</td>
             </tr>
             {metrics.durationBeforeMinutes != null && (
-              <tr className="border-t border-slate-700/50">
-                <td className="px-3 py-1.5 text-slate-400">Time</td>
+              <tr className="border-t border-[var(--color-border)]">
+                <td className="px-3 py-1.5 text-[var(--color-text-muted)]">Time</td>
                 <td className="px-3 py-1.5 text-right">{formatDuration(metrics.durationBeforeMinutes)}</td>
                 <td className="px-3 py-1.5 text-right text-purple-400">
                   {formatDuration(metrics.totalDurationMinutes ?? 0)}
@@ -127,8 +127,8 @@ function ComparisonCard({
   };
 
   return (
-    <div className="bg-slate-800/60 rounded-lg p-2.5 border border-slate-700/40">
-      <div className="text-[10px] text-slate-500 mb-1">{label}</div>
+    <div className="theme-card p-2.5">
+      <div className="text-[10px] mb-1" style={{ color: 'var(--color-text-muted)' }}>{label}</div>
       <div className={`text-sm font-bold ${colorClasses[color]}`}>{value}</div>
     </div>
   );
