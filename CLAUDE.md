@@ -614,10 +614,8 @@ haciendo. Ejemplo durante debug:
 - Antes de correr tests → actualizar a fase de verificación
 - Antes de push → actualizar `tests_passed`, `lint_clean`
 
-**Hook-driven header:** El `UserPromptSubmit` hook inyecta un `DISPLAY RULE` con el
-formato exacto del header **en TODOS los flows** (micro, light, debug, explore, full).
-**Copia el template del hook** al inicio de CADA respuesta sin excepción,
-reemplazando `[...]` con datos concretos. Ejemplos por flow:
+**Header de respuesta:** Inicia CADA respuesta con un header de progreso que resuma
+qué se completó con datos concretos. Formato por flow:
 ```
 💬 El endpoint devuelve 404 porque falta la ruta en routing.yaml
 📝 Light — Eliminados 2 imports no usados en RoutePlannerPage, TS limpio
