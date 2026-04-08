@@ -11,6 +11,7 @@ import { WidgetGalleryPage } from './pages/admin/WidgetGalleryPage';
 import { PageLayoutEditorPage } from './pages/admin/PageLayoutEditorPage';
 import { AdminDashboardPage } from './pages/admin/AdminDashboardPage';
 import { CustomerRouteDetailPage } from './pages/customer/CustomerRouteDetailPage';
+import { CustomerDashboardPage } from './pages/customer/CustomerDashboardPage';
 import { DriverRoutePage } from './pages/driver/DriverRoutePage';
 
 export const router = createBrowserRouter([
@@ -28,6 +29,7 @@ export const router = createBrowserRouter([
       { path: 'admin/widgets', element: <WidgetGalleryPage /> },
       { path: 'admin/page-layouts', element: <PageLayoutEditorPage /> },
       { path: 'admin/routes/:publicId/analysis', element: <RouteAnalysisPage /> },
+      { path: 'customer/dashboard', element: <CustomerDashboardPage /> },
       { path: 'customer/routes/:publicId', element: <CustomerRouteDetailPage /> },
       { path: 'driver/routes/:publicId', element: <DriverRoutePage /> },
       { index: true, element: <Navigate to="admin/dashboard" replace /> },

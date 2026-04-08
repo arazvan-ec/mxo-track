@@ -16,6 +16,8 @@ import { InfrastructureMetricsWidget } from './InfrastructureMetricsWidget';
 import { DashboardKpisWidget } from './DashboardKpisWidget';
 import { MiniReportsWidget } from './MiniReportsWidget';
 import { ActivityFeedWidget } from './ActivityFeedWidget';
+import { CustomerKpisWidget } from './CustomerKpisWidget';
+import { CustomerOptimizationWidget } from './CustomerOptimizationWidget';
 
 export interface WidgetRegistryEntry extends WidgetRegistryMeta {
   component: ComponentType<WidgetProps>;
@@ -108,6 +110,20 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetRegistryEntry> = {
     description: 'Live position feed via Mercure SSE',
     collapsible: true,
     sectionTitle: 'Actividad en vivo',
+  },
+  customer_kpis: {
+    component: CustomerKpisWidget,
+    label: 'Customer KPIs',
+    description: '5 customer KPI cards (shipments, routes, deliveries, completed, exceptions)',
+    collapsible: true,
+    sectionTitle: 'Indicadores',
+  },
+  customer_optimization: {
+    component: CustomerOptimizationWidget,
+    label: 'Customer Optimization',
+    description: 'Optimization value cards (km saved, time saved, success rate, savings %)',
+    collapsible: true,
+    sectionTitle: 'Valor de optimizacion',
   },
 };
 
