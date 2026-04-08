@@ -22,7 +22,7 @@ fi
 
 # Read user prompt from stdin (UserPromptSubmit provides it as JSON)
 HOOK_INPUT=$(cat 2>/dev/null || echo "{}")
-USER_PROMPT=$(echo "$HOOK_INPUT" | jq -r '.user_prompt // ""' 2>/dev/null || echo "")
+USER_PROMPT=$(echo "$HOOK_INPUT" | jq -r '.prompt // .user_prompt // ""' 2>/dev/null || echo "")
 
 # Read state
 STATE=$(cat "$STATE_FILE" 2>/dev/null || echo "{}")
