@@ -1,0 +1,39 @@
+# Git
+.git
+.gitignore
+
+# Documentation
+docs/
+*.md
+LICENSE
+
+# Claude Code workflow
+.claude/
+AGENTS.md
+
+# Development tooling
+tools/
+ml-service/
+docker/php/
+
+# Dockerfiles not used by Railway build
+Dockerfile.osrm
+Dockerfile.traccar
+Dockerfile.mercure
+Dockerfile.worker
+Dockerfile.vroom
+docker-compose*.yml
+
+# IDE and OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Local dependencies (rebuilt in container)
+backend/vendor/
+frontend/node_modules/
+
+# Test artifacts
+backend/var/
+backend/.phpunit.result.cache

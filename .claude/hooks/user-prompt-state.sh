@@ -22,7 +22,7 @@ fi
 
 # Read user prompt from stdin (UserPromptSubmit provides it as JSON)
 HOOK_INPUT=$(cat 2>/dev/null || echo "{}")
-USER_PROMPT=$(echo "$HOOK_INPUT" | jq -r '.prompt // .user_prompt // ""' 2>/dev/null || echo "")
+USER_PROMPT=$(echo "$HOOK_INPUT" | jq -r '.prompt // ""' 2>/dev/null || echo "")
 
 # Read state
 STATE=$(cat "$STATE_FILE" 2>/dev/null || echo "{}")
@@ -42,12 +42,12 @@ fi
 # this hook can set it — direct jq writes are reverted by phase-transition-controller.
 # This prevents the model from self-approving designs.
 #
-# Technique: Regex matching on the user's actual text. The .user_prompt field from
+# Technique: Regex matching on the user's actual text. The .prompt field from
 # the hook input may contain injected <system-reminder> blocks with text like
 # "no existe spec document". Without stripping, the rejection regex (no[, ]|...)
 # matches "no existe" and reverts a legitimate "Apruebo" in the same message.
 #
-# Flow: user_prompt → strip <system-reminder> → lowercase → match approval → match rejection
+# Flow: .prompt → strip <system-reminder> → lowercase → match approval → match rejection
 #       If both match (rare), rejection wins (conservative: false negative costs 1 message,
 #       false positive costs wrong implementation)
 #
