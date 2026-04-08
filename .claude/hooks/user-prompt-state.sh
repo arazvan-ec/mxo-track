@@ -2,7 +2,30 @@
 # UserPromptSubmit hook — injects workflow state into Claude's context
 #
 # Reads session-state.json and outputs a compact status line to stdout.
-# Format: 📍 <phase> <index>/<total> <bar> + done/todo lines
+# Format: 📍 <phase> <index>/<total> <bar> + done/todo lines + Header template
+#
+# ── Design decisions (2026-04-08) ──
+#
+# WHY COMPACT: The previous format (DISPLAY RULE + Evidence key=value + decorators)
+# cost ~88 tokens/turn. Over a 20-turn session that's 1,760 tokens spent on status
+# alone. The compact format costs ~36 tokens/turn — same information, 60% less.
+#
+# WHY NO DISPLAY RULE: CLAUDE.md already instructs the model on response format
+# (loaded once per session). Repeating it every turn via DISPLAY RULE was ~30 tokens
+# of redundancy per turn. Instead, a one-line "Header:" template (~8 tokens) serves
+# as a post-compaction reminder without the verbosity.
+#
+# WHY READABLE DONE/TODO: The old "Evidence: decisions=Y user_turns=2 alternatives=Y"
+# was machine-readable but opaque to both the model and the user. "✅ consult,
+# dialogo(2), alternativas" communicates the same state in natural language. The model
+# can reason about it directly; the user can read it at a glance.
+#
+# WHY NO DECORATORS: "── WORKFLOW STATE ──" and "────────────────────" cost ~10 tokens
+# per turn and add zero information. The 📍 prefix already signals "this is status."
+#
+# INVARIANT: Every exit path must output a "Header:" line. This is the only format
+# instruction that survives context compaction. If you add a new flow type or exit
+# path, include a Header line or the model will lose response format after compaction.
 #
 # Non-blocking: always exits 0.
 

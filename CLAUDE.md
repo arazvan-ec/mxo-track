@@ -614,8 +614,8 @@ haciendo. Ejemplo durante debug:
 - Antes de correr tests → actualizar a fase de verificación
 - Antes de push → actualizar `tests_passed`, `lint_clean`
 
-**Header de respuesta:** Inicia CADA respuesta con un header de progreso que resuma
-qué se completó con datos concretos. Formato por flow:
+**Header de respuesta:** Inicia CADA respuesta con el header que el hook inyecta en la
+línea `Header:`. Reemplaza `[...]` con datos concretos de lo completado. Ejemplos:
 ```
 💬 El endpoint devuelve 404 porque falta la ruta en routing.yaml
 📝 Light — Eliminados 2 imports no usados en RoutePlannerPage, TS limpio
@@ -623,6 +623,28 @@ qué se completó con datos concretos. Formato por flow:
 🔍 Explore — 8 controllers encontrados, 3 usan HubInterface directamente
 ✅✅🔄⬚⬚⬚⬚⬚ Planning (3/8) — Spec aprobado, 12 tareas en plan
 ```
+
+#### Why the status line is compact (not verbose)
+
+The hook output is deliberately minimal (~36 tokens/turn). Previous versions used a
+verbose format with decorators, `Evidence: key=value` pairs, and a full `DISPLAY RULE`
+template (~88 tokens/turn). Over 20 turns, that's 1,760 vs 720 tokens — a 1,000-token
+difference spent on status alone, tokens unavailable for reasoning.
+
+**Why no DISPLAY RULE per turn:** This file already instructs the response format (loaded
+once). Repeating it every turn was redundant. A one-line `Header:` template (~8 tokens)
+in the hook output serves as post-compaction reminder without the verbosity.
+
+**Why readable done/todo instead of key=value:** `Evidence: decisions=Y user_turns=2`
+is opaque — the model must decode it, the user can't read it. `✅ consult, dialogo(2)`
+communicates the same state directly. Same information, zero decoding overhead.
+
+**Why no decorators:** `── WORKFLOW STATE ──` and `────` cost ~10 tokens/turn with zero
+information. The `📍` prefix already signals status.
+
+**NUNCA revertir a formato verbose.** Si necesitas agregar información al status line,
+agrégala como una línea done/todo legible, no como key=value. Si necesitas una instrucción
+de formato, usa la línea `Header:`, no un bloque DISPLAY RULE multilínea.
 
 **Formato:** Usar prefijos emoji (✅ completado, 🔄 en curso, ⬚ pendiente, ❌ fallo)
 para que el estado sea visible de un vistazo. Idioma: español.
