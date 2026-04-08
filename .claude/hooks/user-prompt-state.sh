@@ -108,14 +108,17 @@ fi
 case "$FLOW_TYPE" in
   micro)
     echo "📍 micro | responder"
+    echo "Header: 💬 [respuesta concisa]"
     exit 0
     ;;
   light)
     echo "📍 light | documentar"
+    echo "Header: 📝 Light — [completado]"
     exit 0
     ;;
   explore)
     echo "📍 explore | investigar"
+    echo "Header: 🔍 Explore — [encontrado]"
     exit 0
     ;;
   debug)
@@ -142,6 +145,7 @@ case "$FLOW_TYPE" in
     echo "📍 Debug $DEBUG_PHASE"
     [ -n "$DONE" ] && echo "  ✅ $DONE"
     echo "  ⏳ $TODO"
+    echo "Header: 🐛 Debug ($DEBUG_PHASE) — [causa o fix]"
     exit 0
     ;;
 esac
@@ -175,6 +179,7 @@ if [ "$FLOW_TYPE" = "full" ]; then
   if [ "$CURRENT_PHASE" = "null" ] || [ -z "$CURRENT_PHASE" ]; then
     echo "📍 Pendiente 0/$TOTAL ⬚⬚⬚⬚⬚⬚⬚⬚"
     echo "  ⏳ avanzar a consult"
+    echo "Header: ⬚⬚⬚⬚⬚⬚⬚⬚ Pendiente (0/$TOTAL) — [avanzar a consult]"
     exit 0
   fi
 
@@ -295,6 +300,7 @@ if [ "$FLOW_TYPE" = "full" ]; then
   echo "📍 ${CURRENT_PHASE^} $CURRENT_INDEX/$TOTAL $PHASE_BAR${DEV_SUFFIX}"
   [ -n "$DONE" ] && echo "  ✅ $DONE"
   echo "  ⏳ $TODO"
+  echo "Header: $PHASE_BAR ${CURRENT_PHASE^} ($CURRENT_INDEX/$TOTAL) — [completado]"
   exit 0
 fi
 
