@@ -8,29 +8,29 @@
     {# Header #}
     <div class="mb-6 flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">Disponibilidad semanal</h1>
-        <p class="mt-1 text-sm text-gray-500">{{ driver.name ?? driver.email }}</p>
+        <h1 class="text-2xl font-bold" style="color: var(--color-text-primary);">Disponibilidad semanal</h1>
+        <p class="mt-1 text-sm" style="color: var(--color-text-secondary);">{{ driver.name ?? driver.email }}</p>
       </div>
       <a href="{{ path('admin_drivers_index') }}"
-         class="inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+         class="inline-flex items-center rounded-md px-4 py-2 text-sm font-medium" style="border: 1px solid var(--color-border); background: var(--color-surface-elevated); color: var(--color-text-secondary);">
         Volver a conductores
       </a>
     </div>
 
     {# Schedule form #}
-    <div class="bg-white shadow rounded-lg p-6" x-data="availabilitySchedule()">
+    <div class="theme-card p-6" x-data="availabilitySchedule()">
       <form method="post" action="{{ path('admin_drivers_availability_save', {publicId: driver.publicIdString}) }}">
         <input type="hidden" name="_token" value="{{ csrf_token('availability-' ~ driver.publicIdString) }}">
 
         {# Day tabs #}
-        <div class="border-b border-gray-200 mb-6">
+        <div class="border-b mb-6" style="border-color: var(--color-border);">
           <nav class="-mb-px flex space-x-4 overflow-x-auto" aria-label="Dias">
             <template x-for="(dayName, dayIndex) in days" :key="dayIndex">
               <button type="button"
                       @click="activeDay = dayIndex"
                       :class="activeDay === dayIndex
                         ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'"
+                        : 'border-transparent hover:opacity-80'"
                       class="whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium transition-colors">
                 <span x-text="dayName"></span>
                 <span x-show="slots.filter(s => s.dayOfWeek === dayIndex).length > 0"
@@ -44,23 +44,23 @@
         {# Slots for active day #}
         <div class="space-y-4 min-h-[200px]">
           <template x-for="(slot, idx) in slots.filter(s => s.dayOfWeek === activeDay)" :key="slot._key">
-            <div class="flex items-start gap-4 rounded-lg border border-gray-200 p-4">
+            <div class="flex items-start gap-4 rounded-lg border p-4" style="border-color: var(--color-border);">
               <input type="hidden" :name="'slots[' + slot._key + '][dayOfWeek]'" :value="slot.dayOfWeek">
 
               {# Start time #}
               <div class="flex-1">
-                <label class="block text-xs font-medium text-gray-500 mb-1">Inicio</label>
+                <label class="block text-xs font-medium mb-1" style="color: var(--color-text-secondary);">Inicio</label>
                 <input type="time" x-model="slot.startTime"
                        :name="'slots[' + slot._key + '][startTime]'"
-                       class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                       class="w-full rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" style="border-color: var(--color-border);">
               </div>
 
               {# End time #}
               <div class="flex-1">
-                <label class="block text-xs font-medium text-gray-500 mb-1">Fin</label>
+                <label class="block text-xs font-medium mb-1" style="color: var(--color-text-secondary);">Fin</label>
                 <input type="time" x-model="slot.endTime"
                        :name="'slots[' + slot._key + '][endTime]'"
-                       class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                       class="w-full rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" style="border-color: var(--color-border);">
               </div>
 
               {# Available toggle #}
@@ -69,19 +69,19 @@
                   <input type="checkbox" x-model="slot.isAvailable"
                          :name="'slots[' + slot._key + '][isAvailable]'"
                          class="sr-only peer" value="1">
-                  <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
-                  <span class="ml-2 text-xs font-medium" :class="slot.isAvailable ? 'text-green-600' : 'text-gray-400'"
+                  <div class="w-9 h-5 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600" style="background: var(--color-border);"></div>
+                  <span class="ml-2 text-xs font-medium" :class="slot.isAvailable ? 'text-green-600' : ''" :style="!slot.isAvailable ? 'color: var(--color-text-muted)' : ''"
                         x-text="slot.isAvailable ? 'Disponible' : 'No disponible'"></span>
                 </label>
               </div>
 
               {# Notes #}
               <div class="flex-1">
-                <label class="block text-xs font-medium text-gray-500 mb-1">Notas</label>
+                <label class="block text-xs font-medium mb-1" style="color: var(--color-text-secondary);">Notas</label>
                 <input type="text" x-model="slot.notes"
                        :name="'slots[' + slot._key + '][notes]'"
                        placeholder="Opcional"
-                       class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                       class="w-full rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" style="border-color: var(--color-border);">
               </div>
 
               {# Remove button #}
@@ -98,7 +98,7 @@
 
           {# Empty state #}
           <div x-show="slots.filter(s => s.dayOfWeek === activeDay).length === 0"
-               class="text-center py-8 text-gray-400 text-sm">
+               class="text-center py-8 text-sm" style="color: var(--color-text-muted);">
             No hay franjas horarias configuradas para este dia.
           </div>
         </div>
@@ -106,7 +106,7 @@
         {# Add slot button #}
         <div class="mt-4">
           <button type="button" @click="addSlot(activeDay)"
-                  class="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                  class="inline-flex items-center rounded-md px-3 py-2 text-sm font-medium" style="border: 1px solid var(--color-border); background: var(--color-surface-elevated); color: var(--color-text-secondary);">
             <svg class="mr-1.5 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
             </svg>
@@ -126,9 +126,9 @@
         </template>
 
         {# Save #}
-        <div class="mt-6 flex items-center justify-between border-t border-gray-200 pt-4">
+        <div class="mt-6 flex items-center justify-between border-t pt-4" style="border-color: var(--color-border);">
           <a href="{{ path('admin_drivers_edit', {publicId: driver.publicIdString}) }}"
-             class="text-sm font-medium text-gray-600 hover:text-gray-900">
+             class="text-sm font-medium hover:opacity-80" style="color: var(--color-text-secondary);">
             Editar conductor
           </a>
           <button type="submit"

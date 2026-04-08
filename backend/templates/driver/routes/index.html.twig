@@ -5,10 +5,10 @@
 {% block breadcrumbs %}
   <li>
     <div class="flex items-center">
-      <svg class="h-5 w-5 shrink-0 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+      <svg class="h-5 w-5 shrink-0" style="color: var(--color-text-muted);" viewBox="0 0 20 20" fill="currentColor">
         <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd"/>
       </svg>
-      <span class="ml-2 text-sm font-medium text-gray-500">Mis Rutas</span>
+      <span class="ml-2 text-sm font-medium" style="color: var(--color-text-secondary);">Mis Rutas</span>
     </div>
   </li>
 {% endblock %}
@@ -16,8 +16,8 @@
 {% block content %}
   {# ── Header ──────────────────────────────────────────────────────── #}
   <div class="mb-6">
-    <h1 class="text-2xl font-bold text-gray-900">Mis Rutas</h1>
-    <p class="mt-1 text-sm text-gray-500">Hola, {{ app.user.email }}</p>
+    <h1 class="text-2xl font-bold" style="color: var(--color-text-primary);">Mis Rutas</h1>
+    <p class="mt-1 text-sm" style="color: var(--color-text-secondary);">Hola, {{ app.user.email }}</p>
   </div>
 
   {# ── Summary pills ──────────────────────────────────────────────── #}
@@ -27,17 +27,17 @@
   {% set cancelledRoutes = routes|filter(r => r.status.value == 'CANCELLED') %}
 
   <div class="grid grid-cols-3 gap-3 mb-6">
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 px-4 py-3 text-center">
-      <p class="text-2xl font-bold text-gray-900">{{ routes|length }}</p>
-      <p class="text-xs text-gray-500 mt-0.5">Total rutas</p>
+    <div class="theme-card rounded-xl px-4 py-3 text-center">
+      <p class="text-2xl font-bold" style="color: var(--color-text-primary);">{{ routes|length }}</p>
+      <p class="text-xs mt-0.5" style="color: var(--color-text-secondary);">Total rutas</p>
     </div>
-    <div class="bg-white rounded-xl shadow-sm border border-amber-200 px-4 py-3 text-center">
+    <div class="rounded-xl shadow-sm border border-amber-200 px-4 py-3 text-center" style="background: var(--color-surface-elevated);">
       <p class="text-2xl font-bold text-amber-600">{{ activeRoutes|length }}</p>
-      <p class="text-xs text-gray-500 mt-0.5">Activas</p>
+      <p class="text-xs mt-0.5" style="color: var(--color-text-secondary);">Activas</p>
     </div>
-    <div class="bg-white rounded-xl shadow-sm border border-green-200 px-4 py-3 text-center">
+    <div class="rounded-xl shadow-sm border border-green-200 px-4 py-3 text-center" style="background: var(--color-surface-elevated);">
       <p class="text-2xl font-bold text-green-600">{{ doneRoutes|length }}</p>
-      <p class="text-xs text-gray-500 mt-0.5">Completadas</p>
+      <p class="text-xs mt-0.5" style="color: var(--color-text-secondary);">Completadas</p>
     </div>
   </div>
 
@@ -45,11 +45,11 @@
   {% set sortedRoutes = activeRoutes|merge(plannedRoutes)|merge(doneRoutes)|merge(cancelledRoutes) %}
 
   {% if sortedRoutes|length == 0 %}
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 px-6 py-12 text-center">
-      <svg class="mx-auto h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+    <div class="theme-card rounded-xl px-6 py-12 text-center">
+      <svg class="mx-auto h-12 w-12" style="color: var(--color-text-muted);" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z"/>
       </svg>
-      <p class="mt-3 text-sm text-gray-500">No tienes rutas asignadas.</p>
+      <p class="mt-3 text-sm" style="color: var(--color-text-secondary);">No tienes rutas asignadas.</p>
     </div>
   {% else %}
     <div class="space-y-4">
@@ -58,16 +58,15 @@
         {% set pending = counts.total - counts.delivered - counts.exceptions %}
 
         <div x-data="{ loading: false }"
-             class="bg-white rounded-xl shadow-sm border overflow-hidden
-                    {% if route.status.value == 'ACTIVE' %}border-l-4 border-l-blue-500 border-t border-r border-b border-gray-100
-                    {% else %}border-gray-100{% endif %}">
+             class="rounded-xl shadow-sm border overflow-hidden
+                    {% if route.status.value == 'ACTIVE' %}border-l-4 border-l-blue-500 border-t border-r border-b{% endif %}" style="background: var(--color-surface-elevated); border-color: var(--color-border);">
 
           <div class="px-4 py-4 sm:px-6">
             {# ── Card header: name + status ── #}
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0 flex-1">
-                <h3 class="text-base font-semibold text-gray-900 truncate">{{ route.name }}</h3>
-                <div class="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                <h3 class="text-base font-semibold truncate" style="color: var(--color-text-primary);">{{ route.name }}</h3>
+                <div class="mt-1 flex flex-wrap items-center gap-2 text-xs" style="color: var(--color-text-secondary);">
                   {% if route.customer %}
                     <span class="flex items-center gap-1">
                       <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -102,11 +101,11 @@
             {# ── Progress bar ── #}
             {% if counts.total > 0 %}
               <div class="mt-3">
-                <div class="flex items-center justify-between text-xs text-gray-500 mb-1">
+                <div class="flex items-center justify-between text-xs mb-1" style="color: var(--color-text-secondary);">
                   <span>Progreso</span>
                   <span>{{ counts.delivered }}/{{ counts.total }} entregas</span>
                 </div>
-                <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                <div class="w-full rounded-full h-2 overflow-hidden" style="background: var(--color-surface);">
                   {% set deliveredPct = (counts.delivered / counts.total * 100)|round %}
                   {% set exceptionPct = (counts.exceptions / counts.total * 100)|round %}
                   <div class="h-2 rounded-full flex">
@@ -142,7 +141,7 @@
                 </div>
               </div>
             {% else %}
-              <p class="mt-3 text-xs text-gray-400">Sin paradas asignadas</p>
+              <p class="mt-3 text-xs" style="color: var(--color-text-muted);">Sin paradas asignadas</p>
             {% endif %}
 
             {# ── Actions ── #}
@@ -188,7 +187,7 @@
               {% endif %}
 
               <a href="{{ path('driver_routes_show', {publicId: route.publicIdString}) }}"
-                 class="inline-flex items-center gap-1.5 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 transition-colors">
+                 class="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold shadow-sm ring-1 ring-inset transition-colors" style="background: var(--color-surface-elevated); color: var(--color-text-secondary); --tw-ring-color: var(--color-border);">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/>
                   <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>

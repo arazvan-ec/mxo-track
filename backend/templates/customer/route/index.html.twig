@@ -124,7 +124,7 @@
                   {% endif %}
                 </div>
               {% else %}
-                <span class="text-xs text-gray-400">-</span>
+                <span class="text-xs" style="color: var(--color-text-muted);">-</span>
               {% endif %}
             </td>
             <td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
@@ -134,7 +134,7 @@
           </tr>
         {% else %}
           <tr>
-            <td colspan="7" class="px-6 py-8 text-center text-sm text-gray-500">
+            <td colspan="7" class="px-6 py-8 text-center text-sm" style="color: var(--color-text-secondary);">
               No hay rutas registradas.
             </td>
           </tr>
@@ -146,19 +146,19 @@
   {# ── Pagination ──────────────────────────────────────────────────── #}
   {% if totalPages > 1 %}
     <nav class="mt-6 flex items-center justify-between">
-      <div class="text-sm text-gray-700">
+      <div class="text-sm" style="color: var(--color-text-secondary);">
         Pagina {{ page }} de {{ totalPages }}
       </div>
       <div class="flex space-x-2">
         {% if page > 1 %}
           <a href="{{ path('customer_routes_index', {page: page - 1, status: currentStatus}) }}"
-             class="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+             class="inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium" style="border-color: var(--color-border); background: var(--color-surface-elevated); color: var(--color-text-secondary);">
             Anterior
           </a>
         {% endif %}
         {% if page < totalPages %}
           <a href="{{ path('customer_routes_index', {page: page + 1, status: currentStatus}) }}"
-             class="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+             class="inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium" style="border-color: var(--color-border); background: var(--color-surface-elevated); color: var(--color-text-secondary);">
             Siguiente
           </a>
         {% endif %}
