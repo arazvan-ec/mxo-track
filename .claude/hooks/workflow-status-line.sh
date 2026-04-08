@@ -281,7 +281,21 @@ if [ "$FLOW_TYPE" = "full" ]; then
   # Current phase needs
   NEEDS=$(phase_needs "$CURRENT_PHASE")
 
-  LINE="📍 full | ${DISPLAY_PHASE} (${CURRENT_INDEX}/${TOTAL})"
+  # Build phase progress bar
+  PHASE_BAR=""
+  for i in "${!PHASES[@]}"; do
+    idx=$((i + 1))
+    if [ "$idx" -lt "$CURRENT_INDEX" ]; then
+      PHASE_BAR="${PHASE_BAR}✅"
+    elif [ "$idx" -eq "$CURRENT_INDEX" ]; then
+      PHASE_BAR="${PHASE_BAR}🔄"
+    else
+      PHASE_BAR="${PHASE_BAR}⬚"
+    fi
+  done
+
+  # Line 1: Flow, phase, index, emoji bar, task progress, deviation
+  LINE1="📍 full | ${DISPLAY_PHASE} (${CURRENT_INDEX}/${TOTAL}) | ${PHASE_BAR}"
 
   # Add task progress for implementation/verification phases
   if [ "$TASK_TOTAL" -gt 0 ] 2>/dev/null && [ "$TASK_CURRENT" -gt 0 ] 2>/dev/null; then
@@ -296,23 +310,39 @@ if [ "$FLOW_TYPE" = "full" ]; then
           TASK_BAR="${TASK_BAR}⬚"
         fi
       done
-      LINE="${LINE} | ${TASK_BAR} t${TASK_CURRENT}/${TASK_TOTAL}"
-      [ -n "$TASK_LABEL" ] && LINE="${LINE}: ${TASK_LABEL}"
+      LINE1="${LINE1} ${TASK_BAR} t${TASK_CURRENT}/${TASK_TOTAL}"
+      [ -n "$TASK_LABEL" ] && LINE1="${LINE1}: ${TASK_LABEL}"
     fi
   fi
+  LINE1="${LINE1}${DEVIATION_SUFFIX}"
 
-  if [ -n "$COMPLETED" ]; then
-    LINE="${LINE} | ${COMPLETED} → 🔄 ${CURRENT_PHASE}"
-  else
-    LINE="${LINE} | 🔄 ${CURRENT_PHASE}"
+  # Line 2: Needs + tool context (if either exists)
+  LINE2=""
+  # NEEDS from phase_needs() starts with " | Need: ..." — strip the leading " | "
+  NEEDS_CLEAN="${NEEDS# | }"
+  if [ -n "$NEEDS_CLEAN" ] && [ -n "$TOOL_SUFFIX" ]; then
+    LINE2="  ${NEEDS_CLEAN}${TOOL_SUFFIX}"
+  elif [ -n "$NEEDS_CLEAN" ]; then
+    LINE2="  ${NEEDS_CLEAN}"
+  elif [ -n "$TOOL_SUFFIX" ]; then
+    LINE2=" ${TOOL_SUFFIX}"
   fi
-  LINE="${LINE}${NEEDS}"
-  if [ -n "$PENDING" ]; then
-    LINE="${LINE} | Pendiente: ${PENDING}"
-  fi
-  LINE="${LINE}${DEVIATION_SUFFIX}${TOOL_SUFFIX}"
 
-  echo "$LINE" > "$OUTPUT"
+  # Line 3: Completed phase chain (only if ≥2 phases completed, i.e. CURRENT_INDEX > 2)
+  LINE3=""
+  if [ "$CURRENT_INDEX" -gt 2 ] && [ -n "$COMPLETED" ]; then
+    LINE3="  ${COMPLETED}"
+  elif [ -n "$COMPLETED" ]; then
+    # Early phases: append completed inline to line 1
+    LINE1="${LINE1} | ${COMPLETED}"
+  fi
+
+  # Assemble output
+  {
+    echo "$LINE1"
+    [ -n "$LINE2" ] && echo "$LINE2"
+    [ -n "$LINE3" ] && echo "$LINE3"
+  } > "$OUTPUT"
   cat "$OUTPUT"
   exit 0
 fi
@@ -396,19 +426,47 @@ if [ "$FLOW_TYPE" = "debug" ]; then
 
   DISPLAY_PHASE="$(echo "${DEBUG_CURRENT:0:1}" | tr '[:lower:]' '[:upper:]')${DEBUG_CURRENT:1}"
 
-  LINE="📍 debug | ${DISPLAY_PHASE} (${DEBUG_INDEX}/${TOTAL})"
-  if [ -n "$COMPLETED" ]; then
-    LINE="${LINE} | ${COMPLETED} → 🔄 ${DEBUG_CURRENT}"
-  else
-    LINE="${LINE} | 🔄 ${DEBUG_CURRENT}"
-  fi
-  LINE="${LINE}${NEEDS}"
-  if [ -n "$PENDING" ]; then
-    LINE="${LINE} | Pendiente: ${PENDING}"
-  fi
-  LINE="${LINE}${DEVIATION_SUFFIX}${TOOL_SUFFIX}"
+  # Build debug phase bar
+  DEBUG_BAR=""
+  for i in "${!DEBUG_PHASES[@]}"; do
+    idx=$((i + 1))
+    if [ "$idx" -lt "$DEBUG_INDEX" ]; then
+      DEBUG_BAR="${DEBUG_BAR}✅"
+    elif [ "$idx" -eq "$DEBUG_INDEX" ]; then
+      DEBUG_BAR="${DEBUG_BAR}🔄"
+    else
+      DEBUG_BAR="${DEBUG_BAR}⬚"
+    fi
+  done
 
-  echo "$LINE" > "$OUTPUT"
+  # Line 1: Flow, phase, index, emoji bar, deviation
+  LINE1="📍 debug | ${DISPLAY_PHASE} (${DEBUG_INDEX}/${TOTAL}) | ${DEBUG_BAR}${DEVIATION_SUFFIX}"
+
+  # Line 2: Needs + tool context
+  LINE2=""
+  NEEDS_CLEAN="${NEEDS# | }"
+  if [ -n "$NEEDS_CLEAN" ] && [ -n "$TOOL_SUFFIX" ]; then
+    LINE2="  ${NEEDS_CLEAN}${TOOL_SUFFIX}"
+  elif [ -n "$NEEDS_CLEAN" ]; then
+    LINE2="  ${NEEDS_CLEAN}"
+  elif [ -n "$TOOL_SUFFIX" ]; then
+    LINE2=" ${TOOL_SUFFIX}"
+  fi
+
+  # Line 3: Completed chain (only if ≥2 completed, i.e. DEBUG_INDEX > 2)
+  LINE3=""
+  if [ "$DEBUG_INDEX" -gt 2 ] && [ -n "$COMPLETED" ]; then
+    LINE3="  ${COMPLETED}"
+  elif [ -n "$COMPLETED" ]; then
+    LINE1="${LINE1} | ${COMPLETED}"
+  fi
+
+  # Assemble output
+  {
+    echo "$LINE1"
+    [ -n "$LINE2" ] && echo "$LINE2"
+    [ -n "$LINE3" ] && echo "$LINE3"
+  } > "$OUTPUT"
   cat "$OUTPUT"
   exit 0
 fi
