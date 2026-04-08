@@ -29,11 +29,20 @@
 
 ### What worked
 - Dispatcher pattern (call existing scripts) was much simpler than full merge (~45 lines vs ~750)
-- Pattern from commit 2773ab9 transferred directly
+- Pattern from commit 2773ab9 (Bash consolidation) transferred directly — same technique, different event type
+
+### Emerging pattern: dispatcher as hook consolidation strategy
+- This is the 2nd time we consolidate hooks via dispatcher (1st: Bash in 2773ab9, 2nd: Read/Write/Edit/Agent here)
+- If a 3rd consolidation happens, consider extracting a generic `hook-dispatcher.sh` that takes sub-scripts as arguments
+- For now, 2 instances don't justify the abstraction
 
 ### Lessons
-- Consolidating hooks via dispatcher is the right pattern for this repo — keeps individual scripts testable while reducing UI noise
-- The stdin-once problem (each script reads stdin) is solved by saving input and piping to each sub-script
+- **stdin-once problem:** Each sub-script calls `cat` to read stdin. The dispatcher must save input to a variable and pipe it to each sub-script. This is non-obvious and would bite anyone adding a new sub-script
+- **PreToolUse can't be consolidated the same way:** PreToolUse hooks have exit codes that block/allow the tool. A dispatcher would need to propagate the strictest exit code, adding complexity. Keep PreToolUse hooks separate
+- **Residual noise:** Edit still shows 2 entries (1 PreToolUse + 1 PostToolUse). To reduce further, the PreToolUse workflow-engine would need to be eliminated — but it provides gate enforcement, so the trade-off isn't worth it
+
+### Process note
+- Rushed through retrospective on first pass (declared "ya incluida" without updating decision log or reflecting). The phase exists precisely to catch patterns like the dispatcher consolidation trend — skipping it loses that signal
 
 ### Metrics
 - Files changed: 4 (1 new script, 1 settings update, 1 spec, 1 plan)
