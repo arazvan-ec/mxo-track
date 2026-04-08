@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="{{ app.request.locale }}" class="h-full bg-gray-50">
+<html lang="{{ app.request.locale }}" class="h-full" style="background-color: var(--color-surface);">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -44,11 +44,13 @@
   </script>
 
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+  {# React App Shell CSS (theme variables, shared Tailwind utilities) #}
+  <link rel="stylesheet" href="/app/assets/index.css">
   {% block styles %}{% endblock %}
 </head>
 <body class="h-full" {% block body_attrs %}{% endblock %}>
 {% block body %}
-<div class="flex flex-col min-h-screen" style="background-color: var(--color-surface); color: var(--color-text-primary);">
+<div class="flex flex-col h-screen w-full" style="background-color: var(--color-surface); color: var(--color-text-primary);">
 
   {# ── React App Shell (unified TopBar + Sidebar, same as SPA) ──── #}
   <div id="react-shell-root"></div>
@@ -59,11 +61,11 @@
   <div data-mercure-url="{{ mercure_public_url }}" style="display:none"></div>
   {% endif %}
 
-  {# ── Main content area ──────────────────────────────────────────── #}
-  <div>
+  {# ── Main content area (matches AppLayout's flex-1 structure) ──── #}
+  <div class="flex-1 overflow-auto">
 
     {# ── Flash messages (toasts) ─────────────────────────────────── #}
-    <div class="fixed top-20 right-4 z-50 flex flex-col gap-3 w-96 max-w-[calc(100vw-2rem)]">
+    <div class="fixed top-20 right-4 z-[60] flex flex-col gap-3 w-96 max-w-[calc(100vw-2rem)]">
       {% for type, messages in app.flashes %}
         {% for message in messages %}
           <div x-data="{ show: true }"

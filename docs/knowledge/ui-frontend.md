@@ -14,29 +14,52 @@
 | Stimulus | Symfony UX | 2 controllers | `csrf_protection_controller.js`, `hello_controller.js` |
 | Frontend SPA | React | `frontend/src/` | Separate React app (pages, components, API hooks) |
 
-## Layout Architecture
+## Layout Architecture — Unified System
 
-**`backend/templates/base.html.twig`** — Master layout. All pages extend this.
-- Tailwind config (brand colors, sidebar palette) defined inline in `<script>`
+**Última actualización:** 2026-04-08
+
+**Principle:** SPA and Twig pages share the SAME layout structure so the menu system behaves identically everywhere.
+
+**Unified layout structure** (both `AppLayout.tsx` and `base.html.twig`):
+```
+flex flex-col h-screen w-full
+  ├── TopBar (shrink-0, sticky top-0)
+  ├── NavigationSidebar (fixed overlay, z-50 + backdrop z-40)
+  └── Content area (flex-1 overflow-auto)
+        └── Page content (scrolls within this area)
+```
+
+**`backend/templates/base.html.twig`** — Master layout. All Twig pages extend this.
+- Layout: `flex flex-col h-screen w-full` (matches `AppLayout.tsx`)
+- Content area: `flex-1 overflow-auto` (content scrolls, TopBar stays fixed)
+- React App Shell CSS loaded in `<head>`: `<link rel="stylesheet" href="/app/assets/index.css">`
+- React App Shell widget: `app-shell-widget.js` renders TopBar + NavigationSidebar
+- Tailwind CDN for Twig-specific utility classes
 - Alpine.js loaded via CDN defer
-- Includes sidebar, topbar, flash messages
-- Twig blocks: `title`, `styles`, `body`, `body_attrs`
+- Twig blocks: `title`, `styles`, `body`, `body_attrs`, `content`
 
-**Top Bar** — Unified across Twig and React SPA pages:
-- **Twig pages:** Top bar defined inline in `base.html.twig` with hamburger, search, language switcher, notifications, user dropdown
-- **React SPA pages:** `frontend/src/components/layout/TopBar.tsx` — shared React component matching the Twig top bar (search, language switcher, notifications with Mercure SSE, user dropdown)
-- `TopBar` accepts `extraControls` prop for page-specific buttons (e.g. data sidebar toggle in `DualMenuShell`)
+**`frontend/src/components/layout/AppLayout.tsx`** — SPA layout. React pages use this.
+- Identical structure: `flex flex-col h-screen w-full` → TopBar → `flex-1 overflow-hidden` → Outlet
+- Uses `overflow-hidden` (React pages manage own scroll) vs Twig's `overflow-auto`
 
-**Navigation Sidebar** — Unified React `NavigationSidebar` widget (replaces old Twig `_sidebar_content.html.twig`)
-- **Data source:** `NavigationController::getNavigation()` (`/api/navigation`) — returns sections, items, icons per role. Cached 1h (`Cache-Control: max-age=3600`)
-- **Renderer:** `frontend/src/components/layout/NavigationSidebar.tsx` renders all menu items for all roles
-- **Icons:** SVG icons defined in `NavigationSidebar.tsx` `icons` object — must match `icon` field from API response
-- **Mounted in Twig via widget:** `frontend/src/sidebar-widget.tsx` → standalone entry point, loaded in `base.html.twig` as `<script src="sidebar-widget.js">`
-- **Twig integration:** Hamburger button in topbar calls `window.__mxoSidebarOpen()` to open React overlay drawer
-- **SPA integration:** Same `NavigationSidebar` used inside `DualMenuShell` for React SPA pages
-- Role-based rendering handled inside React component (reads user role from context)
-- Old `_sidebar_content.html.twig` still exists but is **no longer included** in `base.html.twig` (candidate for deletion)
-- **To add a menu item:** 1) Add icon SVG in `NavigationSidebar.tsx` icons object, 2) Add `$this->item()` call in `NavigationController.php`, 3) Add translation key in `messages.{es,en}.yaml`
+**Top Bar** — Single React component used everywhere:
+- `frontend/src/components/layout/TopBar.tsx` — hamburger, search, theme switcher, language, notifications, user dropdown
+- `TopBar` accepts `extraControls` prop for page-specific buttons (e.g. data sidebar toggle)
+- Sticky `top-0 z-20` with glass backdrop blur
+
+**Navigation Sidebar** — Single React component used everywhere:
+- **Data source:** `NavigationController` (`/api/navigation`) — sections, items, icons per role. Cached 1h
+- **Renderer:** `frontend/src/components/layout/NavigationSidebar.tsx`
+- **Overlay mode:** `fixed z-50` + backdrop `fixed inset-0 z-40` + body scroll lock
+- **Responsive width:** `w-[85vw] max-w-[18rem]` on mobile
+- **Icons:** SVG icons in `NavigationSidebar.tsx` `icons` object — must match `icon` field from API
+- **To add a menu item:** 1) Add icon SVG in `NavigationSidebar.tsx`, 2) Add `$this->item()` in `NavigationController.php`, 3) Add translation key in `messages.{es,en}.yaml`
+
+**CSS Architecture:**
+- Theme CSS variables defined in `frontend/src/index.css` (loaded on ALL pages via `<link>`)
+- `index.css` includes: design tokens (`:root`, `.dark`), presets (glass, command, bento, dense), `theme-card` class, animations
+- Vite builds CSS with predictable name (`index.css`, no hash) so `base.html.twig` can link it
+- Tailwind CDN on Twig pages for utility classes; Tailwind v4 via `@tailwindcss/vite` in React build
 
 ## Template Organization
 
@@ -75,7 +98,7 @@ Brand palette defined inline in `base.html.twig`:
 
 Breakpoints: Mobile-first. `lg:` = desktop (sidebar expands, text shown).
 
-Common card pattern: `.rounded-lg.border.border-gray-200.bg-white.shadow-sm`
+Common card pattern: `.theme-card` class (uses CSS variables: `--card-bg`, `--card-border`, `--card-radius`, `--card-shadow`)
 
 ## Alpine.js Patterns
 

@@ -26,6 +26,13 @@ export default defineConfig({
           }
           return 'assets/[name]-[hash].js';
         },
+        assetFileNames: (assetInfo) => {
+          // Predictable CSS name so base.html.twig can link it
+          if (assetInfo.names?.some((n: string) => n.endsWith('.css'))) {
+            return 'assets/[name][extname]';
+          }
+          return 'assets/[name]-[hash][extname]';
+        },
       },
     },
   },

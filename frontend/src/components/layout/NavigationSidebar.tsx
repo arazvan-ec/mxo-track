@@ -1,3 +1,4 @@
+import React from 'react';
 import { useMe } from '@/api/hooks/useMe';
 import { useNavigation } from '@/api/hooks/useNavigation';
 
@@ -138,6 +139,14 @@ export function NavigationSidebar({ onClose, mode = 'overlay' }: Props) {
   const currentPath = window.location.pathname;
   const inline = mode === 'inline';
 
+  // Lock body scroll when overlay sidebar is open
+  React.useEffect(() => {
+    if (inline) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, [inline]);
+
   return (
     <>
       {/* Backdrop (overlay mode only) */}
@@ -154,7 +163,7 @@ export function NavigationSidebar({ onClose, mode = 'overlay' }: Props) {
         className={
           inline
             ? 'w-64 flex-shrink-0 flex flex-col border-r h-full'
-            : 'fixed top-0 left-0 bottom-0 w-72 z-50 flex flex-col shadow-2xl animate-slide-in-left'
+            : 'fixed top-0 left-0 bottom-0 z-50 flex flex-col shadow-2xl animate-slide-in-left w-[85vw] max-w-[18rem]'
         }
         style={{ backgroundColor: 'var(--color-surface-elevated)', borderColor: 'var(--color-border)' }}
       >
