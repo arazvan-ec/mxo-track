@@ -201,6 +201,28 @@ if [ "$FLOW_TYPE" = "full" ]; then
   PHASES=("consult" "brainstorming" "planning" "implementation" "verification" "capture" "retrospective" "finalize")
   TOTAL=8
 
+  # Handle null/undeclared phase: flow declared but phase-advance not yet called
+  if [ "$CURRENT_PHASE" = "null" ] || [ -z "$CURRENT_PHASE" ]; then
+    echo "── WORKFLOW STATE ──"
+    echo "Flow: full | Phase: pending (0/$TOTAL)"
+    echo "Progress: ⬚⬚⬚⬚⬚⬚⬚⬚"
+    echo "Next: run .claude/hooks/phase-advance.sh consult"
+    echo ""
+    echo "DISPLAY RULE: Start your response with: ⬚⬚⬚⬚⬚⬚⬚⬚ Pendiente (0/$TOTAL) — avanzar a consult"
+    echo "────────────────────"
+    exit 0
+  fi
+
+  # Normalize common phase variants to canonical names
+  case "$CURRENT_PHASE" in
+    implement)      CURRENT_PHASE="implementation" ;;
+    brainstorm)     CURRENT_PHASE="brainstorming" ;;
+    plan)           CURRENT_PHASE="planning" ;;
+    verify|verif*)  CURRENT_PHASE="verification" ;;
+    retro)          CURRENT_PHASE="retrospective" ;;
+    final*)         CURRENT_PHASE="finalize" ;;
+  esac
+
   # Find current phase index
   CURRENT_INDEX=0
   for i in "${!PHASES[@]}"; do
