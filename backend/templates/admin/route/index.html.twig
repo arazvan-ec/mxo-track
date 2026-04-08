@@ -5,7 +5,7 @@
 {% block content %}
     {# Header #}
     <div class="mb-6 flex items-center justify-between">
-      <h1 class="text-2xl font-bold text-gray-900">Rutas</h1>
+      <h1 class="text-2xl font-bold" style="color: var(--color-text-primary);">Rutas</h1>
       <a href="{{ path('admin_routes_new') }}"
          class="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
         Nueva ruta
@@ -13,27 +13,27 @@
     </div>
 
     {# Status filter tabs #}
-    <div class="mb-6 border-b border-gray-200">
+    <div class="mb-6 border-b" style="border-color: var(--color-border);">
       <nav class="-mb-px flex space-x-6" aria-label="Filtros">
         {% set tabParams = filterParams|filter((v, k) => k != 'status') %}
         <a href="{{ path('admin_routes_index', tabParams) }}"
-           class="whitespace-nowrap border-b-2 pb-3 px-1 text-sm font-medium {% if currentStatus == '' %}border-blue-500 text-blue-600{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{% endif %}">
+           class="whitespace-nowrap border-b-2 pb-3 px-1 text-sm font-medium {% if currentStatus == '' %}border-blue-500 text-blue-600{% else %}border-transparent hover:opacity-80{% endif %}">
           Todas
         </a>
         <a href="{{ path('admin_routes_index', tabParams|merge({status: 'PLANNED'})) }}"
-           class="whitespace-nowrap border-b-2 pb-3 px-1 text-sm font-medium {% if currentStatus == 'PLANNED' %}border-blue-500 text-blue-600{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{% endif %}">
+           class="whitespace-nowrap border-b-2 pb-3 px-1 text-sm font-medium {% if currentStatus == 'PLANNED' %}border-blue-500 text-blue-600{% else %}border-transparent hover:opacity-80{% endif %}">
           Planificadas
         </a>
         <a href="{{ path('admin_routes_index', tabParams|merge({status: 'ACTIVE'})) }}"
-           class="whitespace-nowrap border-b-2 pb-3 px-1 text-sm font-medium {% if currentStatus == 'ACTIVE' %}border-amber-500 text-amber-600{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{% endif %}">
+           class="whitespace-nowrap border-b-2 pb-3 px-1 text-sm font-medium {% if currentStatus == 'ACTIVE' %}border-amber-500 text-amber-600{% else %}border-transparent hover:opacity-80{% endif %}">
           Activas
         </a>
         <a href="{{ path('admin_routes_index', tabParams|merge({status: 'DONE'})) }}"
-           class="whitespace-nowrap border-b-2 pb-3 px-1 text-sm font-medium {% if currentStatus == 'DONE' %}border-green-500 text-green-600{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{% endif %}">
+           class="whitespace-nowrap border-b-2 pb-3 px-1 text-sm font-medium {% if currentStatus == 'DONE' %}border-green-500 text-green-600{% else %}border-transparent hover:opacity-80{% endif %}">
           Completadas
         </a>
         <a href="{{ path('admin_routes_index', tabParams|merge({status: 'CANCELLED'})) }}"
-           class="whitespace-nowrap border-b-2 pb-3 px-1 text-sm font-medium {% if currentStatus == 'CANCELLED' %}border-red-500 text-red-600{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{% endif %}">
+           class="whitespace-nowrap border-b-2 pb-3 px-1 text-sm font-medium {% if currentStatus == 'CANCELLED' %}border-red-500 text-red-600{% else %}border-transparent hover:opacity-80{% endif %}">
           Canceladas
         </a>
       </nav>
@@ -42,7 +42,7 @@
     {# Advanced filters #}
     <div x-data="{ filtersOpen: {{ (dateFrom or dateTo or driverId or customerId) ? 'true' : 'false' }} }" class="mb-6">
       <button @click="filtersOpen = !filtersOpen" type="button"
-              class="inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
+              class="inline-flex items-center gap-2 text-sm font-medium hover:opacity-80 transition-colors" style="color: var(--color-text-secondary);">
         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z"/>
         </svg>
@@ -52,7 +52,7 @@
         </svg>
       </button>
 
-      <div x-show="filtersOpen" x-cloak x-transition class="mt-4 rounded-lg bg-white p-4 shadow ring-1 ring-gray-200">
+      <div x-show="filtersOpen" x-cloak x-transition class="mt-4 rounded-lg p-4 shadow ring-1" style="background: var(--color-surface-elevated); border-color: var(--color-border);">
         <form action="{{ path('admin_routes_index') }}" method="GET" class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {# Preserve status #}
           {% if currentStatus %}
@@ -61,23 +61,23 @@
 
           {# Date from #}
           <div>
-            <label for="date_from" class="block text-xs font-medium text-gray-600 mb-1">Fecha desde</label>
+            <label for="date_from" class="block text-xs font-medium mb-1" style="color: var(--color-text-secondary);">Fecha desde</label>
             <input type="date" name="date_from" id="date_from" value="{{ dateFrom }}"
-                   class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500">
+                   class="block w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500" style="border-color: var(--color-border);">
           </div>
 
           {# Date to #}
           <div>
-            <label for="date_to" class="block text-xs font-medium text-gray-600 mb-1">Fecha hasta</label>
+            <label for="date_to" class="block text-xs font-medium mb-1" style="color: var(--color-text-secondary);">Fecha hasta</label>
             <input type="date" name="date_to" id="date_to" value="{{ dateTo }}"
-                   class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500">
+                   class="block w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500" style="border-color: var(--color-border);">
           </div>
 
           {# Driver #}
           <div>
-            <label for="driver" class="block text-xs font-medium text-gray-600 mb-1">Transportista</label>
+            <label for="driver" class="block text-xs font-medium mb-1" style="color: var(--color-text-secondary);">Transportista</label>
             <select name="driver" id="driver"
-                    class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500">
+                    class="block w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500" style="border-color: var(--color-border);">
               <option value="">Todos</option>
               {% for driver in drivers %}
                 <option value="{{ driver.id }}" {% if driverId == driver.id %}selected{% endif %}>
@@ -89,9 +89,9 @@
 
           {# Customer #}
           <div>
-            <label for="customer" class="block text-xs font-medium text-gray-600 mb-1">Cliente</label>
+            <label for="customer" class="block text-xs font-medium mb-1" style="color: var(--color-text-secondary);">Cliente</label>
             <select name="customer" id="customer"
-                    class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500">
+                    class="block w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500" style="border-color: var(--color-border);">
               <option value="">Todos</option>
               {% for customer in customers %}
                 <option value="{{ customer.id }}" {% if customerId == customer.id %}selected{% endif %}>
@@ -108,7 +108,7 @@
               Aplicar
             </button>
             <a href="{{ path('admin_routes_index', currentStatus ? {status: currentStatus} : {}) }}"
-               class="inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+               class="theme-card inline-flex items-center rounded-md px-4 py-2 text-sm font-medium" style="color: var(--color-text-secondary);">
               Limpiar
             </a>
           </div>
@@ -117,33 +117,33 @@
     </div>
 
     {# Table #}
-    <div class="bg-white shadow rounded-lg overflow-x-auto">
-      <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
+    <div class="theme-card overflow-x-auto">
+      <table class="min-w-full divide-y" style="border-color: var(--color-border);">
+        <thead style="background: var(--color-surface);">
           <tr>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Nombre</th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Cliente</th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Vehiculo</th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Transportista</th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Estado</th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Progreso</th>
-            <th scope="col" class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Acciones</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Nombre</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Cliente</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Vehiculo</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Transportista</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Estado</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Progreso</th>
+            <th scope="col" class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Acciones</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-200 bg-white">
+        <tbody class="divide-y" style="border-color: var(--color-border); background: var(--color-surface-elevated);">
           {% for route in routes %}
             {% set counts = stopCounts[route.id] ?? {total: 0, delivered: 0} %}
             <tr>
-              <td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
+              <td class="whitespace-nowrap px-6 py-4 text-sm font-medium" style="color: var(--color-text-primary);">
                 {{ route.name }}
               </td>
-              <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+              <td class="whitespace-nowrap px-6 py-4 text-sm" style="color: var(--color-text-secondary);">
                 {{ route.customer ? route.customer.name : '-' }}
               </td>
-              <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+              <td class="whitespace-nowrap px-6 py-4 text-sm" style="color: var(--color-text-secondary);">
                 {{ route.vehicle ? route.vehicle.name : '-' }}
               </td>
-              <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+              <td class="whitespace-nowrap px-6 py-4 text-sm" style="color: var(--color-text-secondary);">
                 {{ route.driver ? route.driver.email : '-' }}
               </td>
               <td class="whitespace-nowrap px-6 py-4 text-sm">
@@ -157,40 +157,40 @@
                   <span class="inline-flex rounded-full bg-red-100 px-2 text-xs font-semibold leading-5 text-red-800">Cancelada</span>
                 {% endif %}
               </td>
-              <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+              <td class="whitespace-nowrap px-6 py-4 text-sm" style="color: var(--color-text-secondary);">
                 {% if counts.total > 0 %}
                   <div class="flex items-center space-x-2">
-                    <div class="w-24 bg-gray-200 rounded-full h-2">
+                    <div class="w-24 rounded-full h-2" style="background: var(--color-surface);">
                       <div class="bg-green-500 h-2 rounded-full" style="width: {{ (counts.delivered / counts.total * 100)|round }}%"></div>
                     </div>
-                    <span class="text-xs text-gray-600">{{ counts.delivered }}/{{ counts.total }} entregas</span>
+                    <span class="text-xs" style="color: var(--color-text-secondary);">{{ counts.delivered }}/{{ counts.total }} entregas</span>
                   </div>
                 {% else %}
-                  <span class="text-xs text-gray-400">Sin paradas</span>
+                  <span class="text-xs" style="color: var(--color-text-muted);">Sin paradas</span>
                 {% endif %}
               </td>
               <td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
                 <a href="{{ path('admin_routes_show', {publicId: route.publicIdString}) }}"
-                   class="text-emerald-600 hover:text-emerald-900 mr-3">Ver</a>
+                   class="text-emerald-600 hover:opacity-80 mr-3">Ver</a>
                 <a href="{{ path('admin_routes_edit', {publicId: route.publicIdString}) }}"
-                   class="text-blue-600 hover:text-blue-900 mr-3">Editar</a>
+                   class="text-blue-600 hover:opacity-80 mr-3">Editar</a>
                 {% if route.status.value == 'DONE' %}
                   <a href="{{ path('admin_routes_analysis', {publicId: route.publicIdString}) }}"
-                     class="text-emerald-600 hover:text-emerald-900 mr-3"
+                     class="text-emerald-600 hover:opacity-80 mr-3"
                      title="Ver analisis de ruta planificada vs ejecutada">Analisis</a>
                 {% endif %}
                 {% if route.status.value != 'CANCELLED' %}
                   <form method="post" action="{{ path('admin_routes_delete', {publicId: route.publicIdString}) }}" class="inline"
                         onsubmit="return confirm('Cancelar esta ruta?');">
                     <input type="hidden" name="_token" value="{{ csrf_token('delete-route-' ~ route.publicIdString) }}">
-                    <button type="submit" class="text-red-600 hover:text-red-900">Cancelar</button>
+                    <button type="submit" class="text-red-600 hover:opacity-80">Cancelar</button>
                   </form>
                 {% endif %}
               </td>
             </tr>
           {% else %}
             <tr>
-              <td colspan="7" class="px-6 py-8 text-center text-sm text-gray-500">
+              <td colspan="7" class="px-6 py-8 text-center text-sm" style="color: var(--color-text-secondary);">
                 No hay rutas registradas.
               </td>
             </tr>
@@ -202,19 +202,19 @@
     {# Pagination #}
     {% if totalPages > 1 %}
       <nav class="mt-6 flex items-center justify-between">
-        <div class="text-sm text-gray-700">
+        <div class="text-sm" style="color: var(--color-text-secondary);">
           Pagina {{ page }} de {{ totalPages }}
         </div>
         <div class="flex space-x-2">
           {% if page > 1 %}
             <a href="{{ path('admin_routes_index', filterParams|merge({page: page - 1})) }}"
-               class="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+               class="theme-card inline-flex items-center px-3 py-2 text-sm font-medium" style="color: var(--color-text-secondary);">
               Anterior
             </a>
           {% endif %}
           {% if page < totalPages %}
             <a href="{{ path('admin_routes_index', filterParams|merge({page: page + 1})) }}"
-               class="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+               class="theme-card inline-flex items-center px-3 py-2 text-sm font-medium" style="color: var(--color-text-secondary);">
               Siguiente
             </a>
           {% endif %}

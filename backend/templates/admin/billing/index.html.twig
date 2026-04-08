@@ -5,11 +5,11 @@
 {% block content %}
 <div class="mb-6 flex items-start justify-between">
   <div>
-    <h1 class="text-2xl font-bold text-gray-900">Facturacion</h1>
-    <p class="mt-1 text-sm text-gray-500">Resumen de entregas por cliente y periodo.</p>
+    <h1 class="text-2xl font-bold" style="color: var(--color-text-primary);">Facturacion</h1>
+    <p class="mt-1 text-sm" style="color: var(--color-text-secondary);">Resumen de entregas por cliente y periodo.</p>
   </div>
   <a href="{{ path('admin_billing_export', {from: from|date('Y-m-d'), to: to|date('Y-m-d')}) }}"
-     class="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm border border-gray-300 hover:bg-gray-50">
+     class="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium shadow-sm border" style="background: var(--color-surface-elevated); color: var(--color-text-secondary); border-color: var(--color-border);">
     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
       <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
     </svg>
@@ -18,42 +18,42 @@
 </div>
 
 {# ── Date Filter ──────────────────────────────────────────────────── #}
-<form method="get" class="mb-6 flex flex-wrap items-end gap-4 bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+<form method="get" class="mb-6 flex flex-wrap items-end gap-4 rounded-xl shadow-sm border p-4" style="background: var(--color-surface-elevated); border-color: var(--color-border);">
   <div>
-    <label class="block text-xs font-medium text-gray-500 mb-1">Desde</label>
-    <input type="date" name="from" value="{{ from|date('Y-m-d') }}" class="rounded-lg border-gray-300 text-sm px-3 py-2 border">
+    <label class="block text-xs font-medium mb-1" style="color: var(--color-text-secondary);">Desde</label>
+    <input type="date" name="from" value="{{ from|date('Y-m-d') }}" class="rounded-lg text-sm px-3 py-2 border" style="border-color: var(--color-border);">
   </div>
   <div>
-    <label class="block text-xs font-medium text-gray-500 mb-1">Hasta</label>
-    <input type="date" name="to" value="{{ to|date('Y-m-d') }}" class="rounded-lg border-gray-300 text-sm px-3 py-2 border">
+    <label class="block text-xs font-medium mb-1" style="color: var(--color-text-secondary);">Hasta</label>
+    <input type="date" name="to" value="{{ to|date('Y-m-d') }}" class="rounded-lg text-sm px-3 py-2 border" style="border-color: var(--color-border);">
   </div>
   <button type="submit" class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-500">Filtrar</button>
 </form>
 
 {# ── Table ────────────────────────────────────────────────────────── #}
-<div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
-  <table class="min-w-full divide-y divide-gray-200">
-    <thead class="bg-gray-50">
+<div class="rounded-xl shadow-sm border overflow-x-auto" style="background: var(--color-surface-elevated); border-color: var(--color-border);">
+  <table class="min-w-full divide-y" style="border-color: var(--color-border);">
+    <thead style="background: var(--color-surface);">
       <tr>
-        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Cliente</th>
-        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Envios</th>
-        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Entregados</th>
-        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Excepciones</th>
-        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Facturables</th>
-        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Km Ahorrados</th>
-        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Tiempo Ahorrado</th>
-        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Ahorro %</th>
-        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Acciones</th>
+        <th class="px-4 py-3 text-left text-xs font-semibold uppercase" style="color: var(--color-text-secondary);">Cliente</th>
+        <th class="px-4 py-3 text-right text-xs font-semibold uppercase" style="color: var(--color-text-secondary);">Envios</th>
+        <th class="px-4 py-3 text-right text-xs font-semibold uppercase" style="color: var(--color-text-secondary);">Entregados</th>
+        <th class="px-4 py-3 text-right text-xs font-semibold uppercase" style="color: var(--color-text-secondary);">Excepciones</th>
+        <th class="px-4 py-3 text-right text-xs font-semibold uppercase" style="color: var(--color-text-secondary);">Facturables</th>
+        <th class="px-4 py-3 text-right text-xs font-semibold uppercase" style="color: var(--color-text-secondary);">Km Ahorrados</th>
+        <th class="px-4 py-3 text-right text-xs font-semibold uppercase" style="color: var(--color-text-secondary);">Tiempo Ahorrado</th>
+        <th class="px-4 py-3 text-right text-xs font-semibold uppercase" style="color: var(--color-text-secondary);">Ahorro %</th>
+        <th class="px-4 py-3 text-right text-xs font-semibold uppercase" style="color: var(--color-text-secondary);">Acciones</th>
       </tr>
     </thead>
-    <tbody class="divide-y divide-gray-100">
+    <tbody class="divide-y" style="border-color: var(--color-border);">
       {% for row in rows %}
-      <tr class="hover:bg-gray-50">
-        <td class="px-4 py-3 text-sm font-medium text-gray-900">{{ row.customer.name }}</td>
-        <td class="px-4 py-3 text-sm text-right text-gray-700">{{ row.total_shipments }}</td>
+      <tr>
+        <td class="px-4 py-3 text-sm font-medium" style="color: var(--color-text-primary);">{{ row.customer.name }}</td>
+        <td class="px-4 py-3 text-sm text-right" style="color: var(--color-text-secondary);">{{ row.total_shipments }}</td>
         <td class="px-4 py-3 text-sm text-right text-green-700 font-medium">{{ row.total_delivered }}</td>
         <td class="px-4 py-3 text-sm text-right text-red-700">{{ row.total_exceptions }}</td>
-        <td class="px-4 py-3 text-sm text-right font-bold text-gray-900">{{ row.billable_deliveries }}</td>
+        <td class="px-4 py-3 text-sm text-right font-bold" style="color: var(--color-text-primary);">{{ row.billable_deliveries }}</td>
         <td class="px-4 py-3 text-sm text-right text-emerald-700 font-medium">{{ row.total_km_saved ? row.total_km_saved|number_format(1) : '-' }}</td>
         <td class="px-4 py-3 text-sm text-right text-blue-700 font-medium">
           {% if row.total_time_saved_minutes is not null %}
@@ -76,7 +76,7 @@
       </tr>
       {% else %}
       <tr>
-        <td colspan="9" class="px-4 py-8 text-center text-sm text-gray-500">No hay datos para este periodo.</td>
+        <td colspan="9" class="px-4 py-8 text-center text-sm" style="color: var(--color-text-secondary);">No hay datos para este periodo.</td>
       </tr>
       {% endfor %}
     </tbody>

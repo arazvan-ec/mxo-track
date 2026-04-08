@@ -5,18 +5,18 @@
 {% block breadcrumbs %}
   <li>
     <div class="flex items-center">
-      <svg class="h-5 w-5 shrink-0 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+      <svg class="h-5 w-5 shrink-0" style="color: var(--color-text-muted);" viewBox="0 0 20 20" fill="currentColor">
         <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd"/>
       </svg>
-      <span class="ml-2 text-sm font-medium text-gray-500">Commit Story</span>
+      <span class="ml-2 text-sm font-medium" style="color: var(--color-text-secondary);">Commit Story</span>
     </div>
   </li>
 {% endblock %}
 
 {% block content %}
 <div class="mb-8">
-  <h1 class="text-2xl font-bold tracking-tight text-gray-900">Commit Story</h1>
-  <p class="mt-1 text-sm text-gray-500">Visualiza el proceso de desarrollo paso a paso de cada rama.</p>
+  <h1 class="text-2xl font-bold tracking-tight" style="color: var(--color-text-primary);">Commit Story</h1>
+  <p class="mt-1 text-sm" style="color: var(--color-text-secondary);">Visualiza el proceso de desarrollo paso a paso de cada rama.</p>
 </div>
 
 {% if unavailable|default(false) %}
@@ -32,25 +32,25 @@
   </div>
 </div>
 {% else %}
-<div class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-900/5">
+<div class="rounded-xl p-6 shadow-sm ring-1 ring-gray-900/5" style="background: var(--color-surface-elevated);">
   <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
     {% for branch in branches %}
       <a href="{{ path('admin_commit_story', {branch: branch}) }}"
-         class="group flex items-center gap-3 rounded-lg border border-gray-200 p-4 transition-all hover:border-brand-300 hover:bg-brand-50/50 hover:shadow-sm">
+         class="group flex items-center gap-3 rounded-lg border p-4 transition-all hover:border-brand-300 hover:bg-brand-50/50 hover:shadow-sm" style="border-color: var(--color-border);">
         <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-50 group-hover:bg-indigo-100 transition-colors">
           <svg class="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5"/>
           </svg>
         </div>
         <div class="min-w-0 flex-1">
-          <p class="text-sm font-medium text-gray-900 group-hover:text-brand-700 truncate">{{ branch }}</p>
+          <p class="text-sm font-medium group-hover:text-brand-700 truncate" style="color: var(--color-text-primary);">{{ branch }}</p>
         </div>
-        <svg class="h-4 w-4 text-gray-400 group-hover:text-brand-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+        <svg class="h-4 w-4 group-hover:text-brand-500 transition-colors" style="color: var(--color-text-muted);" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
         </svg>
       </a>
     {% else %}
-      <p class="text-sm text-gray-500 col-span-full">No se encontraron ramas.</p>
+      <p class="text-sm col-span-full" style="color: var(--color-text-secondary);">No se encontraron ramas.</p>
     {% endfor %}
   </div>
 </div>

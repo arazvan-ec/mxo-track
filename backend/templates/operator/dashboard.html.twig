@@ -4,43 +4,43 @@
 
 {% block content %}
 <div class="mb-6">
-  <h1 class="text-2xl font-bold text-gray-900">Panel de Operador</h1>
-  <p class="mt-1 text-sm text-gray-500">Vista operativa de rutas, vehiculos y entregas.</p>
+  <h1 class="text-2xl font-bold" style="color: var(--color-text-primary);">Panel de Operador</h1>
+  <p class="mt-1 text-sm" style="color: var(--color-text-secondary);">Vista operativa de rutas, vehiculos y entregas.</p>
 </div>
 
 {# ── KPI Cards ──────────────────────────────────────────────────── #}
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-  <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-    <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Rutas activas</p>
-    <p class="mt-2 text-3xl font-bold text-gray-900">{{ metrics.active_routes ?? 0 }}</p>
+  <div class="theme-card rounded-xl p-5">
+    <p class="text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Rutas activas</p>
+    <p class="mt-2 text-3xl font-bold" style="color: var(--color-text-primary);">{{ metrics.active_routes ?? 0 }}</p>
   </div>
-  <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-    <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Paradas pendientes</p>
+  <div class="theme-card rounded-xl p-5">
+    <p class="text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Paradas pendientes</p>
     <p class="mt-2 text-3xl font-bold text-amber-600">{{ metrics.pending_stops ?? 0 }}</p>
   </div>
-  <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-    <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Imports hoy</p>
-    <p class="mt-2 text-3xl font-bold text-gray-900">{{ metrics.import_runs_today ?? 0 }}</p>
+  <div class="theme-card rounded-xl p-5">
+    <p class="text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Imports hoy</p>
+    <p class="mt-2 text-3xl font-bold" style="color: var(--color-text-primary);">{{ metrics.import_runs_today ?? 0 }}</p>
   </div>
-  <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-    <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Posiciones (1h)</p>
+  <div class="theme-card rounded-xl p-5">
+    <p class="text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Posiciones (1h)</p>
     <p class="mt-2 text-3xl font-bold text-blue-600">{{ metrics.positions_ingested_last_hour ?? 0 }}</p>
   </div>
 </div>
 
 {# ── Quick Links ────────────────────────────────────────────────── #}
 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-  <a href="{{ path('admin_routes_index') }}" class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:border-blue-300 transition-colors">
-    <h3 class="text-sm font-semibold text-gray-900">Gestionar Rutas</h3>
-    <p class="mt-1 text-xs text-gray-500">Ver, crear y editar rutas de entrega</p>
+  <a href="{{ path('admin_routes_index') }}" class="theme-card rounded-xl p-5 hover:border-blue-300 transition-colors">
+    <h3 class="text-sm font-semibold" style="color: var(--color-text-primary);">Gestionar Rutas</h3>
+    <p class="mt-1 text-xs" style="color: var(--color-text-secondary);">Ver, crear y editar rutas de entrega</p>
   </a>
-  <a href="{{ path('admin_vehicles_index') }}" class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:border-blue-300 transition-colors">
-    <h3 class="text-sm font-semibold text-gray-900">Vehiculos</h3>
-    <p class="mt-1 text-xs text-gray-500">Estado y posiciones de la flota</p>
+  <a href="{{ path('admin_vehicles_index') }}" class="theme-card rounded-xl p-5 hover:border-blue-300 transition-colors">
+    <h3 class="text-sm font-semibold" style="color: var(--color-text-primary);">Vehiculos</h3>
+    <p class="mt-1 text-xs" style="color: var(--color-text-secondary);">Estado y posiciones de la flota</p>
   </a>
-  <a href="{{ path('fleet_map') }}" class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:border-blue-300 transition-colors">
-    <h3 class="text-sm font-semibold text-gray-900">Mapa en vivo</h3>
-    <p class="mt-1 text-xs text-gray-500">Seguimiento GPS en tiempo real</p>
+  <a href="{{ path('fleet_map') }}" class="theme-card rounded-xl p-5 hover:border-blue-300 transition-colors">
+    <h3 class="text-sm font-semibold" style="color: var(--color-text-primary);">Mapa en vivo</h3>
+    <p class="mt-1 text-xs" style="color: var(--color-text-secondary);">Seguimiento GPS en tiempo real</p>
   </a>
 </div>
 {% endblock %}

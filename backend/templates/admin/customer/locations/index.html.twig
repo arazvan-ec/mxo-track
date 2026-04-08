@@ -10,7 +10,7 @@
     </div>
 
     <div class="sm:flex sm:items-center sm:justify-between mb-6">
-      <h1 class="text-2xl font-bold text-gray-900">Ubicaciones de {{ customer.name }}</h1>
+      <h1 class="text-2xl font-bold" style="color: var(--color-text-primary);">Ubicaciones de {{ customer.name }}</h1>
       <a href="{{ path('admin_customer_locations_new', {customerPublicId: customer.publicIdString}) }}"
          class="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500">
         Nueva ubicacion
@@ -18,34 +18,34 @@
     </div>
 
     {% if locations|length > 0 %}
-      <div class="overflow-x-auto bg-white shadow ring-1 ring-gray-200 sm:rounded-lg">
-        <table class="min-w-full divide-y divide-gray-200">
-          <thead class="bg-gray-50">
+      <div class="overflow-x-auto ring-1 sm:rounded-lg" style="background: var(--color-surface-elevated); ring-color: var(--color-border);">
+        <table class="min-w-full divide-y" style="border-color: var(--color-border);">
+          <thead style="background: var(--color-surface);">
             <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Nombre</th>
-              <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Direccion</th>
-              <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Coordenadas</th>
-              <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Estado</th>
-              <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Acciones</th>
+              <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Nombre</th>
+              <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Direccion</th>
+              <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Coordenadas</th>
+              <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Estado</th>
+              <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Acciones</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-200 bg-white">
+          <tbody class="divide-y" style="border-color: var(--color-border); background: var(--color-surface-elevated);">
             {% for location in locations %}
               <tr>
-                <td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
+                <td class="whitespace-nowrap px-6 py-4 text-sm font-medium" style="color: var(--color-text-primary);">
                   {{ location.name }}
                   {% if location.default %}
                     <span class="ml-1 inline-flex rounded-full bg-blue-100 px-2 text-xs font-semibold leading-5 text-blue-800">Por defecto</span>
                   {% endif %}
                 </td>
-                <td class="px-6 py-4 text-sm text-gray-500 max-w-xs truncate" title="{{ location.address }}">
+                <td class="px-6 py-4 text-sm max-w-xs truncate" style="color: var(--color-text-secondary);" title="{{ location.address }}">
                   {{ location.address }}
                 </td>
-                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                <td class="whitespace-nowrap px-6 py-4 text-sm" style="color: var(--color-text-secondary);">
                   {% if location.latitude and location.longitude %}
                     {{ location.latitude|number_format(4) }}, {{ location.longitude|number_format(4) }}
                   {% else %}
-                    <span class="text-gray-400">Sin coordenadas</span>
+                    <span style="color: var(--color-text-muted);">Sin coordenadas</span>
                   {% endif %}
                 </td>
                 <td class="whitespace-nowrap px-6 py-4 text-sm">
@@ -72,7 +72,7 @@
         </table>
       </div>
     {% else %}
-      <div class="rounded-md bg-gray-100 p-6 text-center text-sm text-gray-500">
+      <div class="rounded-md p-6 text-center text-sm" style="background: var(--color-surface); color: var(--color-text-secondary);">
         No hay ubicaciones registradas para este cliente.
       </div>
     {% endif %}

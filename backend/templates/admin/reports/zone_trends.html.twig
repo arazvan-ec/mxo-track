@@ -4,52 +4,52 @@
 
 {% block content %}
 <div class="mb-6">
-  <h1 class="text-2xl font-bold tracking-tight text-gray-900">Tendencias por Zona</h1>
-  <p class="mt-1 text-sm text-gray-500">Rendimiento de entregas por zona de entrega a lo largo del tiempo.</p>
+  <h1 class="text-2xl font-bold tracking-tight" style="color: var(--color-text-primary);">Tendencias por Zona</h1>
+  <p class="mt-1 text-sm" style="color: var(--color-text-secondary);">Rendimiento de entregas por zona de entrega a lo largo del tiempo.</p>
 </div>
 
 {# Date range filter #}
 <div class="mb-8 flex flex-wrap items-end gap-3" x-data="zoneTrendsFilter()">
   <div>
-    <label for="zt-from" class="block text-xs font-medium text-gray-600 mb-1">Desde</label>
+    <label for="zt-from" class="block text-xs font-medium mb-1" style="color: var(--color-text-secondary);">Desde</label>
     <input type="date" id="zt-from" x-model="fromDate"
-           class="rounded-lg border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-brand-500">
+           class="rounded-lg px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-brand-500" style="border-color: var(--color-border);">
   </div>
   <div>
-    <label for="zt-to" class="block text-xs font-medium text-gray-600 mb-1">Hasta</label>
+    <label for="zt-to" class="block text-xs font-medium mb-1" style="color: var(--color-text-secondary);">Hasta</label>
     <input type="date" id="zt-to" x-model="toDate"
-           class="rounded-lg border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-brand-500">
+           class="rounded-lg px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-brand-500" style="border-color: var(--color-border);">
   </div>
   <button type="button" @click="loadData()"
           class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-500 transition-colors">
     Filtrar
   </button>
   <button type="button" @click="fromDate = ''; toDate = ''; loadData()"
-          class="text-sm text-gray-500 hover:text-gray-700 underline">
+          class="text-sm hover:opacity-80 underline" style="color: var(--color-text-secondary);">
     Limpiar
   </button>
 </div>
 
 {# Summary cards for current week #}
 <div class="mb-8">
-  <h2 class="text-base font-semibold text-gray-900 mb-4">Resumen semana actual</h2>
+  <h2 class="text-base font-semibold mb-4" style="color: var(--color-text-primary);">Resumen semana actual</h2>
   <div id="summaryCards" class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
     {% if summary|length > 0 %}
       {% for zone in summary %}
-        <div class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-900/5">
-          <p class="text-sm font-medium text-gray-500 truncate">{{ zone.zone_name }}</p>
-          <p class="mt-2 text-3xl font-bold text-gray-900">{{ zone.total }}</p>
+        <div class="rounded-xl p-6 shadow-sm ring-1 ring-gray-900/5" style="background: var(--color-surface-elevated);">
+          <p class="text-sm font-medium truncate" style="color: var(--color-text-secondary);">{{ zone.zone_name }}</p>
+          <p class="mt-2 text-3xl font-bold" style="color: var(--color-text-primary);">{{ zone.total }}</p>
           <div class="mt-2 flex items-center gap-3 text-sm">
             <span class="{% if zone.success_rate >= 90 %}text-emerald-600{% elseif zone.success_rate >= 70 %}text-amber-600{% else %}text-red-600{% endif %} font-medium">
               {{ zone.success_rate }}% exito
             </span>
-            <span class="text-gray-400">|</span>
-            <span class="text-gray-500">{{ zone.avg_time }} min prom.</span>
+            <span style="color: var(--color-text-muted);">|</span>
+            <span style="color: var(--color-text-secondary);">{{ zone.avg_time }} min prom.</span>
           </div>
         </div>
       {% endfor %}
     {% else %}
-      <div class="col-span-full rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-900/5 text-center text-sm text-gray-500">
+      <div class="col-span-full rounded-xl p-6 shadow-sm ring-1 ring-gray-900/5 text-center text-sm" style="background: var(--color-surface-elevated); color: var(--color-text-secondary);">
         No hay datos de entregas esta semana.
       </div>
     {% endif %}
@@ -57,12 +57,12 @@
 </div>
 
 {# Chart #}
-<div class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-900/5 mb-8">
-  <h3 class="text-base font-semibold text-gray-900 mb-4">Tasa de exito por zona (semanal)</h3>
-  <div id="chartLoading" class="flex items-center justify-center py-12 text-sm text-gray-400" style="display: none;">
+<div class="rounded-xl p-6 shadow-sm ring-1 ring-gray-900/5 mb-8" style="background: var(--color-surface-elevated);">
+  <h3 class="text-base font-semibold mb-4" style="color: var(--color-text-primary);">Tasa de exito por zona (semanal)</h3>
+  <div id="chartLoading" class="flex items-center justify-center py-12 text-sm" style="display: none; color: var(--color-text-muted);">
     Cargando datos...
   </div>
-  <div id="chartEmpty" class="flex items-center justify-center py-12 text-sm text-gray-400" style="display: none;">
+  <div id="chartEmpty" class="flex items-center justify-center py-12 text-sm" style="display: none; color: var(--color-text-muted);">
     No hay datos disponibles para el periodo seleccionado.
   </div>
   <div class="relative" style="height: 400px;">
@@ -71,12 +71,12 @@
 </div>
 
 {# Detailed table #}
-<div class="rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5 overflow-hidden">
-  <div class="px-6 py-4 border-b border-gray-100">
-    <h3 class="text-base font-semibold text-gray-900">Detalle semanal por zona</h3>
+<div class="rounded-xl shadow-sm ring-1 ring-gray-900/5 overflow-hidden" style="background: var(--color-surface-elevated);">
+  <div class="px-6 py-4" style="border-bottom: 1px solid var(--color-border);">
+    <h3 class="text-base font-semibold" style="color: var(--color-text-primary);">Detalle semanal por zona</h3>
   </div>
   <div id="trendsTableContainer">
-    <div class="px-6 py-12 text-center text-sm text-gray-500">
+    <div class="px-6 py-12 text-center text-sm" style="color: var(--color-text-secondary);">
       Cargando datos...
     </div>
   </div>
@@ -180,31 +180,31 @@ function renderTable(trends) {
   const container = document.getElementById('trendsTableContainer');
 
   if (!trends || trends.length === 0) {
-    container.innerHTML = '<div class="px-6 py-12 text-center text-sm text-gray-500">No hay datos disponibles para el periodo seleccionado.</div>';
+    container.innerHTML = '<div class="px-6 py-12 text-center text-sm" style="color: var(--color-text-secondary);">No hay datos disponibles para el periodo seleccionado.</div>';
     return;
   }
 
-  let html = '<div class="overflow-x-auto"><table class="min-w-full divide-y divide-gray-200">';
-  html += '<thead class="bg-gray-50"><tr>';
-  html += '<th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Zona</th>';
-  html += '<th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Semana</th>';
-  html += '<th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Total</th>';
-  html += '<th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Exitosas</th>';
-  html += '<th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Excepciones</th>';
-  html += '<th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Tasa exito</th>';
-  html += '<th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Tiempo prom. (min)</th>';
-  html += '</tr></thead><tbody class="divide-y divide-gray-100">';
+  let html = '<div class="overflow-x-auto"><table class="min-w-full divide-y" style="border-color: var(--color-border);">';
+  html += '<thead style="background: var(--color-surface);"><tr>';
+  html += '<th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Zona</th>';
+  html += '<th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Semana</th>';
+  html += '<th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Total</th>';
+  html += '<th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Exitosas</th>';
+  html += '<th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Excepciones</th>';
+  html += '<th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Tasa exito</th>';
+  html += '<th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Tiempo prom. (min)</th>';
+  html += '</tr></thead><tbody class="divide-y" style="border-color: var(--color-border);">';
 
   trends.forEach(function(row) {
     var rateClass = row.success_rate >= 90 ? 'text-emerald-600' : (row.success_rate >= 70 ? 'text-amber-600' : 'text-red-600');
-    html += '<tr class="hover:bg-gray-50 transition-colors">';
-    html += '<td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">' + escapeHtml(row.zone_name) + '</td>';
-    html += '<td class="whitespace-nowrap px-6 py-4 text-sm text-gray-700">' + escapeHtml(row.week) + '</td>';
-    html += '<td class="whitespace-nowrap px-6 py-4 text-right text-sm text-gray-700">' + row.total_deliveries + '</td>';
+    html += '<tr class="transition-colors">';
+    html += '<td class="whitespace-nowrap px-6 py-4 text-sm font-medium" style="color: var(--color-text-primary);">' + escapeHtml(row.zone_name) + '</td>';
+    html += '<td class="whitespace-nowrap px-6 py-4 text-sm" style="color: var(--color-text-secondary);">' + escapeHtml(row.week) + '</td>';
+    html += '<td class="whitespace-nowrap px-6 py-4 text-right text-sm" style="color: var(--color-text-secondary);">' + row.total_deliveries + '</td>';
     html += '<td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium text-emerald-600">' + row.successful_deliveries + '</td>';
     html += '<td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium text-red-600">' + row.exceptions + '</td>';
     html += '<td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium ' + rateClass + '">' + row.success_rate + '%</td>';
-    html += '<td class="whitespace-nowrap px-6 py-4 text-right text-sm text-gray-700">' + row.avg_delivery_time_minutes + '</td>';
+    html += '<td class="whitespace-nowrap px-6 py-4 text-right text-sm" style="color: var(--color-text-secondary);">' + row.avg_delivery_time_minutes + '</td>';
     html += '</tr>';
   });
 
@@ -242,7 +242,7 @@ function zoneTrendsFilter() {
         loading.style.display = 'none';
         document.getElementById('chartEmpty').style.display = 'flex';
         document.getElementById('zoneTrendsChart').style.display = 'none';
-        document.getElementById('trendsTableContainer').innerHTML = '<div class="px-6 py-12 text-center text-sm text-red-500">Error al cargar datos.</div>';
+        document.getElementById('trendsTableContainer').innerHTML = '<div class="px-6 py-12 text-center text-sm text-red-500" style="color: var(--color-text-secondary);">Error al cargar datos.</div>';
       }
     }
   };

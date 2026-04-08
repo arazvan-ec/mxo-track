@@ -9,40 +9,40 @@
       </a>
     </div>
 
-    <h1 class="text-2xl font-bold text-gray-900 mb-6">
+    <h1 class="text-2xl font-bold mb-6" style="color: var(--color-text-primary);">
       {{ customer.id ? 'Editar cliente' : 'Nuevo cliente' }}
     </h1>
 
-    <div class="bg-white shadow sm:rounded-lg">
+    <div class="theme-card">
       {{ form_start(form, {attr: {class: 'space-y-6 p-6'}}) }}
 
         <div>
-          {{ form_label(form.name, null, {label_attr: {class: 'block text-sm font-medium text-gray-700 mb-1'}}) }}
+          {{ form_label(form.name, null, {label_attr: {class: 'block text-sm font-medium mb-1', style: 'color: var(--color-text-secondary);'}}) }}
           {{ form_widget(form.name) }}
           {{ form_errors(form.name) }}
         </div>
 
         <div>
-          {{ form_label(form.address, null, {label_attr: {class: 'block text-sm font-medium text-gray-700 mb-1'}}) }}
+          {{ form_label(form.address, null, {label_attr: {class: 'block text-sm font-medium mb-1', style: 'color: var(--color-text-secondary);'}}) }}
           {{ form_widget(form.address) }}
           {{ form_errors(form.address) }}
         </div>
 
         <div>
-          {{ form_label(form.contactPhone, null, {label_attr: {class: 'block text-sm font-medium text-gray-700 mb-1'}}) }}
+          {{ form_label(form.contactPhone, null, {label_attr: {class: 'block text-sm font-medium mb-1', style: 'color: var(--color-text-secondary);'}}) }}
           {{ form_widget(form.contactPhone) }}
           {{ form_errors(form.contactPhone) }}
         </div>
 
         <div class="flex items-center">
-          {{ form_widget(form.isActive, {attr: {class: 'h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500'}}) }}
-          {{ form_label(form.isActive, null, {label_attr: {class: 'ml-2 block text-sm text-gray-700'}}) }}
+          {{ form_widget(form.isActive, {attr: {class: 'h-4 w-4 rounded text-blue-600 focus:ring-blue-500', style: 'border-color: var(--color-border);'}}) }}
+          {{ form_label(form.isActive, null, {label_attr: {class: 'ml-2 block text-sm', style: 'color: var(--color-text-secondary);'}}) }}
           {{ form_errors(form.isActive) }}
         </div>
 
-        <div class="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200">
+        <div class="flex items-center justify-end space-x-3 pt-4 border-t" style="border-color: var(--color-border);">
           <a href="{{ path('admin_customers_index') }}"
-             class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+             class="rounded-md border px-4 py-2 text-sm font-medium" style="border-color: var(--color-border); background: var(--color-surface-elevated); color: var(--color-text-secondary);">
             Cancelar
           </a>
           <button type="submit"
@@ -57,11 +57,11 @@
     {% if customer.id %}
       <div class="mt-6 flex gap-3">
         <a href="{{ path('admin_customer_locations_index', {customerPublicId: customer.publicIdString}) }}"
-           class="inline-flex items-center rounded-md border border-purple-300 bg-white px-4 py-2 text-sm font-medium text-purple-700 shadow-sm hover:bg-purple-50">
+           class="inline-flex items-center rounded-md border border-purple-300 px-4 py-2 text-sm font-medium text-purple-700 shadow-sm hover:bg-purple-50" style="background: var(--color-surface-elevated);">
           Ubicaciones
         </a>
         <a href="{{ path('admin_customers_vehicles', {publicId: customer.publicIdString}) }}"
-           class="inline-flex items-center rounded-md border border-teal-300 bg-white px-4 py-2 text-sm font-medium text-teal-700 shadow-sm hover:bg-teal-50">
+           class="inline-flex items-center rounded-md border border-teal-300 px-4 py-2 text-sm font-medium text-teal-700 shadow-sm hover:bg-teal-50" style="background: var(--color-surface-elevated);">
           Vehiculos
         </a>
       </div>

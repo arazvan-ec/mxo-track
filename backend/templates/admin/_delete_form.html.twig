@@ -11,7 +11,7 @@
   {# Trigger button #}
   <button @click="confirmDelete = true"
           type="button"
-          class="inline-flex items-center gap-1.5 rounded-md bg-white px-3 py-2 text-sm font-medium text-red-600 shadow-sm ring-1 ring-inset ring-red-200 hover:bg-red-50 hover:ring-red-300 transition-all focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
+          class="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-red-600 shadow-sm ring-1 ring-inset ring-red-200 hover:bg-red-50 hover:ring-red-300 transition-all focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2" style="background: var(--color-surface-elevated);">
     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
       <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/>
     </svg>
@@ -43,10 +43,10 @@
              x-transition:leave="ease-in duration-200"
              x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
              x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-             class="relative transform overflow-hidden rounded-xl bg-white shadow-xl transition-all sm:w-full sm:max-w-lg"
+             class="relative transform overflow-hidden rounded-xl shadow-xl transition-all sm:w-full sm:max-w-lg" style="background: var(--color-surface-elevated);"
              @click.outside="confirmDelete = false">
 
-          <div class="bg-white px-6 pb-4 pt-5 sm:p-6">
+          <div class="px-6 pb-4 pt-5 sm:p-6" style="background: var(--color-surface-elevated);">
             <div class="sm:flex sm:items-start">
 
               {# Warning icon #}
@@ -58,12 +58,12 @@
 
               {# Content #}
               <div class="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
-                <h3 class="text-lg font-semibold leading-6 text-gray-900">
+                <h3 class="text-lg font-semibold leading-6" style="color: var(--color-text-primary);">
                   Confirmar eliminacion
                 </h3>
                 <div class="mt-2">
-                  <p class="text-sm text-gray-500">
-                    Esta a punto de eliminar este registro de <strong class="text-gray-700">{{ entityName }}</strong>.
+                  <p class="text-sm" style="color: var(--color-text-secondary);">
+                    Esta a punto de eliminar este registro de <strong style="color: var(--color-text-primary);">{{ entityName }}</strong>.
                     Esta accion no se puede deshacer. Todos los datos asociados seran eliminados permanentemente.
                   </p>
                 </div>
@@ -72,7 +72,7 @@
           </div>
 
           {# Actions #}
-          <div class="bg-gray-50 px-6 py-4 sm:flex sm:flex-row-reverse sm:gap-3">
+          <div class="px-6 py-4 sm:flex sm:flex-row-reverse sm:gap-3" style="background: var(--color-surface);">
             <form method="post" action="{{ deleteUrl }}">
               <input type="hidden" name="_token" value="{{ csrf_token('delete') }}">
               <button type="submit"
@@ -82,7 +82,7 @@
             </form>
             <button type="button"
                     @click="confirmDelete = false"
-                    class="mt-3 inline-flex w-full justify-center rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 transition-colors sm:mt-0 sm:w-auto focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2">
+                    class="mt-3 inline-flex w-full justify-center rounded-lg px-4 py-2.5 text-sm font-semibold shadow-sm ring-1 ring-inset transition-colors sm:mt-0 sm:w-auto focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2" style="background: var(--color-surface-elevated); color: var(--color-text-primary); border-color: var(--color-border);">
               Cancelar
             </button>
           </div>

@@ -34,7 +34,7 @@
             "type": "command",
             "command": "/home/user/mxo-track/.claude/hooks/workflow-engine.sh",
             "timeout": 5,
-            "statusMessage": "Verificando workflow gate..."
+            "statusMessage": "Workflow..."
           }
         ]
       },
@@ -45,31 +45,20 @@
             "type": "command",
             "command": "/home/user/mxo-track/.claude/hooks/pre-push-gate.sh",
             "timeout": 5,
-            "statusMessage": "Verificando pre-push gate..."
+            "statusMessage": "Push gate..."
           }
         ]
       }
     ],
     "PostToolUse": [
       {
-        "matcher": "Read|Write|Edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/home/user/mxo-track/.claude/hooks/auto-evidence.sh",
-            "timeout": 2,
-            "statusMessage": "Detectando evidencia..."
-          }
-        ]
-      },
-      {
         "matcher": "Read|Write|Edit|Agent",
         "hooks": [
           {
             "type": "command",
-            "command": "/home/user/mxo-track/.claude/hooks/workflow-status-line.sh",
-            "timeout": 2,
-            "statusMessage": "Actualizando progreso del proceso..."
+            "command": "/home/user/mxo-track/.claude/hooks/post-rwe-hook.sh",
+            "timeout": 3,
+            "statusMessage": "Procesando..."
           }
         ]
       },
@@ -89,7 +78,7 @@
             "type": "command",
             "command": "/home/user/mxo-track/.claude/hooks/post-bash-validator.sh",
             "timeout": 30,
-            "statusMessage": "Validando comando bash..."
+            "statusMessage": "Validando..."
           }
         ]
       }

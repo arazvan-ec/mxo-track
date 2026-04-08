@@ -7,33 +7,33 @@
 {% if globalMetrics is defined and globalMetrics is not null %}
 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
   {# Distance Before #}
-  <div class="rounded-lg border border-gray-200 bg-white p-4">
-    <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Distancia Original</dt>
-    <dd class="mt-1 text-2xl font-bold text-gray-900">
+  <div class="rounded-lg border p-4" style="border-color: var(--color-border); background: var(--color-surface-elevated);">
+    <dt class="text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Distancia Original</dt>
+    <dd class="mt-1 text-2xl font-bold" style="color: var(--color-text-primary);">
       {{ globalMetrics.totalDistanceBeforeKm is defined ? globalMetrics.totalDistanceBeforeKm|number_format(1) : '—' }} km
     </dd>
   </div>
 
   {# Distance After #}
-  <div class="rounded-lg border border-gray-200 bg-white p-4">
-    <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Distancia Optimizada</dt>
+  <div class="rounded-lg border p-4" style="border-color: var(--color-border); background: var(--color-surface-elevated);">
+    <dt class="text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Distancia Optimizada</dt>
     <dd class="mt-1 text-2xl font-bold text-blue-600">
       {{ globalMetrics.totalDistanceAfterKm is defined ? globalMetrics.totalDistanceAfterKm|number_format(1) : '—' }} km
     </dd>
   </div>
 
   {# Savings #}
-  <div class="rounded-lg border border-gray-200 bg-white p-4">
-    <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Ahorro</dt>
-    <dd class="mt-1 text-2xl font-bold {{ globalMetrics.totalSavingsPercent is defined and globalMetrics.totalSavingsPercent > 0 ? 'text-green-600' : 'text-gray-900' }}">
+  <div class="rounded-lg border p-4" style="border-color: var(--color-border); background: var(--color-surface-elevated);">
+    <dt class="text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Ahorro</dt>
+    <dd class="mt-1 text-2xl font-bold {{ globalMetrics.totalSavingsPercent is defined and globalMetrics.totalSavingsPercent > 0 ? 'text-green-600' : '' }}" {% if not (globalMetrics.totalSavingsPercent is defined and globalMetrics.totalSavingsPercent > 0) %}style="color: var(--color-text-primary);"{% endif %}>
       {{ globalMetrics.totalSavingsPercent is defined ? globalMetrics.totalSavingsPercent|number_format(1) : '0' }}%
     </dd>
   </div>
 
   {# Route Count #}
-  <div class="rounded-lg border border-gray-200 bg-white p-4">
-    <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Rutas</dt>
-    <dd class="mt-1 text-2xl font-bold text-gray-900">
+  <div class="rounded-lg border p-4" style="border-color: var(--color-border); background: var(--color-surface-elevated);">
+    <dt class="text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">Rutas</dt>
+    <dd class="mt-1 text-2xl font-bold" style="color: var(--color-text-primary);">
       {{ globalMetrics.routeCount is defined ? globalMetrics.routeCount : '—' }}
     </dd>
   </div>

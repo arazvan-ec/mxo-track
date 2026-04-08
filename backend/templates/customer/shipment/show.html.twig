@@ -5,26 +5,26 @@
 {% block breadcrumbs %}
   <li>
     <div class="flex items-center">
-      <svg class="h-5 w-5 shrink-0 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+      <svg class="h-5 w-5 shrink-0" style="color: var(--color-text-muted);" viewBox="0 0 20 20" fill="currentColor">
         <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd"/>
       </svg>
-      <a href="{{ path('customer_dashboard') }}" class="ml-2 text-sm font-medium text-gray-500 hover:text-gray-700">Panel</a>
+      <a href="{{ path('customer_dashboard') }}" class="ml-2 text-sm font-medium hover:opacity-80" style="color: var(--color-text-secondary);">Panel</a>
     </div>
   </li>
   <li>
     <div class="flex items-center">
-      <svg class="h-5 w-5 shrink-0 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+      <svg class="h-5 w-5 shrink-0" style="color: var(--color-text-muted);" viewBox="0 0 20 20" fill="currentColor">
         <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd"/>
       </svg>
-      <a href="{{ path('customer_shipments_index') }}" class="ml-2 text-sm font-medium text-gray-500 hover:text-gray-700">Envios</a>
+      <a href="{{ path('customer_shipments_index') }}" class="ml-2 text-sm font-medium hover:opacity-80" style="color: var(--color-text-secondary);">Envios</a>
     </div>
   </li>
   <li>
     <div class="flex items-center">
-      <svg class="h-5 w-5 shrink-0 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+      <svg class="h-5 w-5 shrink-0" style="color: var(--color-text-muted);" viewBox="0 0 20 20" fill="currentColor">
         <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd"/>
       </svg>
-      <span class="ml-2 text-sm font-medium text-gray-500">{{ shipment.reference }}</span>
+      <span class="ml-2 text-sm font-medium" style="color: var(--color-text-secondary);">{{ shipment.reference }}</span>
     </div>
   </li>
 {% endblock %}
@@ -33,9 +33,9 @@
   {# ── Header ──────────────────────────────────────────────────────── #}
   <div class="mb-6">
     <div class="flex items-center justify-between">
-      <h1 class="text-2xl font-bold text-gray-900">Envio {{ shipment.reference }}</h1>
+      <h1 class="text-2xl font-bold" style="color: var(--color-text-primary);">Envio {{ shipment.reference }}</h1>
       <a href="{{ path('customer_shipments_index') }}"
-         class="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+         class="inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium" style="border-color: var(--color-border); background: var(--color-surface-elevated); color: var(--color-text-secondary);">
         Volver a envios
       </a>
     </div>
@@ -45,42 +45,42 @@
 
     {# ── Info card ─────────────────────────────────────────────────── #}
     <div class="lg:col-span-1">
-      <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div class="px-5 py-4 border-b border-gray-100">
-          <h2 class="text-sm font-semibold text-gray-900">Informacion del envio</h2>
+      <div class="theme-card rounded-xl overflow-hidden">
+        <div class="px-5 py-4" style="border-bottom: 1px solid var(--color-border);">
+          <h2 class="text-sm font-semibold" style="color: var(--color-text-primary);">Informacion del envio</h2>
         </div>
-        <dl class="divide-y divide-gray-100">
+        <dl class="divide-y" style="border-color: var(--color-border);">
           <div class="px-5 py-3 flex justify-between">
-            <dt class="text-sm text-gray-500">Referencia</dt>
-            <dd class="text-sm font-medium text-gray-900">{{ shipment.reference }}</dd>
+            <dt class="text-sm" style="color: var(--color-text-secondary);">Referencia</dt>
+            <dd class="text-sm font-medium" style="color: var(--color-text-primary);">{{ shipment.reference }}</dd>
           </div>
           <div class="px-5 py-3 flex justify-between">
-            <dt class="text-sm text-gray-500">Destinatario</dt>
-            <dd class="text-sm font-medium text-gray-900">{{ shipment.recipientName ?? '-' }}</dd>
+            <dt class="text-sm" style="color: var(--color-text-secondary);">Destinatario</dt>
+            <dd class="text-sm font-medium" style="color: var(--color-text-primary);">{{ shipment.recipientName ?? '-' }}</dd>
           </div>
           <div class="px-5 py-3 flex justify-between">
-            <dt class="text-sm text-gray-500">Telefono</dt>
-            <dd class="text-sm font-medium text-gray-900">{{ shipment.recipientPhone ?? '-' }}</dd>
+            <dt class="text-sm" style="color: var(--color-text-secondary);">Telefono</dt>
+            <dd class="text-sm font-medium" style="color: var(--color-text-primary);">{{ shipment.recipientPhone ?? '-' }}</dd>
           </div>
           <div class="px-5 py-3">
-            <dt class="text-sm text-gray-500 mb-1">Direccion</dt>
-            <dd class="text-sm font-medium text-gray-900">{{ shipment.address ?? '-' }}</dd>
+            <dt class="text-sm mb-1" style="color: var(--color-text-secondary);">Direccion</dt>
+            <dd class="text-sm font-medium" style="color: var(--color-text-primary);">{{ shipment.address ?? '-' }}</dd>
           </div>
           {% if shipment.latitude and shipment.longitude %}
             <div class="px-5 py-3 flex justify-between">
-              <dt class="text-sm text-gray-500">Coordenadas</dt>
-              <dd class="text-sm font-medium text-gray-900">{{ shipment.latitude|number_format(5) }}, {{ shipment.longitude|number_format(5) }}</dd>
+              <dt class="text-sm" style="color: var(--color-text-secondary);">Coordenadas</dt>
+              <dd class="text-sm font-medium" style="color: var(--color-text-primary);">{{ shipment.latitude|number_format(5) }}, {{ shipment.longitude|number_format(5) }}</dd>
             </div>
           {% endif %}
           {% if shipment.notes %}
             <div class="px-5 py-3">
-              <dt class="text-sm text-gray-500 mb-1">Notas</dt>
-              <dd class="text-sm text-gray-700">{{ shipment.notes }}</dd>
+              <dt class="text-sm mb-1" style="color: var(--color-text-secondary);">Notas</dt>
+              <dd class="text-sm" style="color: var(--color-text-secondary);">{{ shipment.notes }}</dd>
             </div>
           {% endif %}
           <div class="px-5 py-3 flex justify-between">
-            <dt class="text-sm text-gray-500">Creado</dt>
-            <dd class="text-sm font-medium text-gray-900">{{ shipment.createdAt|date('d/m/Y H:i') }}</dd>
+            <dt class="text-sm" style="color: var(--color-text-secondary);">Creado</dt>
+            <dd class="text-sm font-medium" style="color: var(--color-text-primary);">{{ shipment.createdAt|date('d/m/Y H:i') }}</dd>
           </div>
         </dl>
       </div>
@@ -88,16 +88,16 @@
 
     {# ── Timeline ──────────────────────────────────────────────────── #}
     <div class="lg:col-span-2">
-      <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div class="px-5 py-4 border-b border-gray-100">
-          <h2 class="text-sm font-semibold text-gray-900">Historial de eventos</h2>
+      <div class="theme-card rounded-xl overflow-hidden">
+        <div class="px-5 py-4" style="border-bottom: 1px solid var(--color-border);">
+          <h2 class="text-sm font-semibold" style="color: var(--color-text-primary);">Historial de eventos</h2>
         </div>
 
         {% if events|length > 0 %}
           <div class="p-5">
             <div class="relative">
               {# Vertical line #}
-              <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200"></div>
+              <div class="absolute left-4 top-0 bottom-0 w-0.5" style="background: var(--color-border);"></div>
 
               {% for event in events %}
                 {# Determine color based on event type #}
@@ -184,17 +184,17 @@
                   </div>
 
                   {# Event content #}
-                  <div class="ml-12 bg-gray-50 rounded-lg border border-gray-100 p-4 flex-1">
+                  <div class="ml-12 rounded-lg border p-4 flex-1" style="background: var(--color-surface); border-color: var(--color-border);">
                     <div class="flex items-center justify-between">
-                      <p class="text-sm font-semibold text-gray-900">{{ event_label }}</p>
-                      <p class="text-xs text-gray-500">{{ event.createdAt|date('d/m/Y H:i:s') }}</p>
+                      <p class="text-sm font-semibold" style="color: var(--color-text-primary);">{{ event_label }}</p>
+                      <p class="text-xs" style="color: var(--color-text-secondary);">{{ event.createdAt|date('d/m/Y H:i:s') }}</p>
                     </div>
                     {% if event.payload|length > 0 %}
-                      <div class="mt-2 text-xs text-gray-600">
+                      <div class="mt-2 text-xs" style="color: var(--color-text-secondary);">
                         {% for key, value in event.payload %}
                           {% if key != 'ai_classification' %}
-                            <span class="inline-block bg-white rounded px-2 py-0.5 border border-gray-200 mr-1 mb-1">
-                              <span class="text-gray-400">{{ key }}:</span> {{ value }}
+                            <span class="inline-block rounded px-2 py-0.5 border mr-1 mb-1" style="background: var(--color-surface-elevated); border-color: var(--color-border);">
+                              <span style="color: var(--color-text-muted);">{{ key }}:</span> {{ value }}
                             </span>
                           {% endif %}
                         {% endfor %}
@@ -244,10 +244,10 @@
           </div>
         {% else %}
           <div class="px-5 py-8 text-center">
-            <svg class="mx-auto h-10 w-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <svg class="mx-auto h-10 w-10" style="color: var(--color-text-muted);" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
-            <p class="mt-2 text-sm text-gray-500">No hay eventos registrados para este envio.</p>
+            <p class="mt-2 text-sm" style="color: var(--color-text-secondary);">No hay eventos registrados para este envio.</p>
           </div>
         {% endif %}
       </div>
