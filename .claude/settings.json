@@ -52,14 +52,19 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "",
+        "matcher": "Read|Write|Edit|Bash",
         "hooks": [
           {
             "type": "command",
             "command": "/home/user/mxo-track/.claude/hooks/auto-evidence.sh",
             "timeout": 2,
             "statusMessage": "Detectando evidencia..."
-          },
+          }
+        ]
+      },
+      {
+        "matcher": "Read|Write|Edit|Bash|Agent",
+        "hooks": [
           {
             "type": "command",
             "command": "/home/user/mxo-track/.claude/hooks/workflow-status-line.sh",
@@ -82,21 +87,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/user/mxo-track/.claude/hooks/phase-transition-controller.sh",
-            "timeout": 2,
-            "statusMessage": "Verificando integridad de estado..."
-          },
-          {
-            "type": "command",
-            "command": "/home/user/mxo-track/.claude/hooks/post-commit-validator.sh",
-            "timeout": 5,
-            "statusMessage": "Validando formato de commit..."
-          },
-          {
-            "type": "command",
-            "command": "/home/user/mxo-track/.claude/hooks/post-push-validator.sh",
+            "command": "/home/user/mxo-track/.claude/hooks/post-bash-validator.sh",
             "timeout": 30,
-            "statusMessage": "Ejecutando tareas post-push..."
+            "statusMessage": "Validando comando bash..."
           }
         ]
       }
