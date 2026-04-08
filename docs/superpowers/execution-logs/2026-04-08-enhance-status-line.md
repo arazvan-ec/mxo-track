@@ -8,36 +8,43 @@
 late phases), which the Claude Code web/mobile UI truncated with "...". Actionable
 info (needs, pending phases) was lost to truncation.
 
-## Solution
-Hybrid A+C: adaptive multi-line format with priority inversion.
-- Line 1: flow, phase, index, emoji bar, task progress (always visible)
-- Line 2: needs + tool context (actionable info, second priority)
-- Line 3: completed phase chain with evidence (only when ≥2 phases done)
-- Early phases (≤2 completed): compact 1-2 lines
-- Late phases (≥3 completed): expanded 3 lines
+## Solution (v1 → v2)
+
+**v1 (Hybrid A+C):** adaptive multi-line (1-3 lines) with priority inversion.
+
+**v2 (5-line expanded):** User requested more info. Added:
+- Line 1: flow + phase + emoji bar + task progress + `🔀 branch` + deviation
+- Line 2: `Evidence: ...` — phase-specific evidence fields (decisions, turns, tests, etc.)
+- Line 3: `Next: ...` — next action to take
+- Line 4: completed phase chain with evidence (only when ≥3 phases done)
+- Line 5: `· ToolName target` — last tool used (when available)
 
 ## Alternatives Considered
-- **A (pure multi-line):** Always 3 lines — verbose in early phases
+- **A (pure multi-line):** Always multi-line — verbose in early phases
 - **B (compact, no history):** Drop phase evidence — loses useful context
 - **C (character-count adaptive):** Fragile, unpredictable format changes
+- **Hybrid A+C (selected):** Adaptive by phase count (semantic threshold)
 
 ## Changes
-- `.claude/hooks/workflow-status-line.sh`: refactored full-flow and debug-flow sections
-- `.claude/hooks/test-status-line.sh`: updated 5 assertions for new format
+- `.claude/hooks/workflow-status-line.sh`: full-flow + debug-flow refactored to 5-line format,
+  added `current_evidence()`, `next_action()`, `yn()` helpers, branch via `git branch --show-current`
+- `.claude/hooks/test-status-line.sh`: expanded from 16 to 21 tests (41 assertions total)
 
 ## Test Results
-27/27 tests passing, 0 failures.
+41/41 assertions passing, 0 failures.
 
 ## Lessons
 - Status line truncation is a real UX problem on mobile — always put actionable info
-  first in any single-line output that might be displayed in constrained UIs.
+  first in any output that might be displayed in constrained UIs.
 - The emoji progress bar (✅🔄⬚) is a more compact representation of phase progress
   than explicit "Pendiente: phase1, phase2" text.
+- Evidence + Next lines replicate what `user-prompt-state.sh` injects, but visible to
+  the user in the PostToolUse output — different audience (model vs user).
 
 ## Retrospectiva
-- La tarea fue directa: un solo archivo principal, formato de output claramente definido.
-- El usuario rechazó la desviación, lo que forzó el flujo completo. En retrospectiva, el
-  flujo completo fue valioso porque la spec documentó claramente los 3 enfoques y el
-  híbrido, lo cual será útil si se necesita ajustar el formato después.
-- Patrón: cuando un output se muestra en una UI con restricciones de ancho, siempre
-  priorizar info accionable al inicio de la línea.
+- El usuario rechazó la desviación en v1, forzando flujo completo. Fue valioso: la spec
+  documentó enfoques y el diseño se iteró de 3 a 5 líneas en v2.
+- Dos iteraciones en una sesión: v1 (3 líneas) → feedback → v2 (5 líneas). El flujo
+  completo se aplicó a ambas interacciones sin overhead excesivo.
+- Patrón recurrente: cuando un output tiene restricciones de display, priorizar info
+  accionable al inicio. Aplica a status lines, error messages, notifications.
