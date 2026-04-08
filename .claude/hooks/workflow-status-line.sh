@@ -99,8 +99,8 @@ if [ "$DEV_ACTIVE" = "true" ]; then
   DEVIATION_SUFFIX=" | ⚠ DESVÍO"
 fi
 
-# Get current branch name
-BRANCH=$(git -C "$REPO" branch --show-current 2>/dev/null || echo "unknown")
+# Interaction ID
+INTERACTION_ID=$(echo "$STATE" | jq -r '.interaction_id // 0')
 
 # Helper: Y/N from bool
 yn() { [ "$1" = "true" ] && echo "Y" || echo "N"; }
@@ -303,7 +303,7 @@ phase_needs() {
 
 # No flow declared
 if [ "$FLOW_TYPE" = "null" ] || [ -z "$FLOW_TYPE" ]; then
-  { echo "📍 no flow declared | 🔀 ${BRANCH}${DEVIATION_SUFFIX}"
+  { echo "📍 no flow declared | i#${INTERACTION_ID}${DEVIATION_SUFFIX}"
     echo "  Clasificar antes de continuar${TOOL_SUFFIX}"
   } > "$OUTPUT"
   cat "$OUTPUT"
@@ -313,21 +313,21 @@ fi
 # Simple flows
 case "$FLOW_TYPE" in
   micro)
-    { echo "📍 micro | Responder | 🔀 ${BRANCH}${DEVIATION_SUFFIX}"
+    { echo "📍 micro | Responder | i#${INTERACTION_ID}${DEVIATION_SUFFIX}"
       echo "  ${TOOL_SUFFIX:+${TOOL_SUFFIX} · }i#$(echo "$STATE" | jq -r '.interaction_id // 0')"
     } > "$OUTPUT"
     cat "$OUTPUT"
     exit 0
     ;;
   light)
-    { echo "📍 light | Documentar | 🔀 ${BRANCH}${DEVIATION_SUFFIX}"
+    { echo "📍 light | Documentar | i#${INTERACTION_ID}${DEVIATION_SUFFIX}"
       echo "  ${TOOL_SUFFIX:+${TOOL_SUFFIX} · }i#$(echo "$STATE" | jq -r '.interaction_id // 0')"
     } > "$OUTPUT"
     cat "$OUTPUT"
     exit 0
     ;;
   explore)
-    { echo "📍 explore | Investigar | 🔀 ${BRANCH}${DEVIATION_SUFFIX}"
+    { echo "📍 explore | Investigar | i#${INTERACTION_ID}${DEVIATION_SUFFIX}"
       echo "  ${TOOL_SUFFIX:+${TOOL_SUFFIX} · }i#$(echo "$STATE" | jq -r '.interaction_id // 0')"
     } > "$OUTPUT"
     cat "$OUTPUT"
@@ -439,7 +439,7 @@ if [ "$FLOW_TYPE" = "full" ]; then
       [ -n "$TASK_LABEL" ] && LINE1="${LINE1}: ${TASK_LABEL}"
     fi
   fi
-  LINE1="${LINE1} | 🔀 ${BRANCH}${DEVIATION_SUFFIX}"
+  LINE1="${LINE1} | i#${INTERACTION_ID}${DEVIATION_SUFFIX}"
 
   # Line 2: Evidence for current phase
   EVIDENCE=$(current_evidence "$CURRENT_PHASE")
@@ -567,7 +567,7 @@ if [ "$FLOW_TYPE" = "debug" ]; then
   done
 
   # Line 1: Flow, phase, index, emoji bar, branch, deviation
-  LINE1="📍 debug | ${DISPLAY_PHASE} (${DEBUG_INDEX}/${TOTAL}) | ${DEBUG_BAR} | 🔀 ${BRANCH}${DEVIATION_SUFFIX}"
+  LINE1="📍 debug | ${DISPLAY_PHASE} (${DEBUG_INDEX}/${TOTAL}) | ${DEBUG_BAR} | i#${INTERACTION_ID}${DEVIATION_SUFFIX}"
 
   # Line 2: Evidence
   DEBUG_EVIDENCE="decisions=$(yn $DECISIONS_READ) root_cause=$(yn $ROOT_CAUSE) pattern_wide=$(yn $PATTERN_WIDE) tests_passed=$(yn ${TESTS_PASSED:-false})"
