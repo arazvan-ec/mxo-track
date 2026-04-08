@@ -653,8 +653,8 @@ function Step1Panel({
                 type="checkbox"
                 checked={allSelected}
                 onChange={(e) => onToggleAll(e.target.checked)}
-                className="rounded border-[var(--color-border)] text-blue-600 focus:ring-blue-500/30"
-                style={{ backgroundColor: 'var(--color-surface-elevated)' }}
+                className="rounded text-blue-600 focus:ring-blue-500/30"
+                style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface-elevated)' }}
               />
               <span className="text-xs font-medium" style={{ color: 'var(--color-text-primary)' }}>Select all</span>
             </label>
@@ -669,7 +669,7 @@ function Step1Panel({
               return (
                 <div
                   key={shipment.publicId}
-                  className="flex items-center gap-3 px-3 py-2.5 hover:theme-card-overlay transition-colors cursor-pointer"
+                  className="flex items-center gap-3 px-3 py-2.5 hover:bg-white/5 transition-colors cursor-pointer"
                   onClick={() => onToggleShipment(shipment.publicId)}
                 >
                   <input
@@ -677,8 +677,8 @@ function Step1Panel({
                     checked={selectedShipmentIds.has(shipment.publicId)}
                     onChange={() => onToggleShipment(shipment.publicId)}
                     onClick={(e) => e.stopPropagation()}
-                    className="rounded border-[var(--color-border)] text-blue-600 focus:ring-blue-500/30"
-                    style={{ backgroundColor: 'var(--color-surface-elevated)' }}
+                    className="rounded text-blue-600 focus:ring-blue-500/30"
+                    style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface-elevated)' }}
                   />
                   {clusterColor && (
                     <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: clusterColor }} />
@@ -688,7 +688,7 @@ function Step1Panel({
                     <p className="text-xs truncate" style={{ color: 'var(--color-text-secondary)' }}>{shipment.address}</p>
                   </div>
                   {shipment.totalWeightKg != null && (
-                    <span className="text-xs text-[var(--color-text-muted)] flex-shrink-0">{shipment.totalWeightKg} kg</span>
+                    <span className="text-xs flex-shrink-0" style={{ color: 'var(--color-text-muted)' }}>{shipment.totalWeightKg} kg</span>
                   )}
                   {shipment.addressRisk?.is_risky && (
                     <span className="text-xs bg-red-900/50 text-red-400 px-1.5 py-0.5 rounded-full flex-shrink-0">
@@ -705,7 +705,7 @@ function Step1Panel({
       {/* Empty state */}
       {shipments.length === 0 && !isLoading && (
         <div className="text-center py-8">
-          <p className="text-sm text-[var(--color-text-muted)]">Load shipments to begin planning routes.</p>
+          <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>Load shipments to begin planning routes.</p>
         </div>
       )}
 
@@ -774,7 +774,7 @@ function Step2Panel({
 
       {isLoading ? (
         <div className="text-center py-8">
-          <p className="text-sm text-[var(--color-text-muted)]">Loading vehicles...</p>
+          <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>Loading vehicles...</p>
         </div>
       ) : (
         <>
@@ -966,20 +966,20 @@ function Step3Panel({
   return (
     <div className="space-y-4">
       <h2 className="text-sm font-semibold text-white">Step 3: Preview & Assign Drivers</h2>
-      <p className="text-xs text-[var(--color-text-secondary)]">
+      <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
         Review routes and assign drivers. The system suggests the best driver based on zone, rating, availability.
       </p>
 
       {loadingDrivers && (
         <div className="flex items-center justify-center gap-2 py-6">
           <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-          <span className="text-sm text-[var(--color-text-secondary)]">Loading driver suggestions...</span>
+          <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>Loading driver suggestions...</span>
         </div>
       )}
 
       {!loadingDrivers && routes.length === 0 && (
         <div className="text-center py-8">
-          <p className="text-sm text-[var(--color-text-muted)]">No routes generated. Go back to configure.</p>
+          <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>No routes generated. Go back to configure.</p>
         </div>
       )}
 
@@ -1009,7 +1009,8 @@ function Step3Panel({
       <div className="flex gap-2">
         <button
           onClick={onBack}
-          className="py-2.5 px-4 theme-card-overlay text-[var(--color-text-primary)] text-sm font-medium rounded-lg transition-colors"
+          className="py-2.5 px-4 hover:opacity-80 text-sm font-medium rounded-lg transition-colors"
+          style={{ backgroundColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
         >
           Back
         </button>
@@ -1046,13 +1047,13 @@ function RouteCard({ routeData, color, suggestions, selectedDriverId, onDriverAs
   const selectedDriver = suggestions.find((s) => s.driver_public_id === selectedDriverId);
 
   return (
-    <div className="rounded-lg border border-[var(--color-border-subtle)] theme-card-overlay p-4 space-y-3">
+    <div className="rounded-lg border theme-card-overlay p-4 space-y-3" style={{ borderColor: 'var(--color-border-subtle)' }}>
       {/* Route header */}
       <div className="flex items-center gap-2">
         <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
         <div className="flex-1 min-w-0">
           <h3 className="text-sm font-semibold text-white">{routeData.route.name}</h3>
-          <p className="text-xs text-[var(--color-text-secondary)]">
+          <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
             {routeData.stopsCount} stops
             {routeData.route.totalDistanceKm != null && (
               <> &middot; {routeData.route.totalDistanceKm.toFixed(1)} km</>
@@ -1124,7 +1125,8 @@ function RouteCard({ routeData, color, suggestions, selectedDriverId, onDriverAs
         <select
           value={selectedDriverId}
           onChange={(e) => onDriverAssign(e.target.value)}
-          className="w-full theme-card-overlay border border-[var(--color-border-subtle)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-blue-500/50"
+          className="w-full theme-card-overlay border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
+          style={{ borderColor: 'var(--color-border-subtle)', color: 'var(--color-text-primary)' }}
         >
           <option value="">-- Select driver --</option>
           {suggestions.map((s) => (
@@ -1139,8 +1141,8 @@ function RouteCard({ routeData, color, suggestions, selectedDriverId, onDriverAs
           <div className="grid grid-cols-4 gap-1.5 mt-2">
             {(['zone', 'rating', 'workload', 'skills'] as const).map((key) => (
               <div key={key} className="text-center theme-card-overlay rounded p-1.5">
-                <div className="text-[10px] text-[var(--color-text-muted)] capitalize">{key}</div>
-                <div className="text-xs font-semibold text-[var(--color-text-primary)]">{selectedDriver.breakdown[key]}</div>
+                <div className="text-[10px] capitalize" style={{ color: 'var(--color-text-muted)' }}>{key}</div>
+                <div className="text-xs font-semibold" style={{ color: 'var(--color-text-primary)' }}>{selectedDriver.breakdown[key]}</div>
               </div>
             ))}
           </div>
@@ -1171,18 +1173,18 @@ function CapacityBar({
   return (
     <div>
       <div className="flex items-center justify-between mb-0.5">
-        <span className="text-[10px] font-medium text-[var(--color-text-secondary)]">{label}</span>
-        <span className="text-[10px] text-[var(--color-text-muted)]">
+        <span className="text-[10px] font-medium" style={{ color: 'var(--color-text-secondary)' }}>{label}</span>
+        <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>
           {current?.toFixed(label === 'Volume' ? 2 : 0) ?? '0'} / {max ?? '?'} {unit}
         </span>
       </div>
-      <div className="w-full bg-[var(--color-border)] rounded-full h-1.5">
+      <div className="w-full rounded-full h-1.5" style={{ backgroundColor: 'var(--color-border)' }}>
         <div
           className={`h-1.5 rounded-full transition-all ${barColor}`}
           style={{ width: `${Math.min(100, pct)}%` }}
         />
       </div>
-      <div className="text-right text-[10px] text-[var(--color-text-muted)] mt-0.5">{pct.toFixed(0)}%</div>
+      <div className="text-right text-[10px] mt-0.5" style={{ color: 'var(--color-text-muted)' }}>{pct.toFixed(0)}%</div>
     </div>
   );
 }
