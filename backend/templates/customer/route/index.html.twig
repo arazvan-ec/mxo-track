@@ -71,13 +71,13 @@
         {% for route in routes %}
           {% set counts = stopCounts[route.id] ?? {total: 0, delivered: 0} %}
           <tr>
-            <td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
+            <td class="whitespace-nowrap px-6 py-4 text-sm font-medium" style="color: var(--color-text-primary);">
               {{ route.name }}
             </td>
-            <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+            <td class="whitespace-nowrap px-6 py-4 text-sm" style="color: var(--color-text-secondary);">
               {{ route.vehicle ? route.vehicle.name : '-' }}
             </td>
-            <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+            <td class="whitespace-nowrap px-6 py-4 text-sm" style="color: var(--color-text-secondary);">
               {{ route.driver ? route.driver.email : '-' }}
             </td>
             <td class="whitespace-nowrap px-6 py-4 text-sm">
@@ -91,10 +91,10 @@
                 <span class="inline-flex rounded-full bg-red-100 px-2 text-xs font-semibold leading-5 text-red-800">Cancelada</span>
               {% endif %}
             </td>
-            <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+            <td class="whitespace-nowrap px-6 py-4 text-sm" style="color: var(--color-text-secondary);">
               {% if counts.total > 0 %}
                 <div class="flex items-center space-x-2">
-                  <div class="w-24 bg-gray-200 rounded-full h-2">
+                  <div class="w-24 rounded-full h-2" style="background: var(--color-surface);">
                     <div class="bg-green-500 h-2 rounded-full" style="width: {{ (counts.delivered / counts.total * 100)|round }}%"></div>
                   </div>
                   <span class="text-xs text-gray-600">{{ counts.delivered }}/{{ counts.total }} entregas</span>
