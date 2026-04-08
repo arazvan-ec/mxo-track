@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="{{ app.request.locale }}" class="h-full bg-gray-50">
+<html lang="{{ app.request.locale }}" class="h-full" style="background-color: var(--color-surface);">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -44,6 +44,8 @@
   </script>
 
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+  {# React App Shell CSS (theme variables, shared Tailwind utilities) #}
+  <link rel="stylesheet" href="/app/assets/index.css">
   {% block styles %}{% endblock %}
 </head>
 <body class="h-full" {% block body_attrs %}{% endblock %}>
@@ -63,7 +65,7 @@
   <div>
 
     {# ── Flash messages (toasts) ─────────────────────────────────── #}
-    <div class="fixed top-20 right-4 z-50 flex flex-col gap-3 w-96 max-w-[calc(100vw-2rem)]">
+    <div class="fixed top-20 right-4 z-[60] flex flex-col gap-3 w-96 max-w-[calc(100vw-2rem)]">
       {% for type, messages in app.flashes %}
         {% for message in messages %}
           <div x-data="{ show: true }"

@@ -5,25 +5,26 @@
 {% block breadcrumbs %}
   <li>
     <div class="flex items-center">
-      <svg class="h-5 w-5 shrink-0 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+      <svg class="h-5 w-5 shrink-0" style="color: var(--color-text-muted);" viewBox="0 0 20 20" fill="currentColor">
         <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd"/>
       </svg>
-      <span class="ml-2 text-sm font-medium text-gray-500">Reportes</span>
+      <span class="ml-2 text-sm font-medium" style="color: var(--color-text-secondary);">Reportes</span>
     </div>
   </li>
 {% endblock %}
 
 {% block content %}
 <div class="mb-8">
-  <h1 class="text-2xl font-bold tracking-tight text-gray-900">Reportes y Analitica</h1>
-  <p class="mt-1 text-sm text-gray-500">Accede a los reportes detallados del sistema de logistica.</p>
+  <h1 class="text-2xl font-bold tracking-tight" style="color: var(--color-text-primary);">Reportes y Analitica</h1>
+  <p class="mt-1 text-sm" style="color: var(--color-text-secondary);">Accede a los reportes detallados del sistema de logistica.</p>
 </div>
 
 <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
 
   {# Delivery Report #}
   <a href="{{ path('admin_reports_deliveries') }}"
-     class="group relative overflow-hidden rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-900/5 transition-all hover:shadow-md hover:ring-brand-200">
+     class="theme-card group relative overflow-hidden p-6 transition-all hover:scale-[1.01]"
+     style="color: var(--color-text-primary);">
     <div class="flex items-center gap-4">
       <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-emerald-50 transition-colors group-hover:bg-emerald-100">
         <svg class="h-6 w-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -31,11 +32,11 @@
         </svg>
       </div>
       <div>
-        <h3 class="text-lg font-semibold text-gray-900 group-hover:text-brand-600 transition-colors">Entregas</h3>
-        <p class="mt-1 text-sm text-gray-500">Estadisticas de entregas, excepciones y tasas de exito</p>
+        <h3 class="text-lg font-semibold transition-colors" style="color: var(--color-text-primary);">Entregas</h3>
+        <p class="mt-1 text-sm" style="color: var(--color-text-secondary);">Estadisticas de entregas, excepciones y tasas de exito</p>
       </div>
     </div>
-    <div class="mt-4 flex items-center text-sm font-medium text-brand-600 opacity-0 transition-opacity group-hover:opacity-100">
+    <div class="mt-4 flex items-center text-sm font-medium opacity-0 transition-opacity group-hover:opacity-100" style="color: var(--color-accent);">
       Ver reporte
       <svg class="ml-1 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/>
@@ -45,7 +46,8 @@
 
   {# Drivers Report #}
   <a href="{{ path('admin_reports_drivers') }}"
-     class="group relative overflow-hidden rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-900/5 transition-all hover:shadow-md hover:ring-brand-200">
+     class="theme-card group relative overflow-hidden p-6 transition-all hover:scale-[1.01]"
+     style="color: var(--color-text-primary);">
     <div class="flex items-center gap-4">
       <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-indigo-50 transition-colors group-hover:bg-indigo-100">
         <svg class="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -53,11 +55,11 @@
         </svg>
       </div>
       <div>
-        <h3 class="text-lg font-semibold text-gray-900 group-hover:text-brand-600 transition-colors">Transportistas</h3>
-        <p class="mt-1 text-sm text-gray-500">Ranking y rendimiento de conductores</p>
+        <h3 class="text-lg font-semibold transition-colors" style="color: var(--color-text-primary);">Transportistas</h3>
+        <p class="mt-1 text-sm" style="color: var(--color-text-secondary);">Ranking y rendimiento de conductores</p>
       </div>
     </div>
-    <div class="mt-4 flex items-center text-sm font-medium text-brand-600 opacity-0 transition-opacity group-hover:opacity-100">
+    <div class="mt-4 flex items-center text-sm font-medium opacity-0 transition-opacity group-hover:opacity-100" style="color: var(--color-accent);">
       Ver reporte
       <svg class="ml-1 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/>
@@ -67,7 +69,8 @@
 
   {# Customers Report #}
   <a href="{{ path('admin_reports_customers') }}"
-     class="group relative overflow-hidden rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-900/5 transition-all hover:shadow-md hover:ring-brand-200">
+     class="theme-card group relative overflow-hidden p-6 transition-all hover:scale-[1.01]"
+     style="color: var(--color-text-primary);">
     <div class="flex items-center gap-4">
       <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-violet-50 transition-colors group-hover:bg-violet-100">
         <svg class="h-6 w-6 text-violet-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -75,11 +78,11 @@
         </svg>
       </div>
       <div>
-        <h3 class="text-lg font-semibold text-gray-900 group-hover:text-brand-600 transition-colors">Clientes</h3>
-        <p class="mt-1 text-sm text-gray-500">Desglose de entregas y envios por cliente</p>
+        <h3 class="text-lg font-semibold transition-colors" style="color: var(--color-text-primary);">Clientes</h3>
+        <p class="mt-1 text-sm" style="color: var(--color-text-secondary);">Desglose de entregas y envios por cliente</p>
       </div>
     </div>
-    <div class="mt-4 flex items-center text-sm font-medium text-brand-600 opacity-0 transition-opacity group-hover:opacity-100">
+    <div class="mt-4 flex items-center text-sm font-medium opacity-0 transition-opacity group-hover:opacity-100" style="color: var(--color-accent);">
       Ver reporte
       <svg class="ml-1 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/>
@@ -91,18 +94,20 @@
 
 {# Export section #}
 <div class="mt-10">
-  <h2 class="text-lg font-semibold text-gray-900 mb-4">Exportar datos</h2>
+  <h2 class="text-lg font-semibold mb-4" style="color: var(--color-text-primary);">Exportar datos</h2>
   <div class="flex flex-wrap gap-3">
     <a href="{{ path('admin_reports_export_deliveries') }}"
-       class="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50 transition-colors">
-      <svg class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+       class="theme-card inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors"
+       style="color: var(--color-text-secondary);">
+      <svg class="h-4 w-4" style="color: var(--color-text-muted);" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
       </svg>
       Entregas (CSV)
     </a>
     <a href="{{ path('admin_reports_export_drivers') }}"
-       class="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50 transition-colors">
-      <svg class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+       class="theme-card inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors"
+       style="color: var(--color-text-secondary);">
+      <svg class="h-4 w-4" style="color: var(--color-text-muted);" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
       </svg>
       Transportistas (CSV)
