@@ -50,8 +50,8 @@ export function ExceptionLayer({ exceptions }: Props) {
             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10">
               <div
                 className="whitespace-nowrap rounded-md px-2.5 py-1.5 text-xs border border-red-500/50"
-                style={{ color: 'var(--color-text-primary)' }}
                 style={{
+                  color: 'var(--color-text-primary)',
                   backgroundColor: 'rgba(15, 23, 42, 0.92)',
                   boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
                 }}
@@ -67,8 +67,8 @@ export function ExceptionLayer({ exceptions }: Props) {
               <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-20">
                 <div
                   className="rounded-lg px-3 py-2 text-xs border border-red-500/50 min-w-[200px]"
-                  style={{ color: 'var(--color-text-primary)' }}
                   style={{
+                    color: 'var(--color-text-primary)',
                     backgroundColor: 'rgba(15, 23, 42, 0.95)',
                     boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
                   }}

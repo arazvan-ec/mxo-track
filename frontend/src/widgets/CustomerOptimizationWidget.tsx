@@ -9,8 +9,7 @@ function formatMinutes(minutes: number): string {
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function CustomerOptimizationWidget({ data }: WidgetProps) {
+export function CustomerOptimizationWidget({ data: _data }: WidgetProps) {
   const { data: kpis } = useCustomerOptimizationKpis();
   if (!kpis) return null;
 

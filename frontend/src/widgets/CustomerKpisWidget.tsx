@@ -10,8 +10,7 @@ const KPI_CONFIG = [
   { key: 'exceptions' as const, label: 'Excepciones', color: 'var(--color-error)' },
 ];
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function CustomerKpisWidget({ data }: WidgetProps) {
+export function CustomerKpisWidget({ data: _data }: WidgetProps) {
   const { data: kpis } = useCustomerKpis();
   if (!kpis) return null;
 

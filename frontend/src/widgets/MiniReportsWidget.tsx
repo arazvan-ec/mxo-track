@@ -90,8 +90,7 @@ function TopDriversList({ drivers }: { drivers: TopDriver[] }) {
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function MiniReportsWidget({ data }: WidgetProps) {
+export function MiniReportsWidget({ data: _data }: WidgetProps) {
   const { data: reports } = useQuery({
     queryKey: ['dashboard-reports'],
     queryFn: () => api.get<ReportsResponse>('/api/admin/dashboard-reports'),
