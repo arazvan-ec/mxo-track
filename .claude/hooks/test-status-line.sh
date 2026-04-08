@@ -59,7 +59,7 @@ echo ""
 echo "1. Missing state file"
 rm -f "$STATE_FILE"
 $HOOK
-assert_output "fallback when no state file" "📍 status unavailable"
+assert_contains "fallback when no state file" "📍 status unavailable"
 
 # --- Test 2: Null flow ---
 echo "2. Null flow type"

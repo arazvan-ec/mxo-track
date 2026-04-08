@@ -3,6 +3,7 @@
 # Reads session-state.json evidence fields, writes .claude/workflow-status-line.txt
 # Enhanced 2026-03-24: shows per-phase evidence and current phase needs.
 # Enhanced 2026-04-07: adds tool context suffix to avoid identical repeated lines.
+# Enhanced 2026-04-08: 5-line adaptive format with evidence, next, branch.
 # Non-blocking: always exits 0.
 
 set -euo pipefail
@@ -58,7 +59,9 @@ fi
 
 # Graceful fallback
 if [ ! -f "$STATE_FILE" ]; then
-  echo "📍 status unavailable${TOOL_SUFFIX}" > "$OUTPUT"
+  { echo "📍 status unavailable"
+    echo "  session-state.json not found${TOOL_SUFFIX}"
+  } > "$OUTPUT"
   cat "$OUTPUT"
   exit 0
 fi
@@ -300,9 +303,8 @@ phase_needs() {
 
 # No flow declared
 if [ "$FLOW_TYPE" = "null" ] || [ -z "$FLOW_TYPE" ]; then
-  {
-    echo "📍 no flow declared | 🔀 ${BRANCH}${DEVIATION_SUFFIX}"
-    [ -n "$TOOL_SUFFIX" ] && echo " ${TOOL_SUFFIX}"
+  { echo "📍 no flow declared | 🔀 ${BRANCH}${DEVIATION_SUFFIX}"
+    echo "  Clasificar antes de continuar${TOOL_SUFFIX}"
   } > "$OUTPUT"
   cat "$OUTPUT"
   exit 0
@@ -311,25 +313,22 @@ fi
 # Simple flows
 case "$FLOW_TYPE" in
   micro)
-    {
-      echo "📍 micro | Responder | 🔀 ${BRANCH}${DEVIATION_SUFFIX}"
-      [ -n "$TOOL_SUFFIX" ] && echo " ${TOOL_SUFFIX}"
+    { echo "📍 micro | Responder | 🔀 ${BRANCH}${DEVIATION_SUFFIX}"
+      echo "  ${TOOL_SUFFIX:+${TOOL_SUFFIX} · }i#$(echo "$STATE" | jq -r '.interaction_id // 0')"
     } > "$OUTPUT"
     cat "$OUTPUT"
     exit 0
     ;;
   light)
-    {
-      echo "📍 light | Documentar | 🔀 ${BRANCH}${DEVIATION_SUFFIX}"
-      [ -n "$TOOL_SUFFIX" ] && echo " ${TOOL_SUFFIX}"
+    { echo "📍 light | Documentar | 🔀 ${BRANCH}${DEVIATION_SUFFIX}"
+      echo "  ${TOOL_SUFFIX:+${TOOL_SUFFIX} · }i#$(echo "$STATE" | jq -r '.interaction_id // 0')"
     } > "$OUTPUT"
     cat "$OUTPUT"
     exit 0
     ;;
   explore)
-    {
-      echo "📍 explore | Investigar | 🔀 ${BRANCH}${DEVIATION_SUFFIX}"
-      [ -n "$TOOL_SUFFIX" ] && echo " ${TOOL_SUFFIX}"
+    { echo "📍 explore | Investigar | 🔀 ${BRANCH}${DEVIATION_SUFFIX}"
+      echo "  ${TOOL_SUFFIX:+${TOOL_SUFFIX} · }i#$(echo "$STATE" | jq -r '.interaction_id // 0')"
     } > "$OUTPUT"
     cat "$OUTPUT"
     exit 0
@@ -341,6 +340,25 @@ if [ "$FLOW_TYPE" = "full" ]; then
   PHASES=("consult" "brainstorming" "planning" "implementation" "verification" "capture" "retrospective" "finalize")
   TOTAL=8
 
+  # Handle null/undeclared phase: flow declared but phase-advance not yet called
+  if [ "$CURRENT_PHASE" = "null" ] || [ -z "$CURRENT_PHASE" ]; then
+    { echo "📍 full | Pendiente: avanzar a consult | ⬚⬚⬚⬚⬚⬚⬚⬚${DEVIATION_SUFFIX}"
+      echo "  Next: phase-advance.sh consult${TOOL_SUFFIX}"
+    } > "$OUTPUT"
+    cat "$OUTPUT"
+    exit 0
+  fi
+
+  # Normalize common phase variants to canonical names
+  case "$CURRENT_PHASE" in
+    implement)      CURRENT_PHASE="implementation" ;;
+    brainstorm)     CURRENT_PHASE="brainstorming" ;;
+    plan)           CURRENT_PHASE="planning" ;;
+    verify|verif*)  CURRENT_PHASE="verification" ;;
+    retro)          CURRENT_PHASE="retrospective" ;;
+    final*)         CURRENT_PHASE="finalize" ;;
+  esac
+
   # Find current phase index (1-based)
   CURRENT_INDEX=0
   for i in "${!PHASES[@]}"; do
@@ -351,7 +369,9 @@ if [ "$FLOW_TYPE" = "full" ]; then
   done
 
   if [ "$CURRENT_INDEX" -eq 0 ]; then
-    echo "📍 full | ${CURRENT_PHASE} | ⚠ fase no reconocida${DEVIATION_SUFFIX}${TOOL_SUFFIX}" > "$OUTPUT"
+    { echo "📍 full | ${CURRENT_PHASE} | ⚠ fase no reconocida${DEVIATION_SUFFIX}"
+      echo "  Usar: phase-advance.sh <fase>${TOOL_SUFFIX}"
+    } > "$OUTPUT"
     cat "$OUTPUT"
     exit 0
   fi
@@ -588,6 +608,8 @@ if [ "$FLOW_TYPE" = "debug" ]; then
 fi
 
 # Unknown flow type — show raw
-echo "📍 ${FLOW_TYPE} | ${CURRENT_PHASE}${DEVIATION_SUFFIX}${TOOL_SUFFIX}" > "$OUTPUT"
+{ echo "📍 ${FLOW_TYPE} | ${CURRENT_PHASE}${DEVIATION_SUFFIX}"
+  echo "  ${TOOL_SUFFIX:---}"
+} > "$OUTPUT"
 cat "$OUTPUT"
 exit 0
