@@ -96,6 +96,102 @@ if [ "$DEV_ACTIVE" = "true" ]; then
   DEVIATION_SUFFIX=" | ⚠ DESVÍO"
 fi
 
+# Get current branch name
+BRANCH=$(git -C "$REPO" branch --show-current 2>/dev/null || echo "unknown")
+
+# Helper: Y/N from bool
+yn() { [ "$1" = "true" ] && echo "Y" || echo "N"; }
+
+# Helper: build evidence string for current phase
+current_evidence() {
+  local phase="$1"
+  case "$phase" in
+    consult)
+      echo "decisions_read=$(yn $DECISIONS_READ) logs_scanned=$(yn $LOGS_SCANNED)"
+      ;;
+    brainstorming)
+      local spec_yn="N"; [ -n "$SPEC_PATH" ] && spec_yn="Y"
+      echo "user_turns=$USER_TURNS alternatives=$(yn $ALTERNATIVES) approved=$(yn $USER_APPROVED) spec=$spec_yn"
+      ;;
+    planning)
+      local plan_yn="N"; [ -n "$PLAN_PATH" ] && plan_yn="Y"
+      echo "spec=$([ -n "$SPEC_PATH" ] && echo "Y" || echo "N") plan=$plan_yn"
+      ;;
+    implementation)
+      local ev="plan=$([ -n "$PLAN_PATH" ] && echo "Y" || echo "N") tests_written=$TESTS_WRITTEN"
+      if [ "$TASK_TOTAL" -gt 0 ] 2>/dev/null; then
+        ev="$ev task=${TASK_CURRENT}/${TASK_TOTAL}"
+        [ -n "$TASK_LABEL" ] && ev="$ev ($TASK_LABEL)"
+      fi
+      echo "$ev"
+      ;;
+    verification)
+      echo "tests_passed=$(yn ${TESTS_PASSED:-false}) lint_clean=$(yn ${LINT_CLEAN:-false})"
+      ;;
+    capture)
+      echo "exec_log=$([ -n "$EXEC_LOG" ] && echo "Y" || echo "N")"
+      ;;
+    retrospective)
+      echo "exec_log=$([ -n "$EXEC_LOG" ] && echo "Y" || echo "N")"
+      ;;
+    finalize)
+      echo "branch_strategy=$([ -n "$BRANCH_STRATEGY" ] && echo "$BRANCH_STRATEGY" || echo "N")"
+      ;;
+    *) echo "" ;;
+  esac
+}
+
+# Helper: build next action string for current phase
+next_action() {
+  local phase="$1"
+  case "$phase" in
+    consult)
+      local n=""
+      [ "$DECISIONS_READ" != "true" ] && [ "$LOGS_SCANNED" != "true" ] && n="read decisions/logs"
+      [ -z "$n" ] && n="→ brainstorming"
+      echo "$n"
+      ;;
+    brainstorming)
+      local parts=""
+      [ "$USER_TURNS" -lt 1 ] 2>/dev/null && parts="user dialog"
+      [ "$ALTERNATIVES" != "true" ] && parts="${parts:+$parts, }propose alternatives"
+      [ "$USER_APPROVED" != "true" ] && parts="${parts:+$parts, }get approval"
+      [ -z "$SPEC_PATH" ] && parts="${parts:+$parts, }write spec"
+      [ -z "$parts" ] && parts="→ planning"
+      echo "$parts"
+      ;;
+    planning)
+      [ -z "$PLAN_PATH" ] && echo "write plan" || echo "→ implementation"
+      ;;
+    implementation)
+      if [ "$TASK_TOTAL" -gt 0 ] 2>/dev/null && [ "$TASK_CURRENT" -gt 0 ] 2>/dev/null; then
+        local n="task ${TASK_CURRENT}/${TASK_TOTAL}"
+        [ -n "$TASK_LABEL" ] && n="$n: $TASK_LABEL"
+        echo "$n (TDD, commit each)"
+      else
+        echo "TDD cycle (test first), commit frequently"
+      fi
+      ;;
+    verification)
+      local parts=""
+      [ "$TESTS_PASSED" != "true" ] && parts="run tests"
+      [ "$LINT_CLEAN" != "true" ] && parts="${parts:+$parts, }run lint"
+      [ -z "$parts" ] && parts="→ capture"
+      echo "$parts"
+      ;;
+    capture)
+      [ -z "$EXEC_LOG" ] && echo "write execution log" || echo "→ retrospective"
+      ;;
+    retrospective)
+      echo "update decision log, → finalize"
+      ;;
+    finalize)
+      [ -z "$BRANCH_STRATEGY" ] && echo "declare branch strategy (merge/pr/keep/discard)" || echo "execute $BRANCH_STRATEGY"
+      ;;
+    *) echo "" ;;
+  esac
+}
+
 # Helper: basename or empty
 base_name() {
   if [ -n "$1" ]; then
@@ -204,7 +300,10 @@ phase_needs() {
 
 # No flow declared
 if [ "$FLOW_TYPE" = "null" ] || [ -z "$FLOW_TYPE" ]; then
-  echo "📍 no flow declared${DEVIATION_SUFFIX}${TOOL_SUFFIX}" > "$OUTPUT"
+  {
+    echo "📍 no flow declared | 🔀 ${BRANCH}${DEVIATION_SUFFIX}"
+    [ -n "$TOOL_SUFFIX" ] && echo " ${TOOL_SUFFIX}"
+  } > "$OUTPUT"
   cat "$OUTPUT"
   exit 0
 fi
@@ -212,17 +311,26 @@ fi
 # Simple flows
 case "$FLOW_TYPE" in
   micro)
-    echo "📍 micro | Responder${DEVIATION_SUFFIX}${TOOL_SUFFIX}" > "$OUTPUT"
+    {
+      echo "📍 micro | Responder | 🔀 ${BRANCH}${DEVIATION_SUFFIX}"
+      [ -n "$TOOL_SUFFIX" ] && echo " ${TOOL_SUFFIX}"
+    } > "$OUTPUT"
     cat "$OUTPUT"
     exit 0
     ;;
   light)
-    echo "📍 light | Documentar${DEVIATION_SUFFIX}${TOOL_SUFFIX}" > "$OUTPUT"
+    {
+      echo "📍 light | Documentar | 🔀 ${BRANCH}${DEVIATION_SUFFIX}"
+      [ -n "$TOOL_SUFFIX" ] && echo " ${TOOL_SUFFIX}"
+    } > "$OUTPUT"
     cat "$OUTPUT"
     exit 0
     ;;
   explore)
-    echo "📍 explore | Investigar${DEVIATION_SUFFIX}${TOOL_SUFFIX}" > "$OUTPUT"
+    {
+      echo "📍 explore | Investigar | 🔀 ${BRANCH}${DEVIATION_SUFFIX}"
+      [ -n "$TOOL_SUFFIX" ] && echo " ${TOOL_SUFFIX}"
+    } > "$OUTPUT"
     cat "$OUTPUT"
     exit 0
     ;;
@@ -278,9 +386,6 @@ if [ "$FLOW_TYPE" = "full" ]; then
   # Capitalize
   DISPLAY_PHASE="$(echo "${CURRENT_PHASE:0:1}" | tr '[:lower:]' '[:upper:]')${CURRENT_PHASE:1}"
 
-  # Current phase needs
-  NEEDS=$(phase_needs "$CURRENT_PHASE")
-
   # Build phase progress bar
   PHASE_BAR=""
   for i in "${!PHASES[@]}"; do
@@ -294,7 +399,7 @@ if [ "$FLOW_TYPE" = "full" ]; then
     fi
   done
 
-  # Line 1: Flow, phase, index, emoji bar, task progress, deviation
+  # Line 1: Flow, phase, index, emoji bar, task progress, branch, deviation
   LINE1="📍 full | ${DISPLAY_PHASE} (${CURRENT_INDEX}/${TOTAL}) | ${PHASE_BAR}"
 
   # Add task progress for implementation/verification phases
@@ -314,34 +419,36 @@ if [ "$FLOW_TYPE" = "full" ]; then
       [ -n "$TASK_LABEL" ] && LINE1="${LINE1}: ${TASK_LABEL}"
     fi
   fi
-  LINE1="${LINE1}${DEVIATION_SUFFIX}"
+  LINE1="${LINE1} | 🔀 ${BRANCH}${DEVIATION_SUFFIX}"
 
-  # Line 2: Needs + tool context (if either exists)
-  LINE2=""
-  # NEEDS from phase_needs() starts with " | Need: ..." — strip the leading " | "
-  NEEDS_CLEAN="${NEEDS# | }"
-  if [ -n "$NEEDS_CLEAN" ] && [ -n "$TOOL_SUFFIX" ]; then
-    LINE2="  ${NEEDS_CLEAN}${TOOL_SUFFIX}"
-  elif [ -n "$NEEDS_CLEAN" ]; then
-    LINE2="  ${NEEDS_CLEAN}"
-  elif [ -n "$TOOL_SUFFIX" ]; then
-    LINE2=" ${TOOL_SUFFIX}"
-  fi
+  # Line 2: Evidence for current phase
+  EVIDENCE=$(current_evidence "$CURRENT_PHASE")
+  LINE2="  Evidence: ${EVIDENCE}"
 
-  # Line 3: Completed phase chain (only if ≥2 phases completed, i.e. CURRENT_INDEX > 2)
-  LINE3=""
+  # Line 3: Next action
+  NEXT=$(next_action "$CURRENT_PHASE")
+  LINE3="  Next: ${NEXT}"
+
+  # Line 4: Completed phase chain (only if ≥2 phases completed, i.e. CURRENT_INDEX > 2)
+  LINE4=""
   if [ "$CURRENT_INDEX" -gt 2 ] && [ -n "$COMPLETED" ]; then
-    LINE3="  ${COMPLETED}"
+    LINE4="  ${COMPLETED}"
   elif [ -n "$COMPLETED" ]; then
     # Early phases: append completed inline to line 1
     LINE1="${LINE1} | ${COMPLETED}"
   fi
 
+  # Line 5: Tool context (if present)
+  LINE5=""
+  [ -n "$TOOL_SUFFIX" ] && LINE5=" ${TOOL_SUFFIX}"
+
   # Assemble output
   {
     echo "$LINE1"
-    [ -n "$LINE2" ] && echo "$LINE2"
-    [ -n "$LINE3" ] && echo "$LINE3"
+    echo "$LINE2"
+    echo "$LINE3"
+    [ -n "$LINE4" ] && echo "$LINE4"
+    [ -n "$LINE5" ] && echo "$LINE5"
   } > "$OUTPUT"
   cat "$OUTPUT"
   exit 0
@@ -439,33 +546,42 @@ if [ "$FLOW_TYPE" = "debug" ]; then
     fi
   done
 
-  # Line 1: Flow, phase, index, emoji bar, deviation
-  LINE1="📍 debug | ${DISPLAY_PHASE} (${DEBUG_INDEX}/${TOTAL}) | ${DEBUG_BAR}${DEVIATION_SUFFIX}"
+  # Line 1: Flow, phase, index, emoji bar, branch, deviation
+  LINE1="📍 debug | ${DISPLAY_PHASE} (${DEBUG_INDEX}/${TOTAL}) | ${DEBUG_BAR} | 🔀 ${BRANCH}${DEVIATION_SUFFIX}"
 
-  # Line 2: Needs + tool context
-  LINE2=""
-  NEEDS_CLEAN="${NEEDS# | }"
-  if [ -n "$NEEDS_CLEAN" ] && [ -n "$TOOL_SUFFIX" ]; then
-    LINE2="  ${NEEDS_CLEAN}${TOOL_SUFFIX}"
-  elif [ -n "$NEEDS_CLEAN" ]; then
-    LINE2="  ${NEEDS_CLEAN}"
-  elif [ -n "$TOOL_SUFFIX" ]; then
-    LINE2=" ${TOOL_SUFFIX}"
-  fi
+  # Line 2: Evidence
+  DEBUG_EVIDENCE="decisions=$(yn $DECISIONS_READ) root_cause=$(yn $ROOT_CAUSE) pattern_wide=$(yn $PATTERN_WIDE) tests_passed=$(yn ${TESTS_PASSED:-false})"
+  LINE2="  Evidence: ${DEBUG_EVIDENCE}"
 
-  # Line 3: Completed chain (only if ≥2 completed, i.e. DEBUG_INDEX > 2)
-  LINE3=""
+  # Line 3: Next action
+  DEBUG_NEXT=""
+  case "$DEBUG_CURRENT" in
+    consult) DEBUG_NEXT="read decisions/logs" ;;
+    root_cause) DEBUG_NEXT="identify root cause (Skill 8)" ;;
+    pattern_search) DEBUG_NEXT="pattern-wide search (Skill 8 Phase 2.5)" ;;
+    fix) DEBUG_NEXT="TDD fix + verify" ;;
+  esac
+  LINE3="  Next: ${DEBUG_NEXT}"
+
+  # Line 4: Completed chain (only if ≥2 completed, i.e. DEBUG_INDEX > 2)
+  LINE4=""
   if [ "$DEBUG_INDEX" -gt 2 ] && [ -n "$COMPLETED" ]; then
-    LINE3="  ${COMPLETED}"
+    LINE4="  ${COMPLETED}"
   elif [ -n "$COMPLETED" ]; then
     LINE1="${LINE1} | ${COMPLETED}"
   fi
 
+  # Line 5: Tool context
+  LINE5=""
+  [ -n "$TOOL_SUFFIX" ] && LINE5=" ${TOOL_SUFFIX}"
+
   # Assemble output
   {
     echo "$LINE1"
-    [ -n "$LINE2" ] && echo "$LINE2"
-    [ -n "$LINE3" ] && echo "$LINE3"
+    echo "$LINE2"
+    echo "$LINE3"
+    [ -n "$LINE4" ] && echo "$LINE4"
+    [ -n "$LINE5" ] && echo "$LINE5"
   } > "$OUTPUT"
   cat "$OUTPUT"
   exit 0
