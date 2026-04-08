@@ -8,6 +8,13 @@ Registro de decisiones de diseño significativas. Cada entrada captura el contex
 
 ---
 
+### [2026-04-08] Consolidate PostToolUse hooks via dispatcher pattern
+
+- **Problema:** Claude Code web UI mostraba 3-4 notificaciones de hook por cada herramienta (Edit: workflow-engine PreToolUse + auto-evidence + workflow-status-line + plan-persistence PostToolUse). En sesiones con 30+ tool calls, esto generaba ~100 entradas genéricas que ocultaban el progreso real al usuario.
+- **Decisión:** Dispatcher pattern — un único script `post-tool-handler.sh` que lee stdin una vez y llama secuencialmente a los sub-scripts existentes (auto-evidence → plan-persistence → workflow-status-line). Reduce las entradas PostToolUse de 3 a 1 por herramienta, sin modificar la lógica interna de cada sub-script.
+- **Alternativas descartadas:** (A) Merge completo — fusionar los 3 scripts en uno solo (~750 líneas). Más eficiente pero frágil, pierde testabilidad individual. (B) Solo mejorar statusMessage — no reduce el número de entradas, impacto cosmético. (C) Eliminar hooks de Read — reduce ruido pero pierde auto-evidence detection para decisions/logs.
+- **Resultado:** 50% reducción de notificaciones (Edit: 4→2, Read: 2→1). Patrón reutilizable: misma técnica que commit 2773ab9 (consolidación Bash). Los sub-scripts siguen siendo testables independientemente.
+
 ### [2026-04-07] Validator invocation: prerequisites vs completion
 
 - **Problema:** El workflow-engine ejecutaba brainstorm-validator al escribir specs y planning-validator al escribir plans. Ambos validators verifican que el artefacto exista — pero el Write es lo que lo crea. Dependencia circular.

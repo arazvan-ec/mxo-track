@@ -57,17 +57,8 @@
           {
             "type": "command",
             "command": "/home/user/mxo-track/.claude/hooks/post-rwe-hook.sh",
-            "timeout": 3,
+            "timeout": 5,
             "statusMessage": "Procesando..."
-          }
-        ]
-      },
-      {
-        "matcher": "Write|Edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash -c 'FILE=\"$CLAUDE_TOOL_INPUT_FILE_PATH\"; if [[ \"$FILE\" == /root/.claude/plans/* ]]; then BASENAME=$(basename \"$FILE\"); DATE=$(date +%Y-%m-%d); DEST_DIR=\"/home/user/mxo-track/docs/superpowers/plans/conversation\"; mkdir -p \"$DEST_DIR\"; DEST=\"$DEST_DIR/${DATE}-${BASENAME}\"; cp \"$FILE\" \"$DEST\" && cd /home/user/mxo-track && git add \"$DEST\" && git commit -m \"docs: persist conversation plan ${DATE}-${BASENAME}\" && git push; fi'"
           }
         ]
       },
