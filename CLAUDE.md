@@ -27,6 +27,7 @@ php bin/console doctrine:migrations:migrate -n  # Run migrations
 php bin/console doctrine:fixtures:load -n       # Load fixtures
 make lint                               # PHP syntax lint
 php vendor/bin/phpunit                  # Run tests
+cd frontend && npm run build            # Frontend: TypeScript + Vite (EXACT deploy command)
 ```
 <!-- PROJECT-SPECIFIC-END -->
 
@@ -129,7 +130,7 @@ code edits. Each type activates a different gate chain:
 |------|--------|----------------|----------------------|
 | **Informational** | "what does X do?" | Micro — consult → answer → capture gaps | No code edits allowed (must reclassify if needed) |
 | **Documentation** | Edit docs | Light — check overlap → execute → verify | No `src/` edits (must reclassify if scope grows) |
-| **Bug fix** | Error, unexpected behavior | Debug — root cause → pattern-wide → TDD fix | Blocks fix until root cause + pattern-wide search done |
+| **Bug fix** | Error, unexpected behavior | Debug — root cause → pattern-wide → TDD fix → verification → capture → retrospective | Blocks fix until root cause + pattern-wide search done |
 | **Code change** | New feature, refactor | Full — consult → brainstorming → planning → implementation → verification → capture → retrospective → finalize | Blocks `src/` edits until consult + brainstorming + planning complete |
 | **Exploration** | "audit X", "how does Z?" | Explore — manifest → explore → capture | No code edits allowed (must reclassify if needed) |
 
@@ -231,6 +232,33 @@ consult → brainstorming → planning → implementation → verification → c
 **Scope change detection:** If the user requests something NOT in the current plan,
 it's a new interaction. Increment `interaction_id`, reclassify, restart the flow.
 
+### Why Debug Needs Capture + Retrospective
+
+The debug flow's phases after verification serve a different purpose than in the full flow:
+
+```
+root_cause → pattern-wide → fix → verification → capture → retrospective
+   │              │           │         │            │            │
+   finds the     prevents    TDD     proves      writes       asks: "what
+   real cause    recurrence  cycle   the fix     execution    process gap
+                                     works       log          let this bug
+                                                              reach prod?"
+```
+
+**Capture in debug** writes the execution log with: root cause, why it wasn't caught
+earlier, the fix, and which files changed. This feeds future consult phases — "has this
+type of bug happened before?" Without it, the same bug class reappears because no one
+remembers the previous instance.
+
+**Retrospective in debug** asks the meta-question: "What process gap allowed this bug to
+exist?" A bug is a symptom of two failures — the code failure AND the process failure that
+didn't catch it. The code fix addresses the first. The retrospective addresses the second
+by updating CLAUDE.md, knowledge modules, or verification procedures.
+
+**Example:** `tsc --noEmit` passed locally but `tsc -b` failed in deploy. The code fix
+was trivial (2 lines). The process fix — "always run the exact deploy command" — prevents
+an entire class of future bugs. Without retrospective, only the 2-line fix happens.
+
 ### Fix Invalidation
 
 If a fix doesn't work, the root cause analysis was wrong. Don't iterate on a failed
@@ -248,7 +276,7 @@ jq '.interaction_id = (.interaction_id + 1) | .evidence.root_cause_identified = 
 | Flow | Gate | What it prevents |
 |------|------|-----------------|
 | micro/light/explore | DENY edits to `src/`, `tests/` | Scope creep — a "quick look" turning into unplanned code changes without design review |
-| debug | HARD: needs root_cause + pattern-wide | Symptom fixes — patching what's visible without understanding what's broken |
+| debug | HARD: needs root_cause + pattern-wide; capture + retrospective post-fix | Symptom fixes — patching what's visible without understanding what's broken. Skipping retrospective — losing the process fix that prevents recurrence |
 | full | HARD: needs consult + brainstorming + planning | Cowboy coding — implementing the first idea without evaluating alternatives or checking existing patterns |
 
 The gates are deliberately strict. A false negative (blocking a legitimate edit) costs
@@ -587,6 +615,22 @@ message, after the latest code changes, with full output read.
 
 Skip any step = the claim is unverified. "Should work," "probably passes," and "seems
 fine" are all synonyms for "I didn't check."
+
+#### Run the deploy command, not approximations
+
+**Always run the EXACT command that CI/deploy executes.** Approximations with different
+flags silently diverge from production checks:
+
+| Wrong (approximation) | Right (exact deploy command) | Why it diverges |
+|---|---|---|
+| `npx tsc --noEmit` + `npx vite build` | `cd frontend && npm run build` | `tsc --noEmit` ≠ `tsc -b` (build mode uses project references, stricter) |
+| `php -l src/` | `make lint` | Make target may include additional checks |
+| Running tools separately | Running the combined pipeline | Intermediate failures get swallowed |
+
+**The rule:** If the deploy runs `npm run build`, verification runs `npm run build`.
+If CI runs `make lint && php vendor/bin/phpunit`, verification runs that exact sequence.
+Never substitute individual tools for the pipeline — they may have different configs,
+flags, or strictness levels.
 
 ### Closing the Cycle
 
