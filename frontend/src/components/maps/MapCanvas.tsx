@@ -70,7 +70,7 @@ export const MapCanvas = forwardRef<MapCanvasHandle, Props>(function MapCanvas(
       ref={mapRef}
       mapLib={maplibregl}
       mapStyle={mapStyle}
-      preserveDrawingBuffer
+      canvasContextAttributes={{ preserveDrawingBuffer: true }}
       initialViewState={{
         latitude: initialCenter.lat,
         longitude: initialCenter.lng,
