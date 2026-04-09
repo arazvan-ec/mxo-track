@@ -90,7 +90,7 @@
               <td class="whitespace-nowrap px-6 py-4">
                 {% if loop.index <= 3 %}
                   <span class="inline-flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold
-                    {% if loop.index == 1 %}bg-amber-100 text-amber-700{% elseif loop.index == 2 %}bg-gray-100 text-gray-600{% else %}bg-orange-100 text-orange-700{% endif %}">
+                    {% if loop.index == 1 %}badge-amber{% elseif loop.index == 2 %}badge-gray{% else %}badge-orange{% endif %}">
                     {{ loop.index }}
                   </span>
                 {% else %}
@@ -106,9 +106,9 @@
               <td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium text-red-600">{{ row.exceptions }}</td>
               <td class="whitespace-nowrap px-6 py-4 text-right">
                 <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
-                  {% if row.success_rate >= 90 %}bg-emerald-100 text-emerald-700
-                  {% elseif row.success_rate >= 70 %}bg-amber-100 text-amber-700
-                  {% else %}bg-red-100 text-red-700{% endif %}">
+                  {% if row.success_rate >= 90 %}badge-emerald
+                  {% elseif row.success_rate >= 70 %}badge-amber
+                  {% else %}badge-red{% endif %}">
                   {{ row.success_rate }}%
                 </span>
               </td>

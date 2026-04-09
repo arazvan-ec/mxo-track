@@ -60,9 +60,9 @@
             {% endif %}
           </div>
           <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
-            {% if cr.completion_rate >= 90 %}bg-emerald-100 text-emerald-700
-            {% elseif cr.completion_rate >= 70 %}bg-amber-100 text-amber-700
-            {% else %}bg-red-100 text-red-700{% endif %}">
+            {% if cr.completion_rate >= 90 %}badge-emerald
+            {% elseif cr.completion_rate >= 70 %}badge-amber
+            {% else %}badge-red{% endif %}">
             {{ cr.completion_rate }}% completado
           </span>
         </div>

@@ -34,7 +34,7 @@
     {% for type, messages in app.flashes %}
       {% for message in messages %}
         <div class="mb-4 rounded-lg px-4 py-3 text-sm font-medium
-          {% if type == 'error' %}bg-red-100 text-red-800{% else %}bg-green-100 text-green-800{% endif %}">
+          {% if type == 'error' %}badge-red{% else %}badge-green{% endif %}">
           {{ message }}
         </div>
       {% endfor %}
@@ -66,9 +66,9 @@
                 <p class="text-sm" style="color: var(--color-text-secondary);">
                   {{ slot.slotStart|date('H:i') }} - {{ slot.slotEnd|date('H:i') }}
                   {% if slot.slotStart|date('H') < 13 %}
-                    <span class="ml-1 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">Manana</span>
+                    <span class="ml-1 inline-flex rounded-full badge-amber px-2 py-0.5 text-xs font-medium">Manana</span>
                   {% else %}
-                    <span class="ml-1 inline-flex rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-800">Tarde</span>
+                    <span class="ml-1 inline-flex rounded-full badge-indigo px-2 py-0.5 text-xs font-medium">Tarde</span>
                   {% endif %}
                 </p>
               </div>

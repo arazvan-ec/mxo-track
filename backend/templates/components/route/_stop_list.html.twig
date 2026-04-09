@@ -42,14 +42,14 @@
               {% if showStatus %}
               <div class="shrink-0">
                 <span x-show="stop.status === 'DELIVERED'"
-                      class="inline-flex rounded-full bg-green-100 px-2 text-xs font-semibold leading-5 text-green-800">Entregado</span>
+                      class="inline-flex rounded-full badge-green px-2 text-xs font-semibold leading-5">Entregado</span>
                 <span x-show="stop.status === 'EXCEPTION'"
-                      class="inline-flex rounded-full bg-red-100 px-2 text-xs font-semibold leading-5 text-red-800">Excepcion</span>
+                      class="inline-flex rounded-full badge-red px-2 text-xs font-semibold leading-5">Excepcion</span>
                 <span x-show="stop.status === 'SKIPPED'"
                       class="inline-flex rounded-full px-2 text-xs font-semibold leading-5"
                       style="background: var(--color-surface); color: var(--color-text-secondary);">Omitido</span>
                 <span x-show="stop.status !== 'DELIVERED' && stop.status !== 'EXCEPTION' && stop.status !== 'SKIPPED'"
-                      class="inline-flex rounded-full bg-blue-100 px-2 text-xs font-semibold leading-5 text-blue-800">Pendiente</span>
+                      class="inline-flex rounded-full badge-blue px-2 text-xs font-semibold leading-5">Pendiente</span>
               </div>
               {% endif %}
             </div>

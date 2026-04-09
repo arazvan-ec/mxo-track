@@ -191,6 +191,81 @@
   --card-shadow: 0 1px 2px rgba(0,0,0,0.3);
 }
 
+/* ── Badge Color Tokens ── */
+:root {
+  --badge-blue-bg: #dbeafe; --badge-blue-text: #1e40af;
+  --badge-amber-bg: #fef3c7; --badge-amber-text: #92400e;
+  --badge-green-bg: #dcfce7; --badge-green-text: #166534;
+  --badge-red-bg: #fee2e2; --badge-red-text: #991b1b;
+  --badge-gray-bg: #f3f4f6; --badge-gray-text: #1f2937;
+  --badge-purple-bg: #f3e8ff; --badge-purple-text: #6b21a8;
+  --badge-indigo-bg: #e0e7ff; --badge-indigo-text: #3730a3;
+  --badge-cyan-bg: #cffafe; --badge-cyan-text: #155e75;
+  --badge-orange-bg: #ffedd5; --badge-orange-text: #9a3412;
+  --badge-emerald-bg: #d1fae5; --badge-emerald-text: #065f46;
+  --badge-pink-bg: #fce7f3; --badge-pink-text: #9d174d;
+  --badge-yellow-bg: #fef9c3; --badge-yellow-text: #854d0e;
+  /* Soft variants (toasts, alerts, notifications — lighter bg) */
+  --badge-blue-soft-bg: #eff6ff; --badge-blue-soft-text: #1e40af;
+  --badge-green-soft-bg: #ecfdf5; --badge-green-soft-text: #065f46;
+  --badge-red-soft-bg: #fef2f2; --badge-red-soft-text: #991b1b;
+  --badge-amber-soft-bg: #fffbeb; --badge-amber-soft-text: #92400e;
+  --badge-emerald-soft-bg: #ecfdf5; --badge-emerald-soft-text: #065f46;
+  /* Toast ring colors */
+  --toast-success-ring: #a7f3d0;
+  --toast-error-ring: #fecaca;
+  --toast-warning-ring: #fde68a;
+  --toast-info-ring: #bfdbfe;
+}
+.dark {
+  --badge-blue-bg: rgba(59, 130, 246, 0.15); --badge-blue-text: #93c5fd;
+  --badge-amber-bg: rgba(245, 158, 11, 0.15); --badge-amber-text: #fcd34d;
+  --badge-green-bg: rgba(34, 197, 94, 0.15); --badge-green-text: #86efac;
+  --badge-red-bg: rgba(239, 68, 68, 0.15); --badge-red-text: #fca5a5;
+  --badge-gray-bg: rgba(156, 163, 175, 0.12); --badge-gray-text: #d1d5db;
+  --badge-purple-bg: rgba(168, 85, 247, 0.15); --badge-purple-text: #d8b4fe;
+  --badge-indigo-bg: rgba(99, 102, 241, 0.15); --badge-indigo-text: #a5b4fc;
+  --badge-cyan-bg: rgba(6, 182, 212, 0.15); --badge-cyan-text: #67e8f9;
+  --badge-orange-bg: rgba(249, 115, 22, 0.15); --badge-orange-text: #fdba74;
+  --badge-emerald-bg: rgba(16, 185, 129, 0.15); --badge-emerald-text: #6ee7b7;
+  --badge-pink-bg: rgba(236, 72, 153, 0.15); --badge-pink-text: #f9a8d4;
+  --badge-yellow-bg: rgba(234, 179, 8, 0.15); --badge-yellow-text: #fde047;
+  --badge-blue-soft-bg: rgba(59, 130, 246, 0.08); --badge-blue-soft-text: #93c5fd;
+  --badge-green-soft-bg: rgba(16, 185, 129, 0.08); --badge-green-soft-text: #6ee7b7;
+  --badge-red-soft-bg: rgba(239, 68, 68, 0.08); --badge-red-soft-text: #fca5a5;
+  --badge-amber-soft-bg: rgba(245, 158, 11, 0.08); --badge-amber-soft-text: #fcd34d;
+  --badge-emerald-soft-bg: rgba(16, 185, 129, 0.08); --badge-emerald-soft-text: #6ee7b7;
+  --toast-success-ring: rgba(16, 185, 129, 0.3);
+  --toast-error-ring: rgba(239, 68, 68, 0.3);
+  --toast-warning-ring: rgba(245, 158, 11, 0.3);
+  --toast-info-ring: rgba(59, 130, 246, 0.3);
+}
+
+/* Badge utility classes — theme-aware replacements for hardcoded Tailwind badge colors */
+.badge-blue { background: var(--badge-blue-bg); color: var(--badge-blue-text); }
+.badge-amber { background: var(--badge-amber-bg); color: var(--badge-amber-text); }
+.badge-green { background: var(--badge-green-bg); color: var(--badge-green-text); }
+.badge-red { background: var(--badge-red-bg); color: var(--badge-red-text); }
+.badge-gray { background: var(--badge-gray-bg); color: var(--badge-gray-text); }
+.badge-purple { background: var(--badge-purple-bg); color: var(--badge-purple-text); }
+.badge-indigo { background: var(--badge-indigo-bg); color: var(--badge-indigo-text); }
+.badge-cyan { background: var(--badge-cyan-bg); color: var(--badge-cyan-text); }
+.badge-orange { background: var(--badge-orange-bg); color: var(--badge-orange-text); }
+.badge-emerald { background: var(--badge-emerald-bg); color: var(--badge-emerald-text); }
+.badge-pink { background: var(--badge-pink-bg); color: var(--badge-pink-text); }
+.badge-yellow { background: var(--badge-yellow-bg); color: var(--badge-yellow-text); }
+/* Soft variants for toasts, alerts, notification panels */
+.badge-soft-blue { background: var(--badge-blue-soft-bg); color: var(--badge-blue-soft-text); }
+.badge-soft-green { background: var(--badge-green-soft-bg); color: var(--badge-green-soft-text); }
+.badge-soft-red { background: var(--badge-red-soft-bg); color: var(--badge-red-soft-text); }
+.badge-soft-amber { background: var(--badge-amber-soft-bg); color: var(--badge-amber-soft-text); }
+.badge-soft-emerald { background: var(--badge-emerald-soft-bg); color: var(--badge-emerald-soft-text); }
+/* Toast classes — composite (bg + text + ring color) for flash messages */
+.toast-success { background: var(--badge-emerald-soft-bg); color: var(--badge-emerald-soft-text); --tw-ring-color: var(--toast-success-ring); }
+.toast-error { background: var(--badge-red-soft-bg); color: var(--badge-red-soft-text); --tw-ring-color: var(--toast-error-ring); }
+.toast-warning { background: var(--badge-amber-soft-bg); color: var(--badge-amber-soft-text); --tw-ring-color: var(--toast-warning-ring); }
+.toast-info { background: var(--badge-blue-soft-bg); color: var(--badge-blue-soft-text); --tw-ring-color: var(--toast-info-ring); }
+
 body {
   margin: 0;
   background-color: var(--color-surface);

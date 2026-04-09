@@ -298,13 +298,13 @@ REF-002,Maria Lopez,Av. de la Castellana 100,40.4515,-3.6903,+34698765432,,5.00,
                 {{ run.customer.name }}
               </td>
               <td class="whitespace-nowrap px-6 py-4 text-sm text-right">
-                <span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+                <span class="inline-flex items-center rounded-full badge-soft-emerald px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ring-emerald-600/20">
                   {{ run.createdCount }}
                 </span>
               </td>
               <td class="whitespace-nowrap px-6 py-4 text-sm text-right">
                 {% if run.skippedCount > 0 %}
-                  <span class="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20">
+                  <span class="inline-flex items-center rounded-full badge-soft-amber px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ring-amber-600/20">
                     {{ run.skippedCount }}
                   </span>
                 {% else %}

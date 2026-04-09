@@ -50,15 +50,15 @@
                                         </span>
                                     {% endif %}
                                     <p class="text-sm font-semibold leading-6" style="color: var(--color-text-primary);">{{ notification.title }}</p>
-                                    <span class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium
+                                    <span class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset
                                         {% if notification.type starts with 'shipment_delivered' %}
-                                            bg-green-50 text-green-700 ring-1 ring-inset ring-green-600/20
+                                            badge-soft-green ring-green-600/20
                                         {% elseif notification.type starts with 'shipment_exception' or notification.type starts with 'vehicle_offline' %}
-                                            bg-red-50 text-red-700 ring-1 ring-inset ring-red-600/20
+                                            badge-soft-red ring-red-600/20
                                         {% elseif notification.type starts with 'route_assigned' %}
-                                            bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-600/20
+                                            badge-soft-blue ring-blue-600/20
                                         {% else %}
-                                            ring-1 ring-inset ring-gray-600/20
+                                            ring-gray-600/20
                                         {% endif %}
                                     " {% if not (notification.type starts with 'shipment_delivered' or notification.type starts with 'shipment_exception' or notification.type starts with 'vehicle_offline' or notification.type starts with 'route_assigned') %}style="color: var(--color-text-secondary);"{% endif %}>{{ notification.type }}</span>
                                 </div>

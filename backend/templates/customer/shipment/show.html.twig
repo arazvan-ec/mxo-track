@@ -216,15 +216,15 @@
                         </div>
                         {% if ai.subcategory is defined %}
                           <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
-                            {% if ai.subcategory == 'ACCESO_EDIFICIO' %}bg-yellow-100 text-yellow-800
-                            {% elseif ai.subcategory == 'DIRECCION_INCOMPLETA' %}bg-orange-100 text-orange-800
-                            {% elseif ai.subcategory == 'AUSENCIA_RECURRENTE' %}bg-red-100 text-red-800
-                            {% elseif ai.subcategory == 'RECHAZO_ESTADO' %}bg-pink-100 text-pink-800
-                            {% elseif ai.subcategory == 'HORARIO_INCOMPATIBLE' %}bg-blue-100 text-blue-800
-                            {% elseif ai.subcategory == 'PAQUETE_DANADO' %}bg-amber-100 text-amber-800
-                            {% elseif ai.subcategory == 'DIRECCION_NO_ENCONTRADA' %}bg-gray-100 text-gray-800
-                            {% elseif ai.subcategory == 'DESTINATARIO_DESCONOCIDO' %}bg-indigo-100 text-indigo-800
-                            {% else %}bg-gray-100 text-gray-700
+                            {% if ai.subcategory == 'ACCESO_EDIFICIO' %}badge-yellow
+                            {% elseif ai.subcategory == 'DIRECCION_INCOMPLETA' %}badge-orange
+                            {% elseif ai.subcategory == 'AUSENCIA_RECURRENTE' %}badge-red
+                            {% elseif ai.subcategory == 'RECHAZO_ESTADO' %}badge-pink
+                            {% elseif ai.subcategory == 'HORARIO_INCOMPATIBLE' %}badge-blue
+                            {% elseif ai.subcategory == 'PAQUETE_DANADO' %}badge-amber
+                            {% elseif ai.subcategory == 'DIRECCION_NO_ENCONTRADA' %}badge-gray
+                            {% elseif ai.subcategory == 'DESTINATARIO_DESCONOCIDO' %}badge-indigo
+                            {% else %}badge-gray
                             {% endif %}">
                             {{ ai.subcategory|replace({'_': ' '}) }}
                           </span>
