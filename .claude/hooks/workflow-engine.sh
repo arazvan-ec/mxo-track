@@ -61,7 +61,8 @@ DEVIATION_ACTIVE=$(jq -r '.deviation.active // false' "$STATE_FILE" 2>/dev/null 
 # ── Classify file for gating (early, needed by Gate 1 messages) ──
 classify_file() {
   case "$1" in
-    */backend/src/*|*/frontend/src/*)                echo "code" ;;
+    */backend/src/*|*/frontend/src/*|*/backend/templates/*|*/backend/config/*|*/backend/migrations/*|*/backend/assets/*|*/ml-service/*|*/docker/*|*/scripts/*|*/openspec/*)
+                                                     echo "code" ;;
     */backend/tests/*|*/frontend/tests/*)             echo "test" ;;
     */docs/superpowers/specs/*)                       echo "spec" ;;
     */docs/superpowers/plans/*)                       echo "plan" ;;
@@ -77,8 +78,8 @@ FILE_CLASS=$(classify_file "$FILE_PATH")
 
 # ── Gate 1: Flow type must be declared for ALL file edits ──
 if [ "$FLOW_TYPE" = "null" ]; then
-  case "$FILE_PATH" in
-    */backend/src/*|*/frontend/src/*|*/backend/tests/*|*/frontend/tests/*)
+  case "$FILE_CLASS" in
+    code|test)
       deny "❌ BLOQUEADO [flow no declarado] Archivo: $FILE_CLASS | No puedes editar codigo sin declarar flow_type. | Accion: escribe flow_type (micro|light|debug|full|explore) en .claude/session-state.json"
       ;;
     *)
@@ -97,8 +98,8 @@ fi
 CURRENT_INTERACTION=$(jq -r '.interaction_id // 0' "$STATE_FILE" 2>/dev/null || echo "0")
 EVIDENCE_INTERACTION=$(jq -r '.evidence.interaction_id // 0' "$STATE_FILE" 2>/dev/null || echo "0")
 if [ "$CURRENT_INTERACTION" != "$EVIDENCE_INTERACTION" ]; then
-  case "$FILE_PATH" in
-    */backend/src/*|*/frontend/src/*|*/backend/tests/*|*/frontend/tests/*)
+  case "$FILE_CLASS" in
+    code|test)
       warn "⚠ SCOPE CHANGE [$FLOW_TYPE | $CURRENT_PHASE] interaction_id=$CURRENT_INTERACTION pero evidence=$EVIDENCE_INTERACTION | Accion: resetea evidence.interaction_id y completa fases requeridas."
       ;;
   esac

@@ -162,7 +162,7 @@ failure mode. See "Harness Assumptions" below.
 
 ### What Each Flow May Edit
 
-| Flow | `src/`, `tests/` | `specs/`, `plans/` | `docs/`, config | otros |
+| Flow | code (`src/`, `templates/`, `config/`, `migrations/`, `assets/`, `docker/`, `scripts/`, `ml-service/`, `openspec/`), `tests/` | `specs/`, `plans/` | `docs/`, config | otros |
 |------|-------------------|--------------------|-----------------|-------|
 | **micro** | DENY (reclasificar) | DENY (reclasificar) | pass | pass |
 | **light** | DENY (reclasificar) | DENY (reclasificar) | pass | pass |
@@ -197,11 +197,11 @@ gates on phase transitions verify phase completion.**
 |----------------|---------------------|------|---------------------------|
 | `docs/superpowers/specs/*` | `consult` | HARD | brainstorm-validator (spec exists, approved) |
 | `docs/superpowers/plans/*` | `brainstorm` | HARD | planning-validator (plan exists, has tasks) |
-| `src/*`, `tests/*` | `brainstorm` + `planning` + `spec-compliance` + `implementation` | HARD | — |
+| code (`src/*`, `templates/*`, `config/*`, `migrations/*`, `assets/*`, `docker/*`, `scripts/*`, `ml-service/*`, `openspec/*`), `tests/*` | `brainstorm` + `planning` + `spec-compliance` + `implementation` | HARD | — |
 | `docs/superpowers/execution-logs/*` | `capture` | SOFT | — |
 | `docs/decisions/*` | `retrospective` | SOFT | — |
 
-### Debug-Flow Gates (for `src/*` and `tests/*`)
+### Debug-Flow Gates (for all code paths and `tests/*`)
 
 | Step | Requires | Gate |
 |------|----------|------|
