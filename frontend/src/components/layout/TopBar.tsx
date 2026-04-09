@@ -15,13 +15,8 @@ export function TopBar({ compact = false, onMenuClick, extraControls }: TopBarPr
 
   return (
     <div
-      className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-x-4 border-b px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8"
-      style={{
-        backgroundColor: 'var(--color-surface-glass)',
-        borderColor: 'var(--color-border)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
-      }}
+      className="glass-overlay sticky top-0 z-20 flex h-16 shrink-0 items-center gap-x-4 border-b px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8"
+      style={{ borderColor: 'var(--color-border)' }}
     >
       {/* Hamburger button */}
       <button

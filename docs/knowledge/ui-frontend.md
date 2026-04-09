@@ -57,15 +57,19 @@ flex flex-col h-screen w-full
 - **Icons:** SVG icons in `NavigationSidebar.tsx` `icons` object — must match `icon` field from API
 - **To add a menu item:** 1) Add icon SVG in `NavigationSidebar.tsx`, 2) Add `$this->item()` in `NavigationController.php`, 3) Add translation key in `messages.{es,en}.yaml`
 
-**Glass Overlay Pattern** — Used by components that overlay map/content:
-| Component | Blur | Brightness | Saturate | Notes |
-|-----------|------|-----------|----------|-------|
-| TopBar | 16px | — | — | Static glass, `--color-surface-glass` |
-| NavigationSidebar (overlay) | 24px | 0.15–0.30 (adaptive) | 0.3 | `useAdaptiveOpacity` hook adjusts brightness based on map canvas luminance |
-| BottomSheet | 20px | — | — | Static glass, `--color-surface-glass` |
-| MapLibre popups | 12px | — | — | Styled via `index.css` |
-- All use `--color-surface-glass` as background (80% opacity in dark, adapts per preset)
-- If a 4th component needs glass overlay, consider extracting a shared CSS utility
+**Glass Overlay Pattern** — `.glass-overlay` utility class in `index.css`:
+- CSS custom properties: `--glass-blur` (default 16px), `--glass-brightness` (1), `--glass-saturate` (1), `--glass-bg`, `--glass-border`
+- All overlay components use this class; override via inline `style={{ '--glass-blur': '24px' } as React.CSSProperties}`
+- `.theme-card-overlay` uses same custom property namespace (default blur 12px)
+
+| Component | Class | blur | brightness | saturate | border |
+|-----------|-------|------|-----------|----------|--------|
+| TopBar | `.glass-overlay` | 16px (default) | 1 | 1 | `--color-border` (inline) |
+| NavigationSidebar (overlay) | `.glass-overlay` | 24px | adaptive (0.15–0.30) | 0.3 | `--color-border-accent` |
+| BottomSheet | `.glass-overlay` | 20px | 1 | 1 | `--color-border-accent` |
+| FleetSidebar | `.glass-overlay` | 16px (default) | 1 | 1 | `--color-border-subtle` (default) |
+| `.theme-card-overlay` | standalone | 12px (default) | 1 | 1 | `--color-border-subtle` |
+| MapLibre popups/controls | standalone CSS | 12px | — | — | accent/subtle |
 
 **CSS Architecture:**
 - Theme CSS variables defined in `frontend/src/index.css` (loaded on ALL pages via `<link>`)

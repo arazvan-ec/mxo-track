@@ -165,17 +165,17 @@ export function NavigationSidebar({ onClose, mode = 'overlay' }: Props) {
         className={
           inline
             ? 'w-64 flex-shrink-0 flex flex-col border-r h-full'
-            : 'fixed top-0 left-0 bottom-0 z-50 flex flex-col shadow-2xl animate-slide-in-left w-[85vw] max-w-[18rem]'
+            : 'glass-overlay fixed top-0 left-0 bottom-0 z-50 flex flex-col shadow-2xl animate-slide-in-left w-[85vw] max-w-[18rem]'
         }
         style={
           inline
             ? { backgroundColor: 'var(--color-surface-elevated)', borderColor: 'var(--color-border)' }
             : {
-                backgroundColor: 'var(--color-surface-glass)',
-                borderColor: 'var(--color-border-accent)',
-                backdropFilter: `blur(24px) brightness(${brightnessValue}) saturate(0.3)`,
-                WebkitBackdropFilter: `blur(24px) brightness(${brightnessValue}) saturate(0.3)`,
-              }
+                '--glass-blur': '24px',
+                '--glass-brightness': String(brightnessValue),
+                '--glass-saturate': '0.3',
+                '--glass-border': 'var(--color-border-accent)',
+              } as React.CSSProperties
         }
       >
         {/* Brand header */}

@@ -19,15 +19,13 @@ export function BottomSheet({ state, onStateChange, title, children, isLoading, 
 
   return (
     <div
-      className="fixed left-0 right-0 top-0 z-40 flex flex-col rounded-t-2xl border-t"
+      className="glass-overlay fixed left-0 right-0 top-0 z-40 flex flex-col rounded-t-2xl border-t"
       style={{
         ...sheetStyle,
-        backgroundColor: 'var(--color-surface-glass)',
-        borderColor: 'var(--color-border-accent)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
+        '--glass-blur': '20px',
+        '--glass-border': 'var(--color-border-accent)',
         boxShadow: '0 -8px 32px rgba(0,0,0,0.12)',
-      }}
+      } as React.CSSProperties}
     >
       {/* Drag handle */}
       <div

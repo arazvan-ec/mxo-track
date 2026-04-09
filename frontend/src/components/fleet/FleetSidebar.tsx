@@ -32,7 +32,7 @@ export function FleetSidebar({
   const [searchQuery, setSearchQuery] = useState('');
 
   return (
-    <div className="flex flex-col w-80 border-r" style={{ backgroundColor: 'var(--color-surface-glass)', backdropFilter: 'blur(16px)', borderColor: 'var(--color-border-subtle)' }}>
+    <div className="glass-overlay flex flex-col w-80 border-r">
       {/* Back link */}
       <a
         href="/admin"
