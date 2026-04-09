@@ -27,6 +27,7 @@ php bin/console doctrine:migrations:migrate -n  # Run migrations
 php bin/console doctrine:fixtures:load -n       # Load fixtures
 make lint                               # PHP syntax lint
 php vendor/bin/phpunit                  # Run tests
+cd frontend && npm run build            # Frontend: TypeScript + Vite (EXACT deploy command)
 ```
 <!-- PROJECT-SPECIFIC-END -->
 
@@ -587,6 +588,22 @@ message, after the latest code changes, with full output read.
 
 Skip any step = the claim is unverified. "Should work," "probably passes," and "seems
 fine" are all synonyms for "I didn't check."
+
+#### Run the deploy command, not approximations
+
+**Always run the EXACT command that CI/deploy executes.** Approximations with different
+flags silently diverge from production checks:
+
+| Wrong (approximation) | Right (exact deploy command) | Why it diverges |
+|---|---|---|
+| `npx tsc --noEmit` + `npx vite build` | `cd frontend && npm run build` | `tsc --noEmit` ≠ `tsc -b` (build mode uses project references, stricter) |
+| `php -l src/` | `make lint` | Make target may include additional checks |
+| Running tools separately | Running the combined pipeline | Intermediate failures get swallowed |
+
+**The rule:** If the deploy runs `npm run build`, verification runs `npm run build`.
+If CI runs `make lint && php vendor/bin/phpunit`, verification runs that exact sequence.
+Never substitute individual tools for the pipeline — they may have different configs,
+flags, or strictness levels.
 
 ### Closing the Cycle
 
