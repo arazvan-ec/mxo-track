@@ -14,7 +14,7 @@ const DEBOUNCE_MS = 300;
  */
 export function useAdaptiveOpacity(isOpen: boolean): { brightnessValue: number } {
   const [brightnessValue, setBrightnessValue] = useState(DEFAULT_BRIGHTNESS);
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     if (!isOpen) {
