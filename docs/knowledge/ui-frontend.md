@@ -51,9 +51,25 @@ flex flex-col h-screen w-full
 - **Data source:** `NavigationController` (`/api/navigation`) — sections, items, icons per role. Cached 1h
 - **Renderer:** `frontend/src/components/layout/NavigationSidebar.tsx`
 - **Overlay mode:** `fixed z-50` + backdrop `fixed inset-0 z-40` + body scroll lock
+- **Overlay glass:** `--color-surface-glass` + `backdrop-filter: blur(24px) brightness() saturate(0.3)` — adaptive glass via `useAdaptiveOpacity` hook
+- **Inline mode:** Solid `--color-surface-elevated` (no glass, no blur)
 - **Responsive width:** `w-[85vw] max-w-[18rem]` on mobile
 - **Icons:** SVG icons in `NavigationSidebar.tsx` `icons` object — must match `icon` field from API
 - **To add a menu item:** 1) Add icon SVG in `NavigationSidebar.tsx`, 2) Add `$this->item()` in `NavigationController.php`, 3) Add translation key in `messages.{es,en}.yaml`
+
+**Glass Overlay Pattern** — `.glass-overlay` utility class in `index.css`:
+- CSS custom properties: `--glass-blur` (default 16px), `--glass-brightness` (1), `--glass-saturate` (1), `--glass-bg`, `--glass-border`
+- All overlay components use this class; override via inline `style={{ '--glass-blur': '24px' } as React.CSSProperties}`
+- `.theme-card-overlay` uses same custom property namespace (default blur 12px)
+
+| Component | Class | blur | brightness | saturate | border |
+|-----------|-------|------|-----------|----------|--------|
+| TopBar | `.glass-overlay` | 16px (default) | 1 | 1 | `--color-border` (inline) |
+| NavigationSidebar (overlay) | `.glass-overlay` | 24px | adaptive (0.15–0.30) | 0.3 | `--color-border-accent` |
+| BottomSheet | `.glass-overlay` | 20px | 1 | 1 | `--color-border-accent` |
+| FleetSidebar | `.glass-overlay` | 16px (default) | 1 | 1 | `--color-border-subtle` (default) |
+| `.theme-card-overlay` | standalone | 12px (default) | 1 | 1 | `--color-border-subtle` |
+| MapLibre popups/controls | standalone CSS | 12px | — | — | accent/subtle |
 
 **CSS Architecture:**
 - Theme CSS variables defined in `frontend/src/index.css` (loaded on ALL pages via `<link>`)

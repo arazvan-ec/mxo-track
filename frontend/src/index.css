@@ -63,7 +63,7 @@
   --color-surface: #020617;
   --color-surface-elevated: #0f172a;
   --color-surface-glass: rgba(15, 23, 42, 0.80);
-  --color-surface-overlay: rgba(0, 0, 0, 0.60);
+  --color-surface-overlay: rgba(0, 0, 0, 0.70);
   --color-text-primary: #f1f5f9;
   --color-text-secondary: #94a3b8;
   --color-text-muted: #64748b;
@@ -220,16 +220,25 @@ body {
 
 /* Overlay variant — for widgets rendered over map backgrounds */
 .theme-card-overlay {
-  background: var(--color-surface-glass);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--color-border-subtle);
+  background: var(--glass-bg, var(--color-surface-glass));
+  backdrop-filter: blur(var(--glass-blur, 12px)) brightness(var(--glass-brightness, 1)) saturate(var(--glass-saturate, 1));
+  -webkit-backdrop-filter: blur(var(--glass-blur, 12px)) brightness(var(--glass-brightness, 1)) saturate(var(--glass-saturate, 1));
+  border: 1px solid var(--glass-border, var(--color-border-subtle));
   border-radius: var(--card-radius);
   box-shadow: var(--card-shadow);
   transition: box-shadow 0.2s, background 0.3s, border 0.3s;
 }
 .theme-card-overlay:hover {
   box-shadow: var(--card-hover-shadow);
+}
+
+/* Glass overlay — reusable frosted glass effect for overlays.
+   Override via CSS custom properties: --glass-blur, --glass-brightness, --glass-saturate, --glass-bg, --glass-border */
+.glass-overlay {
+  background: var(--glass-bg, var(--color-surface-glass));
+  backdrop-filter: blur(var(--glass-blur, 16px)) brightness(var(--glass-brightness, 1)) saturate(var(--glass-saturate, 1));
+  -webkit-backdrop-filter: blur(var(--glass-blur, 16px)) brightness(var(--glass-brightness, 1)) saturate(var(--glass-saturate, 1));
+  border: 1px solid var(--glass-border, var(--color-border-subtle));
 }
 
 /* ── Animations ── */
