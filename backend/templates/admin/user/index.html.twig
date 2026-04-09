@@ -35,13 +35,13 @@
               </td>
               <td class="whitespace-nowrap px-6 py-4 text-sm">
                 {% if u.hasRole('ROLE_ADMIN') %}
-                  <span class="inline-flex rounded-full bg-purple-100 px-2 text-xs font-semibold leading-5 text-purple-800">Administrador</span>
+                  <span class="inline-flex rounded-full badge-purple px-2 text-xs font-semibold leading-5">Administrador</span>
                 {% elseif u.hasRole('ROLE_CUSTOMER') %}
                   <span class="inline-flex rounded-full bg-teal-100 px-2 text-xs font-semibold leading-5 text-teal-800">Cliente</span>
                 {% elseif u.hasRole('ROLE_DRIVER') %}
-                  <span class="inline-flex rounded-full bg-amber-100 px-2 text-xs font-semibold leading-5 text-amber-800">Transportista</span>
+                  <span class="inline-flex rounded-full badge-amber px-2 text-xs font-semibold leading-5">Transportista</span>
                 {% else %}
-                  <span class="inline-flex rounded-full bg-gray-100 px-2 text-xs font-semibold leading-5 text-gray-800">Usuario</span>
+                  <span class="inline-flex rounded-full badge-gray px-2 text-xs font-semibold leading-5">Usuario</span>
                 {% endif %}
               </td>
               <td class="whitespace-nowrap px-6 py-4 text-sm" style="color: var(--color-text-secondary);">
@@ -49,9 +49,9 @@
               </td>
               <td class="whitespace-nowrap px-6 py-4 text-sm">
                 {% if u.active %}
-                  <span class="inline-flex rounded-full bg-green-100 px-2 text-xs font-semibold leading-5 text-green-800">Activo</span>
+                  <span class="inline-flex rounded-full badge-green px-2 text-xs font-semibold leading-5">Activo</span>
                 {% else %}
-                  <span class="inline-flex rounded-full bg-red-100 px-2 text-xs font-semibold leading-5 text-red-800">Inactivo</span>
+                  <span class="inline-flex rounded-full badge-red px-2 text-xs font-semibold leading-5">Inactivo</span>
                 {% endif %}
               </td>
               <td class="whitespace-nowrap px-6 py-4 text-sm" style="color: var(--color-text-secondary);">

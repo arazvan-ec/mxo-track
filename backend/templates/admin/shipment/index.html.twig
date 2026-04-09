@@ -63,13 +63,13 @@
               </td>
               <td class="whitespace-nowrap px-6 py-4 text-sm">
                 {% set priorityColors = {
-                  'CRITICAL': 'bg-red-100 text-red-800',
-                  'URGENT': 'bg-amber-100 text-amber-800',
-                  'HIGH': 'bg-orange-100 text-orange-800',
-                  'NORMAL': 'bg-blue-100 text-blue-800',
-                  'LOW': 'bg-gray-100 text-gray-800',
+                  'CRITICAL': 'badge-red',
+                  'URGENT': 'badge-amber',
+                  'HIGH': 'badge-orange',
+                  'NORMAL': 'badge-blue',
+                  'LOW': 'badge-gray',
                 } %}
-                <span class="inline-flex rounded-full px-2 text-xs font-semibold leading-5 {{ priorityColors[shipment.priority.name] ?? 'bg-gray-100 text-gray-800' }}">
+                <span class="inline-flex rounded-full px-2 text-xs font-semibold leading-5 {{ priorityColors[shipment.priority.name] ?? 'badge-gray' }}">
                   {{ shipment.priority.label }}
                 </span>
               </td>
