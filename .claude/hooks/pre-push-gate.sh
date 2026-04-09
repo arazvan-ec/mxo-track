@@ -17,6 +17,9 @@ set -euo pipefail
 REPO="/home/user/mxo-track"
 STATE_FILE="$REPO/.claude/session-state.json"
 
+# Shared file classification (single source of truth with workflow-engine.sh)
+source "$REPO/.claude/hooks/lib/classify-file.sh"
+
 # Parse tool input from stdin
 INPUT=$(cat)
 COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // ""')
@@ -56,6 +59,7 @@ if [ "$FLOW_TYPE" != "full" ] && [ "$FLOW_TYPE" != "debug" ]; then
 fi
 
 # ── Check if push contains protected path changes ──
+# Uses shared classify_file() — single source of truth with workflow-engine.sh
 has_protected_changes() {
   local changed_files
   changed_files=$(cd "$REPO" && git diff --name-only origin/main...HEAD 2>/dev/null || echo "")
@@ -64,26 +68,13 @@ has_protected_changes() {
     return 1
   fi
 
-  # Protected path patterns
-  local protected_patterns=(
-    "backend/src/"
-    "backend/tests/"
-    "backend/templates/"
-    "backend/config/"
-    "backend/migrations/"
-    "backend/assets/"
-    "frontend/src/"
-    "ml-service/"
-    "docker/"
-    "scripts/"
-    "openspec/"
-  )
-
-  for pattern in "${protected_patterns[@]}"; do
-    if echo "$changed_files" | grep -q "^${pattern}"; then
+  while IFS= read -r file; do
+    local file_class
+    file_class=$(classify_file "$REPO/$file")
+    if [ "$file_class" = "code" ] || [ "$file_class" = "test" ]; then
       return 0
     fi
-  done
+  done <<< "$changed_files"
 
   return 1
 }

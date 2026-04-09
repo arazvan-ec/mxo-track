@@ -20,6 +20,9 @@ REPO="/home/user/mxo-track"
 STATE_FILE="$REPO/.claude/session-state.json"
 VALIDATORS_DIR="$REPO/.claude/hooks/validators"
 
+# Shared file classification (single source of truth)
+source "$REPO/.claude/hooks/lib/classify-file.sh"
+
 # Parse tool input from stdin
 INPUT=$(cat)
 TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // ""')
@@ -58,31 +61,26 @@ FLOW_TYPE=$(jq -r '.flow_type // "null"' "$STATE_FILE" 2>/dev/null || echo "null
 CURRENT_PHASE=$(jq -r '.current_phase // "null"' "$STATE_FILE" 2>/dev/null || echo "null")
 DEVIATION_ACTIVE=$(jq -r '.deviation.active // false' "$STATE_FILE" 2>/dev/null || echo "false")
 
-# ── Classify file for gating (early, needed by Gate 1 messages) ──
-classify_file() {
-  case "$1" in
-    */backend/src/*|*/frontend/src/*)                echo "code" ;;
-    */backend/tests/*|*/frontend/tests/*)             echo "test" ;;
-    */docs/superpowers/specs/*)                       echo "spec" ;;
-    */docs/superpowers/plans/*)                       echo "plan" ;;
-    */docs/superpowers/execution-logs/*)              echo "execution-log" ;;
-    */docs/decisions/*)                               echo "decision" ;;
-    */docs/knowledge/*|*/docs/FEATURES.md|*/docs/codebase-manifest.md) echo "docs" ;;
-    */CLAUDE.md|*/AGENTS.md)                         echo "config" ;;
-    *)                                                echo "other" ;;
-  esac
-}
-
+# ── Classify file for gating (uses shared lib/classify-file.sh) ──
 FILE_CLASS=$(classify_file "$FILE_PATH")
 
-# ── Gate 1: Flow type must be declared for ALL file edits ──
+# ── Gate 1: Flow type must be declared AND valid ──
 if [ "$FLOW_TYPE" = "null" ]; then
-  case "$FILE_PATH" in
-    */backend/src/*|*/frontend/src/*|*/backend/tests/*|*/frontend/tests/*)
+  case "$FILE_CLASS" in
+    code|test)
       deny "❌ BLOQUEADO [flow no declarado] Archivo: $FILE_CLASS | No puedes editar codigo sin declarar flow_type. | Accion: escribe flow_type (micro|light|debug|full|explore) en .claude/session-state.json"
       ;;
     *)
       warn "⚠ [flow no declarado] Archivo: $FILE_CLASS | Declara flow_type en session-state.json antes de continuar."
+      ;;
+  esac
+elif ! is_valid_flow_type "$FLOW_TYPE"; then
+  case "$FILE_CLASS" in
+    code|test)
+      deny "❌ BLOQUEADO [flow_type invalido: '$FLOW_TYPE'] Archivo: $FILE_CLASS | Valores validos: micro, light, debug, full, explore. | Un code change requiere flow_type='full'."
+      ;;
+    *)
+      warn "⚠ [flow_type invalido: '$FLOW_TYPE'] Valores validos: micro, light, debug, full, explore."
       ;;
   esac
 fi
@@ -97,8 +95,8 @@ fi
 CURRENT_INTERACTION=$(jq -r '.interaction_id // 0' "$STATE_FILE" 2>/dev/null || echo "0")
 EVIDENCE_INTERACTION=$(jq -r '.evidence.interaction_id // 0' "$STATE_FILE" 2>/dev/null || echo "0")
 if [ "$CURRENT_INTERACTION" != "$EVIDENCE_INTERACTION" ]; then
-  case "$FILE_PATH" in
-    */backend/src/*|*/frontend/src/*|*/backend/tests/*|*/frontend/tests/*)
+  case "$FILE_CLASS" in
+    code|test)
       warn "⚠ SCOPE CHANGE [$FLOW_TYPE | $CURRENT_PHASE] interaction_id=$CURRENT_INTERACTION pero evidence=$EVIDENCE_INTERACTION | Accion: resetea evidence.interaction_id y completa fases requeridas."
       ;;
   esac

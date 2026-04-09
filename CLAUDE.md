@@ -275,9 +275,9 @@ jq '.interaction_id = (.interaction_id + 1) | .evidence.root_cause_identified = 
 
 | Flow | Gate | What it prevents |
 |------|------|-----------------|
-| micro/light/explore | DENY edits to `src/`, `tests/` | Scope creep — a "quick look" turning into unplanned code changes without design review |
-| debug | HARD: needs root_cause + pattern-wide; capture + retrospective post-fix | Symptom fixes — patching what's visible without understanding what's broken. Skipping retrospective — losing the process fix that prevents recurrence |
-| full | HARD: needs consult + brainstorming + planning | Cowboy coding — implementing the first idea without evaluating alternatives or checking existing patterns |
+| micro/light/explore | DENY edits to all business paths (`src/`, `templates/`, `config/`, `migrations/`, `assets/`, `tests/`, `docker/`, `scripts/`, `ml-service/`, `openspec/`) | Scope creep — a "quick look" turning into unplanned code changes without design review |
+| debug | HARD: needs root_cause + pattern-wide; capture + retrospective post-fix (all business paths) | Symptom fixes — patching what's visible without understanding what's broken. Skipping retrospective — losing the process fix that prevents recurrence |
+| full | HARD: needs consult + brainstorming + planning (all business paths, not just `src/`) | Cowboy coding — implementing the first idea without evaluating alternatives or checking existing patterns |
 
 The gates are deliberately strict. A false negative (blocking a legitimate edit) costs
 minutes to reclassify. A false positive (allowing an unreviewed edit) costs hours to
