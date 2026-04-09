@@ -1,6 +1,7 @@
 import React from 'react';
 import { useMe } from '@/api/hooks/useMe';
 import { useNavigation } from '@/api/hooks/useNavigation';
+import { useAdaptiveOpacity } from '@/hooks/useAdaptiveOpacity';
 
 interface Props {
   onClose: () => void;
@@ -138,6 +139,7 @@ export function NavigationSidebar({ onClose, mode = 'overlay' }: Props) {
   const sections = nav?.sections ?? [];
   const currentPath = window.location.pathname;
   const inline = mode === 'inline';
+  const { brightnessValue } = useAdaptiveOpacity(!inline);
 
   // Lock body scroll when overlay sidebar is open
   React.useEffect(() => {
@@ -165,7 +167,16 @@ export function NavigationSidebar({ onClose, mode = 'overlay' }: Props) {
             ? 'w-64 flex-shrink-0 flex flex-col border-r h-full'
             : 'fixed top-0 left-0 bottom-0 z-50 flex flex-col shadow-2xl animate-slide-in-left w-[85vw] max-w-[18rem]'
         }
-        style={{ backgroundColor: 'var(--color-surface-elevated)', borderColor: 'var(--color-border)' }}
+        style={
+          inline
+            ? { backgroundColor: 'var(--color-surface-elevated)', borderColor: 'var(--color-border)' }
+            : {
+                backgroundColor: 'var(--color-surface-glass)',
+                borderColor: 'var(--color-border-accent)',
+                backdropFilter: `blur(24px) brightness(${brightnessValue}) saturate(0.3)`,
+                WebkitBackdropFilter: `blur(24px) brightness(${brightnessValue}) saturate(0.3)`,
+              }
+        }
       >
         {/* Brand header */}
         <div className="flex h-14 shrink-0 items-center justify-between px-4 border-b" style={{ borderColor: 'var(--color-border)' }}>
