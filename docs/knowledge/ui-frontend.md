@@ -51,9 +51,21 @@ flex flex-col h-screen w-full
 - **Data source:** `NavigationController` (`/api/navigation`) — sections, items, icons per role. Cached 1h
 - **Renderer:** `frontend/src/components/layout/NavigationSidebar.tsx`
 - **Overlay mode:** `fixed z-50` + backdrop `fixed inset-0 z-40` + body scroll lock
+- **Overlay glass:** `--color-surface-glass` + `backdrop-filter: blur(24px) brightness() saturate(0.3)` — adaptive glass via `useAdaptiveOpacity` hook
+- **Inline mode:** Solid `--color-surface-elevated` (no glass, no blur)
 - **Responsive width:** `w-[85vw] max-w-[18rem]` on mobile
 - **Icons:** SVG icons in `NavigationSidebar.tsx` `icons` object — must match `icon` field from API
 - **To add a menu item:** 1) Add icon SVG in `NavigationSidebar.tsx`, 2) Add `$this->item()` in `NavigationController.php`, 3) Add translation key in `messages.{es,en}.yaml`
+
+**Glass Overlay Pattern** — Used by components that overlay map/content:
+| Component | Blur | Brightness | Saturate | Notes |
+|-----------|------|-----------|----------|-------|
+| TopBar | 16px | — | — | Static glass, `--color-surface-glass` |
+| NavigationSidebar (overlay) | 24px | 0.15–0.30 (adaptive) | 0.3 | `useAdaptiveOpacity` hook adjusts brightness based on map canvas luminance |
+| BottomSheet | 20px | — | — | Static glass, `--color-surface-glass` |
+| MapLibre popups | 12px | — | — | Styled via `index.css` |
+- All use `--color-surface-glass` as background (80% opacity in dark, adapts per preset)
+- If a 4th component needs glass overlay, consider extracting a shared CSS utility
 
 **CSS Architecture:**
 - Theme CSS variables defined in `frontend/src/index.css` (loaded on ALL pages via `<link>`)
