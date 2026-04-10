@@ -5,6 +5,7 @@ import type { PaginatedResponse, CustomerListItem } from '../types';
 export interface CustomerListParams {
   page?: number;
   limit?: number;
+  active?: string;
 }
 
 function buildQuery(params: CustomerListParams): string {

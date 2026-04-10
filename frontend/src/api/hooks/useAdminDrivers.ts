@@ -5,6 +5,9 @@ import type { PaginatedResponse, DriverListItem } from '../types';
 export interface DriverListParams {
   page?: number;
   limit?: number;
+  active?: string;
+  date_from?: string;
+  date_to?: string;
 }
 
 function buildQuery(params: DriverListParams): string {

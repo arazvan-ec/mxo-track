@@ -28,6 +28,7 @@ class CustomerListApiController extends AbstractController
     {
         $page = max(1, $request->query->getInt('page', 1));
         $limit = min(100, max(1, $request->query->getInt('limit', self::ITEMS_PER_PAGE)));
+        $activeFilter = $request->query->getString('active', '');
 
         $qb = $this->em->createQueryBuilder()
             ->select('c')
@@ -36,14 +37,20 @@ class CustomerListApiController extends AbstractController
             ->setFirstResult(($page - 1) * $limit)
             ->setMaxResults($limit);
 
+        $countQb = $this->em->createQueryBuilder()
+            ->select('COUNT(c.id)')
+            ->from(Customer::class, 'c');
+
+        if ($activeFilter !== '') {
+            $active = $activeFilter === 'true';
+            $qb->andWhere('c.isActive = :active')->setParameter('active', $active);
+            $countQb->andWhere('c.isActive = :active')->setParameter('active', $active);
+        }
+
         /** @var Customer[] $customers */
         $customers = $qb->getQuery()->getResult();
 
-        $total = (int) $this->em->createQueryBuilder()
-            ->select('COUNT(c.id)')
-            ->from(Customer::class, 'c')
-            ->getQuery()
-            ->getSingleScalarResult();
+        $total = (int) $countQb->getQuery()->getSingleScalarResult();
 
         $totalPages = max(1, (int) ceil($total / $limit));
 

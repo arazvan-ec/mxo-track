@@ -28,6 +28,9 @@ class VehicleListApiController extends AbstractController
     {
         $page = max(1, $request->query->getInt('page', 1));
         $limit = min(100, max(1, $request->query->getInt('limit', self::ITEMS_PER_PAGE)));
+        $activeFilter = $request->query->getString('active', '');
+        $dateFrom = $request->query->getString('date_from', '');
+        $dateTo = $request->query->getString('date_to', '');
 
         $qb = $this->em->createQueryBuilder()
             ->select('v')
@@ -36,14 +39,36 @@ class VehicleListApiController extends AbstractController
             ->setFirstResult(($page - 1) * $limit)
             ->setMaxResults($limit);
 
+        $countQb = $this->em->createQueryBuilder()
+            ->select('COUNT(v.id)')
+            ->from(Vehicle::class, 'v');
+
+        if ($activeFilter !== '') {
+            $active = $activeFilter === 'true';
+            $qb->andWhere('v.isActive = :active')->setParameter('active', $active);
+            $countQb->andWhere('v.isActive = :active')->setParameter('active', $active);
+        }
+
+        if ($dateFrom !== '') {
+            try {
+                $from = new \DateTimeImmutable($dateFrom . ' 00:00:00');
+                $qb->andWhere('v.createdAt >= :dateFrom')->setParameter('dateFrom', $from);
+                $countQb->andWhere('v.createdAt >= :dateFrom')->setParameter('dateFrom', $from);
+            } catch (\Exception) {}
+        }
+
+        if ($dateTo !== '') {
+            try {
+                $to = new \DateTimeImmutable($dateTo . ' 23:59:59');
+                $qb->andWhere('v.createdAt <= :dateTo')->setParameter('dateTo', $to);
+                $countQb->andWhere('v.createdAt <= :dateTo')->setParameter('dateTo', $to);
+            } catch (\Exception) {}
+        }
+
         /** @var Vehicle[] $vehicles */
         $vehicles = $qb->getQuery()->getResult();
 
-        $total = (int) $this->em->createQueryBuilder()
-            ->select('COUNT(v.id)')
-            ->from(Vehicle::class, 'v')
-            ->getQuery()
-            ->getSingleScalarResult();
+        $total = (int) $countQb->getQuery()->getSingleScalarResult();
 
         $totalPages = max(1, (int) ceil($total / $limit));
 

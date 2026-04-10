@@ -6,6 +6,9 @@ export interface ShipmentListParams {
   page?: number;
   limit?: number;
   customer?: string;
+  priority?: string;
+  date_from?: string;
+  date_to?: string;
 }
 
 function buildQuery(params: ShipmentListParams): string {
