@@ -92,14 +92,15 @@ class LearningMetricsCommand extends Command
         foreach ($byOptimizer as $row) {
             $rows[] = [
                 $row['optimizer_used'],
-                (string) $row['total_routes'],
-                $this->formatPercent($row['avg_delivery_rate']),
-                $this->formatDecimal($row['avg_km_saved']) . ' km',
+                (string) $row['route_count'],
+                $this->formatDecimal($row['avg_distance_km']) . ' km',
+                $row['avg_duration_min'] . ' min',
+                $this->formatPercent($row['avg_success_rate']),
             ];
         }
 
         $io->table(
-            ['Optimizer', 'Routes', 'Avg Delivery Rate', 'Avg Km Saved'],
+            ['Optimizer', 'Routes', 'Avg Distance', 'Avg Duration', 'Avg Success Rate'],
             $rows,
         );
     }

@@ -52,6 +52,7 @@ final class RoutePerformanceMetricRepositoryTest extends TestCase
 
         $qb = $this->createMock(QueryBuilder::class);
         $qb->method('select')->willReturnSelf();
+        $qb->method('from')->willReturnSelf();
         $qb->method('where')->willReturnSelf();
         $qb->method('setParameter')->willReturnSelf();
         $qb->method('groupBy')->willReturnSelf();
@@ -80,6 +81,7 @@ final class RoutePerformanceMetricRepositoryTest extends TestCase
 
         $qb = $this->createMock(QueryBuilder::class);
         $qb->method('select')->willReturnSelf();
+        $qb->method('from')->willReturnSelf();
         $qb->method('where')->willReturnSelf();
         $qb->method('setParameter')->willReturnSelf();
         $qb->method('groupBy')->willReturnSelf();
@@ -118,6 +120,7 @@ final class RoutePerformanceMetricRepositoryTest extends TestCase
 
         $qb = $this->createMock(QueryBuilder::class);
         $qb->method('select')->willReturnSelf();
+        $qb->method('from')->willReturnSelf();
         $qb->method('where')->willReturnSelf();
         $qb->method('setParameter')->willReturnSelf();
         $qb->method('groupBy')->willReturnSelf();
