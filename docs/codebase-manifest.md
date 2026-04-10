@@ -3,15 +3,15 @@
 > **Auto-generated** by `make manifest` (`backend/bin/generate-manifest.sh`).
 > Do not edit manually — regenerate with `make manifest`.
 
-**Generated:** 2026-04-09 02:14
+**Generated:** 2026-04-10 14:49
 **Regenerate:** `make manifest`
 
 ## Project Overview
 
 | Area | Path | Files | Tech |
 |------|------|------:|------|
-| Backend | `backend/` | 518 PHP | Symfony 7.4, PHP 8.4 |
-| Frontend | `frontend/` | 131 JS/TS | React |
+| Backend | `backend/` | 520 PHP | Symfony 7.4, PHP 8.4 |
+| Frontend | `frontend/` | 138 JS/TS | React |
 | ML Service | `ml-service/` | 17 Python | FastAPI |
 | Docker/Infra | `docker/` + `scripts/` | 9 + 5 | Docker, OSRM, VROOM, Traccar |
 | OpenSpec | `openspec/` | 28 specs | YAML specs |
@@ -28,7 +28,7 @@
 | Enums — core (src/Enum/) | 20 |
 | Enums — provider | 4 |
 | **Enums total** | **24** |
-| Controllers | 68 |
+| Controllers | 70 |
 | Application Services (src/Application/) | 23 |
 | Domain/Infra Services (src/Service/) | 73 |
 | Repositories | 21 |
@@ -214,8 +214,8 @@ View
 
 | Category | Count |
 |----------|------:|
-| JS/TS files total | 131 |
-| Pages | 13 |
+| JS/TS files total | 138 |
+| Pages | 15 |
 
 ### Directory Tree
 
@@ -225,6 +225,7 @@ api/hooks
 assets
 components
 components/bottom-sheet
+components/data-table
 components/fleet
 components/layout
 components/maps
@@ -550,6 +551,7 @@ Controller endpoints (auto-extracted from `#[Route]` attributes):
 | GET | `` | SlaReportController | index |
 | GET | `` | UserAdminController | index |
 | GET | `` | VehicleAdminController | index |
+| GET | `` | VehicleListApiController | list |
 | GET | `` | ZonePerformanceController | index |
 | POST | `` | DriverPushSubscriptionController | subscribe |
 
