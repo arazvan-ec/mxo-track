@@ -56,9 +56,9 @@ class NavigationController extends AbstractController
             [
                 'title' => $this->t('sidebar.operations'),
                 'items' => [
-                    $this->item('nav.vehicles', '/admin/vehicles', 'vehicle'),
+                    $this->item('nav.vehicles', '/app/admin/vehicles', 'vehicle'),
                     $this->item('nav.drivers', '/admin/drivers', 'driver'),
-                    $this->item('nav.routes', '/admin/routes', 'route'),
+                    $this->item('nav.routes', '/app/admin/routes', 'route'),
                     $this->item('nav.shipments', '/admin/shipments', 'shipment'),
                     $this->item('nav.import_csv', '/admin/shipments/import', 'import'),
                     $this->item('nav.planner', '/app/admin/route-planner', 'planner'),

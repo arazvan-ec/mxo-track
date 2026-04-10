@@ -308,3 +308,72 @@ export interface AdminDashboardResponse {
   top_drivers: TopDriver[];
   generated_at: string;
 }
+
+/* ── Paginated List Types ──────────────────────────────────────────── */
+
+export interface PaginatedResponse<T> {
+  items: T[];
+  total: number;
+  page: number;
+  pages: number;
+}
+
+export interface RouteListItem {
+  publicId: string;
+  name: string;
+  customerName: string | null;
+  vehicleName: string | null;
+  driverName: string | null;
+  driverEmail: string | null;
+  status: 'PLANNED' | 'ACTIVE' | 'DONE' | 'CANCELLED';
+  deliveredStops: number;
+  totalStops: number;
+}
+
+export interface VehicleListItem {
+  publicId: string;
+  name: string;
+  traccarDeviceId: number | null;
+  active: boolean;
+  maxWeightKg: number | null;
+  maxVolumeM3: number | null;
+  maxParcels: number | null;
+  lastPosition: { lat: number; lng: number } | null;
+  createdAt: string;
+}
+
+export interface ShipmentListItem {
+  publicId: string;
+  reference: string | null;
+  customerName: string | null;
+  recipientName: string;
+  address: string;
+  priority: 'CRITICAL' | 'URGENT' | 'HIGH' | 'NORMAL' | 'LOW';
+  totalWeightKg: number | null;
+  totalVolumeM3: number | null;
+  totalParcels: number | null;
+  createdAt: string;
+}
+
+export interface CustomerListItem {
+  publicId: string;
+  name: string;
+  address: string | null;
+  email: string | null;
+  phone: string | null;
+  active: boolean;
+  userCount: number;
+}
+
+export interface DriverListItem {
+  publicId: string;
+  email: string;
+  name: string | null;
+  active: boolean;
+  createdAt: string;
+}
+
+export interface RouteFilterOptions {
+  drivers: Array<{ id: number; name: string; email: string }>;
+  customers: Array<{ id: number; name: string }>;
+}

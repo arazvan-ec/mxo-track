@@ -10,6 +10,8 @@ import { RoutePlannerPage } from './pages/admin/RoutePlannerPage';
 import { WidgetGalleryPage } from './pages/admin/WidgetGalleryPage';
 import { PageLayoutEditorPage } from './pages/admin/PageLayoutEditorPage';
 import { AdminDashboardPage } from './pages/admin/AdminDashboardPage';
+import { AdminRoutesListPage } from './pages/admin/AdminRoutesListPage';
+import { AdminVehiclesListPage } from './pages/admin/AdminVehiclesListPage';
 import { CustomerRouteDetailPage } from './pages/customer/CustomerRouteDetailPage';
 import { CustomerDashboardPage } from './pages/customer/CustomerDashboardPage';
 import { DriverRoutePage } from './pages/driver/DriverRoutePage';
@@ -20,6 +22,8 @@ export const router = createBrowserRouter([
     element: <AppLayout />,
     children: [
       { path: 'admin/dashboard', element: <AdminDashboardPage /> },
+      { path: 'admin/routes', element: <AdminRoutesListPage /> },
+      { path: 'admin/vehicles', element: <AdminVehiclesListPage /> },
       { path: 'admin/fleet-map', element: <FleetMapPage /> },
       { path: 'admin/exception-map', element: <ExceptionMapPage /> },
       { path: 'admin/routes/:publicId', element: <RouteDetailPage /> },
