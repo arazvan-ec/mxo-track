@@ -11,6 +11,7 @@ use App\Domain\Route\Repository\RouteEventRepositoryInterface;
 use App\Entity\VehicleLastPosition;
 use App\Enum\RouteEventType;
 use App\Enum\RouteStatus;
+use App\Repository\ReoptimizationPolicyRepository;
 use App\Repository\RouteRepository;
 use App\Service\RouteOptimizationService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -33,6 +34,7 @@ final readonly class DelayReoptimizationSubscriber
         private RouteEventRepositoryInterface $eventRepo,
         private int $delayThresholdMinutes = 30,
         private int $cooldownMinutes = 10,
+        private ?ReoptimizationPolicyRepository $policyRepo = null,
     ) {}
 
     #[AsEventListener]
@@ -43,7 +45,12 @@ final readonly class DelayReoptimizationSubscriber
             return;
         }
 
-        if (!$route->isAutoReoptimize()) {
+        $policy = $this->policyRepo?->findOneBy(['customer' => $route->getCustomer()]);
+        if ($policy !== null) {
+            if (!$policy->isEnabled() || !$policy->allowsTrigger('on_delay')) {
+                return;
+            }
+        } elseif (!$route->isAutoReoptimize()) {
             return;
         }
 
@@ -51,7 +58,8 @@ final readonly class DelayReoptimizationSubscriber
             return;
         }
 
-        if (!$this->isDelayExceeded($route)) {
+        $effectiveThreshold = $policy !== null ? $policy->getDelayThresholdMinutes() : $this->delayThresholdMinutes;
+        if (!$this->isDelayExceeded($route, $effectiveThreshold)) {
             return;
         }
 
@@ -102,7 +110,7 @@ final readonly class DelayReoptimizationSubscriber
         }
     }
 
-    private function isDelayExceeded(Route $route): bool
+    private function isDelayExceeded(Route $route, int $thresholdMinutes): bool
     {
         $estimatedMinutes = $route->getEstimatedDurationMinutes();
         if ($estimatedMinutes === null || $estimatedMinutes <= 0) {
@@ -120,7 +128,7 @@ final readonly class DelayReoptimizationSubscriber
 
         $delayMinutes = $elapsedMinutes - $estimatedMinutes;
 
-        return $delayMinutes >= $this->delayThresholdMinutes;
+        return $delayMinutes >= $thresholdMinutes;
     }
 
     private function isInCooldown(Route $route): bool

@@ -10,13 +10,14 @@ use App\Enum\ExceptionCode;
 final readonly class StopExceptionReported implements MapProjectableEventInterface
 {
     public function __construct(
-        public string $stopPublicId,
-        public string $shipmentPublicId,
-        public string $routePublicId,
-        public int $driverUserId,
-        public ExceptionCode $reason,
-        public ?string $notes,
+        public string $stopPublicId = '',
+        public string $shipmentPublicId = '',
+        public string $routePublicId = '',
+        public int $driverUserId = 0,
+        public ?ExceptionCode $reason = null,
+        public ?string $notes = null,
         public \DateTimeImmutable $occurredAt = new \DateTimeImmutable(),
+        public ?string $exceptionCode = null,
     ) {}
 
     public function getRoutePublicId(): string

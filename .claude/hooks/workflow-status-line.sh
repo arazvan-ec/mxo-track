@@ -103,6 +103,11 @@ TASK_TOTAL=$(echo "$STATE" | jq -r '.evidence.task_progress.total // 0')
 TASK_LABEL=$(echo "$STATE" | jq -r '.evidence.task_progress.label // ""')
 TASK_COMPLETED=$(echo "$STATE" | jq -r '.evidence.task_progress.completed_labels // [] | length')
 
+# Wave progress fields (design structure: Phase 1-A, Wave 2/5)
+WAVE_CURRENT=$(echo "$STATE" | jq -r '.evidence.task_progress.wave_current // 0')
+WAVE_TOTAL=$(echo "$STATE" | jq -r '.evidence.task_progress.wave_total // 0')
+WAVE_LABEL=$(echo "$STATE" | jq -r '.evidence.task_progress.wave_label // ""')
+
 DEVIATION_SUFFIX=""
 if [ "$DEV_ACTIVE" = "true" ]; then
   DEVIATION_SUFFIX=" | ⚠ DESVÍO"
@@ -177,9 +182,12 @@ next_action() {
       ;;
     implementation)
       if [ "$TASK_TOTAL" -gt 0 ] 2>/dev/null && [ "$TASK_CURRENT" -gt 0 ] 2>/dev/null; then
-        local n="task ${TASK_CURRENT}/${TASK_TOTAL}"
+        local n="Tarea ${TASK_CURRENT}/${TASK_TOTAL}"
         [ -n "$TASK_LABEL" ] && n="$n: $TASK_LABEL"
-        echo "$n (TDD, commit each)"
+        n="$n (TDD)"
+        echo "$n"
+      elif [ "$WAVE_TOTAL" -gt 0 ] 2>/dev/null; then
+        echo "Wave ${WAVE_CURRENT}/${WAVE_TOTAL}: ${WAVE_LABEL:-implementar} (TDD)"
       else
         echo "TDD cycle (test first), commit frequently"
       fi
@@ -235,11 +243,15 @@ phase_evidence() {
       [ -n "$sp" ] && echo "(${sp:0:25})" || echo "(—)"
       ;;
     implementation)
-      if [ "$TASK_TOTAL" -gt 0 ] 2>/dev/null; then
-        echo "(t${TASK_CURRENT}/${TASK_TOTAL},tests:${TESTS_WRITTEN})"
-      else
-        echo "(tests:${TESTS_WRITTEN})"
+      local ev=""
+      if [ "$WAVE_TOTAL" -gt 0 ] 2>/dev/null; then
+        ev="w${WAVE_CURRENT}/${WAVE_TOTAL}"
       fi
+      if [ "$TASK_TOTAL" -gt 0 ] 2>/dev/null; then
+        ev="${ev:+$ev,}t${TASK_CURRENT}/${TASK_TOTAL}"
+      fi
+      ev="${ev:+$ev,}${TESTS_WRITTEN}tests"
+      echo "(${ev})"
       ;;
     verification)
       local ev=""
@@ -285,11 +297,14 @@ phase_needs() {
       ;;
     implementation)
       local parts=""
+      if [ "$WAVE_TOTAL" -gt 0 ] 2>/dev/null && [ "$WAVE_CURRENT" -gt 0 ] 2>/dev/null; then
+        parts="Wave ${WAVE_CURRENT}/${WAVE_TOTAL}"
+        [ -n "$WAVE_LABEL" ] && parts="${parts}: ${WAVE_LABEL}"
+      fi
       if [ "$TASK_TOTAL" -gt 0 ] 2>/dev/null && [ "$TASK_CURRENT" -gt 0 ] 2>/dev/null; then
-        parts="Tarea ${TASK_CURRENT}/${TASK_TOTAL}"
+        [ -n "$parts" ] && parts="${parts} · Tarea ${TASK_CURRENT}/${TASK_TOTAL}" || parts="Tarea ${TASK_CURRENT}/${TASK_TOTAL}"
         [ -n "$TASK_LABEL" ] && parts="${parts}: ${TASK_LABEL}"
       fi
-      [ "$TESTS_WRITTEN" -eq 0 ] 2>/dev/null && { [ -n "$parts" ] && parts="$parts — tests first (TDD)" || parts="tests first (TDD)"; }
       [ -n "$parts" ] && echo " | ${parts}"
       ;;
     verification)
@@ -383,14 +398,12 @@ if [ "$FLOW_TYPE" = "full" ]; then
   # Capitalize
   DISPLAY_PHASE="$(echo "${CURRENT_PHASE:0:1}" | tr '[:lower:]' '[:upper:]')${CURRENT_PHASE:1}"
 
-  # ── Line 1: Current phase prominently ──
+  # ── Line 1: Current phase with design structure context ──
   LINE1="📍 ${DISPLAY_PHASE} (${CURRENT_INDEX}/${TOTAL})"
-  # Add task progress for implementation
-  if [ "$TASK_TOTAL" -gt 0 ] 2>/dev/null && [ "$TASK_CURRENT" -gt 0 ] 2>/dev/null; then
-    if [ "$CURRENT_PHASE" = "implementation" ] || [ "$CURRENT_PHASE" = "verification" ]; then
-      LINE1="${LINE1} — tarea ${TASK_CURRENT}/${TASK_TOTAL}"
-      [ -n "$TASK_LABEL" ] && LINE1="${LINE1}: ${TASK_LABEL}"
-    fi
+  # Add wave + phase context from design plan
+  if [ "$WAVE_TOTAL" -gt 0 ] 2>/dev/null && [ "$WAVE_CURRENT" -gt 0 ] 2>/dev/null; then
+    LINE1="${LINE1} · Wave ${WAVE_CURRENT}/${WAVE_TOTAL}"
+    [ -n "$WAVE_LABEL" ] && LINE1="${LINE1} · ${WAVE_LABEL}"
   fi
   [ "$DEV_ACTIVE" = "true" ] && LINE1="${LINE1} [DESVÍO]"
 
@@ -428,8 +441,14 @@ if [ "$FLOW_TYPE" = "full" ]; then
       [ -n "$PLAN_PATH" ] && DETAIL="${DETAIL:+$DETAIL, }plan"
       ;;
     implementation)
-      [ -n "$PLAN_PATH" ] && DETAIL="${DETAIL:+$DETAIL, }plan"
-      [ "$TESTS_WRITTEN" -gt 0 ] 2>/dev/null && DETAIL="${DETAIL:+$DETAIL, }${TESTS_WRITTEN} tests"
+      if [ "$TASK_TOTAL" -gt 0 ] 2>/dev/null && [ "$TASK_CURRENT" -gt 0 ] 2>/dev/null; then
+        DETAIL="Tarea ${TASK_CURRENT}/${TASK_TOTAL}"
+        [ -n "$TASK_LABEL" ] && DETAIL="${DETAIL}: ${TASK_LABEL}"
+        [ "$TESTS_WRITTEN" -gt 0 ] 2>/dev/null && DETAIL="${DETAIL} (${TESTS_WRITTEN} tests)"
+      else
+        [ -n "$PLAN_PATH" ] && DETAIL="${DETAIL:+$DETAIL, }plan"
+        [ "$TESTS_WRITTEN" -gt 0 ] 2>/dev/null && DETAIL="${DETAIL:+$DETAIL, }${TESTS_WRITTEN} tests"
+      fi
       ;;
     verification)
       [ "$TESTS_PASSED" = "true" ] && DETAIL="${DETAIL:+$DETAIL, }tests ✓" || DETAIL="${DETAIL:+$DETAIL, }tests pendiente"

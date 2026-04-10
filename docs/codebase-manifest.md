@@ -3,15 +3,15 @@
 > **Auto-generated** by `make manifest` (`backend/bin/generate-manifest.sh`).
 > Do not edit manually — regenerate with `make manifest`.
 
-**Generated:** 2026-04-10 17:03
+**Generated:** 2026-04-10 19:33
 **Regenerate:** `make manifest`
 
 ## Project Overview
 
 | Area | Path | Files | Tech |
 |------|------|------:|------|
-| Backend | `backend/` | 523 PHP | Symfony 7.4, PHP 8.4 |
-| Frontend | `frontend/` | 144 JS/TS | React |
+| Backend | `backend/` | 531 PHP | Symfony 7.4, PHP 8.4 |
+| Frontend | `frontend/` | 148 JS/TS | React |
 | ML Service | `ml-service/` | 17 Python | FastAPI |
 | Docker/Infra | `docker/` + `scripts/` | 9 + 5 | Docker, OSRM, VROOM, Traccar |
 | OpenSpec | `openspec/` | 28 specs | YAML specs |
@@ -23,22 +23,22 @@
 
 | Category | Count |
 |----------|------:|
-| Entities (src/Entity/) | 37 |
+| Entities (src/Entity/) | 38 |
 | Domain Models (src/Domain/*/Model/) | 16 |
 | Enums — core (src/Enum/) | 20 |
 | Enums — provider | 4 |
 | **Enums total** | **24** |
-| Controllers | 73 |
+| Controllers | 76 |
 | Application Services (src/Application/) | 23 |
-| Domain/Infra Services (src/Service/) | 73 |
-| Repositories | 21 |
+| Domain/Infra Services (src/Service/) | 75 |
+| Repositories | 22 |
 | Console Commands | 18 |
 | DTOs | 17 |
 | Event Listeners | 11 |
 | Messenger Messages | 4 |
 | Message Handlers | 4 |
-| Tests | 128 |
-| Migrations | 38 |
+| Tests | 144 |
+| Migrations | 39 |
 
 ## Entity List
 
@@ -67,6 +67,7 @@
 - RealtimeEvent
 - RecipientAction
 - RecipientNotification
+- ReoptimizationPolicy
 - RouteOptimizationLog
 - RoutePerformanceMetric
 - RoutePlanTemplate
@@ -214,8 +215,8 @@ View
 
 | Category | Count |
 |----------|------:|
-| JS/TS files total | 144 |
-| Pages | 18 |
+| JS/TS files total | 148 |
+| Pages | 20 |
 
 ### Directory Tree
 
@@ -412,6 +413,7 @@ Key Doctrine relationships (auto-extracted from entity attributes):
 - **RealtimeEvent** → Customer
 - **RecipientAction** → Shipment
 - **RecipientNotification** → Shipment
+- **ReoptimizationPolicy** → Customer
 - **RouteOptimizationLog** → Customer, Route
 - **RoutePerformanceMetric** → Customer, Route
 - **RoutePlanTemplate** → Customer
@@ -431,6 +433,7 @@ Controller endpoints (auto-extracted from `#[Route]` attributes):
 | Method | Path | Controller | Action |
 |--------|------|-----------|--------|
 | GET | `/` | DashboardController | index |
+| GET | `/address-risks` | OptimizationAnalyticsController | addressRisks |
 | GET | `/admin/health/live` | AdminController | healthLive |
 | GET | `/admin/health` | AdminController | health |
 | GET | `/admin` | AdminController | dashboard |
@@ -441,6 +444,7 @@ Controller endpoints (auto-extracted from `#[Route]` attributes):
 | PUT | `/api/admin/page-layouts/{publicId}` | PageLayoutApiController | update |
 | GET | `/api/admin/page-layouts` | PageLayoutApiController | list |
 | POST | `/api/admin/page-layouts` | PageLayoutApiController | create |
+| GET | `/api/admin/route-planner/optimizers` | OptimizerRegistryController | list |
 | PATCH | `/api/admin/widgets/{publicId}` | WidgetDefinitionApiController | patch |
 | GET | `/api/admin/widgets` | WidgetDefinitionApiController | list |
 | GET | `/api/csrf-token/{intention}` | CsrfTokenController | __invoke |
@@ -493,9 +497,11 @@ Controller endpoints (auto-extracted from `#[Route]` attributes):
 | GET | `/login` | SecurityController | login |
 | GET | `/logout` | SecurityController | logout |
 | POST | `/message` | AiAssistantController | message |
+| GET | `/metrics` | OptimizationAnalyticsController | metrics |
 | POST | `/notifications/{publicId}/read` | NotificationController | markAsRead |
 | GET | `/notifications` | NotificationController | index |
 | POST | `/push-position` | AdminDevPushPositionController | __invoke |
+| GET | `/reopt-history` | OptimizationAnalyticsController | reoptHistory |
 | GET | `/routes/{routePublicId}/briefing` | DriverApiController | briefing |
 | GET | `/routes/{routePublicId}/etas` | DriverApiController | etas |
 | POST | `/routes/{routePublicId}/finish` | DriverApiController | finish |
@@ -532,7 +538,9 @@ Controller endpoints (auto-extracted from `#[Route]` attributes):
 | POST | `/{publicId}/delete` | VehicleAdminController | delete |
 | GET | `/{publicId}/events` | RouteEventApiController | events |
 | POST | `/{publicId}/toggle` | ApiKeyAdminController | toggle |
+| DELETE | `/{publicId}` | ReoptimizationPolicyApiController | delete |
 | GET | `/{publicId}` | CustomerShipmentController | show |
+| PUT | `/{publicId}` | ReoptimizationPolicyApiController | update |
 | DELETE | `` | DriverPushSubscriptionController | unsubscribe |
 | GET | `` | AiAssistantController | index |
 | GET | `` | ApiKeyAdminController | index |
@@ -549,6 +557,7 @@ Controller endpoints (auto-extracted from `#[Route]` attributes):
 | GET | `` | DriverListApiController | list |
 | GET | `` | ExceptionMapController | index |
 | GET | `` | OperatorDashboardController | dashboard |
+| GET | `` | ReoptimizationPolicyApiController | list |
 | GET | `` | ReportController | index |
 | GET | `` | ShipmentAdminController | index |
 | GET | `` | ShipmentListApiController | list |
@@ -558,6 +567,7 @@ Controller endpoints (auto-extracted from `#[Route]` attributes):
 | GET | `` | VehicleListApiController | list |
 | GET | `` | ZonePerformanceController | index |
 | POST | `` | DriverPushSubscriptionController | subscribe |
+| POST | `` | ReoptimizationPolicyApiController | create |
 
 ---
 
@@ -603,11 +613,11 @@ Provider factories (critical for Constructor Signature Changes pattern):
 
 | Type | Count |
 |------|------:|
-| Unit | 112 |
+| Unit | 128 |
 | Functional | 8 |
 | Domain | 6 |
 | Factory (test factories) | 1 |
-| **Total** | **128** |
+| **Total** | **144** |
 
 ---
 

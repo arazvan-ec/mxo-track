@@ -8,6 +8,7 @@ use App\Domain\Route\Repository\RouteRepositoryInterface;
 use App\Domain\Route\Repository\RouteStopRepositoryInterface;
 use App\Entity\Customer;
 use App\Entity\CustomerLocation;
+use App\Entity\DriverAvailability;
 use App\Domain\Route\Model\Route;
 use App\Domain\Route\Model\RouteStop;
 use App\Domain\Shipment\Model\Shipment;
@@ -28,6 +29,8 @@ use App\RouteOptimization\RouteOptimizerInterface;
  */
 final class RouteBuilder
 {
+    private const ADDRESS_RISK_BUFFER_SECONDS = 120;
+
     public function __construct(
         private readonly RouteRepositoryInterface $routeRepo,
         private readonly RouteStopRepositoryInterface $stopRepo,
@@ -35,6 +38,9 @@ final class RouteBuilder
         private readonly RouteCapacityValidator $capacityValidator,
         private readonly OptimizationLogger $optimizationLogger,
         private readonly RouteSnapshotManager $snapshotManager,
+        private readonly ServiceTimeCalibrationService $calibrationService,
+        private readonly AddressRiskService $addressRiskService,
+        private readonly CoordinateCorrectionService $coordinateCorrectionService,
     ) {
     }
 
@@ -42,6 +48,7 @@ final class RouteBuilder
      * @param list<Shipment> $shipments
      * @param list<Vehicle> $vehicles
      * @param array<string, int>|null $serviceTimeOverrides Map of address → service time in seconds
+     * @param array<int, DriverAvailability>|null $driverAvailabilities Map of vehicle index → DriverAvailability
      * @return list<array{route: Route, stops: list<RouteStop>, validation: array}>
      */
     public function buildRoutes(
@@ -52,13 +59,26 @@ final class RouteBuilder
         int $maxStopsPerRoute = 30,
         ?RouteOptimizerInterface $optimizerOverride = null,
         ?array $serviceTimeOverrides = null,
+        ?array $driverAvailabilities = null,
     ): array {
         if (\count($shipments) === 0 || \count($vehicles) === 0) {
             return [];
         }
 
+        // Auto-calibrate service times when none are explicitly provided
+        if ($serviceTimeOverrides === null) {
+            $customerId = $customer->getId();
+            if ($customerId !== null) {
+                $calibrated = $this->calibrationService->getCalibratedServiceTimesWithFeedback((int) $customerId);
+                $serviceTimeOverrides = [];
+                foreach ($calibrated as $entry) {
+                    $serviceTimeOverrides[$entry['address']] = $entry['avgSeconds'];
+                }
+            }
+        }
+
         // Convert domain entities to optimizer-neutral value objects
-        $optimizableVehicles = $this->mapVehiclesToOptimizable($vehicles, $origin, $maxStopsPerRoute);
+        $optimizableVehicles = $this->mapVehiclesToOptimizable($vehicles, $origin, $maxStopsPerRoute, $driverAvailabilities);
 
         $this->optimizationLogger->logStep(
             OptimizationStepCategory::VEHICLE_MAPPING,
@@ -130,15 +150,25 @@ final class RouteBuilder
 
     /**
      * @param list<Vehicle> $vehicles
+     * @param array<int, DriverAvailability>|null $driverAvailabilities Map of vehicle index → DriverAvailability
      * @return list<OptimizableVehicle>
      */
-    private function mapVehiclesToOptimizable(array $vehicles, ?CustomerLocation $origin, int $maxTasks): array
+    private function mapVehiclesToOptimizable(array $vehicles, ?CustomerLocation $origin, int $maxTasks, ?array $driverAvailabilities = null): array
     {
         $result = [];
 
         foreach ($vehicles as $index => $vehicle) {
             $startLat = $origin?->getLatitude();
             $startLng = $origin?->getLongitude();
+
+            $shiftStartSeconds = null;
+            $shiftEndSeconds = null;
+
+            if ($driverAvailabilities !== null && isset($driverAvailabilities[$index])) {
+                $availability = $driverAvailabilities[$index];
+                $shiftStartSeconds = $this->hhmmToSeconds($availability->getStartTime());
+                $shiftEndSeconds = $this->hhmmToSeconds($availability->getEndTime());
+            }
 
             $result[] = new OptimizableVehicle(
                 id: $index,
@@ -151,6 +181,8 @@ final class RouteBuilder
                 maxParcels: $vehicle->getMaxParcels(),
                 maxTasks: $maxTasks,
                 skills: array_map(static fn(VehicleSkill $s) => (string) $s->value, $vehicle->getSkills()),
+                shiftStartSeconds: $shiftStartSeconds,
+                shiftEndSeconds: $shiftEndSeconds,
             );
         }
 
@@ -191,10 +223,28 @@ final class RouteBuilder
                 $serviceTime = $serviceTimeOverrides[$address];
             }
 
+            // Address intelligence: add buffer for high-risk addresses
+            if ($address !== null) {
+                $riskCheck = $this->addressRiskService->checkAddress($address);
+                if ($riskCheck['is_risky'] ?? false) {
+                    $serviceTime += self::ADDRESS_RISK_BUFFER_SECONDS;
+                }
+            }
+
+            // Coordinate correction: use driver-corrected coords if consistently reported
+            $jobLat = $shipment->getLatitude();
+            $jobLng = $shipment->getLongitude();
+            if ($address !== null) {
+                $corrected = $this->coordinateCorrectionService->getCorrectedCoordinates($address);
+                if ($corrected !== null) {
+                    [$jobLat, $jobLng] = $corrected;
+                }
+            }
+
             $result[] = new OptimizableJob(
                 id: $index,
-                latitude: $shipment->getLatitude(),
-                longitude: $shipment->getLongitude(),
+                latitude: $jobLat,
+                longitude: $jobLng,
                 serviceTimeSeconds: $serviceTime,
                 weightKg: $shipment->getTotalWeightKg() ?? 0.0,
                 volumeM3: $shipment->getTotalVolumeM3() ?? 0.0,
@@ -299,5 +349,15 @@ final class RouteBuilder
         return (int) $time->format('H') * 3600
             + (int) $time->format('i') * 60
             + (int) $time->format('s');
+    }
+
+    /**
+     * Converts "HH:MM" string to seconds since midnight.
+     */
+    private function hhmmToSeconds(string $hhmm): int
+    {
+        [$hours, $minutes] = array_map('intval', explode(':', $hhmm));
+
+        return $hours * 3600 + $minutes * 60;
     }
 }

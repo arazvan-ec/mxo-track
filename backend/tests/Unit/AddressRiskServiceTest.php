@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit;
 
+use App\Repository\AddressRiskRepository;
 use App\Service\AddressRiskService;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Result;
@@ -27,7 +28,8 @@ final class AddressRiskServiceTest extends TestCase
         $this->conn = $this->createMock(Connection::class);
         $this->em->method('getConnection')->willReturn($this->conn);
 
-        $this->service = new AddressRiskService($this->em, new NullLogger());
+        $repo = $this->createMock(AddressRiskRepository::class);
+        $this->service = new AddressRiskService($this->em, new NullLogger(), $repo);
     }
 
     #[Test]

@@ -9,6 +9,7 @@ use App\Domain\Event\StopExceptionReported;
 use App\Domain\Route\Model\Route;
 use App\Entity\VehicleLastPosition;
 use App\Enum\RouteStatus;
+use App\Repository\ReoptimizationPolicyRepository;
 use App\Repository\RouteRepository;
 use App\Service\RouteOptimizationService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -28,6 +29,7 @@ final readonly class ExceptionReoptimizationSubscriber
         private EntityManagerInterface $em,
         private LoggerInterface $logger,
         private EventDispatcherInterface $eventDispatcher,
+        private ReoptimizationPolicyRepository $policyRepo,
     ) {}
 
     #[AsEventListener]
@@ -38,7 +40,12 @@ final readonly class ExceptionReoptimizationSubscriber
             return;
         }
 
-        if (!$route->isAutoReoptimize()) {
+        $policy = $this->policyRepo->findOneBy(['customer' => $route->getCustomer()]);
+        if ($policy !== null) {
+            if (!$policy->isEnabled() || !$policy->allowsTrigger('on_exception')) {
+                return;
+            }
+        } elseif (!$route->isAutoReoptimize()) {
             return;
         }
 
@@ -81,7 +88,7 @@ final readonly class ExceptionReoptimizationSubscriber
             $this->logger->info('Auto-reoptimized route after exception.', [
                 'route_public_id' => $event->routePublicId,
                 'stop_public_id' => $event->stopPublicId,
-                'reason' => $event->reason->value,
+                'reason' => $event->reason?->value ?? $event->exceptionCode,
                 'stops_reordered' => \count($result['optimized']),
                 'distance_before' => $distanceBefore,
                 'distance_after' => $distanceAfter,

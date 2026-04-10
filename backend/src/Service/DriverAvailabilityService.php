@@ -84,6 +84,27 @@ final class DriverAvailabilityService
     }
 
     /**
+     * Returns the first DriverAvailability entry for a driver on a specific date.
+     * Returns null if no availability is configured for that day.
+     */
+    public function getAvailabilityForDriverOnDate(User $driver, \DateTimeInterface $date): ?DriverAvailability
+    {
+        $dayOfWeek = ((int) $date->format('N')) - 1; // 1=Mon..7=Sun → 0..6
+
+        return $this->em->createQueryBuilder()
+            ->select('da')
+            ->from(DriverAvailability::class, 'da')
+            ->where('da.driver = :driver')
+            ->andWhere('da.dayOfWeek = :day')
+            ->andWhere('da.isAvailable = true')
+            ->setParameter('driver', $driver)
+            ->setParameter('day', $dayOfWeek)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    /**
      * Replaces the entire weekly schedule for a driver.
      *
      * Each element in $schedule should be an array with keys:

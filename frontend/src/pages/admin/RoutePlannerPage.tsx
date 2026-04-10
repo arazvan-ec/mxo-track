@@ -19,6 +19,7 @@ import {
   useClusterMutation,
   usePreviewMutation,
   useConfirmMutation,
+  useCompareOptimizers,
 } from '@/api/hooks/useRoutePlanner';
 import type { CalibrationEntry } from '@/api/hooks/useRoutePlanner';
 import type {
@@ -28,6 +29,7 @@ import type {
   PlannerCluster,
   PlannerPreviewRoute,
   DriverSuggestion,
+  OptimizerComparisonResult,
 } from '@/api/types';
 
 type Step = 1 | 2 | 3 | 4;
@@ -60,6 +62,7 @@ export function RoutePlannerPage() {
   const [maxStopsPerRoute, setMaxStopsPerRoute] = useState(30);
   const [optimizerName, setOptimizerName] = useState<string>('');
   const [useCalibration, setUseCalibration] = useState(false);
+  const [comparisonResults, setComparisonResults] = useState<OptimizerComparisonResult[]>([]);
 
   // Step 3 state
   const [previewRoutes, setPreviewRoutes] = useState<PlannerPreviewRoute[]>([]);
@@ -79,6 +82,7 @@ export function RoutePlannerPage() {
   const clusterMutation = useClusterMutation();
   const previewMutation = usePreviewMutation();
   const confirmMutation = useConfirmMutation();
+  const compareMutation = useCompareOptimizers();
 
   // When import_id is provided, use import shipments; otherwise use regular shipments
   const shipments = importId
@@ -188,6 +192,20 @@ export function RoutePlannerPage() {
     },
     [vehicles],
   );
+
+  const handleCompareOptimizers = useCallback(() => {
+    compareMutation.mutate(
+      {
+        shipment_ids: Array.from(selectedShipmentIds),
+        vehicle_ids: Array.from(selectedVehicleIds),
+        origin_public_id: originPublicId || undefined,
+        max_stops: maxStopsPerRoute,
+      },
+      {
+        onSuccess: (data) => setComparisonResults(data),
+      },
+    );
+  }, [selectedShipmentIds, selectedVehicleIds, originPublicId, maxStopsPerRoute, compareMutation]);
 
   // -- Step 3 handlers --
 
@@ -453,6 +471,9 @@ export function RoutePlannerPage() {
                 onMaxStopsChange={setMaxStopsPerRoute}
                 onOptimizerChange={setOptimizerName}
                 onCalibrationToggle={setUseCalibration}
+                comparisonResults={comparisonResults}
+                isComparing={compareMutation.isPending}
+                onCompare={handleCompareOptimizers}
                 onBack={() => setStep(1)}
                 onGenerate={handleGeneratePreview}
               />
@@ -734,6 +755,8 @@ interface Step2Props {
   optimizerName: string;
   calibrations: CalibrationEntry[];
   useCalibration: boolean;
+  comparisonResults: OptimizerComparisonResult[];
+  isComparing: boolean;
   isGenerating: boolean;
   onToggleVehicle: (id: string) => void;
   onToggleAll: (checked: boolean) => void;
@@ -741,6 +764,7 @@ interface Step2Props {
   onMaxStopsChange: (v: number) => void;
   onOptimizerChange: (v: string) => void;
   onCalibrationToggle: (v: boolean) => void;
+  onCompare: () => void;
   onBack: () => void;
   onGenerate: () => void;
 }
@@ -756,6 +780,8 @@ function Step2Panel({
   optimizerName,
   calibrations,
   useCalibration,
+  comparisonResults,
+  isComparing,
   isGenerating,
   onToggleVehicle,
   onToggleAll,
@@ -763,6 +789,7 @@ function Step2Panel({
   onMaxStopsChange,
   onOptimizerChange,
   onCalibrationToggle,
+  onCompare,
   onBack,
   onGenerate,
 }: Step2Props) {
@@ -870,6 +897,45 @@ function Step2Panel({
                     </option>
                   ))}
                 </select>
+                <button
+                  onClick={onCompare}
+                  disabled={isComparing}
+                  className="mt-2 w-full py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-medium rounded-lg transition-colors"
+                >
+                  {isComparing ? 'Comparando...' : 'Comparar optimizadores'}
+                </button>
+              </div>
+            )}
+
+            {/* Optimizer comparison results */}
+            {comparisonResults.length > 0 && (
+              <div className="rounded-lg border overflow-hidden" style={{ borderColor: 'var(--color-border-subtle)' }}>
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr style={{ backgroundColor: 'var(--color-surface-elevated)' }}>
+                      <th className="text-left px-2 py-1.5 font-medium" style={{ color: 'var(--color-text-secondary)' }}>Optimizer</th>
+                      <th className="text-right px-2 py-1.5 font-medium" style={{ color: 'var(--color-text-secondary)' }}>Distancia (km)</th>
+                      <th className="text-right px-2 py-1.5 font-medium" style={{ color: 'var(--color-text-secondary)' }}>Duracion (min)</th>
+                      <th className="text-right px-2 py-1.5 font-medium" style={{ color: 'var(--color-text-secondary)' }}>Rutas</th>
+                      <th className="text-right px-2 py-1.5 font-medium" style={{ color: 'var(--color-text-secondary)' }}>Sin asignar</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[var(--color-border-subtle)]">
+                    {comparisonResults.map((r) => (
+                      <tr
+                        key={r.optimizer_name}
+                        className={`cursor-pointer hover:bg-white/5 transition-colors ${optimizerName === r.optimizer_name ? 'bg-blue-900/30' : ''}`}
+                        onClick={() => onOptimizerChange(r.optimizer_name)}
+                      >
+                        <td className="px-2 py-1.5 text-white font-medium">{r.optimizer_name}</td>
+                        <td className="px-2 py-1.5 text-right" style={{ color: 'var(--color-text-secondary)' }}>{r.distance_km.toFixed(1)}</td>
+                        <td className="px-2 py-1.5 text-right" style={{ color: 'var(--color-text-secondary)' }}>{r.duration_min.toFixed(0)}</td>
+                        <td className="px-2 py-1.5 text-right" style={{ color: 'var(--color-text-secondary)' }}>{r.route_count}</td>
+                        <td className="px-2 py-1.5 text-right" style={{ color: r.unassigned_count > 0 ? 'var(--color-warning, #f59e0b)' : 'var(--color-text-secondary)' }}>{r.unassigned_count}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
 
