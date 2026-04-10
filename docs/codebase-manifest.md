@@ -3,14 +3,14 @@
 > **Auto-generated** by `make manifest` (`backend/bin/generate-manifest.sh`).
 > Do not edit manually — regenerate with `make manifest`.
 
-**Generated:** 2026-04-10 17:48
+**Generated:** 2026-04-10 18:07
 **Regenerate:** `make manifest`
 
 ## Project Overview
 
 | Area | Path | Files | Tech |
 |------|------|------:|------|
-| Backend | `backend/` | 523 PHP | Symfony 7.4, PHP 8.4 |
+| Backend | `backend/` | 526 PHP | Symfony 7.4, PHP 8.4 |
 | Frontend | `frontend/` | 144 JS/TS | React |
 | ML Service | `ml-service/` | 17 Python | FastAPI |
 | Docker/Infra | `docker/` + `scripts/` | 9 + 5 | Docker, OSRM, VROOM, Traccar |
@@ -28,16 +28,16 @@
 | Enums — core (src/Enum/) | 20 |
 | Enums — provider | 4 |
 | **Enums total** | **24** |
-| Controllers | 73 |
+| Controllers | 74 |
 | Application Services (src/Application/) | 23 |
-| Domain/Infra Services (src/Service/) | 73 |
+| Domain/Infra Services (src/Service/) | 74 |
 | Repositories | 21 |
 | Console Commands | 18 |
 | DTOs | 17 |
 | Event Listeners | 11 |
 | Messenger Messages | 4 |
 | Message Handlers | 4 |
-| Tests | 133 |
+| Tests | 139 |
 | Migrations | 38 |
 
 ## Entity List
@@ -441,6 +441,7 @@ Controller endpoints (auto-extracted from `#[Route]` attributes):
 | PUT | `/api/admin/page-layouts/{publicId}` | PageLayoutApiController | update |
 | GET | `/api/admin/page-layouts` | PageLayoutApiController | list |
 | POST | `/api/admin/page-layouts` | PageLayoutApiController | create |
+| GET | `/api/admin/route-planner/optimizers` | OptimizerRegistryController | list |
 | PATCH | `/api/admin/widgets/{publicId}` | WidgetDefinitionApiController | patch |
 | GET | `/api/admin/widgets` | WidgetDefinitionApiController | list |
 | GET | `/api/csrf-token/{intention}` | CsrfTokenController | __invoke |
@@ -603,11 +604,11 @@ Provider factories (critical for Constructor Signature Changes pattern):
 
 | Type | Count |
 |------|------:|
-| Unit | 117 |
+| Unit | 123 |
 | Functional | 8 |
 | Domain | 6 |
 | Factory (test factories) | 1 |
-| **Total** | **133** |
+| **Total** | **139** |
 
 ---
 
