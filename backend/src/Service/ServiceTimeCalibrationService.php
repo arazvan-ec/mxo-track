@@ -74,4 +74,69 @@ final readonly class ServiceTimeCalibrationService
             'maxSeconds' => (int) round((float) $row['max_seconds']),
         ], $rows);
     }
+
+    /**
+     * Combines driver feedback service times with historical delivery data.
+     * Driver feedback takes priority over historical data for the same address.
+     *
+     * @return list<array{address: string, avgSeconds: int, sampleCount: int, minSeconds: int, maxSeconds: int}>
+     */
+    public function getCalibratedServiceTimesWithFeedback(int $customerId, int $limit = 50, int $minSamples = 2): array
+    {
+        $feedbackData = $this->getDriverFeedbackServiceTimes($customerId, $minSamples);
+        $historicalData = $this->getCalibratedServiceTimes($customerId, $limit, $minSamples);
+
+        // Index feedback by address for O(1) lookup
+        $feedbackByAddress = [];
+        foreach ($feedbackData as $entry) {
+            $feedbackByAddress[$entry['address']] = $entry;
+        }
+
+        // Index historical by address, feedback overrides
+        $merged = $feedbackByAddress;
+        foreach ($historicalData as $entry) {
+            if (!isset($merged[$entry['address']])) {
+                $merged[$entry['address']] = $entry;
+            }
+        }
+
+        // Return as indexed list, limited
+        return array_values(\array_slice($merged, 0, $limit));
+    }
+
+    /**
+     * @return list<array{address: string, avgSeconds: int, sampleCount: int, minSeconds: int, maxSeconds: int}>
+     */
+    private function getDriverFeedbackServiceTimes(int $customerId, int $minSamples): array
+    {
+        $sql = <<<'SQL'
+            SELECT
+                rs.address,
+                AVG(df.actual_service_time_seconds) AS avg_seconds,
+                COUNT(*) AS sample_count,
+                MIN(df.actual_service_time_seconds) AS min_seconds,
+                MAX(df.actual_service_time_seconds) AS max_seconds
+            FROM driver_feedback df
+            INNER JOIN route_stop rs ON rs.id = df.stop_id
+            INNER JOIN route_plan r ON r.id = rs.route_id
+            WHERE r.customer_id = :customer_id
+              AND df.actual_service_time_seconds IS NOT NULL
+            GROUP BY rs.address
+            HAVING COUNT(*) >= :min_samples
+            ORDER BY COUNT(*) DESC
+            SQL;
+
+        $rows = $this->connection->executeQuery($sql, [
+            'customer_id' => $customerId,
+            'min_samples' => $minSamples,
+        ])->fetchAllAssociative();
+
+        return array_map(static fn (array $row) => [
+            'address' => $row['address'],
+            'avgSeconds' => (int) round((float) $row['avg_seconds']),
+            'sampleCount' => (int) $row['sample_count'],
+            'minSeconds' => (int) round((float) $row['min_seconds']),
+            'maxSeconds' => (int) round((float) $row['max_seconds']),
+        ], $rows);
+    }
 }
