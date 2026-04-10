@@ -9,6 +9,7 @@ use App\Domain\Event\StopSkipped;
 use App\Domain\Route\Model\Route;
 use App\Entity\VehicleLastPosition;
 use App\Enum\RouteStatus;
+use App\Repository\ReoptimizationPolicyRepository;
 use App\Repository\RouteRepository;
 use App\Service\RouteOptimizationService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -28,6 +29,7 @@ final readonly class SkipReoptimizationSubscriber
         private EntityManagerInterface $em,
         private LoggerInterface $logger,
         private EventDispatcherInterface $eventDispatcher,
+        private ?ReoptimizationPolicyRepository $policyRepo = null,
     ) {}
 
     #[AsEventListener]
@@ -38,7 +40,12 @@ final readonly class SkipReoptimizationSubscriber
             return;
         }
 
-        if (!$route->isAutoReoptimize()) {
+        $policy = $this->policyRepo?->findOneBy(['customer' => $route->getCustomer()]);
+        if ($policy !== null) {
+            if (!$policy->isEnabled() || !$policy->allowsTrigger('on_skip')) {
+                return;
+            }
+        } elseif (!$route->isAutoReoptimize()) {
             return;
         }
 
