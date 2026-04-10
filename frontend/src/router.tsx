@@ -15,6 +15,7 @@ import { AdminVehiclesListPage } from './pages/admin/AdminVehiclesListPage';
 import { AdminShipmentsListPage } from './pages/admin/AdminShipmentsListPage';
 import { AdminCustomersListPage } from './pages/admin/AdminCustomersListPage';
 import { AdminDriversListPage } from './pages/admin/AdminDriversListPage';
+import { ReoptimizationPolicyPage } from './pages/admin/ReoptimizationPolicyPage';
 import { CustomerRouteDetailPage } from './pages/customer/CustomerRouteDetailPage';
 import { CustomerDashboardPage } from './pages/customer/CustomerDashboardPage';
 import { DriverRoutePage } from './pages/driver/DriverRoutePage';
@@ -39,6 +40,7 @@ export const router = createBrowserRouter([
       { path: 'admin/widgets', element: <WidgetGalleryPage /> },
       { path: 'admin/page-layouts', element: <PageLayoutEditorPage /> },
       { path: 'admin/routes/:publicId/analysis', element: <RouteAnalysisPage /> },
+      { path: 'admin/reoptimization-policies', element: <ReoptimizationPolicyPage /> },
       { path: 'customer/dashboard', element: <CustomerDashboardPage /> },
       { path: 'customer/routes/:publicId', element: <CustomerRouteDetailPage /> },
       { path: 'driver/routes/:publicId', element: <DriverRoutePage /> },
