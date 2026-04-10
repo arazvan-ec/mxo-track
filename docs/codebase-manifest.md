@@ -3,15 +3,15 @@
 > **Auto-generated** by `make manifest` (`backend/bin/generate-manifest.sh`).
 > Do not edit manually — regenerate with `make manifest`.
 
-**Generated:** 2026-04-10 14:56
+**Generated:** 2026-04-10 15:04
 **Regenerate:** `make manifest`
 
 ## Project Overview
 
 | Area | Path | Files | Tech |
 |------|------|------:|------|
-| Backend | `backend/` | 520 PHP | Symfony 7.4, PHP 8.4 |
-| Frontend | `frontend/` | 138 JS/TS | React |
+| Backend | `backend/` | 523 PHP | Symfony 7.4, PHP 8.4 |
+| Frontend | `frontend/` | 144 JS/TS | React |
 | ML Service | `ml-service/` | 17 Python | FastAPI |
 | Docker/Infra | `docker/` + `scripts/` | 9 + 5 | Docker, OSRM, VROOM, Traccar |
 | OpenSpec | `openspec/` | 28 specs | YAML specs |
@@ -28,7 +28,7 @@
 | Enums — core (src/Enum/) | 20 |
 | Enums — provider | 4 |
 | **Enums total** | **24** |
-| Controllers | 70 |
+| Controllers | 73 |
 | Application Services (src/Application/) | 23 |
 | Domain/Infra Services (src/Service/) | 73 |
 | Repositories | 21 |
@@ -214,8 +214,8 @@ View
 
 | Category | Count |
 |----------|------:|
-| JS/TS files total | 138 |
-| Pages | 15 |
+| JS/TS files total | 144 |
+| Pages | 18 |
 
 ### Directory Tree
 
@@ -487,6 +487,7 @@ Controller endpoints (auto-extracted from `#[Route]` attributes):
 | GET | `/export/deliveries.csv` | ReportController | exportDeliveries |
 | GET | `/export/drivers.csv` | ReportController | exportDrivers |
 | GET | `/export` | SlaReportController | export |
+| GET | `/filters` | ShipmentListApiController | filters |
 | POST | `/load` | DemoFixtureController | load |
 | POST | `/locale/{locale}` | LocaleController | switchLocale |
 | GET | `/login` | SecurityController | login |
@@ -539,15 +540,18 @@ Controller endpoints (auto-extracted from `#[Route]` attributes):
 | GET | `` | CommitStoryController | index |
 | GET | `` | CustomerAdminController | index |
 | GET | `` | CustomerIntegrationAdminController | index |
+| GET | `` | CustomerListApiController | list |
 | GET | `` | CustomerLocationAdminController | index |
 | GET | `` | CustomerReportController | index |
 | GET | `` | CustomerShipmentController | index |
 | GET | `` | DemoFixtureController | index |
 | GET | `` | DriverAdminController | index |
+| GET | `` | DriverListApiController | list |
 | GET | `` | ExceptionMapController | index |
 | GET | `` | OperatorDashboardController | dashboard |
 | GET | `` | ReportController | index |
 | GET | `` | ShipmentAdminController | index |
+| GET | `` | ShipmentListApiController | list |
 | GET | `` | SlaReportController | index |
 | GET | `` | UserAdminController | index |
 | GET | `` | VehicleAdminController | index |
