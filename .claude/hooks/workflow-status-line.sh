@@ -444,13 +444,48 @@ if [ "$FLOW_TYPE" = "full" ]; then
   fi
   LINE1="${LINE1} | i#${INTERACTION_ID}${DEVIATION_SUFFIX}"
 
-  # Line 2: Evidence for current phase
-  EVIDENCE=$(current_evidence "$CURRENT_PHASE")
-  LINE2="  Evidence: ${EVIDENCE}"
+  # Line 2: Done items (readable, mirrors user-prompt-state.sh)
+  FULL_DONE=""
+  case "$CURRENT_PHASE" in
+    consult)
+      [ "$DECISIONS_READ" = "true" ] && FULL_DONE="${FULL_DONE:+$FULL_DONE, }decisions"
+      [ "$LOGS_SCANNED" = "true" ] && FULL_DONE="${FULL_DONE:+$FULL_DONE, }logs"
+      ;;
+    brainstorming)
+      [ "$DECISIONS_READ" = "true" ] || [ "$LOGS_SCANNED" = "true" ] && FULL_DONE="${FULL_DONE:+$FULL_DONE, }consult"
+      [ "$USER_TURNS" -gt 0 ] 2>/dev/null && FULL_DONE="${FULL_DONE:+$FULL_DONE, }dialogo($USER_TURNS)"
+      [ "$ALTERNATIVES" = "true" ] && FULL_DONE="${FULL_DONE:+$FULL_DONE, }alternativas"
+      [ "$USER_APPROVED" = "true" ] && FULL_DONE="${FULL_DONE:+$FULL_DONE, }aprobado"
+      [ -n "$SPEC_PATH" ] && FULL_DONE="${FULL_DONE:+$FULL_DONE, }spec"
+      ;;
+    planning)
+      [ -n "$SPEC_PATH" ] && FULL_DONE="${FULL_DONE:+$FULL_DONE, }spec"
+      [ -n "$PLAN_PATH" ] && FULL_DONE="${FULL_DONE:+$FULL_DONE, }plan"
+      ;;
+    implementation)
+      [ -n "$PLAN_PATH" ] && FULL_DONE="${FULL_DONE:+$FULL_DONE, }plan"
+      [ "$TESTS_WRITTEN" -gt 0 ] 2>/dev/null && FULL_DONE="${FULL_DONE:+$FULL_DONE, }${TESTS_WRITTEN} tests"
+      ;;
+    verification)
+      [ "$TESTS_PASSED" = "true" ] && FULL_DONE="${FULL_DONE:+$FULL_DONE, }tests"
+      [ "$LINT_CLEAN" = "true" ] && FULL_DONE="${FULL_DONE:+$FULL_DONE, }lint"
+      ;;
+    capture)
+      [ -n "$EXEC_LOG" ] && FULL_DONE="execution log"
+      ;;
+    retrospective)
+      [ -n "$EXEC_LOG" ] && FULL_DONE="${FULL_DONE:+$FULL_DONE, }execution log"
+      ;;
+    finalize)
+      [ -n "$BRANCH_STRATEGY" ] && FULL_DONE="strategy: $BRANCH_STRATEGY"
+      ;;
+  esac
+  LINE2=""
+  [ -n "$FULL_DONE" ] && LINE2="  ✅ $FULL_DONE"
 
-  # Line 3: Next action
+  # Line 3: Pending action
   NEXT=$(next_action "$CURRENT_PHASE")
-  LINE3="  Next: ${NEXT}"
+  LINE3="  ⏳ ${NEXT}"
 
   # Line 4: Completed phase chain (only if ≥2 phases completed, i.e. CURRENT_INDEX > 2)
   LINE4=""
@@ -571,19 +606,25 @@ if [ "$FLOW_TYPE" = "debug" ]; then
   # Line 1: Flow, phase, index, emoji bar, branch, deviation
   LINE1="📍 debug | ${DISPLAY_PHASE} (${DEBUG_INDEX}/${TOTAL}) | ${DEBUG_BAR} | i#${INTERACTION_ID}${DEVIATION_SUFFIX}"
 
-  # Line 2: Evidence
-  DEBUG_EVIDENCE="decisions=$(yn $DECISIONS_READ) root_cause=$(yn $ROOT_CAUSE) pattern_wide=$(yn $PATTERN_WIDE) tests_passed=$(yn ${TESTS_PASSED:-false})"
-  LINE2="  Evidence: ${DEBUG_EVIDENCE}"
+  # Line 2: Done items (readable, not key=value)
+  DEBUG_DONE=""
+  [ "$DECISIONS_READ" = "true" ] && DEBUG_DONE="${DEBUG_DONE:+$DEBUG_DONE, }decisions"
+  [ "$ROOT_CAUSE" = "true" ] && DEBUG_DONE="${DEBUG_DONE:+$DEBUG_DONE, }causa raiz"
+  [ "$PATTERN_WIDE" = "true" ] && DEBUG_DONE="${DEBUG_DONE:+$DEBUG_DONE, }patron"
+  [ "${TESTS_PASSED:-false}" = "true" ] && DEBUG_DONE="${DEBUG_DONE:+$DEBUG_DONE, }tests"
+  [ "${LINT_CLEAN:-false}" = "true" ] && DEBUG_DONE="${DEBUG_DONE:+$DEBUG_DONE, }lint"
+  LINE2=""
+  [ -n "$DEBUG_DONE" ] && LINE2="  ✅ $DEBUG_DONE"
 
-  # Line 3: Next action
-  DEBUG_NEXT=""
+  # Line 3: Pending action
+  DEBUG_TODO=""
   case "$DEBUG_CURRENT" in
-    consult) DEBUG_NEXT="read decisions/logs" ;;
-    root_cause) DEBUG_NEXT="identify root cause (Skill 8)" ;;
-    pattern_search) DEBUG_NEXT="pattern-wide search (Skill 8 Phase 2.5)" ;;
-    fix) DEBUG_NEXT="TDD fix + verify" ;;
+    consult) DEBUG_TODO="leer decisions/logs" ;;
+    root_cause) DEBUG_TODO="identificar causa raiz" ;;
+    pattern_search) DEBUG_TODO="busqueda patron-wide" ;;
+    fix) DEBUG_TODO="TDD fix + verificar" ;;
   esac
-  LINE3="  Next: ${DEBUG_NEXT}"
+  LINE3="  ⏳ ${DEBUG_TODO}"
 
   # Line 4: Completed chain (only if ≥2 completed, i.e. DEBUG_INDEX > 2)
   LINE4=""
