@@ -386,6 +386,30 @@ export interface OptimizerComparisonResult {
   unassigned_count: number;
 }
 
+/* ── Optimization Analytics ─────────────────────────────────────── */
+
+export interface OptimizerMetric {
+  optimizer_name: string;
+  avg_distance_km: number;
+  avg_duration_min: number;
+  route_count: number;
+  avg_success_rate: number;
+}
+
+export interface AddressRiskInfo {
+  address: string;
+  total_deliveries: number;
+  exception_count: number;
+  exception_rate: number;
+  is_high_risk: boolean;
+}
+
+export interface ReoptEvent {
+  route_public_id: string;
+  trigger: string;
+  occurred_at: string;
+}
+
 /* ── Reoptimization Policy ───────────────────────────────────────── */
 
 export interface ReoptimizationPolicy {

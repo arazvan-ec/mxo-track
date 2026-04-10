@@ -78,6 +78,7 @@ class NavigationController extends AbstractController
                     $this->item('nav.billing', '/admin/billing', 'billing'),
                     $this->item('nav.optimization_logs', '/admin/optimization-logs', 'optimization'),
                     $this->item('nav.reopt_policies', '/app/admin/reoptimization-policies', 'optimization'),
+                    $this->item('nav.analytics_opt', '/app/admin/optimization-dashboard', 'reports'),
                     $this->item('nav.ai_assistant', '/admin/ai-assistant', 'ai'),
                     $this->item('nav.api_keys', '/admin/api-keys', 'apiKey'),
                     $this->item('nav.widget_gallery', '/app/admin/widgets', 'template'),
