@@ -86,7 +86,7 @@ class DemoFixtureController extends AbstractController
             "DELETE FROM route_current_state WHERE route_id IN $demoRouteFilter",
             "DELETE FROM route_optimization_log WHERE route_id IN $demoRouteFilter",
             "DELETE FROM route_performance_metric WHERE route_id IN $demoRouteFilter",
-            "DELETE FROM optimization_strategy_comparison WHERE route_id IN $demoRouteFilter",
+            "DELETE FROM optimization_strategy_comparison WHERE result_route_id IN $demoRouteFilter",
             // Shipment children
             "DELETE FROM parcel WHERE shipment_id IN (SELECT id FROM shipment WHERE customer_id IN $demoCustomerFilter)",
             "DELETE FROM shipment_event WHERE shipment_id IN (SELECT id FROM shipment WHERE customer_id IN $demoCustomerFilter)",
