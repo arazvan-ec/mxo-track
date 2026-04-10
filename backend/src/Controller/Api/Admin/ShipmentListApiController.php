@@ -6,6 +6,7 @@ namespace App\Controller\Api\Admin;
 
 use App\Domain\Shipment\Model\Shipment;
 use App\Entity\Customer;
+use App\Enum\ShipmentPriority;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -29,6 +30,9 @@ class ShipmentListApiController extends AbstractController
         $page = max(1, $request->query->getInt('page', 1));
         $limit = min(100, max(1, $request->query->getInt('limit', self::ITEMS_PER_PAGE)));
         $customerFilter = $request->query->getString('customer', '');
+        $priorityFilter = $request->query->getString('priority', '');
+        $dateFrom = $request->query->getString('date_from', '');
+        $dateTo = $request->query->getString('date_to', '');
 
         $qb = $this->em->createQueryBuilder()
             ->select('s', 'c')
@@ -50,6 +54,30 @@ class ShipmentListApiController extends AbstractController
                 $qb->andWhere('s.customer = :customer')->setParameter('customer', $customer);
                 $countQb->andWhere('s.customer = :customer')->setParameter('customer', $customer);
             }
+        }
+
+        if ($priorityFilter !== '') {
+            $priority = ShipmentPriority::tryFrom((int) $priorityFilter);
+            if ($priority !== null) {
+                $qb->andWhere('s.priority = :priority')->setParameter('priority', $priority);
+                $countQb->andWhere('s.priority = :priority')->setParameter('priority', $priority);
+            }
+        }
+
+        if ($dateFrom !== '') {
+            try {
+                $from = new \DateTimeImmutable($dateFrom . ' 00:00:00');
+                $qb->andWhere('s.createdAt >= :dateFrom')->setParameter('dateFrom', $from);
+                $countQb->andWhere('s.createdAt >= :dateFrom')->setParameter('dateFrom', $from);
+            } catch (\Exception) {}
+        }
+
+        if ($dateTo !== '') {
+            try {
+                $to = new \DateTimeImmutable($dateTo . ' 23:59:59');
+                $qb->andWhere('s.createdAt <= :dateTo')->setParameter('dateTo', $to);
+                $countQb->andWhere('s.createdAt <= :dateTo')->setParameter('dateTo', $to);
+            } catch (\Exception) {}
         }
 
         /** @var Shipment[] $shipments */

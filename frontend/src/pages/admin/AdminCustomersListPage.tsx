@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAdminCustomers } from '@/api/hooks/useAdminCustomers';
 import type { CustomerListItem } from '@/api/types';
 import { ResponsiveDataTable, type ColumnDef, type ActionDef } from '@/components/data-table/ResponsiveDataTable';
+import { FilterBar, type FilterChip } from '@/components/data-table/FilterBar';
 import { Pagination } from '@/components/data-table/Pagination';
 
 /* ── Render helpers ────────────────────────────────────────────────── */
@@ -29,8 +30,12 @@ const columns: ColumnDef<CustomerListItem>[] = [
 
 export function AdminCustomersListPage() {
   const [page, setPage] = useState(1);
+  const [active, setActive] = useState('');
 
-  const { data, isLoading } = useAdminCustomers({ page });
+  const { data, isLoading } = useAdminCustomers({
+    page,
+    active: active || undefined,
+  });
 
   const actions = (row: CustomerListItem): ActionDef[] => [
     { label: 'Editar', href: `/admin/customers/${row.publicId}/edit`, color: 'text-blue-600' },
@@ -38,6 +43,17 @@ export function AdminCustomersListPage() {
 
   const statusColorClass = (row: CustomerListItem) =>
     row.active ? 'border-l-green-500' : 'border-l-red-500';
+
+  const activeChips: FilterChip[] = [
+    { key: '', label: 'Todos', color: 'border-blue-500 text-blue-600' },
+    { key: 'true', label: 'Activos', color: 'border-green-500 text-green-600' },
+    { key: 'false', label: 'Inactivos', color: 'border-red-500 text-red-600' },
+  ];
+
+  const handleChipClick = (key: string) => {
+    setActive(key);
+    setPage(1);
+  };
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
@@ -51,6 +67,13 @@ export function AdminCustomersListPage() {
           Nuevo cliente
         </a>
       </div>
+
+      {/* Filters */}
+      <FilterBar
+        chips={activeChips}
+        activeChip={active}
+        onChipClick={handleChipClick}
+      />
 
       {/* Table / Cards */}
       <ResponsiveDataTable

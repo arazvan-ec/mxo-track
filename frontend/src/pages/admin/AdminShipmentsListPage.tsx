@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAdminShipments, useShipmentFilters } from '@/api/hooks/useAdminShipments';
 import type { ShipmentListItem } from '@/api/types';
 import { ResponsiveDataTable, type ColumnDef, type ActionDef } from '@/components/data-table/ResponsiveDataTable';
+import { FilterBar, type FilterChip } from '@/components/data-table/FilterBar';
 import { Pagination } from '@/components/data-table/Pagination';
 
 /* ── Render helpers ────────────────────────────────────────────────── */
@@ -53,11 +54,17 @@ const columns: ColumnDef<ShipmentListItem>[] = [
 
 export function AdminShipmentsListPage() {
   const [page, setPage] = useState(1);
+  const [priority, setPriority] = useState('');
   const [customerId, setCustomerId] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   const { data, isLoading } = useAdminShipments({
     page,
+    priority: priority || undefined,
     customer: customerId || undefined,
+    date_from: dateFrom || undefined,
+    date_to: dateTo || undefined,
   });
   const { data: filters } = useShipmentFilters();
 
@@ -67,6 +74,57 @@ export function AdminShipmentsListPage() {
 
   const statusColorClass = (row: ShipmentListItem) =>
     PRIORITY_CONFIG[row.priority]?.borderClass ?? 'border-l-gray-500';
+
+  const priorityChips: FilterChip[] = [
+    { key: '', label: 'Todos', color: 'border-blue-500 text-blue-600' },
+    { key: '100', label: 'Crítico', color: 'border-red-500 text-red-600' },
+    { key: '75', label: 'Urgente', color: 'border-amber-500 text-amber-600' },
+    { key: '50', label: 'Alto', color: 'border-orange-500 text-orange-600' },
+    { key: '25', label: 'Normal', color: 'border-blue-500 text-blue-600' },
+    { key: '0', label: 'Bajo', color: 'border-gray-500 text-gray-600' },
+  ];
+
+  const handleChipClick = (key: string) => {
+    setPriority(key);
+    setPage(1);
+  };
+
+  const advancedFilters = (
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div>
+        <label htmlFor="customer" className="block text-xs font-medium mb-1" style={{ color: 'var(--color-text-secondary)' }}>Cliente</label>
+        <select
+          id="customer" value={customerId}
+          onChange={(e) => { setCustomerId(e.target.value); setPage(1); }}
+          className="block w-full rounded-md border px-3 py-2 text-sm shadow-sm"
+          style={{ borderColor: 'var(--color-border)' }}
+        >
+          <option value="">Todos</option>
+          {filters?.customers.map((c) => (
+            <option key={c.publicId} value={c.publicId}>{c.name}</option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label htmlFor="date_from" className="block text-xs font-medium mb-1" style={{ color: 'var(--color-text-secondary)' }}>Fecha desde</label>
+        <input
+          type="date" id="date_from" value={dateFrom}
+          onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+          className="block w-full rounded-md border px-3 py-2 text-sm shadow-sm"
+          style={{ borderColor: 'var(--color-border)' }}
+        />
+      </div>
+      <div>
+        <label htmlFor="date_to" className="block text-xs font-medium mb-1" style={{ color: 'var(--color-text-secondary)' }}>Fecha hasta</label>
+        <input
+          type="date" id="date_to" value={dateTo}
+          onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+          className="block w-full rounded-md border px-3 py-2 text-sm shadow-sm"
+          style={{ borderColor: 'var(--color-border)' }}
+        />
+      </div>
+    </div>
+  );
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
@@ -88,24 +146,14 @@ export function AdminShipmentsListPage() {
         </a>
       </div>
 
-      {/* Customer filter */}
-      <div className="mb-4 flex items-center gap-3">
-        <label htmlFor="customer" className="text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
-          Filtrar por cliente:
-        </label>
-        <select
-          id="customer"
-          value={customerId}
-          onChange={(e) => { setCustomerId(e.target.value); setPage(1); }}
-          className="rounded-md shadow-sm text-sm"
-          style={{ borderColor: 'var(--color-border)' }}
-        >
-          <option value="">Todos los clientes</option>
-          {filters?.customers.map((c) => (
-            <option key={c.publicId} value={c.publicId}>{c.name}</option>
-          ))}
-        </select>
-      </div>
+      {/* Filters */}
+      <FilterBar
+        chips={priorityChips}
+        activeChip={priority}
+        onChipClick={handleChipClick}
+        advancedFilters={advancedFilters}
+        advancedFiltersOpen={!!(customerId || dateFrom || dateTo)}
+      />
 
       {/* Table / Cards */}
       <ResponsiveDataTable

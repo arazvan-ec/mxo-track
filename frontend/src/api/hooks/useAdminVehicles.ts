@@ -5,6 +5,9 @@ import type { PaginatedResponse, VehicleListItem } from '../types';
 export interface VehicleListParams {
   page?: number;
   limit?: number;
+  active?: string;
+  date_from?: string;
+  date_to?: string;
 }
 
 function buildQuery(params: VehicleListParams): string {
