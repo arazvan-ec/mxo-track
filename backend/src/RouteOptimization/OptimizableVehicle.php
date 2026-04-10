@@ -23,6 +23,8 @@ final readonly class OptimizableVehicle
         public ?int $maxParcels = null,
         public ?int $maxTasks = null,
         public array $skills = [],
+        public ?int $shiftStartSeconds = null,
+        public ?int $shiftEndSeconds = null,
     ) {
     }
 }
