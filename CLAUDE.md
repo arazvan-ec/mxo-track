@@ -487,19 +487,25 @@ archivos" o "necesito entender X". Solo necesita saber qué se hizo y qué falta
 
 **CORRECTO:** Cada mensaje incluye (1) qué se completó con dato concreto, (2) qué sigue.
 
-**En cada transición de fase:**
+**Formato jerárquico de progreso:** Los mensajes reflejan la jerarquía completa del
+trabajo: fase del flujo → etapa del plan → wave → tarea. Esto permite al usuario saber
+en todo momento dónde está la implementación sin leer mensajes anteriores.
+
+**Estructura del mensaje de progreso (2 líneas):**
+- **Línea 1:** wave actual + etapa del plan + fase del flujo
+- **Línea 2:** tarea concreta + qué se está construyendo
+
+**Durante implementación (wave en curso):**
 ```
-✅ Consult (1/8) — 3 decision logs relevantes, 2 execution logs recientes
-🔄 Brainstorm (2/8) — 8 páginas analizadas, 17 componentes mapeados
+🔄 Wave 2/4 · Fase 1: Rutas + Vehículos (Implementation 4/8)
+📍 Tarea 5/10: RouteListApiController — endpoint con filtros por estado, fecha, conductor y cliente
 ```
 
-**En cada tarea durante implementación:**
+**Wave completada → siguiente:**
 ```
-📍 Tarea 1/3 — Derivar visibleRoutes
-Resultado: 3 archivos modificados, TypeScript limpio
-
-📍 Tarea 2/3 — Usar visibleRoutes en capas del mapa
-Resultado: FleetMap renderiza 46 paradas de 3 rutas
+✅ Wave 2/4 · Fase 1: Rutas + Vehículos (Implementation 4/8)
+Resultado: 2 endpoints API con paginación + filtros, PHP lint limpio (2 archivos)
+🔄 Wave 3/4 — 2 páginas React: rutas (5 chips estado + filtros) y vehículos (capacidad + GPS)
 ```
 
 **En verificación:**
@@ -507,12 +513,25 @@ Resultado: FleetMap renderiza 46 paradas de 3 rutas
 🧪 Verificación — TypeScript: ✅ | Lint: ✅ | Tests: ✅ (602 tests, 0 nuevos fallos)
 ```
 
-**Entre fases (cuando se lanzan herramientas/agentes):** Un solo mensaje corto con
-lo completado + lo que sigue. NO narrar cada paso intermedio.
+**Resumen final (solo lo nuevo de esta interacción, no repetir lo ya mergeado):**
 ```
-✅ 6 widgets implementados, registry actualizado (10/10)
-🔄 Migrando 7 páginas al widget system (5 en paralelo)
+✅ Fase 2 completada — 12 archivos, +709 líneas. PR #237.
+
+| Página | Filtros | Mobile card |
+|--------|---------|-------------|
+| Envíos | Cliente dropdown | PriorityBadge 5 niveles + carga |
+| Clientes | — | ActiveBadge + conteo usuarios |
+| Conductores | — | ActiveBadge + acción Horario |
 ```
+
+**Commit/push:** Solo resultado, no output de git.
+```
+Committed y pusheado — 6 archivos, +374 líneas.
+```
+
+**NUNCA repetir fases ya completadas en el texto** — el status bar del hook ya las muestra.
+"✅ Consult + Brainstorm + Planning completados" es redundante. Solo comunicar la fase
+actual con su contexto de plan/wave/tarea.
 
 **PROHIBIDO entre tool calls:** NO emitir texto entre herramientas consecutivas salvo que
 haya un resultado concreto nuevo. Esto incluye:
@@ -546,14 +565,15 @@ haciendo. Ejemplo durante debug:
 - Antes de correr tests → actualizar a fase de verificación
 - Antes de push → actualizar `tests_passed`, `lint_clean`
 
-**Header de respuesta:** Inicia CADA respuesta con el header que el hook inyecta en la
-línea `Header:`. Reemplaza `[...]` con datos concretos de lo completado. Ejemplos:
+**Header de respuesta:** Inicia CADA respuesta con el header apropiado al tipo de flujo.
+En flujos que no son full/debug, usar formato simple. En full/debug, usar el formato
+jerárquico (wave · etapa · fase). Ejemplos por tipo:
 ```
 💬 El endpoint devuelve 404 porque falta la ruta en routing.yaml
 📝 Light — Eliminados 2 imports no usados en RoutePlannerPage, TS limpio
 🐛 Debug (fix) — TS6133 por import no usado, eliminado, build pasa
 🔍 Explore — 8 controllers encontrados, 3 usan HubInterface directamente
-✅✅🔄⬚⬚⬚⬚⬚ Planning (3/8) — Spec aprobado, 12 tareas en plan
+🔄 Wave 2/4 · Fase 1: Rutas + Vehículos (Implementation 4/8)
 ```
 
 #### Why the status line is compact (not verbose)
