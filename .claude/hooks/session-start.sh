@@ -148,6 +148,22 @@ EOJSON
 if [ -f "$STATE_FILE" ]; then
   EXISTING_DATE=$(jq -r '.session_date // ""' "$STATE_FILE" 2>/dev/null || echo "")
   if [ "$EXISTING_DATE" = "$TODAY" ]; then
+    # Auto-restore user_approved if phase >= implementation and spec+plan exist
+    # This prevents deadlock on resume: can't edit code because approved=false,
+    # can't get approval because no user message yet.
+    CURRENT_PHASE=$(jq -r '.current_phase // ""' "$STATE_FILE" 2>/dev/null || echo "")
+    SPEC_EXISTS=$(jq -r '.evidence.spec_path // ""' "$STATE_FILE" 2>/dev/null || echo "")
+    PLAN_EXISTS=$(jq -r '.evidence.plan_path // ""' "$STATE_FILE" 2>/dev/null || echo "")
+    USER_APPROVED=$(jq -r '.evidence.user_approved // false' "$STATE_FILE" 2>/dev/null || echo "false")
+
+    if [ "$USER_APPROVED" != "true" ] && [ -n "$SPEC_EXISTS" ] && [ -n "$PLAN_EXISTS" ]; then
+      case "$CURRENT_PHASE" in
+        implementation|verification|capture|retrospective|finalize)
+          jq '.evidence.user_approved = true' "$STATE_FILE" > /tmp/ss-resume.json && mv /tmp/ss-resume.json "$STATE_FILE"
+          ;;
+      esac
+    fi
+
     output_context "yes (same day)"
     exit 0
   fi
