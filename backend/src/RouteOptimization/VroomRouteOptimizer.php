@@ -165,6 +165,10 @@ final class VroomRouteOptimizer implements RouteOptimizerInterface
                 $v['skills'] = array_map('intval', $vehicle->skills);
             }
 
+            if ($vehicle->shiftStartSeconds !== null && $vehicle->shiftEndSeconds !== null) {
+                $v['time_window'] = [$vehicle->shiftStartSeconds, $vehicle->shiftEndSeconds];
+            }
+
             $vroomVehicles[] = $v;
         }
 
