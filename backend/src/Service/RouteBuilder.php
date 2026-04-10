@@ -29,6 +29,8 @@ use App\RouteOptimization\RouteOptimizerInterface;
  */
 final class RouteBuilder
 {
+    private const ADDRESS_RISK_BUFFER_SECONDS = 120;
+
     public function __construct(
         private readonly RouteRepositoryInterface $routeRepo,
         private readonly RouteStopRepositoryInterface $stopRepo,
@@ -37,6 +39,8 @@ final class RouteBuilder
         private readonly OptimizationLogger $optimizationLogger,
         private readonly RouteSnapshotManager $snapshotManager,
         private readonly ServiceTimeCalibrationService $calibrationService,
+        private readonly AddressRiskService $addressRiskService,
+        private readonly CoordinateCorrectionService $coordinateCorrectionService,
     ) {
     }
 
@@ -219,10 +223,28 @@ final class RouteBuilder
                 $serviceTime = $serviceTimeOverrides[$address];
             }
 
+            // Address intelligence: add buffer for high-risk addresses
+            if ($address !== null) {
+                $riskCheck = $this->addressRiskService->checkAddress($address);
+                if ($riskCheck['is_risky'] ?? false) {
+                    $serviceTime += self::ADDRESS_RISK_BUFFER_SECONDS;
+                }
+            }
+
+            // Coordinate correction: use driver-corrected coords if consistently reported
+            $jobLat = $shipment->getLatitude();
+            $jobLng = $shipment->getLongitude();
+            if ($address !== null) {
+                $corrected = $this->coordinateCorrectionService->getCorrectedCoordinates($address);
+                if ($corrected !== null) {
+                    [$jobLat, $jobLng] = $corrected;
+                }
+            }
+
             $result[] = new OptimizableJob(
                 id: $index,
-                latitude: $shipment->getLatitude(),
-                longitude: $shipment->getLongitude(),
+                latitude: $jobLat,
+                longitude: $jobLng,
                 serviceTimeSeconds: $serviceTime,
                 weightKg: $shipment->getTotalWeightKg() ?? 0.0,
                 volumeM3: $shipment->getTotalVolumeM3() ?? 0.0,
