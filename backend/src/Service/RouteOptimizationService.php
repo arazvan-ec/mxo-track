@@ -7,8 +7,10 @@ namespace App\Service;
 use App\Domain\Route\Repository\RouteStopRepositoryInterface;
 use App\Domain\Route\Model\Route;
 use App\Domain\Route\Model\RouteStop;
+use App\Domain\Shipment\Model\Shipment;
 use App\Enum\OptimizationStepCategory;
 use App\Enum\RouteStopStatus;
+use App\Enum\VehicleSkill;
 use App\RouteOptimization\OptimizableJob;
 use App\RouteOptimization\OptimizableVehicle;
 use App\RouteOptimization\RouteOptimizerInterface;
@@ -77,13 +79,13 @@ final class RouteOptimizationService
             sprintf('Optimizando orden de %d paradas', \count($deliveryStops)),
         );
 
-        // Build optimizer-neutral vehicle and jobs
-        $optimizableVehicle = new OptimizableVehicle(
-            id: 0,
-            startLatitude: $originStop?->getLatitude(),
-            startLongitude: $originStop?->getLongitude(),
-            endLatitude: $originStop?->getLatitude(),
-            endLongitude: $originStop?->getLongitude(),
+        // Build optimizer-neutral vehicle with constraints from Route's vehicle
+        $optimizableVehicle = $this->buildVehicleFromRoute(
+            $route,
+            startLat: $originStop?->getLatitude(),
+            startLng: $originStop?->getLongitude(),
+            endLat: $originStop?->getLatitude(),
+            endLng: $originStop?->getLongitude(),
         );
 
         $optimizableJobs = [];
@@ -94,12 +96,7 @@ final class RouteOptimizationService
                 continue;
             }
 
-            $optimizableJobs[] = new OptimizableJob(
-                id: $index,
-                latitude: $stop->getLatitude(),
-                longitude: $stop->getLongitude(),
-                serviceTimeSeconds: 300,
-            );
+            $optimizableJobs[] = $this->buildJobFromStop($stop, $index);
             $stopMap[$index] = $stop;
         }
 
@@ -227,13 +224,13 @@ final class RouteOptimizationService
 
         $distanceBefore = $this->calculatePendingDistance($pendingStops, $startLat, $startLng, null);
 
-        // Build optimizer-neutral vehicle and jobs
-        $optimizableVehicle = new OptimizableVehicle(
-            id: 0,
-            startLatitude: $startLat,
-            startLongitude: $startLng,
-            endLatitude: null,
-            endLongitude: null,
+        // Build optimizer-neutral vehicle with constraints from Route's vehicle
+        $optimizableVehicle = $this->buildVehicleFromRoute(
+            $route,
+            startLat: $startLat,
+            startLng: $startLng,
+            endLat: null,
+            endLng: null,
         );
 
         $optimizableJobs = [];
@@ -244,12 +241,7 @@ final class RouteOptimizationService
                 continue;
             }
 
-            $optimizableJobs[] = new OptimizableJob(
-                id: $index,
-                latitude: $stop->getLatitude(),
-                longitude: $stop->getLongitude(),
-                serviceTimeSeconds: 300,
-            );
+            $optimizableJobs[] = $this->buildJobFromStop($stop, $index);
             $stopMap[$index] = $stop;
         }
 
@@ -414,6 +406,83 @@ final class RouteOptimizationService
             'distanceAfter' => $distanceAfter,
             'durationMinutes' => $durationMinutes,
         ];
+    }
+
+    /**
+     * Builds an OptimizableJob from a RouteStop, extracting constraints from its Shipment.
+     */
+    private function buildJobFromStop(RouteStop $stop, int $id): OptimizableJob
+    {
+        $shipment = $stop->getShipment();
+
+        if ($shipment === null) {
+            return new OptimizableJob(
+                id: $id,
+                latitude: $stop->getLatitude(),
+                longitude: $stop->getLongitude(),
+                serviceTimeSeconds: 300,
+            );
+        }
+
+        $timeWindows = [];
+        $windowStart = $shipment->getPreferredWindowStart();
+        $windowEnd = $shipment->getPreferredWindowEnd();
+        if ($windowStart !== null && $windowEnd !== null) {
+            $timeWindows[] = [
+                'start' => $this->timeToSeconds($windowStart),
+                'end' => $this->timeToSeconds($windowEnd),
+            ];
+        }
+
+        return new OptimizableJob(
+            id: $id,
+            latitude: $stop->getLatitude(),
+            longitude: $stop->getLongitude(),
+            serviceTimeSeconds: $shipment->getServiceTimeSeconds() ?? 300,
+            weightKg: $shipment->getTotalWeightKg() ?? 0.0,
+            volumeM3: $shipment->getTotalVolumeM3() ?? 0.0,
+            parcels: $shipment->getTotalParcels(),
+            priority: $shipment->getPriority()->toVroomPriority(),
+            timeWindows: $timeWindows,
+            requiredSkills: array_map(static fn(VehicleSkill $s) => (string) $s->value, $shipment->getRequiredSkills()),
+        );
+    }
+
+    /**
+     * Builds an OptimizableVehicle from a Route, extracting capacity and skills from its Vehicle.
+     */
+    private function buildVehicleFromRoute(Route $route, ?float $startLat = null, ?float $startLng = null, ?float $endLat = null, ?float $endLng = null): OptimizableVehicle
+    {
+        $vehicle = $route->getVehicle();
+
+        if ($vehicle === null) {
+            return new OptimizableVehicle(
+                id: 0,
+                startLatitude: $startLat,
+                startLongitude: $startLng,
+                endLatitude: $endLat,
+                endLongitude: $endLng,
+            );
+        }
+
+        return new OptimizableVehicle(
+            id: 0,
+            startLatitude: $startLat,
+            startLongitude: $startLng,
+            endLatitude: $endLat,
+            endLongitude: $endLng,
+            maxWeightKg: $vehicle->getMaxWeightKg(),
+            maxVolumeM3: $vehicle->getMaxVolumeM3(),
+            maxParcels: $vehicle->getMaxParcels(),
+            skills: array_map(static fn(VehicleSkill $s) => (string) $s->value, $vehicle->getSkills()),
+        );
+    }
+
+    private function timeToSeconds(\DateTimeImmutable $time): int
+    {
+        return (int) $time->format('H') * 3600
+            + (int) $time->format('i') * 60
+            + (int) $time->format('s');
     }
 
     /**
