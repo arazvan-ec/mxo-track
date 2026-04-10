@@ -10,10 +10,12 @@ use App\Domain\Event\StopsReordered;
 use App\Domain\Route\Model\RouteMapOptions;
 use App\Domain\Route\Service\RouteMapProjection;
 use App\Entity\CustomerLocation;
+use App\Entity\DriverAvailability;
 use App\Domain\Route\Model\Route;
 use App\Domain\Route\Model\RouteStop;
 use App\Domain\Shipment\Model\Shipment;
 use App\Entity\Vehicle;
+use App\Service\DriverAvailabilityService;
 use App\Enum\OptimizationOperation;
 use App\Enum\OptimizationStepCategory;
 use App\Domain\Route\Repository\RouteRepositoryInterface;
@@ -44,6 +46,7 @@ final readonly class RoutePlanningService
         private RouteSnapshotManager $snapshotManager,
         private RouteMapProjection $routeMapProjection,
         private ProviderFactoryRegistry $providerFactoryRegistry,
+        private DriverAvailabilityService $driverAvailabilityService,
     ) {}
 
     /**
@@ -142,6 +145,22 @@ final readonly class RoutePlanningService
             }
         }
 
+        // Load driver availabilities for today via last route assignment per vehicle
+        $driverAvailabilities = null;
+        $planDate = new \DateTimeImmutable();
+        foreach ($vehicles as $index => $vehicle) {
+            // Find the most recent driver assigned to this vehicle via past routes
+            $lastRoute = $this->routeRepo->findLastByVehicle($vehicle);
+            $driver = $lastRoute?->getDriver();
+            if ($driver !== null) {
+                $availability = $this->driverAvailabilityService->getAvailabilityForDriverOnDate($driver, $planDate);
+                if ($availability !== null) {
+                    $driverAvailabilities ??= [];
+                    $driverAvailabilities[$index] = $availability;
+                }
+            }
+        }
+
         $results = $this->routeBuilder->buildRoutes(
             $shipments,
             $vehicles,
@@ -150,6 +169,7 @@ final readonly class RoutePlanningService
             $input->maxStopsPerRoute,
             $optimizerOverride,
             $input->serviceTimeOverrides,
+            $driverAvailabilities,
         );
 
         $this->em->flush();

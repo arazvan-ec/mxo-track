@@ -6,6 +6,7 @@ namespace App\Infrastructure\Route\Doctrine;
 
 use App\Domain\Route\Repository\RouteRepositoryInterface;
 use App\Entity\Customer;
+use App\Entity\Vehicle;
 use App\Domain\Route\Model\Route;
 use App\Entity\User;
 use App\Enum\RouteStatus;
@@ -52,6 +53,19 @@ final readonly class DoctrineRouteRepository implements RouteRepositoryInterface
             ->setParameter('status', RouteStatus::ACTIVE);
 
         return array_column($qb->getQuery()->getScalarResult(), 'pid');
+    }
+
+    public function findLastByVehicle(Vehicle $vehicle): ?Route
+    {
+        return $this->em->createQueryBuilder()
+            ->select('r')
+            ->from(Route::class, 'r')
+            ->where('r.vehicle = :vehicle')
+            ->orderBy('r.createdAt', 'DESC')
+            ->setParameter('vehicle', $vehicle)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
     }
 
     public function save(Route $route): void
