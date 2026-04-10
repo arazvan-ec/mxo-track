@@ -18,6 +18,8 @@ use App\Service\OptimizationLogger;
 use App\Service\RouteBuilder;
 use App\Service\RouteCapacityValidator;
 use App\Service\RouteSnapshotManager;
+use App\Service\AddressRiskService;
+use App\Service\CoordinateCorrectionService;
 use App\Service\ServiceTimeCalibrationService;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
@@ -50,6 +52,8 @@ final class RouteBuilderServiceTimeOverrideTest extends TestCase
         $routeRepo->method('flush');
 
         $calibrationService = $this->createMock(ServiceTimeCalibrationService::class);
+        $addressRiskService = $this->createMock(AddressRiskService::class);
+        $coordinateCorrectionService = $this->createMock(CoordinateCorrectionService::class);
 
         $builder = new RouteBuilder(
             $routeRepo,
@@ -59,6 +63,8 @@ final class RouteBuilderServiceTimeOverrideTest extends TestCase
             $optimizationLogger,
             $snapshotManager,
             $calibrationService,
+            $addressRiskService,
+            $coordinateCorrectionService,
         );
 
         $shipment1 = $this->createShipment('123 Main St', 300);

@@ -16,6 +16,8 @@ use App\Service\OptimizationLogger;
 use App\Service\RouteBuilder;
 use App\Service\RouteCapacityValidator;
 use App\Service\RouteSnapshotManager;
+use App\Service\AddressRiskService;
+use App\Service\CoordinateCorrectionService;
 use App\Service\ServiceTimeCalibrationService;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
@@ -38,6 +40,8 @@ final class RouteBuilderAutoCalibrationTest extends TestCase
             ->willReturn(new OptimizationResult(routes: [], unassignedJobIds: [0]));
 
         $calibrationService = $this->createMock(ServiceTimeCalibrationService::class);
+        $addressRiskService = $this->createMock(AddressRiskService::class);
+        $coordinateCorrectionService = $this->createMock(CoordinateCorrectionService::class);
 
         // Calibration service SHOULD be called when no overrides provided
         $calibrationService->expects(self::once())
@@ -55,6 +59,8 @@ final class RouteBuilderAutoCalibrationTest extends TestCase
             $optimizationLogger,
             $snapshotManager,
             $calibrationService,
+            $addressRiskService,
+            $coordinateCorrectionService,
         );
 
         $shipment = $this->createShipment('123 Main St', null);
@@ -103,6 +109,8 @@ final class RouteBuilderAutoCalibrationTest extends TestCase
             ->willReturn(new OptimizationResult(routes: [], unassignedJobIds: [0]));
 
         $calibrationService = $this->createMock(ServiceTimeCalibrationService::class);
+        $addressRiskService = $this->createMock(AddressRiskService::class);
+        $coordinateCorrectionService = $this->createMock(CoordinateCorrectionService::class);
 
         // Calibration service should NOT be called when explicit overrides provided
         $calibrationService->expects(self::never())
@@ -116,6 +124,8 @@ final class RouteBuilderAutoCalibrationTest extends TestCase
             $optimizationLogger,
             $snapshotManager,
             $calibrationService,
+            $addressRiskService,
+            $coordinateCorrectionService,
         );
 
         $shipment = $this->createShipment('123 Main St', null);

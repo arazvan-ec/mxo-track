@@ -29,6 +29,8 @@ use App\Service\OptimizationLogger;
 use App\Service\RouteBuilder;
 use App\Service\RouteCapacityValidator;
 use App\Service\RouteSnapshotManager;
+use App\Service\AddressRiskService;
+use App\Service\CoordinateCorrectionService;
 use App\Service\ServiceTimeCalibrationService;
 use Doctrine\ORM\AbstractQuery;
 use Doctrine\ORM\EntityManagerInterface;
@@ -86,6 +88,8 @@ final class RoutePlanningServiceOptimizerSelectionTest extends TestCase
         $snapshotManager = $this->createMock(RouteSnapshotManager::class);
         $calibrationService = $this->createMock(ServiceTimeCalibrationService::class);
         $calibrationService->method('getCalibratedServiceTimesWithFeedback')->willReturn([]);
+        $addressRiskService = $this->createMock(AddressRiskService::class);
+        $coordinateCorrectionService = $this->createMock(CoordinateCorrectionService::class);
 
         $builder = new RouteBuilder(
             $routeRepo,
@@ -95,6 +99,8 @@ final class RoutePlanningServiceOptimizerSelectionTest extends TestCase
             $logger,
             $snapshotManager,
             $calibrationService,
+            $addressRiskService,
+            $coordinateCorrectionService,
         );
 
         $customer = new Customer('Test');
@@ -138,6 +144,8 @@ final class RoutePlanningServiceOptimizerSelectionTest extends TestCase
         $snapshotManager = $this->createMock(RouteSnapshotManager::class);
         $calibrationService = $this->createMock(ServiceTimeCalibrationService::class);
         $calibrationService->method('getCalibratedServiceTimesWithFeedback')->willReturn([]);
+        $addressRiskService = $this->createMock(AddressRiskService::class);
+        $coordinateCorrectionService = $this->createMock(CoordinateCorrectionService::class);
 
         $builder = new RouteBuilder(
             $routeRepo,
@@ -147,6 +155,8 @@ final class RoutePlanningServiceOptimizerSelectionTest extends TestCase
             $logger,
             $snapshotManager,
             $calibrationService,
+            $addressRiskService,
+            $coordinateCorrectionService,
         );
 
         $customer = new Customer('Test');

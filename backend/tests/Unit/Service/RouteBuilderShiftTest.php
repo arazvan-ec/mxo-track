@@ -19,6 +19,8 @@ use App\Service\OptimizationLogger;
 use App\Service\RouteBuilder;
 use App\Service\RouteCapacityValidator;
 use App\Service\RouteSnapshotManager;
+use App\Service\AddressRiskService;
+use App\Service\CoordinateCorrectionService;
 use App\Service\ServiceTimeCalibrationService;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
@@ -37,6 +39,8 @@ final class RouteBuilderShiftTest extends TestCase
         $snapshotManager = $this->createMock(RouteSnapshotManager::class);
         $calibrationService = $this->createMock(ServiceTimeCalibrationService::class);
         $calibrationService->method('getCalibratedServiceTimesWithFeedback')->willReturn([]);
+        $addressRiskService = $this->createMock(AddressRiskService::class);
+        $coordinateCorrectionService = $this->createMock(CoordinateCorrectionService::class);
 
         // Capture vehicles passed to optimizer
         $capturedVehicles = null;
@@ -56,6 +60,8 @@ final class RouteBuilderShiftTest extends TestCase
             $optimizationLogger,
             $snapshotManager,
             $calibrationService,
+            $addressRiskService,
+            $coordinateCorrectionService,
         );
 
         $shipment = $this->createShipment();
@@ -101,6 +107,8 @@ final class RouteBuilderShiftTest extends TestCase
         $snapshotManager = $this->createMock(RouteSnapshotManager::class);
         $calibrationService = $this->createMock(ServiceTimeCalibrationService::class);
         $calibrationService->method('getCalibratedServiceTimesWithFeedback')->willReturn([]);
+        $addressRiskService = $this->createMock(AddressRiskService::class);
+        $coordinateCorrectionService = $this->createMock(CoordinateCorrectionService::class);
 
         $capturedVehicles = null;
         $optimizer = $this->createMock(RouteOptimizerInterface::class);
@@ -119,6 +127,8 @@ final class RouteBuilderShiftTest extends TestCase
             $optimizationLogger,
             $snapshotManager,
             $calibrationService,
+            $addressRiskService,
+            $coordinateCorrectionService,
         );
 
         $shipment = $this->createShipment();
