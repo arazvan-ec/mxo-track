@@ -377,3 +377,22 @@ export interface RouteFilterOptions {
   drivers: Array<{ id: number; name: string; email: string }>;
   customers: Array<{ id: number; name: string }>;
 }
+
+export interface OptimizerComparisonResult {
+  optimizer_name: string;
+  distance_km: number;
+  duration_min: number;
+  route_count: number;
+  unassigned_count: number;
+}
+
+/* ── Reoptimization Policy ───────────────────────────────────────── */
+
+export interface ReoptimizationPolicy {
+  public_id: string;
+  triggers: string[];
+  delay_threshold_minutes: number;
+  cooldown_minutes: number;
+  consecutive_exception_threshold: number;
+  enabled: boolean;
+}

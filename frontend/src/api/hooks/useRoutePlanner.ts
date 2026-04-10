@@ -7,6 +7,7 @@ import type {
   PlannerPreviewResponse,
   DriverSuggestion,
   PlannerConfirmResponse,
+  OptimizerComparisonResult,
 } from '../types';
 
 export function usePlannerShipments(customerId?: string) {
@@ -107,6 +108,13 @@ export function useSuggestDrivers(routeId: string | null) {
         `/admin/route-planner/suggest-drivers?route_id=${encodeURIComponent(routeId!)}`,
       ),
     enabled: !!routeId,
+  });
+}
+
+export function useCompareOptimizers() {
+  return useMutation({
+    mutationFn: (data: { shipment_ids: string[]; vehicle_ids: string[]; origin_public_id?: string; max_stops: number }) =>
+      api.post<OptimizerComparisonResult[]>('/admin/route-planner/compare', data),
   });
 }
 
