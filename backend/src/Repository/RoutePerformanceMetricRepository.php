@@ -135,21 +135,30 @@ final class RoutePerformanceMetricRepository extends ServiceEntityRepository
     /**
      * Get metrics grouped by optimizer for comparison.
      *
-     * @return list<array{optimizer_used: string, avg_delivery_rate: ?string, avg_km_saved: ?string, total_routes: int}>
+     * @return list<array{optimizer_used: string, avg_distance_km: ?string, avg_duration_min: ?string, route_count: int, avg_success_rate: ?string}>
      */
     public function getMetricsByOptimizer(\DateTimeImmutable $since): array
     {
-        return $this->createQueryBuilder('m')
+        $rows = $this->createQueryBuilder('m')
             ->select(
                 'm.optimizerUsed as optimizer_used',
-                'AVG(m.deliverySuccessRate) as avg_delivery_rate',
-                'AVG(m.kmSaved) as avg_km_saved',
-                'COUNT(m.id) as total_routes',
+                'AVG(m.plannedDistanceKm) as avg_distance_km',
+                'AVG(m.plannedDurationMinutes) as avg_duration_min',
+                'COUNT(m.id) as route_count',
+                'AVG(m.deliverySuccessRate) as avg_success_rate',
             )
             ->where('m.createdAt >= :since')
             ->setParameter('since', $since)
             ->groupBy('m.optimizerUsed')
             ->getQuery()
             ->getResult();
+
+        return array_map(static fn (array $row): array => [
+            'optimizer_used' => $row['optimizer_used'],
+            'avg_distance_km' => $row['avg_distance_km'],
+            'avg_duration_min' => $row['avg_duration_min'] !== null ? (string) $row['avg_duration_min'] : null,
+            'route_count' => (int) $row['route_count'],
+            'avg_success_rate' => $row['avg_success_rate'],
+        ], $rows);
     }
 }
