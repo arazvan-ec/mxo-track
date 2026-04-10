@@ -10,9 +10,7 @@ use App\Domain\Shipment\Model\Shipment;
 use App\Entity\Customer;
 use App\Entity\Vehicle;
 use App\Enum\ShipmentPriority;
-use App\RouteOptimization\OptimizableJob;
 use App\RouteOptimization\OptimizationResult;
-use App\RouteOptimization\OptimizedRoute;
 use App\RouteOptimization\RouteOptimizerInterface;
 use App\Service\OptimizationLogger;
 use App\Service\RouteBuilder;
@@ -24,10 +22,10 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 #[CoversClass(RouteBuilder::class)]
-final class RouteBuilderServiceTimeOverrideTest extends TestCase
+final class RouteBuilderAutoCalibrationTest extends TestCase
 {
     #[Test]
-    public function service_time_overrides_are_applied_to_optimizer_jobs(): void
+    public function buildRoutes_without_serviceTimeOverrides_calls_calibration_service(): void
     {
         $routeRepo = $this->createMock(RouteRepositoryInterface::class);
         $stopRepo = $this->createMock(RouteStopRepositoryInterface::class);
@@ -36,20 +34,18 @@ final class RouteBuilderServiceTimeOverrideTest extends TestCase
         $snapshotManager = $this->createMock(RouteSnapshotManager::class);
 
         $optimizer = $this->createMock(RouteOptimizerInterface::class);
-
-        // Capture the jobs passed to the optimizer to verify service times
-        $capturedJobs = null;
-        $optimizer->expects(self::once())
-            ->method('optimize')
-            ->willReturnCallback(function ($vehicles, $jobs) use (&$capturedJobs) {
-                $capturedJobs = $jobs;
-                return new OptimizationResult(routes: [], unassignedJobIds: array_map(fn($j) => $j->id, $jobs));
-            });
-
-        $routeRepo->method('save');
-        $routeRepo->method('flush');
+        $optimizer->method('optimize')
+            ->willReturn(new OptimizationResult(routes: [], unassignedJobIds: [0]));
 
         $calibrationService = $this->createMock(ServiceTimeCalibrationService::class);
+
+        // Calibration service SHOULD be called when no overrides provided
+        $calibrationService->expects(self::once())
+            ->method('getCalibratedServiceTimesWithFeedback')
+            ->with(42, 50, 2)
+            ->willReturn([
+                ['address' => '123 Main St', 'avgSeconds' => 420, 'sampleCount' => 5, 'minSeconds' => 300, 'maxSeconds' => 600],
+            ]);
 
         $builder = new RouteBuilder(
             $routeRepo,
@@ -61,8 +57,68 @@ final class RouteBuilderServiceTimeOverrideTest extends TestCase
             $calibrationService,
         );
 
-        $shipment1 = $this->createShipment('123 Main St', 300);
-        $shipment2 = $this->createShipment('456 Oak Ave', null);
+        $shipment = $this->createShipment('123 Main St', null);
+
+        $vehicle = $this->createMock(Vehicle::class);
+        $vehicle->method('getMaxWeightKg')->willReturn(1000.0);
+        $vehicle->method('getMaxVolumeM3')->willReturn(10.0);
+        $vehicle->method('getMaxParcels')->willReturn(50);
+        $vehicle->method('getSkills')->willReturn([]);
+
+        $customer = $this->createMock(Customer::class);
+        $customer->method('getId')->willReturn('42');
+
+        // Capture jobs to verify calibrated service time was applied
+        $capturedJobs = null;
+        $optimizer->expects(self::once())
+            ->method('optimize')
+            ->willReturnCallback(function ($vehicles, $jobs) use (&$capturedJobs) {
+                $capturedJobs = $jobs;
+                return new OptimizationResult(routes: [], unassignedJobIds: [0]);
+            });
+
+        $builder->buildRoutes(
+            [$shipment],
+            [$vehicle],
+            $customer,
+        );
+
+        self::assertNotNull($capturedJobs);
+        self::assertCount(1, $capturedJobs);
+        // Calibration returned 420s for '123 Main St' — should be used
+        self::assertSame(420, $capturedJobs[0]->serviceTimeSeconds);
+    }
+
+    #[Test]
+    public function buildRoutes_with_serviceTimeOverrides_does_not_call_calibration(): void
+    {
+        $routeRepo = $this->createMock(RouteRepositoryInterface::class);
+        $stopRepo = $this->createMock(RouteStopRepositoryInterface::class);
+        $capacityValidator = $this->createMock(RouteCapacityValidator::class);
+        $optimizationLogger = $this->createMock(OptimizationLogger::class);
+        $snapshotManager = $this->createMock(RouteSnapshotManager::class);
+
+        $optimizer = $this->createMock(RouteOptimizerInterface::class);
+        $optimizer->method('optimize')
+            ->willReturn(new OptimizationResult(routes: [], unassignedJobIds: [0]));
+
+        $calibrationService = $this->createMock(ServiceTimeCalibrationService::class);
+
+        // Calibration service should NOT be called when explicit overrides provided
+        $calibrationService->expects(self::never())
+            ->method('getCalibratedServiceTimesWithFeedback');
+
+        $builder = new RouteBuilder(
+            $routeRepo,
+            $stopRepo,
+            $optimizer,
+            $capacityValidator,
+            $optimizationLogger,
+            $snapshotManager,
+            $calibrationService,
+        );
+
+        $shipment = $this->createShipment('123 Main St', null);
 
         $vehicle = $this->createMock(Vehicle::class);
         $vehicle->method('getMaxWeightKg')->willReturn(1000.0);
@@ -73,21 +129,11 @@ final class RouteBuilderServiceTimeOverrideTest extends TestCase
         $customer = $this->createMock(Customer::class);
 
         $builder->buildRoutes(
-            [$shipment1, $shipment2],
+            [$shipment],
             [$vehicle],
             $customer,
-            maxStopsPerRoute: 30,
-            serviceTimeOverrides: ['456 Oak Ave' => 600],
+            serviceTimeOverrides: ['123 Main St' => 999],
         );
-
-        self::assertNotNull($capturedJobs);
-        self::assertCount(2, $capturedJobs);
-
-        // Shipment 1: has its own service time (300), no override for its address
-        self::assertSame(300, $capturedJobs[0]->serviceTimeSeconds);
-
-        // Shipment 2: no service time (null → would default to 300), but override sets 600
-        self::assertSame(600, $capturedJobs[1]->serviceTimeSeconds);
     }
 
     private function createShipment(string $address, ?int $serviceTimeSeconds): Shipment
