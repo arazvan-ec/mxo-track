@@ -462,6 +462,10 @@ sequentially.** The mechanism:
 3. **Dependency test before serializing:** For each pair of tasks, ask: "Does task B
    import, read, or reference a file/type/artifact that task A creates?" If yes → B
    depends on A, serialize them. If no → they are independent, run in parallel.
+   **File conflict rule:** Two tasks that edit the same file cannot run in parallel —
+   the second agent gets "file modified since read" and fails. During planning, verify
+   that parallel tasks touch **disjoint file sets**. If they share a file, put them in
+   sequential waves.
 
 **The failure mode this prevents:** The user says "do A and B in parallel" and the model
 does A completely, then B completely — burning twice the wall-clock time while claiming
