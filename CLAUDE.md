@@ -459,9 +459,9 @@ sequentially.** The mechanism:
    task immediately — don't wait.
 2. **Within a single task's plan, waves are parallel.** Each wave's independent tasks
    launch as concurrent agents. Don't serialize tasks within a wave.
-3. **Self-check before executing:** "Am I doing this sequentially because there's a real
-   dependency, or because sequential is the path of least resistance?" If the latter,
-   restructure into parallel agents.
+3. **Dependency test before serializing:** For each pair of tasks, ask: "Does task B
+   import, read, or reference a file/type/artifact that task A creates?" If yes → B
+   depends on A, serialize them. If no → they are independent, run in parallel.
 
 **The failure mode this prevents:** The user says "do A and B in parallel" and the model
 does A completely, then B completely — burning twice the wall-clock time while claiming
