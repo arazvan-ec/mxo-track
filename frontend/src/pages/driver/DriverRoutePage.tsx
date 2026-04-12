@@ -26,6 +26,7 @@ import type { StopData } from '@/api/types';
 export function DriverRoutePage() {
   const { publicId } = useParams<{ publicId: string }>();
   const mapRef = useRef<MapCanvasHandle>(null);
+  const hasFittedRef = useRef(false);
   const [sheetState, setSheetState] = useState<BottomSheetState>('collapsed');
   const { data: me } = useMe();
   const { selection, selectStop, clear } = useMapSelection();
@@ -107,6 +108,14 @@ export function DriverRoutePage() {
       recipientName: s.recipientName,
       shipmentPublicId: s.shipmentPublicId,
     }));
+
+  // Fit map to route bounds on first load
+  useEffect(() => {
+    if (markerStops.length > 0 && !hasFittedRef.current) {
+      hasFittedRef.current = true;
+      setTimeout(() => mapRef.current?.fitBounds(markerStops), 200);
+    }
+  }, [markerStops.length]);
 
   // Vehicle marker data
   const vehicleMarkers =

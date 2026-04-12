@@ -13,6 +13,7 @@ use App\Entity\User;
 use App\Entity\Vehicle;
 use App\Service\DemoScenarioBuilder;
 use App\Service\DemoScenarioResult;
+use App\Application\Route\RoutePlanningService;
 use App\Service\ShipmentCsvImporter;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -25,12 +26,14 @@ final class DemoSetupCommandTest extends TestCase
     private DemoScenarioBuilder&MockObject $builder;
     private EntityManagerInterface&MockObject $em;
     private ShipmentCsvImporter&MockObject $csvImporter;
+    private RoutePlanningService&MockObject $routePlanning;
 
     protected function setUp(): void
     {
         $this->builder = $this->createMock(DemoScenarioBuilder::class);
         $this->em = $this->createMock(EntityManagerInterface::class);
         $this->csvImporter = $this->createMock(ShipmentCsvImporter::class);
+        $this->routePlanning = $this->createMock(RoutePlanningService::class);
     }
 
     public function testCommandPersistsAllEntities(): void
@@ -57,7 +60,7 @@ final class DemoSetupCommandTest extends TestCase
         $this->em->expects(self::once())
             ->method('flush');
 
-        $command = new DemoSetupCommand($this->builder, $this->em, $this->csvImporter);
+        $command = new DemoSetupCommand($this->builder, $this->em, $this->csvImporter, $this->routePlanning);
 
         $app = new Application();
         $app->add($command);
@@ -86,7 +89,7 @@ final class DemoSetupCommandTest extends TestCase
         $this->em->method('persist');
         $this->em->method('flush');
 
-        $command = new DemoSetupCommand($this->builder, $this->em, $this->csvImporter);
+        $command = new DemoSetupCommand($this->builder, $this->em, $this->csvImporter, $this->routePlanning);
         $tester = new CommandTester($command);
         $tester->execute(['--skip-routes' => true]);
 
@@ -112,7 +115,7 @@ final class DemoSetupCommandTest extends TestCase
         $this->em->method('persist');
         $this->em->method('flush');
 
-        $command = new DemoSetupCommand($this->builder, $this->em, $this->csvImporter);
+        $command = new DemoSetupCommand($this->builder, $this->em, $this->csvImporter, $this->routePlanning);
         $tester = new CommandTester($command);
         $tester->execute(['--shipments' => '10', '--skip-routes' => true]);
 
@@ -144,7 +147,7 @@ final class DemoSetupCommandTest extends TestCase
                 return ['created' => 55, 'skipped' => 0, 'errors' => 0, 'quality_report' => null];
             });
 
-        $command = new DemoSetupCommand($this->builder, $this->em, $this->csvImporter);
+        $command = new DemoSetupCommand($this->builder, $this->em, $this->csvImporter, $this->routePlanning);
         $tester = new CommandTester($command);
         $tester->execute(['--import-csv' => true, '--skip-routes' => true]);
 

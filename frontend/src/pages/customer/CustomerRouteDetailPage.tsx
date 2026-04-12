@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback, useMemo } from 'react';
+import { useRef, useState, useCallback, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router';
 import { useRouteMapData, getRouteFromMapData } from '@/api/hooks/useRouteMapData';
 import { useMe } from '@/api/hooks/useMe';
@@ -24,6 +24,7 @@ import type { StopData } from '@/api/types';
 export function CustomerRouteDetailPage() {
   const { publicId } = useParams<{ publicId: string }>();
   const mapRef = useRef<MapCanvasHandle>(null);
+  const hasFittedRef = useRef(false);
   const [sheetState, setSheetState] = useState<BottomSheetState>('collapsed');
   const { data: me } = useMe();
   const { selection, selectStop, clear } = useMapSelection();
@@ -76,6 +77,14 @@ export function CustomerRouteDetailPage() {
       recipientName: s.recipientName,
       shipmentPublicId: s.shipmentPublicId,
     }));
+
+  // Fit map to route bounds on first load
+  useEffect(() => {
+    if (markerStops.length > 0 && !hasFittedRef.current) {
+      hasFittedRef.current = true;
+      setTimeout(() => mapRef.current?.fitBounds(markerStops), 200);
+    }
+  }, [markerStops.length]);
 
   // Vehicle marker data
   const vehicleMarkers =

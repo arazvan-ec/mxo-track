@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Tests\Unit;
 
 use App\Domain\Route\Model\Route;
+use App\Entity\RoutePerformanceMetric;
 use App\Message\PostRouteAnalysisMessage;
 use App\MessageHandler\PostRouteAnalysisHandler;
 use App\Service\PostRouteAnalyzer;
+use App\Service\RoutePerformanceMetricFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\EntityRepository;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -21,15 +23,18 @@ use Symfony\Component\Uid\Ulid;
 final class PostRouteAnalysisHandlerTest extends TestCase
 {
     private PostRouteAnalyzer&MockObject $analyzer;
+    private RoutePerformanceMetricFactory&MockObject $metricFactory;
     private EntityManagerInterface&MockObject $em;
     private PostRouteAnalysisHandler $handler;
 
     protected function setUp(): void
     {
         $this->analyzer = $this->createMock(PostRouteAnalyzer::class);
+        $this->metricFactory = $this->createMock(RoutePerformanceMetricFactory::class);
         $this->em = $this->createMock(EntityManagerInterface::class);
         $this->handler = new PostRouteAnalysisHandler(
             $this->analyzer,
+            $this->metricFactory,
             $this->em,
             new NullLogger(),
         );
@@ -47,9 +52,16 @@ final class PostRouteAnalysisHandlerTest extends TestCase
             ->with(['publicId' => Ulid::fromString((string) $ulid)])
             ->willReturn($route);
 
+        $metricRepo = $this->createMock(EntityRepository::class);
+        $metricRepo->method('findOneBy')->willReturn(null);
+
         $this->em->method('getRepository')
-            ->with(Route::class)
-            ->willReturn($repo);
+            ->willReturnMap([
+                [Route::class, $repo],
+                [RoutePerformanceMetric::class, $metricRepo],
+            ]);
+
+        $this->metricFactory->method('createFromRoute')->willReturn(null);
 
         $analysis = [
             'summary' => 'Ruta completada correctamente.',

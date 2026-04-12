@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router';
 import { useRouteMapData } from '@/api/hooks/useRouteMapData';
 import { useVehicleTrail } from '@/api/hooks/useVehicleTrail';
@@ -24,6 +24,7 @@ export function RouteDetailPage() {
   const { layout } = usePageLayout('route_detail');
   const { data: me } = useMe();
   const mapRef = useRef<MapCanvasHandle>(null);
+  const hasFittedRef = useRef(false);
   const [sheetState, setSheetState] = useState<BottomSheetState>('collapsed');
   const { selection, selectStop, clear } = useMapSelection();
 
@@ -119,6 +120,14 @@ export function RouteDetailPage() {
       recipientName: s.recipientName,
       shipmentPublicId: s.shipmentPublicId,
     }));
+
+  // Fit map to route bounds on first load
+  useEffect(() => {
+    if (mapStops.length > 0 && !hasFittedRef.current) {
+      hasFittedRef.current = true;
+      setTimeout(() => mapRef.current?.fitBounds(mapStops), 200);
+    }
+  }, [mapStops.length]);
 
   // Build vehicle markers
   const vehicleMarkers =

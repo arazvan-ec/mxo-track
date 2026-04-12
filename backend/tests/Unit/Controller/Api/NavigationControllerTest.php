@@ -81,20 +81,20 @@ final class NavigationControllerTest extends TestCase
             }
         }
 
-        // Routes from spec's Route Registry Inventory
+        // Routes from NavigationController — must match actual menu hrefs
         $expectedHrefs = [
             '/app/admin/dashboard',
             '/app/admin/operator-dashboard',
             '/notifications',
             '/search',
-            '/admin/vehicles',
-            '/admin/drivers',
-            '/admin/routes',
-            '/admin/shipments',
+            '/app/admin/vehicles',
+            '/app/admin/drivers',
+            '/app/admin/routes',
+            '/app/admin/shipments',
             '/admin/shipments/import',
             '/app/admin/route-planner',
             '/admin/route-templates',
-            '/admin/customers',
+            '/app/admin/customers',
             '/admin/integrations',
             '/admin/users',
             '/admin/reports',
@@ -103,7 +103,12 @@ final class NavigationControllerTest extends TestCase
             '/app/admin/exception-map',
             '/admin/billing',
             '/admin/optimization-logs',
+            '/app/admin/reoptimization-policies',
+            '/app/admin/optimization-dashboard',
             '/admin/ai-assistant',
+            '/admin/api-keys',
+            '/app/admin/widgets',
+            '/app/admin/page-layouts',
             '/app/admin/fleet-map',
             '/admin/test-routing',
             '/admin/debug/routing',
