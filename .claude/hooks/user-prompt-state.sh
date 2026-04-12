@@ -106,6 +106,11 @@ if [ "${#WC_DESC_SHORT}" -gt 40 ]; then
   WC_DESC_SHORT="${WC_DESC_SHORT:0:37}..."
 fi
 
+# Warn if flow_type is set but interaction_classification is missing
+if [ "$FLOW_TYPE" != "null" ] && [ -n "$FLOW_TYPE" ] && [ -z "$INTERACTION_CLASS" ]; then
+  echo "  ⚠ Falta interaction_classification — setear antes de continuar"
+fi
+
 # No flow declared
 if [ "$FLOW_TYPE" = "null" ] || [ -z "$FLOW_TYPE" ]; then
   echo "📍 Sin clasificar — clasificar antes de proceder"

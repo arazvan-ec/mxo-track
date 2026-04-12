@@ -49,6 +49,13 @@
 - **Verificación:** 2 tests — auto-init cuando vacío ✅, no-overwrite cuando ya seteado ✅
 - **Cambio:** +7 líneas en `user-prompt-state.sh`
 
+## Follow-up 2: Enforcement de interaction_classification
+
+- **Problema resuelto:** `interaction_classification` no tenía enforcement — si Claude lo olvidaba, toda la cadena auto-init → work_context → status line fallaba silenciosamente.
+- **Solución:** Warning `⚠ Falta interaction_classification` en el status line cuando `flow_type` está seteado pero `interaction_classification` está vacío. Visible en cada prompt.
+- **Verificación:** 2 tests — warning cuando falta ✅, sin warning cuando existe ✅
+- **Cambio:** +4 líneas en `user-prompt-state.sh`
+
 ## Lessons
 
 - El campo `work_context` es puramente informativo (no gate-blocking). La auto-inicialización desde `interaction_classification` elimina la dependencia de la memoria del modelo.
