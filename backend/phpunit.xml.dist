@@ -16,6 +16,12 @@
         <server name="MERCURE_SUBSCRIBER_TOKEN_TTL" value="3600" />
     </php>
 
+    <groups>
+        <exclude>
+            <group>requires-db</group>
+        </exclude>
+    </groups>
+
     <testsuites>
         <testsuite name="Unit">
             <directory>tests/Unit</directory>

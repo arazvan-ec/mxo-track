@@ -13,8 +13,8 @@ final class GitLogReaderTest extends TestCase
 
     protected function setUp(): void
     {
-        // Use the actual project directory (repo exists during tests)
-        $this->reader = new GitLogReader(dirname(__DIR__, 3));
+        // Use the monorepo root (where .git lives), one level above backend/
+        $this->reader = new GitLogReader(dirname(__DIR__, 4));
     }
 
     /**
