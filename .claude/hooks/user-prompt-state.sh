@@ -405,6 +405,13 @@ if [ "$FLOW_TYPE" = "full" ]; then
     finalize) [ -n "$BRANCH_STRATEGY" ] && NEXT="ejecutar $BRANCH_STRATEGY" || NEXT="declarar strategy" ;;
   esac
   echo "  Siguiente: $NEXT"
+
+  # Narration guard during active work phases
+  case "$CURRENT_PHASE" in
+    implementation|verification|capture|retrospective|finalize)
+      echo "  ⛔ No narrar proceso entre tools. Solo texto si: resultado concreto, cambio de fase, o decisión del usuario."
+      ;;
+  esac
   exit 0
 fi
 

@@ -493,6 +493,14 @@ if [ "$FLOW_TYPE" = "full" ]; then
   LINE5=""
   [ -n "$TOOL_SUFFIX" ] && LINE5=" ${TOOL_SUFFIX}"
 
+  # ── Narration guard: reminder during active work phases ──
+  NARRATION_GUARD=""
+  case "$CURRENT_PHASE" in
+    implementation|verification|capture|retrospective|finalize)
+      NARRATION_GUARD="  ⛔ No narrar proceso entre tools. Solo texto si: resultado concreto, cambio de fase, o decisión del usuario."
+      ;;
+  esac
+
   # Assemble output
   {
     echo "$LINE1"
@@ -500,6 +508,7 @@ if [ "$FLOW_TYPE" = "full" ]; then
     [ -n "$LINE3" ] && echo "$LINE3"
     echo "$LINE4"
     [ -n "$LINE5" ] && echo "$LINE5"
+    [ -n "$NARRATION_GUARD" ] && echo "$NARRATION_GUARD"
   } | emit
   exit 0
 fi
