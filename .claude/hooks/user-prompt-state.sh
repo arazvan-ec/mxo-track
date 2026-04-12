@@ -84,6 +84,21 @@ fi
 INTERACTION_ID=$(echo "$STATE" | jq -r '.interaction_id // 0')
 DEV_ACTIVE=$(echo "$STATE" | jq -r '.deviation.active // false')
 
+# Work context — hierarchical progress tracking
+WC_DESCRIPTION=$(echo "$STATE" | jq -r '.evidence.work_context.description // ""')
+WC_PROB_TOTAL=$(echo "$STATE" | jq -r '.evidence.work_context.problems.total // 0')
+WC_PROB_CURRENT=$(echo "$STATE" | jq -r '.evidence.work_context.problems.current // 0')
+WC_PROB_LABEL=$(echo "$STATE" | jq -r 'if .evidence.work_context.problems.current > 0 then .evidence.work_context.problems.labels[.evidence.work_context.problems.current - 1] // "" else "" end')
+WC_WAVE_TOTAL=$(echo "$STATE" | jq -r '.evidence.work_context.wave.total // 0')
+WC_WAVE_CURRENT=$(echo "$STATE" | jq -r '.evidence.work_context.wave.current // 0')
+WC_WAVE_LABEL=$(echo "$STATE" | jq -r '.evidence.work_context.wave.label // ""')
+
+# Helper: truncate description to ~40 chars
+WC_DESC_SHORT="$WC_DESCRIPTION"
+if [ "${#WC_DESC_SHORT}" -gt 40 ]; then
+  WC_DESC_SHORT="${WC_DESC_SHORT:0:37}..."
+fi
+
 # No flow declared
 if [ "$FLOW_TYPE" = "null" ] || [ -z "$FLOW_TYPE" ]; then
   echo "📍 Sin clasificar — clasificar antes de proceder"
@@ -120,7 +135,8 @@ if [ "$FLOW_TYPE" = "full" ] && [ "$CURRENT_PHASE" = "finalize" ]; then
       .evidence.branch_strategy = null |
       .evidence.root_cause_identified = false |
       .evidence.pattern_wide_search_done = false |
-      .evidence.task_progress = {"current": 0, "total": 0, "label": null, "completed_labels": []}
+      .evidence.task_progress = {"current": 0, "total": 0, "label": null, "completed_labels": []} |
+      .evidence.work_context = {"description": null, "problems": {"total": 0, "current": 0, "labels": []}, "wave": {"total": 0, "current": 0, "label": null}}
     ' "$STATE_FILE" > /tmp/ss_reset.json && mv /tmp/ss_reset.json "$STATE_FILE"
     echo "📍 Sin clasificar — clasificar antes de proceder"
     exit 0
@@ -130,17 +146,29 @@ fi
 # Simple flows — one line each
 case "$FLOW_TYPE" in
   micro)
-    echo "📍 micro | responder"
+    if [ -n "$WC_DESC_SHORT" ]; then
+      echo "📍 micro | $WC_DESC_SHORT"
+    else
+      echo "📍 micro | responder"
+    fi
     echo "Header: 💬 [respuesta concisa]"
     exit 0
     ;;
   light)
-    echo "📍 light | documentar"
+    if [ -n "$WC_DESC_SHORT" ]; then
+      echo "📍 light | $WC_DESC_SHORT"
+    else
+      echo "📍 light | documentar"
+    fi
     echo "Header: 📝 Light — [completado]"
     exit 0
     ;;
   explore)
-    echo "📍 explore | investigar"
+    if [ -n "$WC_DESC_SHORT" ]; then
+      echo "📍 explore | $WC_DESC_SHORT"
+    else
+      echo "📍 explore | investigar"
+    fi
     echo "Header: 🔍 Explore — [encontrado]"
     exit 0
     ;;
@@ -157,7 +185,15 @@ case "$FLOW_TYPE" in
     fi
     DEBUG_PHASES=("consult" "root_cause" "pattern_search" "fix")
     DISPLAY_PHASE="$(echo "${DEBUG_PHASE:0:1}" | tr '[:lower:]' '[:upper:]')${DEBUG_PHASE:1}"
-    echo "📍 Debug: ${DISPLAY_PHASE} (${DEBUG_INDEX}/4)"
+    # Build problem suffix: " — Problema 1/2: label" (only if multiple problems)
+    PROB_SUFFIX=""
+    if [ "$WC_PROB_TOTAL" -gt 1 ] 2>/dev/null && [ "$WC_PROB_CURRENT" -gt 0 ] 2>/dev/null; then
+      PROB_SUFFIX=" — Problema ${WC_PROB_CURRENT}/${WC_PROB_TOTAL}"
+      [ -n "$WC_PROB_LABEL" ] && PROB_SUFFIX="${PROB_SUFFIX}: ${WC_PROB_LABEL}"
+    elif [ -n "$WC_DESC_SHORT" ]; then
+      PROB_SUFFIX=" — ${WC_DESC_SHORT}"
+    fi
+    echo "📍 Debug: ${DISPLAY_PHASE} (${DEBUG_INDEX}/4)${PROB_SUFFIX}"
     # Timeline
     TIMELINE=""
     for i in "${!DEBUG_PHASES[@]}"; do
@@ -248,8 +284,16 @@ if [ "$FLOW_TYPE" = "full" ]; then
   # Capitalize current phase for display
   DISPLAY_PHASE="$(echo "${CURRENT_PHASE:0:1}" | tr '[:lower:]' '[:upper:]')${CURRENT_PHASE:1}"
 
-  # ── Line 1: Current phase prominently ──
-  echo "📍 ${DISPLAY_PHASE} (${CURRENT_INDEX}/${TOTAL})${DEV_SUFFIX}"
+  # ── Line 1: Current phase + work context ──
+  LINE1="📍 ${DISPLAY_PHASE} (${CURRENT_INDEX}/${TOTAL})${DEV_SUFFIX}"
+  # During implementation: show wave if available
+  if [ "$CURRENT_PHASE" = "implementation" ] && [ "$WC_WAVE_TOTAL" -gt 0 ] 2>/dev/null && [ "$WC_WAVE_CURRENT" -gt 0 ] 2>/dev/null; then
+    LINE1="${LINE1} — Wave ${WC_WAVE_CURRENT}/${WC_WAVE_TOTAL}"
+    [ -n "$WC_WAVE_LABEL" ] && LINE1="${LINE1}: ${WC_WAVE_LABEL}"
+  elif [ -n "$WC_DESC_SHORT" ]; then
+    LINE1="${LINE1} — ${WC_DESC_SHORT}"
+  fi
+  echo "$LINE1"
 
   # ── Line 2: Timeline — completed → current → pending ──
   TIMELINE=""
