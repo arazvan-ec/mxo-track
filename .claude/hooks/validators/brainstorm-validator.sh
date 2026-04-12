@@ -62,6 +62,22 @@ else
   if ! grep -qE '## Omission Decisions' "$SPEC_FULL" 2>/dev/null; then
     ERRORS="${ERRORS}- ANTI-OMISION: Falta seccion '## Omission Decisions' (si no hay omisiones, declarar 'No omissions — all inventory items addressed')\n"
   fi
+
+  # TDD task isolation: plan must not have standalone "add tests" tasks
+  PLAN_PATH_VAL=$(jq -r '.evidence.plan_path // ""' "$STATE_FILE" 2>/dev/null || echo "")
+  PLAN_FULL=""
+  if [ -n "$PLAN_PATH_VAL" ]; then
+    if [ -f "$REPO/$PLAN_PATH_VAL" ]; then
+      PLAN_FULL="$REPO/$PLAN_PATH_VAL"
+    elif [ -f "$PLAN_PATH_VAL" ]; then
+      PLAN_FULL="$PLAN_PATH_VAL"
+    fi
+  fi
+  if [ -n "$PLAN_FULL" ] && [ -f "$PLAN_FULL" ]; then
+    if grep -iEn '^[-*]\s.*(add|write|create|agregar|escribir)\s+(unit\s+)?tests?\b' "$PLAN_FULL" 2>/dev/null | grep -ivE '(TDD|test.*implement|implement.*test|red.green|failing test)' > /dev/null 2>&1; then
+      WARNINGS="${WARNINGS}- TDD: El plan tiene tareas standalone de tests. Los tests deben ser parte integral de cada tarea (TDD: test first → implement → green).\n"
+    fi
+  fi
 fi
 
 if [ -n "$ERRORS" ]; then

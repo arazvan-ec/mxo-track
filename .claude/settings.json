@@ -48,6 +48,17 @@
             "statusMessage": "Push gate..."
           }
         ]
+      },
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/user/mxo-track/.claude/hooks/pre-agent-check.sh",
+            "timeout": 5,
+            "statusMessage": "Agent pre-check..."
+          }
+        ]
       }
     ],
     "PostToolUse": [
@@ -78,7 +89,9 @@
   "mcpServers": {
     "codebase-search": {
       "command": "node",
-      "args": ["tools/codebase-search/dist/index.js"],
+      "args": [
+        "tools/codebase-search/dist/index.js"
+      ],
       "cwd": "/home/user/mxo-track",
       "env": {
         "PROJECT_ROOT": "/home/user/mxo-track"

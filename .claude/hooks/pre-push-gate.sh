@@ -254,4 +254,10 @@ if [ -n "$ERRORS" ]; then
   gate "❌ PUSH BLOQUEADO [$FLOW_TYPE] | $CHECKLIST | Accion: completa los items marcados con ❌"
 fi
 
+# ── SOFT: Manifest freshness check ──
+MANIFEST_UPDATED=$(git diff origin/main..HEAD --name-only 2>/dev/null | grep -c 'codebase-manifest.md' || true)
+if [ "$MANIFEST_UPDATED" -eq 0 ]; then
+  echo "{\"systemMessage\":\"⚠ manifest no actualizado en este branch. Ejecuta 'make manifest' antes del push final.\"}"
+fi
+
 exit 0
