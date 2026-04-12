@@ -85,6 +85,7 @@ INTERACTION_ID=$(echo "$STATE" | jq -r '.interaction_id // 0')
 DEV_ACTIVE=$(echo "$STATE" | jq -r '.deviation.active // false')
 
 # Work context — hierarchical progress tracking
+INTERACTION_CLASS=$(echo "$STATE" | jq -r '.interaction_classification // ""')
 WC_DESCRIPTION=$(echo "$STATE" | jq -r '.evidence.work_context.description // ""')
 WC_PROB_TOTAL=$(echo "$STATE" | jq -r '.evidence.work_context.problems.total // 0')
 WC_PROB_CURRENT=$(echo "$STATE" | jq -r '.evidence.work_context.problems.current // 0')
@@ -92,6 +93,12 @@ WC_PROB_LABEL=$(echo "$STATE" | jq -r 'if .evidence.work_context.problems.curren
 WC_WAVE_TOTAL=$(echo "$STATE" | jq -r '.evidence.work_context.wave.total // 0')
 WC_WAVE_CURRENT=$(echo "$STATE" | jq -r '.evidence.work_context.wave.current // 0')
 WC_WAVE_LABEL=$(echo "$STATE" | jq -r '.evidence.work_context.wave.label // ""')
+
+# Auto-init: copy interaction_classification → work_context.description if empty
+if [ -n "$INTERACTION_CLASS" ] && [ -z "$WC_DESCRIPTION" ]; then
+  jq '.evidence.work_context.description = .interaction_classification' "$STATE_FILE" > /tmp/wc.json && mv /tmp/wc.json "$STATE_FILE"
+  WC_DESCRIPTION="$INTERACTION_CLASS"
+fi
 
 # Helper: truncate description to ~40 chars
 WC_DESC_SHORT="$WC_DESCRIPTION"

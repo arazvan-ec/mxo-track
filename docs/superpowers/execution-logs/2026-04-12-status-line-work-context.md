@@ -42,7 +42,14 @@
 
 - Rebase sobre main: conflicto en `codebase-manifest.md` (archivo generado). Resuelto tomando versión de main.
 
+## Follow-up: Auto-init work_context.description
+
+- **Problema resuelto:** Claude podía olvidar setear `work_context.description` manualmente.
+- **Solución:** Auto-copiar `interaction_classification` → `work_context.description` en el hook `UserPromptSubmit` cuando description está vacío. No sobrescribe valores manuales.
+- **Verificación:** 2 tests — auto-init cuando vacío ✅, no-overwrite cuando ya seteado ✅
+- **Cambio:** +7 líneas en `user-prompt-state.sh`
+
 ## Lessons
 
-- El campo `work_context` es puramente informativo (no gate-blocking). Esto simplifica la implementación pero depende de que Claude recuerde actualizarlo. Si se detectan omisiones frecuentes, considerar agregar detección automática en auto-evidence.
+- El campo `work_context` es puramente informativo (no gate-blocking). La auto-inicialización desde `interaction_classification` elimina la dependencia de la memoria del modelo.
 - La truncación a 40 chars previene que descripciones largas rompan el formato compacto del status line.
