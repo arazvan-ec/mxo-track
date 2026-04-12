@@ -297,7 +297,16 @@ if [ "$FLOW_TYPE" = "full" ]; then
   DISPLAY_PHASE="$(echo "${CURRENT_PHASE:0:1}" | tr '[:lower:]' '[:upper:]')${CURRENT_PHASE:1}"
 
   # ── Line 1: Current phase + work context ──
-  LINE1="📍 ${DISPLAY_PHASE} (${CURRENT_INDEX}/${TOTAL})${DEV_SUFFIX}"
+  # Multi-problem prefix
+  PROB_PREFIX=""
+  if [ "$WC_PROB_TOTAL" -ge 2 ] 2>/dev/null; then
+    if [ "$WC_PROB_CURRENT" -gt 0 ] 2>/dev/null && [ -n "$WC_PROB_LABEL" ]; then
+      PROB_PREFIX="[${WC_PROB_LABEL}] "
+    else
+      PROB_PREFIX="⚠ MULTI-PROBLEMA (${WC_PROB_TOTAL}) sin current — setear problems.current | "
+    fi
+  fi
+  LINE1="📍 ${PROB_PREFIX}${DISPLAY_PHASE} (${CURRENT_INDEX}/${TOTAL})${DEV_SUFFIX}"
   # During implementation: show wave if available
   if [ "$CURRENT_PHASE" = "implementation" ] && [ "$WC_WAVE_TOTAL" -gt 0 ] 2>/dev/null && [ "$WC_WAVE_CURRENT" -gt 0 ] 2>/dev/null; then
     LINE1="${LINE1} — Wave ${WC_WAVE_CURRENT}/${WC_WAVE_TOTAL}"
