@@ -114,8 +114,8 @@ final readonly class FleetOverviewService
         $activeRoutes = (int) $this->em->createQueryBuilder()
             ->select('COUNT(r.id)')
             ->from(Route::class, 'r')
-            ->where('r.status = :status')
-            ->setParameter('status', RouteStatus::ACTIVE)
+            ->where('r.status IN (:statuses)')
+            ->setParameter('statuses', [RouteStatus::ACTIVE, RouteStatus::PLANNED])
             ->getQuery()
             ->getSingleScalarResult();
 
