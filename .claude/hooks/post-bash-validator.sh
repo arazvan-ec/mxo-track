@@ -130,6 +130,37 @@ if echo "$COMMAND" | grep -q 'session-state.json'; then
         fi
       fi
 
+      # Check 3: deviation.active set to true — validate criteria
+      OLD_DEV=$(jq -r '.deviation.active // false' "$SNAPSHOT_FILE" 2>/dev/null || echo "false")
+      NEW_DEV=$(jq -r '.deviation.active // false' "$STATE_FILE" 2>/dev/null || echo "false")
+
+      if [ "$OLD_DEV" = "false" ] && [ "$NEW_DEV" = "true" ]; then
+        DEV_REASON=$(jq -r '.deviation.reason // ""' "$STATE_FILE" 2>/dev/null || echo "")
+        DEV_ISSUES=""
+
+        # Criterion 1: < 30 lines changed
+        LINES_CHANGED=$(cd "$REPO" && git diff --stat HEAD 2>/dev/null | tail -1 | grep -oE '[0-9]+ insertion|[0-9]+ deletion' | grep -oE '[0-9]+' | paste -sd+ | bc 2>/dev/null || echo "0")
+        if [ "$LINES_CHANGED" -ge 30 ] 2>/dev/null; then
+          DEV_ISSUES="${DEV_ISSUES}Lineas cambiadas: $LINES_CHANGED (limite: <30). "
+        fi
+
+        # Criterion 2: No new endpoints
+        NEW_ROUTES=$(cd "$REPO" && git diff HEAD --name-only 2>/dev/null | xargs grep -l '#\[Route' 2>/dev/null | wc -l || echo "0")
+        if [ "$NEW_ROUTES" -gt 0 ] 2>/dev/null; then
+          DEV_ISSUES="${DEV_ISSUES}Nuevos endpoints detectados ($NEW_ROUTES archivos con #[Route]). "
+        fi
+
+        # Criterion 3: Reason must contain file:line reference
+        if ! echo "$DEV_REASON" | grep -qE '[a-zA-Z0-9_/]+\.[a-z]+:[0-9]+'; then
+          DEV_ISSUES="${DEV_ISSUES}Razon de desviacion no contiene referencia file:line. "
+        fi
+
+        if [ -n "$DEV_ISSUES" ]; then
+          jq '.deviation.active = false' "$STATE_FILE" > /tmp/ptc-fix.json && mv /tmp/ptc-fix.json "$STATE_FILE"
+          WARNINGS="${WARNINGS}⚠ REVERT deviation: Criterios no cumplidos — $DEV_ISSUES"
+        fi
+      fi
+
       if [ -n "$WARNINGS" ]; then
         ESCAPED=$(echo "$WARNINGS" | sed 's/"/\\"/g')
         echo "{\"systemMessage\":\"PHASE-TRANSITION-CONTROLLER: $ESCAPED\"}"

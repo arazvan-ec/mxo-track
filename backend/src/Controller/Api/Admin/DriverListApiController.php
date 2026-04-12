@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Controller\Api\Admin;
 
 use App\Entity\User;
+use App\Service\Admin\FilterDefinition;
+use App\Service\Admin\ListFilterApplier;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -20,6 +22,7 @@ class DriverListApiController extends AbstractController
 
     public function __construct(
         private readonly EntityManagerInterface $em,
+        private readonly ListFilterApplier $filterApplier,
     ) {}
 
     #[Route('', name: 'api_admin_drivers_list', methods: ['GET'])]
@@ -46,27 +49,11 @@ class DriverListApiController extends AbstractController
             ->where('JSON_TEXT(u.roles) LIKE :role')
             ->setParameter('role', '%ROLE_DRIVER%');
 
-        if ($activeFilter !== '') {
-            $active = $activeFilter === 'true';
-            $qb->andWhere('u.isActive = :active')->setParameter('active', $active);
-            $countQb->andWhere('u.isActive = :active')->setParameter('active', $active);
-        }
-
-        if ($dateFrom !== '') {
-            try {
-                $from = new \DateTimeImmutable($dateFrom . ' 00:00:00');
-                $qb->andWhere('u.createdAt >= :dateFrom')->setParameter('dateFrom', $from);
-                $countQb->andWhere('u.createdAt >= :dateFrom')->setParameter('dateFrom', $from);
-            } catch (\Exception) {}
-        }
-
-        if ($dateTo !== '') {
-            try {
-                $to = new \DateTimeImmutable($dateTo . ' 23:59:59');
-                $qb->andWhere('u.createdAt <= :dateTo')->setParameter('dateTo', $to);
-                $countQb->andWhere('u.createdAt <= :dateTo')->setParameter('dateTo', $to);
-            } catch (\Exception) {}
-        }
+        $this->filterApplier->apply($qb, $countQb, [
+            FilterDefinition::boolean('u.isActive', 'active', $activeFilter),
+            FilterDefinition::dateFrom('u.createdAt', 'dateFrom', $dateFrom),
+            FilterDefinition::dateTo('u.createdAt', 'dateTo', $dateTo),
+        ]);
 
         /** @var User[] $drivers */
         $drivers = $qb->getQuery()->getResult();

@@ -447,6 +447,32 @@ conflicts or compile errors from missing artifacts.
 number of tasks that could run right now?" If the answer is 1 and the plan has > 4
 tasks total, the decomposition likely missed parallelism. Revisit Step 1.
 
+#### Multi-task requests: parallel by default
+
+When the user requests multiple tasks in one message, they are independent by definition
+— the user wouldn't bundle them if they were sequential. **Execute them in parallel, not
+sequentially.** The mechanism:
+
+1. **Independent tasks → background agents.** Launch each task as a background agent
+   (`run_in_background: true`). Small tasks (<5 lines, hooks/config) can use
+   `isolation: "worktree"` or direct edit if no conflict risk. Continue with the next
+   task immediately — don't wait.
+2. **Within a single task's plan, waves are parallel.** Each wave's independent tasks
+   launch as concurrent agents. Don't serialize tasks within a wave.
+3. **Dependency test before serializing:** For each pair of tasks, ask: "Does task B
+   import, read, or reference a file/type/artifact that task A creates?" If yes → B
+   depends on A, serialize them. If no → they are independent, run in parallel.
+   **File conflict rule:** Two tasks that edit the same file cannot run in parallel —
+   the second agent gets "file modified since read" and fails. During planning, verify
+   that parallel tasks touch **disjoint file sets**. If they share a file, put them in
+   sequential waves.
+
+**The failure mode this prevents:** The user says "do A and B in parallel" and the model
+does A completely, then B completely — burning twice the wall-clock time while claiming
+both are done. The user sees through this because the response time is 2× what parallel
+would take. **Sequential execution of independent tasks is a process bug, not a style
+preference.**
+
 **Detail:** TDD rules in `backend/src/CLAUDE.md`, debugging rules in `backend/src/CLAUDE.md`
 
 ### Task Progress Tracking
@@ -462,6 +488,21 @@ Three transitions maintain the counter:
 3. **All tasks done:** Reset to zero before transitioning to verification
 
 This produces: `📍 full | Implementation (4/8) | ✅🔄⬚⬚⬚ t2/5: Add toggle button`
+
+#### Multi-problem tracking via work_context.problems
+
+When the user requests 2+ problems in one interaction, use `work_context.problems` to
+track which problem is active:
+
+```bash
+jq '.evidence.work_context.problems = {"total": 2, "current": 1, "labels": ["ListFilterApplier refactor", "Regex aprobación"]}' \
+  .claude/session-state.json > /tmp/ss.json && mv /tmp/ss.json .claude/session-state.json
+```
+
+Advance `current` when switching problems. The hook reads `problems.labels[current-1]`
+and includes it in the status line. **Every message header and status update must prefix
+the problem name when `problems.total >= 2`.** Without this, the user cannot tell which
+problem the progress corresponds to.
 
 ### Message Progress Display
 
@@ -488,24 +529,42 @@ archivos" o "necesito entender X". Solo necesita saber qué se hizo y qué falta
 **CORRECTO:** Cada mensaje incluye (1) qué se completó con dato concreto, (2) qué sigue.
 
 **Formato jerárquico de progreso:** Los mensajes reflejan la jerarquía completa del
-trabajo: fase del flujo → etapa del plan → wave → tarea. Esto permite al usuario saber
-en todo momento dónde está la implementación sin leer mensajes anteriores.
+trabajo. La jerarquía tiene hasta 4 niveles, y **siempre se muestra el nivel más alto
+que tenga más de 1 elemento:**
 
-**Estructura del mensaje de progreso (2 líneas):**
-- **Línea 1:** wave actual + etapa del plan + fase del flujo
+```
+problema (solo si hay 2+ problemas en la interacción)
+  └─ fase del flujo
+       └─ wave
+            └─ tarea concreta
+```
+
+**Regla clave: cuando hay múltiples problemas, SIEMPRE identificar cuál.** Sin esto el
+usuario no sabe a qué problema corresponde el progreso. El nombre del problema es el
+nivel raíz del header.
+
+**Estructura del mensaje de progreso:**
+- **Línea 1:** [problema si 2+] · wave actual + fase del flujo
 - **Línea 2:** tarea concreta + qué se está construyendo
 
-**Durante implementación (wave en curso):**
+**Con problema único (formato habitual):**
 ```
 🔄 Wave 2/4 · Fase 1: Rutas + Vehículos (Implementation 4/8)
-📍 Tarea 5/10: RouteListApiController — endpoint con filtros por estado, fecha, conductor y cliente
+📍 Tarea 5/10: RouteListApiController — endpoint con filtros
+```
+
+**Con múltiples problemas (siempre prefijo del problema):**
+```
+🔄 [ListFilterApplier] Wave 2/4 · Implementation (3-5/7)
+📍 Tareas 3a-3c: Refactor 3 controllers simples
+
+✅ [Regex aprobación] Completado — 1 línea en user-prompt-state.sh
 ```
 
 **Wave completada → siguiente:**
 ```
-✅ Wave 2/4 · Fase 1: Rutas + Vehículos (Implementation 4/8)
-Resultado: 2 endpoints API con paginación + filtros, PHP lint limpio (2 archivos)
-🔄 Wave 3/4 — 2 páginas React: rutas (5 chips estado + filtros) y vehículos (capacidad + GPS)
+✅ [ListFilterApplier] Wave 2/4 — Service + value object creados, lint limpio
+🔄 [ListFilterApplier] Wave 3/4 — 2 controllers complejos (Shipment + Route)
 ```
 
 **En verificación:**

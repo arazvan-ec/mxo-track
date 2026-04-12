@@ -119,25 +119,48 @@ case "$TOOL_NAME" in
     if [[ "$FILE_PATH" == *"backend/tests/"* ]]; then
       update_state '.evidence.tests_written = (.evidence.tests_written + 1)'
     fi
+
+    # Ephemeral artifact warning
+    if [[ "$FILE_PATH" == /tmp/* || "$FILE_PATH" == /root/.claude/* ]] && [[ "$FILE_PATH" != *session-state* ]]; then
+      # Check if content looks like a spec/plan/execution-log
+      CONTENT=$(echo "$INPUT" | jq -r '.tool_input.content // .tool_input.new_string // ""' | head -5)
+      if echo "$CONTENT" | grep -qiE '(spec|plan|execution.log|design|approach|alternativ)'; then
+        echo "{\"systemMessage\":\"⚠ Artifact escrito en path efímero ($FILE_PATH). Considera guardarlo en docs/superpowers/ para persistencia.\"}"
+      fi
+    fi
     ;;
 
   Bash)
-    # tests_passed: phpunit command
+    EVIDENCE_TS=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+    # tests_passed: phpunit command (with fresh timestamp)
     if [[ "$COMMAND" == *"phpunit"* ]]; then
       if [ "$TOOL_EXIT" = "0" ]; then
-        update_state '.evidence.tests_passed = true'
+        update_state ".evidence.tests_passed = true | .evidence.tests_ran_at = \"$EVIDENCE_TS\""
       else
-        update_state '.evidence.tests_passed = false'
+        update_state ".evidence.tests_passed = false | .evidence.tests_ran_at = \"$EVIDENCE_TS\""
       fi
     fi
 
-    # lint_clean: lint commands
+    # lint_clean: lint commands (with fresh timestamp)
     if [[ "$COMMAND" == *"make lint"* ]] || [[ "$COMMAND" == *"php -l"* ]] || [[ "$COMMAND" == *"phpcs"* ]]; then
       if [ "$TOOL_EXIT" = "0" ]; then
-        update_state '.evidence.lint_clean = true'
+        update_state ".evidence.lint_clean = true | .evidence.lint_ran_at = \"$EVIDENCE_TS\""
       else
-        update_state '.evidence.lint_clean = false'
+        update_state ".evidence.lint_clean = false | .evidence.lint_ran_at = \"$EVIDENCE_TS\""
       fi
+    fi
+
+    # Track canonical verification commands
+    if echo "$COMMAND" | grep -qE '^(cd\s+\S+\s*&&\s*)?npm run build'; then
+      update_state '.evidence.verified_commands = ((.evidence.verified_commands // []) + ["npm_run_build"] | unique)'
+    fi
+    if echo "$COMMAND" | grep -qE '(^|\s)make lint'; then
+      update_state '.evidence.verified_commands = ((.evidence.verified_commands // []) + ["make_lint"] | unique)'
+    fi
+    # Track approximate commands as warnings
+    if echo "$COMMAND" | grep -qE 'tsc\s+--noEmit' && ! echo "$COMMAND" | grep -qE 'npm run build'; then
+      echo "{\"systemMessage\":\"⚠ tsc --noEmit no es el comando de deploy. Usa 'npm run build' para verificación exacta.\"}"
     fi
     ;;
 

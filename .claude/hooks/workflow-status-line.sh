@@ -108,6 +108,14 @@ WAVE_CURRENT=$(echo "$STATE" | jq -r '.evidence.task_progress.wave_current // 0'
 WAVE_TOTAL=$(echo "$STATE" | jq -r '.evidence.task_progress.wave_total // 0')
 WAVE_LABEL=$(echo "$STATE" | jq -r '.evidence.task_progress.wave_label // ""')
 
+# Multi-problem tracking
+PROB_TOTAL=$(echo "$STATE" | jq -r '.evidence.work_context.problems.total // 0')
+PROB_CURRENT=$(echo "$STATE" | jq -r '.evidence.work_context.problems.current // 0')
+PROB_LABEL=""
+if [ "$PROB_TOTAL" -ge 2 ] 2>/dev/null; then
+  PROB_LABEL=$(echo "$STATE" | jq -r "if .evidence.work_context.problems.current > 0 then .evidence.work_context.problems.labels[.evidence.work_context.problems.current - 1] // \"\" else \"\" end")
+fi
+
 DEVIATION_SUFFIX=""
 if [ "$DEV_ACTIVE" = "true" ]; then
   DEVIATION_SUFFIX=" | ⚠ DESVÍO"
@@ -399,7 +407,16 @@ if [ "$FLOW_TYPE" = "full" ]; then
   DISPLAY_PHASE="$(echo "${CURRENT_PHASE:0:1}" | tr '[:lower:]' '[:upper:]')${CURRENT_PHASE:1}"
 
   # ── Line 1: Current phase with design structure context ──
-  LINE1="📍 ${DISPLAY_PHASE} (${CURRENT_INDEX}/${TOTAL})"
+  # Prefix with problem label when multiple problems are tracked
+  PROB_PREFIX=""
+  if [ "$PROB_TOTAL" -ge 2 ] 2>/dev/null; then
+    if [ "$PROB_CURRENT" -gt 0 ] 2>/dev/null && [ -n "$PROB_LABEL" ]; then
+      PROB_PREFIX="[${PROB_LABEL}] "
+    else
+      PROB_PREFIX="⚠ MULTI-PROBLEMA (${PROB_TOTAL}) sin current — setear work_context.problems.current | "
+    fi
+  fi
+  LINE1="📍 ${PROB_PREFIX}${DISPLAY_PHASE} (${CURRENT_INDEX}/${TOTAL})"
   # Add wave + phase context from design plan
   if [ "$WAVE_TOTAL" -gt 0 ] 2>/dev/null && [ "$WAVE_CURRENT" -gt 0 ] 2>/dev/null; then
     LINE1="${LINE1} · Wave ${WAVE_CURRENT}/${WAVE_TOTAL}"
@@ -476,6 +493,14 @@ if [ "$FLOW_TYPE" = "full" ]; then
   LINE5=""
   [ -n "$TOOL_SUFFIX" ] && LINE5=" ${TOOL_SUFFIX}"
 
+  # ── Narration guard: reminder during active work phases ──
+  NARRATION_GUARD=""
+  case "$CURRENT_PHASE" in
+    implementation|verification|capture|retrospective|finalize)
+      NARRATION_GUARD="  ⛔ No narrar proceso entre tools. Solo texto si: resultado concreto, cambio de fase, o decisión del usuario."
+      ;;
+  esac
+
   # Assemble output
   {
     echo "$LINE1"
@@ -483,6 +508,7 @@ if [ "$FLOW_TYPE" = "full" ]; then
     [ -n "$LINE3" ] && echo "$LINE3"
     echo "$LINE4"
     [ -n "$LINE5" ] && echo "$LINE5"
+    [ -n "$NARRATION_GUARD" ] && echo "$NARRATION_GUARD"
   } | emit
   exit 0
 fi

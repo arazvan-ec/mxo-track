@@ -8,6 +8,13 @@ Registro de decisiones de diseño significativas. Cada entrada captura el contex
 
 ---
 
+### [2026-04-12] Extract ListFilterApplier service for dual QueryBuilder pattern
+
+- **Problema:** 5 admin list controllers repetían la mecánica de aplicar filtros a `$qb` + `$countQb` en paralelo (~80 líneas duplicadas). Riesgo de count mismatch si se olvida aplicar filtro al countQb.
+- **Decisión:** Service inyectable `ListFilterApplier` + value object `FilterDefinition` con static factories tipadas por tipo de filtro (boolean, like, enum, dateFrom, dateTo, entity). `withCountJoin()` para el caso especial de Route (re-alias en countQb).
+- **Alternativas descartadas:** Trait (viola SRP, no testable independientemente), AbstractController (single inheritance limit, Symfony lo desaconseja)
+- **Resultado:** 5 controllers refactorizados. ~80 líneas duplicadas → ~30 líneas netas. Cada controller declara filtros en 4-7 líneas. Nuevo tipo de filtro = nueva factory method, sin tocar controllers.
+
 ### [2026-04-08] Consolidate PostToolUse hooks via dispatcher pattern
 
 - **Problema:** Claude Code web UI mostraba 3-4 notificaciones de hook por cada herramienta (Edit: workflow-engine PreToolUse + auto-evidence + workflow-status-line + plan-persistence PostToolUse). En sesiones con 30+ tool calls, esto generaba ~100 entradas genéricas que ocultaban el progreso real al usuario.

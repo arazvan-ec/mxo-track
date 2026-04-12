@@ -6,6 +6,9 @@ namespace App\Controller\Api\Admin;
 
 use App\Entity\Customer;
 use App\Entity\User;
+use App\Enum\ClientFrequency;
+use App\Service\Admin\FilterDefinition;
+use App\Service\Admin\ListFilterApplier;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -21,6 +24,7 @@ class CustomerListApiController extends AbstractController
 
     public function __construct(
         private readonly EntityManagerInterface $em,
+        private readonly ListFilterApplier $filterApplier,
     ) {}
 
     #[Route('', name: 'api_admin_customers_list', methods: ['GET'])]
@@ -29,6 +33,8 @@ class CustomerListApiController extends AbstractController
         $page = max(1, $request->query->getInt('page', 1));
         $limit = min(100, max(1, $request->query->getInt('limit', self::ITEMS_PER_PAGE)));
         $activeFilter = $request->query->getString('active', '');
+        $searchFilter = trim($request->query->getString('search', ''));
+        $frequencyFilter = $request->query->getString('frequency', '');
 
         $qb = $this->em->createQueryBuilder()
             ->select('c')
@@ -41,11 +47,11 @@ class CustomerListApiController extends AbstractController
             ->select('COUNT(c.id)')
             ->from(Customer::class, 'c');
 
-        if ($activeFilter !== '') {
-            $active = $activeFilter === 'true';
-            $qb->andWhere('c.isActive = :active')->setParameter('active', $active);
-            $countQb->andWhere('c.isActive = :active')->setParameter('active', $active);
-        }
+        $this->filterApplier->apply($qb, $countQb, [
+            FilterDefinition::boolean('c.isActive', 'active', $activeFilter),
+            FilterDefinition::like('c.name', 'search', $searchFilter),
+            FilterDefinition::enum('c.frequency', 'frequency', $frequencyFilter, ClientFrequency::class),
+        ]);
 
         /** @var Customer[] $customers */
         $customers = $qb->getQuery()->getResult();
@@ -107,6 +113,19 @@ class CustomerListApiController extends AbstractController
             'total' => $total,
             'page' => $page,
             'pages' => $totalPages,
+        ]);
+    }
+
+    #[Route('/filters', name: 'api_admin_customers_filters', methods: ['GET'])]
+    public function filters(): JsonResponse
+    {
+        $frequencies = array_map(
+            fn (ClientFrequency $f) => ['value' => $f->value, 'label' => $f->label()],
+            ClientFrequency::cases(),
+        );
+
+        return $this->json([
+            'frequencies' => $frequencies,
         ]);
     }
 }

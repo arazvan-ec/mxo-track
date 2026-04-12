@@ -7,6 +7,8 @@ namespace App\Controller\Api\Admin;
 use App\Domain\Shipment\Model\Shipment;
 use App\Entity\Customer;
 use App\Enum\ShipmentPriority;
+use App\Service\Admin\FilterDefinition;
+use App\Service\Admin\ListFilterApplier;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -22,6 +24,7 @@ class ShipmentListApiController extends AbstractController
 
     public function __construct(
         private readonly EntityManagerInterface $em,
+        private readonly ListFilterApplier $filterApplier,
     ) {}
 
     #[Route('', name: 'api_admin_shipments_list', methods: ['GET'])]
@@ -48,37 +51,16 @@ class ShipmentListApiController extends AbstractController
             ->from(Shipment::class, 's')
             ->where('s.deletedAt IS NULL');
 
-        if ($customerFilter !== '') {
-            $customer = $this->em->getRepository(Customer::class)->findOneBy(['publicId' => $customerFilter]);
-            if ($customer !== null) {
-                $qb->andWhere('s.customer = :customer')->setParameter('customer', $customer);
-                $countQb->andWhere('s.customer = :customer')->setParameter('customer', $customer);
-            }
-        }
+        $customer = $customerFilter !== ''
+            ? $this->em->getRepository(Customer::class)->findOneBy(['publicId' => $customerFilter])
+            : null;
 
-        if ($priorityFilter !== '') {
-            $priority = ShipmentPriority::tryFrom((int) $priorityFilter);
-            if ($priority !== null) {
-                $qb->andWhere('s.priority = :priority')->setParameter('priority', $priority);
-                $countQb->andWhere('s.priority = :priority')->setParameter('priority', $priority);
-            }
-        }
-
-        if ($dateFrom !== '') {
-            try {
-                $from = new \DateTimeImmutable($dateFrom . ' 00:00:00');
-                $qb->andWhere('s.createdAt >= :dateFrom')->setParameter('dateFrom', $from);
-                $countQb->andWhere('s.createdAt >= :dateFrom')->setParameter('dateFrom', $from);
-            } catch (\Exception) {}
-        }
-
-        if ($dateTo !== '') {
-            try {
-                $to = new \DateTimeImmutable($dateTo . ' 23:59:59');
-                $qb->andWhere('s.createdAt <= :dateTo')->setParameter('dateTo', $to);
-                $countQb->andWhere('s.createdAt <= :dateTo')->setParameter('dateTo', $to);
-            } catch (\Exception) {}
-        }
+        $this->filterApplier->apply($qb, $countQb, [
+            FilterDefinition::entity('s.customer', 'customer', $customer),
+            FilterDefinition::enum('s.priority', 'priority', $priorityFilter, ShipmentPriority::class),
+            FilterDefinition::dateFrom('s.createdAt', 'dateFrom', $dateFrom),
+            FilterDefinition::dateTo('s.createdAt', 'dateTo', $dateTo),
+        ]);
 
         /** @var Shipment[] $shipments */
         $shipments = $qb->getQuery()->getResult();

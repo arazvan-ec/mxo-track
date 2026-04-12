@@ -3,14 +3,14 @@
 > **Auto-generated** by `make manifest` (`backend/bin/generate-manifest.sh`).
 > Do not edit manually — regenerate with `make manifest`.
 
-**Generated:** 2026-04-12 19:45
+**Generated:** 2026-04-12 22:24
 **Regenerate:** `make manifest`
 
 ## Project Overview
 
 | Area | Path | Files | Tech |
 |------|------|------:|------|
-| Backend | `backend/` | 531 PHP | Symfony 7.4, PHP 8.4 |
+| Backend | `backend/` | 533 PHP | Symfony 7.4, PHP 8.4 |
 | Frontend | `frontend/` | 148 JS/TS | React |
 | ML Service | `ml-service/` | 17 Python | FastAPI |
 | Docker/Infra | `docker/` + `scripts/` | 9 + 5 | Docker, OSRM, VROOM, Traccar |
@@ -30,7 +30,7 @@
 | **Enums total** | **24** |
 | Controllers | 76 |
 | Application Services (src/Application/) | 23 |
-| Domain/Infra Services (src/Service/) | 75 |
+| Domain/Infra Services (src/Service/) | 77 |
 | Repositories | 22 |
 | Console Commands | 18 |
 | DTOs | 17 |
@@ -203,6 +203,7 @@ Routing
 Security
 Security/Voter
 Service
+Service/Admin
 Tracking
 Twig
 Validator
@@ -491,6 +492,7 @@ Controller endpoints (auto-extracted from `#[Route]` attributes):
 | GET | `/export/deliveries.csv` | ReportController | exportDeliveries |
 | GET | `/export/drivers.csv` | ReportController | exportDrivers |
 | GET | `/export` | SlaReportController | export |
+| GET | `/filters` | CustomerListApiController | filters |
 | GET | `/filters` | ShipmentListApiController | filters |
 | POST | `/load` | DemoFixtureController | load |
 | POST | `/locale/{locale}` | LocaleController | switchLocale |

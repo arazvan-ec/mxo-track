@@ -66,7 +66,7 @@ if [ "$FLOW_TYPE" = "full" ] && [ -n "$USER_PROMPT" ]; then
   PROMPT_LOWER=$(echo "$CLEAN_PROMPT" | tr '[:upper:]' '[:lower:]')
 
   # Approval patterns (Spanish + English)
-  if echo "$PROMPT_LOWER" | grep -qiE '(^|\s)(sí|si,|si$|yes|ok|dale|adelante|aprobado|apruebo|perfecto|de acuerdo|estoy de acuerdo|me parece bien|prefiero|vamos con|go ahead|approved|lgtm|apruebo el plan|lo apruebo|suena bien|hazlo|implementa|proceed|me gusta|está bien|esta bien|correcto|confirmo|confirm|procede|continua|continúa)(\s|$|[,.\!])'; then
+  if echo "$PROMPT_LOWER" | grep -qiE '(^|\s)(sí|si,|si$|yes|ok|dale|adelante|aprobado|apruebo|perfecto|de acuerdo|estoy de acuerdo|me parece bien|prefiero|vamos con|go ahead|approved|lgtm|apruebo el plan|lo apruebo|suena bien|hazlo|implementa|proceed|me gusta|está bien|esta bien|correcto|confirmo|confirm|procede|continua|continúa|igual que|igual a|como las otras)(\s|$|[,.\!])'; then
     if [ "$CURRENT_APPROVED" != "true" ]; then
       jq '.evidence.user_approved = true' "$STATE_FILE" > /tmp/upt.json && mv /tmp/upt.json "$STATE_FILE"
       STATE=$(cat "$STATE_FILE" 2>/dev/null || echo "{}")
@@ -297,7 +297,16 @@ if [ "$FLOW_TYPE" = "full" ]; then
   DISPLAY_PHASE="$(echo "${CURRENT_PHASE:0:1}" | tr '[:lower:]' '[:upper:]')${CURRENT_PHASE:1}"
 
   # ── Line 1: Current phase + work context ──
-  LINE1="📍 ${DISPLAY_PHASE} (${CURRENT_INDEX}/${TOTAL})${DEV_SUFFIX}"
+  # Multi-problem prefix
+  PROB_PREFIX=""
+  if [ "$WC_PROB_TOTAL" -ge 2 ] 2>/dev/null; then
+    if [ "$WC_PROB_CURRENT" -gt 0 ] 2>/dev/null && [ -n "$WC_PROB_LABEL" ]; then
+      PROB_PREFIX="[${WC_PROB_LABEL}] "
+    else
+      PROB_PREFIX="⚠ MULTI-PROBLEMA (${WC_PROB_TOTAL}) sin current — setear problems.current | "
+    fi
+  fi
+  LINE1="📍 ${PROB_PREFIX}${DISPLAY_PHASE} (${CURRENT_INDEX}/${TOTAL})${DEV_SUFFIX}"
   # During implementation: show wave if available
   if [ "$CURRENT_PHASE" = "implementation" ] && [ "$WC_WAVE_TOTAL" -gt 0 ] 2>/dev/null && [ "$WC_WAVE_CURRENT" -gt 0 ] 2>/dev/null; then
     LINE1="${LINE1} — Wave ${WC_WAVE_CURRENT}/${WC_WAVE_TOTAL}"
@@ -396,6 +405,13 @@ if [ "$FLOW_TYPE" = "full" ]; then
     finalize) [ -n "$BRANCH_STRATEGY" ] && NEXT="ejecutar $BRANCH_STRATEGY" || NEXT="declarar strategy" ;;
   esac
   echo "  Siguiente: $NEXT"
+
+  # Narration guard during active work phases
+  case "$CURRENT_PHASE" in
+    implementation|verification|capture|retrospective|finalize)
+      echo "  ⛔ No narrar proceso entre tools. Solo texto si: resultado concreto, cambio de fase, o decisión del usuario."
+      ;;
+  esac
   exit 0
 fi
 
