@@ -10,6 +10,8 @@ use App\Entity\Customer;
 use App\Entity\User;
 use App\Enum\RouteStatus;
 use App\Enum\RouteStopStatus;
+use App\Service\Admin\FilterDefinition;
+use App\Service\Admin\ListFilterApplier;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -25,6 +27,7 @@ class RouteListApiController extends AbstractController
 
     public function __construct(
         private readonly EntityManagerInterface $em,
+        private readonly ListFilterApplier $filterApplier,
     ) {}
 
     #[SymfonyRoute('', name: 'api_admin_routes_list', methods: ['GET'])]
@@ -52,36 +55,15 @@ class RouteListApiController extends AbstractController
             ->select('COUNT(r.id)')
             ->from(Route::class, 'r');
 
-        if ($status !== '' && RouteStatus::tryFrom($status) !== null) {
-            $qb->andWhere('r.status = :status')->setParameter('status', $status);
-            $countQb->andWhere('r.status = :status')->setParameter('status', $status);
-        }
-
-        if ($dateFrom !== '') {
-            try {
-                $from = new \DateTimeImmutable($dateFrom . ' 00:00:00');
-                $qb->andWhere('r.startAt >= :dateFrom')->setParameter('dateFrom', $from);
-                $countQb->andWhere('r.startAt >= :dateFrom')->setParameter('dateFrom', $from);
-            } catch (\Exception) {}
-        }
-
-        if ($dateTo !== '') {
-            try {
-                $to = new \DateTimeImmutable($dateTo . ' 23:59:59');
-                $qb->andWhere('r.startAt <= :dateTo')->setParameter('dateTo', $to);
-                $countQb->andWhere('r.startAt <= :dateTo')->setParameter('dateTo', $to);
-            } catch (\Exception) {}
-        }
-
-        if ($driverId !== '') {
-            $qb->andWhere('d.id = :driverId')->setParameter('driverId', $driverId);
-            $countQb->leftJoin('r.driver', 'cd')->andWhere('cd.id = :driverId')->setParameter('driverId', $driverId);
-        }
-
-        if ($customerId !== '') {
-            $qb->andWhere('c.id = :customerId')->setParameter('customerId', $customerId);
-            $countQb->leftJoin('r.customer', 'cc')->andWhere('cc.id = :customerId')->setParameter('customerId', $customerId);
-        }
+        $this->filterApplier->apply($qb, $countQb, [
+            FilterDefinition::enum('r.status', 'status', $status, RouteStatus::class),
+            FilterDefinition::dateFrom('r.startAt', 'dateFrom', $dateFrom),
+            FilterDefinition::dateTo('r.startAt', 'dateTo', $dateTo),
+            FilterDefinition::entity('d.id', 'driverId', $driverId)
+                ->withCountJoin('r.driver', 'cd'),
+            FilterDefinition::entity('c.id', 'customerId', $customerId)
+                ->withCountJoin('r.customer', 'cc'),
+        ]);
 
         /** @var Route[] $routes */
         $routes = $qb->getQuery()->getResult();

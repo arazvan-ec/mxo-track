@@ -6,6 +6,8 @@ namespace App\Controller\Api\Admin;
 
 use App\Entity\Vehicle;
 use App\Entity\VehicleLastPosition;
+use App\Service\Admin\FilterDefinition;
+use App\Service\Admin\ListFilterApplier;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -21,6 +23,7 @@ class VehicleListApiController extends AbstractController
 
     public function __construct(
         private readonly EntityManagerInterface $em,
+        private readonly ListFilterApplier $filterApplier,
     ) {}
 
     #[Route('', name: 'api_admin_vehicles_list', methods: ['GET'])]
@@ -43,27 +46,11 @@ class VehicleListApiController extends AbstractController
             ->select('COUNT(v.id)')
             ->from(Vehicle::class, 'v');
 
-        if ($activeFilter !== '') {
-            $active = $activeFilter === 'true';
-            $qb->andWhere('v.isActive = :active')->setParameter('active', $active);
-            $countQb->andWhere('v.isActive = :active')->setParameter('active', $active);
-        }
-
-        if ($dateFrom !== '') {
-            try {
-                $from = new \DateTimeImmutable($dateFrom . ' 00:00:00');
-                $qb->andWhere('v.createdAt >= :dateFrom')->setParameter('dateFrom', $from);
-                $countQb->andWhere('v.createdAt >= :dateFrom')->setParameter('dateFrom', $from);
-            } catch (\Exception) {}
-        }
-
-        if ($dateTo !== '') {
-            try {
-                $to = new \DateTimeImmutable($dateTo . ' 23:59:59');
-                $qb->andWhere('v.createdAt <= :dateTo')->setParameter('dateTo', $to);
-                $countQb->andWhere('v.createdAt <= :dateTo')->setParameter('dateTo', $to);
-            } catch (\Exception) {}
-        }
+        $this->filterApplier->apply($qb, $countQb, [
+            FilterDefinition::boolean('v.isActive', 'active', $activeFilter),
+            FilterDefinition::dateFrom('v.createdAt', 'dateFrom', $dateFrom),
+            FilterDefinition::dateTo('v.createdAt', 'dateTo', $dateTo),
+        ]);
 
         /** @var Vehicle[] $vehicles */
         $vehicles = $qb->getQuery()->getResult();

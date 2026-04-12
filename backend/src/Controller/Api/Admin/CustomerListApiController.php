@@ -7,6 +7,8 @@ namespace App\Controller\Api\Admin;
 use App\Entity\Customer;
 use App\Entity\User;
 use App\Enum\ClientFrequency;
+use App\Service\Admin\FilterDefinition;
+use App\Service\Admin\ListFilterApplier;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -22,6 +24,7 @@ class CustomerListApiController extends AbstractController
 
     public function __construct(
         private readonly EntityManagerInterface $em,
+        private readonly ListFilterApplier $filterApplier,
     ) {}
 
     #[Route('', name: 'api_admin_customers_list', methods: ['GET'])]
@@ -44,24 +47,11 @@ class CustomerListApiController extends AbstractController
             ->select('COUNT(c.id)')
             ->from(Customer::class, 'c');
 
-        if ($activeFilter !== '') {
-            $active = $activeFilter === 'true';
-            $qb->andWhere('c.isActive = :active')->setParameter('active', $active);
-            $countQb->andWhere('c.isActive = :active')->setParameter('active', $active);
-        }
-
-        if ($searchFilter !== '') {
-            $qb->andWhere('LOWER(c.name) LIKE :search')->setParameter('search', '%' . mb_strtolower($searchFilter) . '%');
-            $countQb->andWhere('LOWER(c.name) LIKE :search')->setParameter('search', '%' . mb_strtolower($searchFilter) . '%');
-        }
-
-        if ($frequencyFilter !== '') {
-            $frequency = ClientFrequency::tryFrom($frequencyFilter);
-            if ($frequency !== null) {
-                $qb->andWhere('c.frequency = :frequency')->setParameter('frequency', $frequency);
-                $countQb->andWhere('c.frequency = :frequency')->setParameter('frequency', $frequency);
-            }
-        }
+        $this->filterApplier->apply($qb, $countQb, [
+            FilterDefinition::boolean('c.isActive', 'active', $activeFilter),
+            FilterDefinition::like('c.name', 'search', $searchFilter),
+            FilterDefinition::enum('c.frequency', 'frequency', $frequencyFilter, ClientFrequency::class),
+        ]);
 
         /** @var Customer[] $customers */
         $customers = $qb->getQuery()->getResult();
