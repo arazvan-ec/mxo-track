@@ -52,3 +52,5 @@
 - El caso de `withCountJoin()` para Route confirma que los edge cases de join re-aliasing son manejables como decorator sobre la definición base, sin contaminar la API general.
 
 **Proceso:** La retrospectiva de la sesión anterior (customer filters) detectó correctamente que el patrón de 5 vistas justificaba extracción. Esto valida que las retrospectivas producen trabajo futuro accionable, no solo reflexión.
+
+**Fallo de paralelismo:** El usuario pidió ejecutar ambas tareas (regex fix + refactor) en paralelo. Se lanzó la investigación en paralelo con la lectura de la regex (correcto), pero la ejecución fue secuencial. Lo correcto: agente background para el regex fix (independiente, ~1 línea) mientras el flujo principal avanza con el refactor. En Wave 2, los 3 controllers simples también podían ser agentes paralelos con `isolation: "worktree"`. Cuando el usuario pide paralelo, usar agentes background para tareas independientes — no serializar.
