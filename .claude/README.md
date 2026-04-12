@@ -50,6 +50,19 @@ it, gates cannot enforce anything.
       "total": 0,                   // Total de tareas del plan
       "label": null,                // Descripción corta de la tarea actual
       "completed_labels": []        // Lista de labels de tareas completadas
+    },
+    "work_context": {               // Contexto jerárquico de trabajo — mostrado en status line
+      "description": null,          // Qué se está haciendo (todos los flujos). Truncado a ~40 chars
+      "problems": {                 // (debug) Tracking de problemas independientes
+        "total": 0,                 // Total de problemas diagnosticados
+        "current": 0,               // Problema actual (1-based)
+        "labels": []                // Descripción corta de cada problema
+      },
+      "wave": {                     // (full impl) Wave actual del plan
+        "total": 0,                 // Total de waves
+        "current": 0,               // Wave actual (1-based)
+        "label": null               // Descripción de la wave actual
+      }
     }
   },
   "deviation": {
@@ -149,6 +162,30 @@ jq '.evidence.task_progress.completed_labels += [.evidence.task_progress.label] 
 **Task progress — reset (when leaving implementation or starting new interaction):**
 ```bash
 jq '.evidence.task_progress = {"current": 0, "total": 0, "label": null, "completed_labels": []}' \
+  .claude/session-state.json > /tmp/ss.json && mv /tmp/ss.json .claude/session-state.json
+```
+
+**Work context — set description when classifying interaction:**
+```bash
+jq '.evidence.work_context.description = "Status line con work_context"' \
+  .claude/session-state.json > /tmp/ss.json && mv /tmp/ss.json .claude/session-state.json
+```
+
+**Work context — set problems (debug multi-problema):**
+```bash
+jq '.evidence.work_context.problems = {"total": 2, "current": 1, "labels": ["phase-advance.sh", "Tests pre-existentes"]}' \
+  .claude/session-state.json > /tmp/ss.json && mv /tmp/ss.json .claude/session-state.json
+```
+
+**Work context — set wave (full implementation):**
+```bash
+jq '.evidence.work_context.wave = {"total": 3, "current": 1, "label": "Schema + initial state"}' \
+  .claude/session-state.json > /tmp/ss.json && mv /tmp/ss.json .claude/session-state.json
+```
+
+**Work context — reset:**
+```bash
+jq '.evidence.work_context = {"description": null, "problems": {"total": 0, "current": 0, "labels": []}, "wave": {"total": 0, "current": 0, "label": null}}' \
   .claude/session-state.json > /tmp/ss.json && mv /tmp/ss.json .claude/session-state.json
 ```
 
