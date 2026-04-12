@@ -77,6 +77,39 @@ else
     if grep -iEn '^[-*]\s.*(add|write|create|agregar|escribir)\s+(unit\s+)?tests?\b' "$PLAN_FULL" 2>/dev/null | grep -ivE '(TDD|test.*implement|implement.*test|red.green|failing test)' > /dev/null 2>&1; then
       WARNINGS="${WARNINGS}- TDD: El plan tiene tareas standalone de tests. Los tests deben ser parte integral de cada tarea (TDD: test first → implement → green).\n"
     fi
+
+    # Parallel file conflict detection (HARD gate)
+    # Parse [parallel] waves, extract → files: declarations, detect overlaps
+    CURRENT_WAVE=""
+    declare -A WAVE_FILES  # wave_name → "file1|file2|..."
+    declare -A FILE_TASK   # "wave:file" → "task label"
+    while IFS= read -r line; do
+      # Detect wave headers: ### [parallel] Wave N...
+      if echo "$line" | grep -qiE '^\s*#{1,4}\s*\[parallel\]'; then
+        CURRENT_WAVE=$(echo "$line" | sed 's/^[# ]*//' | sed 's/\[parallel\]//' | xargs)
+      elif echo "$line" | grep -qiE '^\s*#{1,4}\s' && [ -n "$CURRENT_WAVE" ]; then
+        # New non-parallel header resets current wave
+        CURRENT_WAVE=""
+      fi
+
+      # Inside a parallel wave, look for → files: or → files:
+      if [ -n "$CURRENT_WAVE" ]; then
+        FILES_DECL=$(echo "$line" | grep -oE '→ files?:\s*.*' | sed 's/→ files\?:\s*//' || true)
+        if [ -n "$FILES_DECL" ]; then
+          TASK_LABEL=$(echo "$line" | grep -oE '\*\*[^*]+\*\*' | head -1 | tr -d '*' || true)
+          [ -z "$TASK_LABEL" ] && TASK_LABEL=$(echo "$line" | sed 's/^[-* ]*//' | cut -c1-30)
+          # Split by comma or space
+          for f in $(echo "$FILES_DECL" | tr ',' '\n' | tr ' ' '\n' | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//' | grep -v '^$'); do
+            KEY="${CURRENT_WAVE}::${f}"
+            if [ -n "${FILE_TASK[$KEY]+x}" ]; then
+              ERRORS="${ERRORS}- CONFLICTO PARALELO: En '$CURRENT_WAVE', tareas '${FILE_TASK[$KEY]}' y '$TASK_LABEL' ambas editan '$f'. Mover a waves secuenciales.\n"
+            else
+              FILE_TASK[$KEY]="$TASK_LABEL"
+            fi
+          done
+        fi
+      fi
+    done < "$PLAN_FULL"
   fi
 fi
 
