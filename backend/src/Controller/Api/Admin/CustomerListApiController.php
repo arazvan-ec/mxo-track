@@ -6,6 +6,7 @@ namespace App\Controller\Api\Admin;
 
 use App\Entity\Customer;
 use App\Entity\User;
+use App\Enum\ClientFrequency;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -29,6 +30,8 @@ class CustomerListApiController extends AbstractController
         $page = max(1, $request->query->getInt('page', 1));
         $limit = min(100, max(1, $request->query->getInt('limit', self::ITEMS_PER_PAGE)));
         $activeFilter = $request->query->getString('active', '');
+        $searchFilter = trim($request->query->getString('search', ''));
+        $frequencyFilter = $request->query->getString('frequency', '');
 
         $qb = $this->em->createQueryBuilder()
             ->select('c')
@@ -45,6 +48,19 @@ class CustomerListApiController extends AbstractController
             $active = $activeFilter === 'true';
             $qb->andWhere('c.isActive = :active')->setParameter('active', $active);
             $countQb->andWhere('c.isActive = :active')->setParameter('active', $active);
+        }
+
+        if ($searchFilter !== '') {
+            $qb->andWhere('LOWER(c.name) LIKE :search')->setParameter('search', '%' . mb_strtolower($searchFilter) . '%');
+            $countQb->andWhere('LOWER(c.name) LIKE :search')->setParameter('search', '%' . mb_strtolower($searchFilter) . '%');
+        }
+
+        if ($frequencyFilter !== '') {
+            $frequency = ClientFrequency::tryFrom($frequencyFilter);
+            if ($frequency !== null) {
+                $qb->andWhere('c.frequency = :frequency')->setParameter('frequency', $frequency);
+                $countQb->andWhere('c.frequency = :frequency')->setParameter('frequency', $frequency);
+            }
         }
 
         /** @var Customer[] $customers */
@@ -107,6 +123,19 @@ class CustomerListApiController extends AbstractController
             'total' => $total,
             'page' => $page,
             'pages' => $totalPages,
+        ]);
+    }
+
+    #[Route('/filters', name: 'api_admin_customers_filters', methods: ['GET'])]
+    public function filters(): JsonResponse
+    {
+        $frequencies = array_map(
+            fn (ClientFrequency $f) => ['value' => $f->value, 'label' => $f->label()],
+            ClientFrequency::cases(),
+        );
+
+        return $this->json([
+            'frequencies' => $frequencies,
         ]);
     }
 }

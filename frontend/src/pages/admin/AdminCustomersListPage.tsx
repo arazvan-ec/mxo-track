@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useAdminCustomers } from '@/api/hooks/useAdminCustomers';
+import { useAdminCustomers, useCustomerFilters } from '@/api/hooks/useAdminCustomers';
 import type { CustomerListItem } from '@/api/types';
 import { ResponsiveDataTable, type ColumnDef, type ActionDef } from '@/components/data-table/ResponsiveDataTable';
 import { FilterBar, type FilterChip } from '@/components/data-table/FilterBar';
@@ -31,11 +31,16 @@ const columns: ColumnDef<CustomerListItem>[] = [
 export function AdminCustomersListPage() {
   const [page, setPage] = useState(1);
   const [active, setActive] = useState('');
+  const [search, setSearch] = useState('');
+  const [frequency, setFrequency] = useState('');
 
   const { data, isLoading } = useAdminCustomers({
     page,
     active: active || undefined,
+    search: search || undefined,
+    frequency: frequency || undefined,
   });
+  const { data: filters } = useCustomerFilters();
 
   const actions = (row: CustomerListItem): ActionDef[] => [
     { label: 'Editar', href: `/admin/customers/${row.publicId}/edit`, color: 'text-blue-600' },
@@ -55,6 +60,34 @@ export function AdminCustomersListPage() {
     setPage(1);
   };
 
+  const advancedFilters = (
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div>
+        <label htmlFor="search" className="block text-xs font-medium mb-1" style={{ color: 'var(--color-text-secondary)' }}>Buscar por nombre</label>
+        <input
+          type="text" id="search" value={search} placeholder="Nombre del cliente..."
+          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+          className="block w-full rounded-md border px-3 py-2 text-sm shadow-sm"
+          style={{ borderColor: 'var(--color-border)' }}
+        />
+      </div>
+      <div>
+        <label htmlFor="frequency" className="block text-xs font-medium mb-1" style={{ color: 'var(--color-text-secondary)' }}>Frecuencia</label>
+        <select
+          id="frequency" value={frequency}
+          onChange={(e) => { setFrequency(e.target.value); setPage(1); }}
+          className="block w-full rounded-md border px-3 py-2 text-sm shadow-sm"
+          style={{ borderColor: 'var(--color-border)' }}
+        >
+          <option value="">Todas</option>
+          {filters?.frequencies.map((f) => (
+            <option key={f.value} value={f.value}>{f.label}</option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
+
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
       {/* Header */}
@@ -73,6 +106,8 @@ export function AdminCustomersListPage() {
         chips={activeChips}
         activeChip={active}
         onChipClick={handleChipClick}
+        advancedFilters={advancedFilters}
+        advancedFiltersOpen={!!(search || frequency)}
       />
 
       {/* Table / Cards */}
