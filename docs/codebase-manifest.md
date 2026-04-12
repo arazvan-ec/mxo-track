@@ -3,7 +3,7 @@
 > **Auto-generated** by `make manifest` (`backend/bin/generate-manifest.sh`).
 > Do not edit manually — regenerate with `make manifest`.
 
-**Generated:** 2026-04-12 19:56
+**Generated:** 2026-04-12 20:13
 **Regenerate:** `make manifest`
 
 ## Project Overview
@@ -491,6 +491,7 @@ Controller endpoints (auto-extracted from `#[Route]` attributes):
 | GET | `/export/deliveries.csv` | ReportController | exportDeliveries |
 | GET | `/export/drivers.csv` | ReportController | exportDrivers |
 | GET | `/export` | SlaReportController | export |
+| GET | `/filters` | CustomerListApiController | filters |
 | GET | `/filters` | ShipmentListApiController | filters |
 | POST | `/load` | DemoFixtureController | load |
 | POST | `/locale/{locale}` | LocaleController | switchLocale |
