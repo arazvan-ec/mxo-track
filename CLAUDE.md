@@ -447,6 +447,28 @@ conflicts or compile errors from missing artifacts.
 number of tasks that could run right now?" If the answer is 1 and the plan has > 4
 tasks total, the decomposition likely missed parallelism. Revisit Step 1.
 
+#### Multi-task requests: parallel by default
+
+When the user requests multiple tasks in one message, they are independent by definition
+— the user wouldn't bundle them if they were sequential. **Execute them in parallel, not
+sequentially.** The mechanism:
+
+1. **Independent tasks → background agents.** Launch each task as a background agent
+   (`run_in_background: true`). Small tasks (<5 lines, hooks/config) can use
+   `isolation: "worktree"` or direct edit if no conflict risk. Continue with the next
+   task immediately — don't wait.
+2. **Within a single task's plan, waves are parallel.** Each wave's independent tasks
+   launch as concurrent agents. Don't serialize tasks within a wave.
+3. **Self-check before executing:** "Am I doing this sequentially because there's a real
+   dependency, or because sequential is the path of least resistance?" If the latter,
+   restructure into parallel agents.
+
+**The failure mode this prevents:** The user says "do A and B in parallel" and the model
+does A completely, then B completely — burning twice the wall-clock time while claiming
+both are done. The user sees through this because the response time is 2× what parallel
+would take. **Sequential execution of independent tasks is a process bug, not a style
+preference.**
+
 **Detail:** TDD rules in `backend/src/CLAUDE.md`, debugging rules in `backend/src/CLAUDE.md`
 
 ### Task Progress Tracking
