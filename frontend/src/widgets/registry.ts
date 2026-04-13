@@ -83,6 +83,7 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetRegistryEntry> = {
     description: '6 service status cards (DB, Redis, Traccar, Mercure, OSRM, VROOM)',
     collapsible: true,
     sectionTitle: 'Estado del sistema',
+    supportsDetail: true,
   },
   infrastructure_metrics: {
     component: InfrastructureMetricsWidget,
@@ -90,6 +91,7 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetRegistryEntry> = {
     description: '3 metric cards (positions table, DB size, last ingestion)',
     collapsible: true,
     sectionTitle: 'Infraestructura',
+    supportsDetail: true,
   },
   dashboard_kpis: {
     component: DashboardKpisWidget,
@@ -97,6 +99,7 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetRegistryEntry> = {
     description: '4 KPI cards (routes, stops, imports, positions/hour)',
     collapsible: true,
     sectionTitle: 'KPIs',
+    supportsDetail: true,
   },
   mini_reports: {
     component: MiniReportsWidget,
@@ -104,6 +107,7 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetRegistryEntry> = {
     description: 'Chart (7-day deliveries) + top 5 drivers',
     collapsible: true,
     sectionTitle: 'Reportes',
+    supportsDetail: true,
   },
   activity_feed: {
     component: ActivityFeedWidget,
@@ -111,6 +115,8 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetRegistryEntry> = {
     description: 'Live position feed via Mercure SSE',
     collapsible: true,
     sectionTitle: 'Actividad en vivo',
+    supportsDetail: true,
+    defaultMinimized: true,
   },
   customer_kpis: {
     component: CustomerKpisWidget,
