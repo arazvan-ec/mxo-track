@@ -104,3 +104,68 @@ mxo-dashboard-widget-infra-minimized
   regresión perceptible, ajustar en PR 2.
 - Animación `animate-fade-in-up` escalonada eliminada (cada KPI ahora tiene la
   animación interna de `CollapsibleWidget`). Visualmente equivalente en la práctica.
+
+## Retrospective
+
+### Qué funcionó
+
+- **Dos subagents Explore consecutivos** redujeron el ruido de contexto. El primero
+  descubrió que el dashboard visible era React (no Twig), el segundo encontró
+  `CollapsibleWidget` ya existente + `WidgetRenderer` + falta de infra de user prefs.
+  Sin esos dos pasos habría implementado contra el dashboard equivocado.
+- **TDD estricto en `AdminMetricsService`** — el test RED capturó exactamente los 8
+  campos que faltaban, y la implementación fue mecánica después. Zero iteración, zero
+  bugs en los nuevos campos.
+- **Push-back de alcance** — cuando el usuario pidió "migración completa + todos los
+  widgets + user prefs en perfil", calculé ~1200 líneas y propuse faseo en 3 PRs.
+  El usuario aceptó opción conservadora. Esto evitó un plan >15 pasos que no
+  sobreviviría a una compactación, y mantuvo el blast radius de este PR limitado.
+
+### Qué salió mal
+
+- **Verificación inicial falló por ambiente no preparado:** `make lint` se intentó
+  desde `backend/` en vez de raíz, y `npm run build` falló porque `node_modules` no
+  existía. Tuve que lanzar `composer install` y `npm install` mid-verificación. No es
+  culpa del código pero sí del proceso — idealmente verificar deps antes de impl.
+- **Deviación de spec sin preguntar:** añadí el prop `summary` a `CollapsibleWidget`
+  durante implementación porque identifiqué que el spec original contradecía el
+  requisito del usuario ("info visible siempre"). Documentado arriba en deviaciones,
+  pero idealmente detectado en brainstorming.
+- **Fallo pre-existente no relacionado:** `GitLogReaderTest` falla en este branch y
+  en `main` (6/667 tests históricamente rojos según el spec, 1 hoy). No es de esta
+  PR pero deja ruido en la verificación.
+
+### Estimación vs realidad
+
+- **Estimado:** ~400 líneas, 1 sesión, 4 tareas en 3 waves.
+- **Real:** 1113 insertions / 187 deletions (9 archivos). 4 tareas completadas como
+  planeadas, sin blockers reales. Estimación bastante precisa — el salto de líneas
+  es inflado por docs (spec + plan + execution-log ≈ 400 líneas de markdown) y por
+  el rewrite completo de `AdminDashboardPage.tsx` con la extensión del `summary`.
+
+### Gap de proceso detectado
+
+Mi spec inicial decía "el número grande pasa al cuerpo para no duplicar información".
+Esto es un **anti-patrón** cuando el widget está colapsado — el usuario pierde info
+al colapsar (peor que antes). El checklist de brainstorming no tiene un paso
+explícito de "probar mentalmente el estado COLAPSADO", solo el expandido.
+
+**Acción diferida:** para futuras features con componentes colapsables, incluir en la
+revisión del spec la pregunta "¿qué información se pierde al colapsar? ¿es
+aceptable?". No amerita modificar `CLAUDE.md` todavía (incidente único), pero si
+reaparece en otro execution log → graduar a regla del módulo `ui-frontend.md`.
+
+### Pattern-wide check
+
+Consumidor único de `CollapsibleWidget` fuera de este cambio: `WidgetRenderer.tsx:
+30-36`. Los widgets que renderiza (`DashboardKpisWidget`, `SystemHealthWidget`, etc.)
+pierden TODA la info al colapsar — **mismo problema potencial**. Cuando migremos en
+PR 2, evaluar pasar `summary` a través del registry (render-prop en
+`WidgetDefinition`).
+
+### Backlog derivado
+
+- PR 2: seed `admin_dashboard` layout + refactor a `usePageLayout` + `WidgetRenderer`.
+  Considerar exponer `summary` prop al registry.
+- PR 3: `UserPreference` entity + endpoint + `ProfilePage` con selector modo b/c.
+- `GitLogReaderTest` pre-existente — fix independiente si bloquea CI.
