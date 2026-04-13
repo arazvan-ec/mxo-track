@@ -4,6 +4,19 @@
 **Tipo:** UI redesign — nuevo preset visual + motion
 **Branch:** `claude/ios-style-transfers-whTh4`
 
+## Alternativas evaluadas
+
+Durante el brainstorming se propusieron 3 approaches:
+
+- **Approach A — Preset `ios` completo (visual + motion).** **Seleccionado.** Ventaja: cero breaking changes, aprovecha `.glass-overlay` y arquitectura de presets existente (decisión 2026-04-07 innovative-dashboard), motion hace que el look iOS sea auténtico. Trade-off: más código CSS (~200 líneas) pero modular.
+- **Approach B — Solo preset visual, sin motion.** Descartado. Problema: Liquid Glass sin springs iOS se siente como "otro glass genérico" — pierde la mitad de la identidad iOS. Ventaja: más pequeño (~80 líneas). Desventaja: resultado visualmente incompleto.
+- **Approach C — Reemplazar preset `default`.** Descartado. Problema: breaking change para usuarios que ya eligieron la estética actual. Opcion más agresiva sin beneficio real sobre A.
+
+**Decisiones de diseño cerradas con el usuario:**
+- Acento: **iOS System Blue `#007AFF`** (vs. conservar teal `#0d9488` del proyecto) — elegido por autenticidad iOS
+- Alcance: **SPA + Twig** — ambos consumen `index.css`, sin esfuerzo adicional
+- Motion: **incluido** — page transitions, sheet rise, popovers scale-in, button press
+
 ## Resumen
 
 Añadir un nuevo preset `ios` al sistema de theming existente que reproduzca el lenguaje visual **Liquid Glass de iOS 26** (blanco translúcido, hairlines, radios grandes, highlights especulares) **junto con un sistema de transiciones spring** estilo iOS aplicable a page transitions, BottomSheet, NavigationSidebar, popovers y microinteracciones.
