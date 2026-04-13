@@ -43,7 +43,7 @@ en RouteDetailPage).
 - No introducir librería de charts externa (Chart.js, Recharts) — reutilizar
   componentes SVG ya construidos
 
-## Inventario de Funcionalidad Existente
+## Existing Functionality Inventory
 
 | Elemento | Decisión | Justificación |
 |---|---|---|
@@ -66,6 +66,18 @@ en RouteDetailPage).
 | `RoutePerformanceMetricRepository` | **Include** — usar `getCustomerAggregateMetrics()` | Ya tiene km/min saved |
 | Tabla nueva `system_health_log` | **Add (Phase 2)** | Para uptime histórico e incidentes |
 | Cron de muestreo health | **Add (Phase 2)** | Job Symfony Scheduler cada 60s |
+
+## Omission Decisions
+
+| Elemento | Decisión | Justificación |
+|---|---|---|
+| Bento grid layout actual (KPIs 2/3 + Sistema 1/3, Entregas 3/5 + Drivers 2/5) | **Omit** — sustituir por stack vertical via WidgetRenderer | Decisión explícita del usuario: priorizar widget system universal sobre layout artístico. El bento perdería sentido al introducir doble toggle por widget. |
+| `theme-card-overlay` para widgets sobre mapa | **Omit** — no aplica a este dashboard (no hay mapa de fondo) | El dashboard admin no tiene background map. Otros widgets que sí lo usan (KpiPills, MetricPairs en FleetMapPage) mantienen su clase. |
+| Floating ThemeSwitcher en AdminDashboardPage | **Omit** — ya removido en commit 58de2d5 (movido a TopBar inline) | Sin cambios en este PR. |
+| `CustomerDashboardPage` migration | **Omit** — fuera de scope, queda en TODO | El usuario indicó "todas las vistas" como meta a largo plazo, pero este PR se enfoca en admin. CustomerDashboard ya usa `customer_kpis` y `customer_optimization` widgets parcialmente. |
+| Layout configurable via `LayoutConfig` editor | **Omit** — layout admin queda hardcoded en este PR | El editor existente (`PageLayoutEditorPage`) sigue funcionando para otras páginas. Migrar admin al editor añadiría 1-2 waves más sin valor inmediato para el usuario. |
+| Sparklines reales de health (60min history) | **Omit (Phase 2)** — requiere tabla `system_health_log` y cron | En Phase 1 los sparklines del SystemHealthWidget detailed quedan vacíos o muestran solo la última lectura. |
+| Métricas avanzadas de Infra (queue depth, cache hit, disk free, table sizes) | **Omit (Phase 2)** — requieren queries especializadas | InfrastructureMetricsWidget detailed muestra solo las métricas alcanzables con queries actuales en Phase 1. |
 
 ## Diseño
 
