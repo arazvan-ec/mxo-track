@@ -9,8 +9,10 @@ export const SHEET_HEIGHTS: Record<BottomSheetState, number> = {
 };
 
 const STATES_ORDERED: BottomSheetState[] = ['collapsed', 'half', 'full'];
-const SPRING_EASING = 'cubic-bezier(0.32, 0.72, 0, 1)';
-const TRANSITION_MS = 300;
+// Spring easing — resolved from CSS var `--ease-ios` (set by preset-ios) with fallback
+// to the same curve for other presets, keeping current behavior unchanged.
+const SPRING_EASING = 'var(--ease-ios, cubic-bezier(0.32, 0.72, 0, 1))';
+const TRANSITION_MS_FALLBACK = 300;
 const SWIPE_VELOCITY_THRESHOLD = 500; // px/s
 
 interface UseBottomSheetReturn {
@@ -145,7 +147,9 @@ export function useBottomSheet(
 
   const sheetStyle: CSSProperties = {
     transform: `translateY(${currentTranslateY}px)`,
-    transition: isDragging ? 'none' : `transform ${TRANSITION_MS}ms ${SPRING_EASING}`,
+    transition: isDragging
+      ? 'none'
+      : `transform var(--dur-sheet, ${TRANSITION_MS_FALLBACK}ms) ${SPRING_EASING}`,
     height: `${viewportHeight}px`,
     willChange: isDragging ? 'transform' : 'auto',
   };

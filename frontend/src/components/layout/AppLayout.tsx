@@ -2,6 +2,7 @@ import { useState, createContext, useContext, type ReactNode } from 'react';
 import { Outlet } from 'react-router';
 import { NavigationSidebar } from './NavigationSidebar';
 import { TopBar } from './TopBar';
+import { IOSPageTransition } from '../transitions/IOSPageTransition';
 
 /* ── Context ──────────────────────────────────────────────────────── */
 
@@ -35,7 +36,9 @@ export function AppLayout() {
           extraControls={extraControls}
         />
         <div className="flex-1 relative overflow-hidden">
-          <Outlet />
+          <IOSPageTransition>
+            <Outlet />
+          </IOSPageTransition>
         </div>
       </div>
     </AppLayoutContext.Provider>
