@@ -83,6 +83,17 @@
             "statusMessage": "Validando..."
           }
         ]
+      },
+      {
+        "matcher": "TodoWrite",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/user/mxo-track/.claude/hooks/todowrite-mirror.sh",
+            "timeout": 2,
+            "statusMessage": "Reflejando todos..."
+          }
+        ]
       }
     ]
   },
