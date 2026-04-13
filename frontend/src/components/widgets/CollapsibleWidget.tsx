@@ -3,6 +3,7 @@ import { useState, useCallback, type ReactNode } from 'react';
 interface CollapsibleWidgetProps {
   title: string;
   icon?: ReactNode;
+  summary?: ReactNode;
   storageKey: string;
   defaultExpanded?: boolean;
   children: ReactNode;
@@ -22,6 +23,7 @@ function getInitialExpanded(storageKey: string, defaultExpanded: boolean): boole
 export function CollapsibleWidget({
   title,
   icon,
+  summary,
   storageKey,
   defaultExpanded = true,
   children,
@@ -49,11 +51,16 @@ export function CollapsibleWidget({
         className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors"
         style={{ borderBottom: expanded ? `1px solid var(--color-border)` : 'none' }}
       >
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
           {icon && <span style={{ color: 'var(--color-text-muted)' }}>{icon}</span>}
-          <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>
+          <h2 className="text-xs font-semibold uppercase tracking-wider shrink-0" style={{ color: 'var(--color-text-muted)' }}>
             {title}
           </h2>
+          {summary && (
+            <div className="min-w-0 flex-1 text-right text-sm" style={{ color: 'var(--color-text-primary)' }}>
+              {summary}
+            </div>
+          )}
         </div>
         <svg
           className={`h-4 w-4 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
