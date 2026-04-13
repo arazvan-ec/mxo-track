@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, useCallback, type React
 
 type ThemeMode = 'light' | 'dark' | 'system';
 type ResolvedTheme = 'light' | 'dark';
-type ThemePreset = 'default' | 'glass' | 'command' | 'bento' | 'dense';
+type ThemePreset = 'default' | 'glass' | 'command' | 'bento' | 'dense' | 'ios';
 
 interface ThemeContextValue {
   mode: ThemeMode;
@@ -17,7 +17,7 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 const STORAGE_KEY = 'mxo-theme';
 const PRESET_KEY = 'mxo-theme-preset';
-const ALL_PRESETS: ThemePreset[] = ['default', 'glass', 'command', 'bento', 'dense'];
+const ALL_PRESETS: ThemePreset[] = ['default', 'glass', 'command', 'bento', 'dense', 'ios'];
 
 function getSystemTheme(): ResolvedTheme {
   if (typeof window === 'undefined') return 'dark';

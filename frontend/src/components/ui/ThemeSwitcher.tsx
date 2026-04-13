@@ -7,6 +7,7 @@ const PRESET_META: Record<ThemePreset, { label: string; colors: [string, string,
   command: { label: 'Command', colors: ['#22d3ee', '#060a14', '#0c1425'] },
   bento: { label: 'Bento', colors: ['#7c3aed', '#faf8f6', '#f0eaff'] },
   dense: { label: 'Dense', colors: ['#0d9488', '#f1f3f5', '#dee2e6'] },
+  ios: { label: 'iOS', colors: ['#007AFF', 'rgba(255,255,255,0.72)', 'rgba(60,60,67,0.18)'] },
 };
 
 function PresetSwatch({ preset, active, onClick }: { preset: ThemePreset; active: boolean; onClick: () => void }) {

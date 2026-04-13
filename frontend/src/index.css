@@ -410,5 +410,181 @@ body {
 }
 
 .animate-slide-in-left {
-  animation: slide-in-left 0.2s ease-out;
+  animation: slide-in-left var(--dur-std, 0.2s) var(--ease-ios, ease-out);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ── Preset: iOS Liquid Glass (iOS 26) ──
+   White translucent surfaces, hairlines, generous radii, spring motion.
+   Accent: iOS System Blue. Applied to both SPA and Twig via CSS vars.
+   ══════════════════════════════════════════════════════════════════════════ */
+.preset-ios {
+  /* Surfaces — blanco translúcido capas Liquid Glass */
+  --color-surface: #f2f2f7;                          /* iOS grouped bg */
+  --color-surface-elevated: rgba(255, 255, 255, 0.72);
+  --color-surface-glass: rgba(255, 255, 255, 0.68);
+  --color-surface-overlay: rgba(0, 0, 0, 0.35);
+
+  /* Text — SF Pro hierarchy */
+  --color-text-primary: #000000;
+  --color-text-secondary: rgba(60, 60, 67, 0.60);
+  --color-text-muted: rgba(60, 60, 67, 0.30);
+
+  /* Hairlines — 0.5px separadores iOS */
+  --color-border: rgba(60, 60, 67, 0.18);
+  --color-border-subtle: rgba(60, 60, 67, 0.12);
+  --color-border-accent: rgba(0, 122, 255, 0.35);
+
+  /* Acento — iOS System Blue */
+  --color-accent: #007AFF;
+  --color-accent-bg: #007AFF;
+  --color-accent-hover: #0051D5;
+  --color-accent-muted: rgba(0, 122, 255, 0.12);
+
+  /* Semantic iOS colors */
+  --color-success: #34C759;
+  --color-error: #FF3B30;
+  --color-warning: #FF9500;
+
+  /* Glass tuning — Liquid Glass */
+  --glass-blur: 28px;
+  --glass-brightness: 1.08;
+  --glass-saturate: 1.8;
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.6);
+
+  /* Card tokens — radios iOS + specular highlights */
+  --card-radius: 1.25rem;
+  --card-border: 0.5px solid var(--color-border);
+  --card-bg: rgba(255, 255, 255, 0.72);
+  --card-blur: blur(24px) saturate(180%);
+  --card-shadow:
+    0 0 0 0.5px rgba(0, 0, 0, 0.04),
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 8px 24px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  --card-hover-shadow:
+    0 0 0 0.5px rgba(0, 0, 0, 0.06),
+    0 2px 4px rgba(0, 0, 0, 0.06),
+    0 12px 32px rgba(0, 0, 0, 0.10),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  --card-padding: 1.25rem;
+  --section-gap: 1.5rem;
+
+  /* Motion tokens — iOS spring curves */
+  --ease-ios: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-ios-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --dur-fast: 250ms;
+  --dur-std: 400ms;
+  --dur-sheet: 500ms;
+
+  /* Typography tweak — SF Pro feel */
+  font-feature-settings: 'ss01', 'ss02';
+  letter-spacing: -0.01em;
+}
+
+/* Preset iOS — dark variant (Liquid Glass dark mode) */
+.preset-ios.dark {
+  --color-surface: #000000;
+  --color-surface-elevated: rgba(28, 28, 30, 0.72);
+  --color-surface-glass: rgba(28, 28, 30, 0.64);
+  --color-surface-overlay: rgba(0, 0, 0, 0.60);
+
+  --color-text-primary: #ffffff;
+  --color-text-secondary: rgba(235, 235, 245, 0.60);
+  --color-text-muted: rgba(235, 235, 245, 0.30);
+
+  --color-border: rgba(84, 84, 88, 0.40);
+  --color-border-subtle: rgba(84, 84, 88, 0.25);
+  --color-border-accent: rgba(10, 132, 255, 0.40);
+
+  --color-accent: #0A84FF;
+  --color-accent-bg: #0A84FF;
+  --color-accent-hover: #409CFF;
+  --color-accent-muted: rgba(10, 132, 255, 0.18);
+
+  --color-success: #30D158;
+  --color-error: #FF453A;
+  --color-warning: #FF9F0A;
+
+  --glass-bg: rgba(28, 28, 30, 0.64);
+  --glass-border: rgba(255, 255, 255, 0.08);
+
+  --card-bg: rgba(28, 28, 30, 0.68);
+  --card-border: 0.5px solid rgba(84, 84, 88, 0.40);
+  --card-shadow:
+    0 0 0 0.5px rgba(255, 255, 255, 0.06),
+    0 1px 2px rgba(0, 0, 0, 0.30),
+    0 8px 24px rgba(0, 0, 0, 0.40),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --card-hover-shadow:
+    0 0 0 0.5px rgba(255, 255, 255, 0.08),
+    0 2px 4px rgba(0, 0, 0, 0.40),
+    0 12px 32px rgba(0, 0, 0, 0.50),
+    inset 0 1px 0 rgba(255, 255, 255, 0.10);
+}
+
+/* ── iOS Motion — Keyframes ── */
+@keyframes ios-sheet-rise {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+@keyframes ios-scale-in {
+  from { transform: scale(0.96); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+@keyframes ios-push-in {
+  from { transform: translateX(16px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+@keyframes ios-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.animate-ios-sheet-rise { animation: ios-sheet-rise var(--dur-sheet, 500ms) var(--ease-ios, cubic-bezier(0.32, 0.72, 0, 1)) both; }
+.animate-ios-scale-in   { animation: ios-scale-in var(--dur-fast, 250ms) var(--ease-ios, cubic-bezier(0.32, 0.72, 0, 1)) both; }
+.animate-ios-push-in    { animation: ios-push-in var(--dur-std, 400ms) var(--ease-ios, cubic-bezier(0.32, 0.72, 0, 1)) both; }
+.animate-ios-fade-in    { animation: ios-fade-in var(--dur-std, 400ms) var(--ease-ios, cubic-bezier(0.32, 0.72, 0, 1)) both; }
+
+/* Hairline utility — 0.5px separators iOS style */
+.ios-hairline {
+  border-width: 0.5px;
+  border-color: var(--color-border);
+}
+
+/* Preset iOS — microinteraction: button press */
+.preset-ios button:not(:disabled):active {
+  transform: scale(0.97);
+  transition: transform 120ms ease-out;
+}
+
+/* Preset iOS — badge tonos translúcidos para encajar con glass */
+.preset-ios {
+  --badge-blue-bg: rgba(0, 122, 255, 0.15);    --badge-blue-text: #0040DD;
+  --badge-amber-bg: rgba(255, 149, 0, 0.15);   --badge-amber-text: #7A4700;
+  --badge-green-bg: rgba(52, 199, 89, 0.15);   --badge-green-text: #0F6B2C;
+  --badge-red-bg: rgba(255, 59, 48, 0.15);     --badge-red-text: #8E1A14;
+  --badge-gray-bg: rgba(60, 60, 67, 0.10);     --badge-gray-text: #1F2937;
+  --badge-purple-bg: rgba(175, 82, 222, 0.15); --badge-purple-text: #5A1F82;
+  --badge-indigo-bg: rgba(88, 86, 214, 0.15);  --badge-indigo-text: #2E2C7A;
+  --badge-cyan-bg: rgba(50, 173, 230, 0.15);   --badge-cyan-text: #0E5A7A;
+  --badge-orange-bg: rgba(255, 149, 0, 0.15);  --badge-orange-text: #7A4700;
+  --badge-emerald-bg: rgba(52, 199, 89, 0.15); --badge-emerald-text: #0F6B2C;
+  --badge-pink-bg: rgba(255, 45, 85, 0.15);    --badge-pink-text: #8E1A3E;
+  --badge-yellow-bg: rgba(255, 204, 0, 0.20);  --badge-yellow-text: #7A5E00;
+}
+
+/* Preset iOS — MapLibre popups/controls con radio iOS */
+.preset-ios .maplibregl-popup-content {
+  border-radius: 14px !important;
+  border-width: 0.5px !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+}
+.preset-ios .maplibregl-ctrl-group {
+  border-radius: 14px !important;
+  border-width: 0.5px !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
 }
