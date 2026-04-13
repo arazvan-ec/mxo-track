@@ -147,8 +147,9 @@ if [ "$FLOW_TYPE" = "full" ] && [ "$CURRENT_PHASE" = "finalize" ]; then
       .evidence.branch_strategy = null |
       .evidence.root_cause_identified = false |
       .evidence.pattern_wide_search_done = false |
-      .evidence.task_progress = {"current": 0, "total": 0, "label": null, "completed_labels": []} |
-      .evidence.work_context = {"description": null, "problems": {"total": 0, "current": 0, "labels": []}, "wave": {"total": 0, "current": 0, "label": null}}
+      .evidence.task_progress = {"current": 0, "total": 0, "label": null, "completed_labels": [], "task_index": []} |
+      .evidence.work_context = {"description": null, "problems": {"total": 0, "current": 0, "labels": []}, "wave": {"total": 0, "current": 0, "label": null, "labels": []}} |
+      .evidence.todo_progress = {"total": 0, "completed": 0, "in_progress_label": null, "items": []}
     ' "$STATE_FILE" > /tmp/ss_reset.json && mv /tmp/ss_reset.json "$STATE_FILE"
     echo "📍 Sin clasificar — clasificar antes de proceder"
     exit 0
@@ -258,6 +259,12 @@ BRANCH_STRATEGY=$(echo "$STATE" | jq -r '.evidence.branch_strategy // ""')
 TASK_CURRENT=$(echo "$STATE" | jq -r '.evidence.task_progress.current // 0')
 TASK_TOTAL=$(echo "$STATE" | jq -r '.evidence.task_progress.total // 0')
 TASK_LABEL=$(echo "$STATE" | jq -r '.evidence.task_progress.label // ""')
+TASK_DONE=$(echo "$STATE" | jq -r '.evidence.task_progress.completed_labels // [] | length')
+
+# Todo progress (mirror of TodoWrite)
+TODO_TOTAL=$(echo "$STATE" | jq -r '.evidence.todo_progress.total // 0')
+TODO_DONE=$(echo "$STATE" | jq -r '.evidence.todo_progress.completed // 0')
+TODO_IP=$(echo "$STATE" | jq -r '.evidence.todo_progress.in_progress_label // ""')
 
 if [ "$FLOW_TYPE" = "full" ]; then
   PHASES=("consult" "brainstorming" "planning" "implementation" "verification" "capture" "retrospective" "finalize")
@@ -307,13 +314,24 @@ if [ "$FLOW_TYPE" = "full" ]; then
     fi
   fi
   LINE1="📍 ${PROB_PREFIX}${DISPLAY_PHASE} (${CURRENT_INDEX}/${TOTAL})${DEV_SUFFIX}"
-  # During implementation: show wave if available
-  if [ "$CURRENT_PHASE" = "implementation" ] && [ "$WC_WAVE_TOTAL" -gt 0 ] 2>/dev/null && [ "$WC_WAVE_CURRENT" -gt 0 ] 2>/dev/null; then
-    LINE1="${LINE1} — Wave ${WC_WAVE_CURRENT}/${WC_WAVE_TOTAL}"
-    [ -n "$WC_WAVE_LABEL" ] && LINE1="${LINE1}: ${WC_WAVE_LABEL}"
-  elif [ -n "$WC_DESC_SHORT" ]; then
-    LINE1="${LINE1} — ${WC_DESC_SHORT}"
-  fi
+  # Show wave hierarchy from planning onwards (when plan has been parsed)
+  case "$CURRENT_PHASE" in
+    planning|implementation|verification|capture|retrospective)
+      if [ "$WC_WAVE_TOTAL" -gt 0 ] 2>/dev/null; then
+        if [ "$WC_WAVE_CURRENT" -gt 0 ] 2>/dev/null; then
+          LINE1="${LINE1} — Wave ${WC_WAVE_CURRENT}/${WC_WAVE_TOTAL}"
+          [ -n "$WC_WAVE_LABEL" ] && LINE1="${LINE1}: ${WC_WAVE_LABEL}"
+        else
+          LINE1="${LINE1} — ${WC_WAVE_TOTAL} waves planificadas"
+        fi
+      elif [ -n "$WC_DESC_SHORT" ]; then
+        LINE1="${LINE1} — ${WC_DESC_SHORT}"
+      fi
+      ;;
+    *)
+      [ -n "$WC_DESC_SHORT" ] && LINE1="${LINE1} — ${WC_DESC_SHORT}"
+      ;;
+  esac
   echo "$LINE1"
 
   # ── Line 2: Timeline — completed → current → pending ──
@@ -330,6 +348,37 @@ if [ "$FLOW_TYPE" = "full" ]; then
     fi
   done
   echo "  $TIMELINE"
+
+  # ── Line 2.5: Plan progress (when plan parsed and we're in execution phases) ──
+  case "$CURRENT_PHASE" in
+    planning|implementation|verification|capture|retrospective)
+      if [ "$TASK_TOTAL" -gt 0 ] 2>/dev/null; then
+        # Build a compact ✅✅⬚⬚⬚ visual (max 12 cells to keep line short)
+        PLAN_BAR=""
+        VISUAL_LIMIT=12
+        DISPLAY_TOTAL=$TASK_TOTAL
+        [ "$DISPLAY_TOTAL" -gt "$VISUAL_LIMIT" ] && DISPLAY_TOTAL=$VISUAL_LIMIT
+        for ((i=1; i<=DISPLAY_TOTAL; i++)); do
+          if [ "$i" -le "$TASK_DONE" ]; then
+            PLAN_BAR="${PLAN_BAR}✅"
+          elif [ "$i" -eq "$TASK_CURRENT" ]; then
+            PLAN_BAR="${PLAN_BAR}🔄"
+          else
+            PLAN_BAR="${PLAN_BAR}⬚"
+          fi
+        done
+        PLAN_LINE="  Plan: ${PLAN_BAR} ${TASK_DONE}/${TASK_TOTAL}"
+        if [ "$TASK_CURRENT" -gt 0 ] 2>/dev/null && [ -n "$TASK_LABEL" ]; then
+          PLAN_LINE="${PLAN_LINE} — Tarea ${TASK_CURRENT}: ${TASK_LABEL}"
+        fi
+        echo "$PLAN_LINE"
+      fi
+      # Todos mirror line (only when there's an active in_progress)
+      if [ "$TODO_TOTAL" -gt 0 ] 2>/dev/null && [ -n "$TODO_IP" ]; then
+        echo "  Todos: 🔄 ${TODO_IP} (${TODO_DONE}/${TODO_TOTAL})"
+      fi
+      ;;
+  esac
 
   # ── Line 3: Current phase detail (what's done inside this phase) ──
   DETAIL=""
