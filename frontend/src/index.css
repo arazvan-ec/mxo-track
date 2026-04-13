@@ -425,9 +425,12 @@ body {
   --color-surface-glass: rgba(255, 255, 255, 0.68);
   --color-surface-overlay: rgba(0, 0, 0, 0.35);
 
-  /* Text — SF Pro hierarchy */
+  /* Text — SF Pro hierarchy.
+     Note: iOS uses secondaryLabel at 0.60 alpha; we bump to 0.75 to meet
+     WCAG AA (5.05:1 vs. 3.41:1 at 0.60 on elevated). Muted stays at 0.30
+     — matches iOS tertiary, for large/decorative text only. */
   --color-text-primary: #000000;
-  --color-text-secondary: rgba(60, 60, 67, 0.60);
+  --color-text-secondary: rgba(60, 60, 67, 0.75);
   --color-text-muted: rgba(60, 60, 67, 0.30);
 
   /* Hairlines — 0.5px separadores iOS */
@@ -573,6 +576,29 @@ body {
   --badge-emerald-bg: rgba(52, 199, 89, 0.15); --badge-emerald-text: #0F6B2C;
   --badge-pink-bg: rgba(255, 45, 85, 0.15);    --badge-pink-text: #8E1A3E;
   --badge-yellow-bg: rgba(255, 204, 0, 0.20);  --badge-yellow-text: #7A5E00;
+}
+
+/* Preset iOS — Toasts con ios-fade-in + translateY spring */
+@keyframes ios-toast-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.preset-ios .toast-success,
+.preset-ios .toast-error,
+.preset-ios .toast-warning,
+.preset-ios .toast-info {
+  animation: ios-toast-in var(--dur-std, 400ms) var(--ease-ios, ease-out) both;
+  border-radius: 14px;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+
+/* Preset iOS — Alpine.js x-transition dropdowns/popovers usan scale-in.
+   Alpine aplica `display: none` al entrar con x-show; añadimos un fade+scale
+   suave para los elementos que entran en frame. Targets usuales: dropdowns
+   con x-show, modales con x-show="open". */
+.preset-ios [x-show]:not([style*="display: none"]) {
+  animation: ios-scale-in var(--dur-fast, 250ms) var(--ease-ios, ease-out) both;
 }
 
 /* Preset iOS — MapLibre popups/controls con radio iOS */

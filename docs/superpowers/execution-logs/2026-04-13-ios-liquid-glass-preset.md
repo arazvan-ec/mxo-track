@@ -71,3 +71,28 @@
 **Patrón emergente para knowledge module:** El patrón "**CSS var con doble fallback**" (`var(--ease-ios, cubic-bezier(...))`) para permitir override por preset sin tocar el JSX del componente es la tercera vez que aparece en este codebase (ya usado en `.glass-overlay` con `--glass-blur` y en `.theme-card` con `--card-*`). Si vuelve a aparecer, graduar a `design-patterns.md` como pattern explícito.
 
 **Lección para futuras sesiones:** Antes de añadir `cubic-bezier(...)` nuevos, grep el codebase — muy probablemente la curva ya existe (pasó en `useBottomSheet.ts`). Esto debería ir como regla en `ui-frontend.md` si vuelve a pasar.
+
+---
+
+## Fase 2 — Pulido
+
+### Resumen
+
+4 tareas netas (3 ya se habían adelantado accidentalmente a Fase 1: M1b badges, M1c maplibre, M2a button scale).
+
+| Tarea | Resultado |
+|---|---|
+| M1a — WCAG AA audit dark/light | Auditoría con algoritmo WCAG: primary 18-20:1 ✅, secondary light 3.41:1 ❌ → bump alpha 0.60→0.75 (5.05:1 ✅). Muted se deja en 0.30 intencionalmente (iOS tertiary behavior, large text only) |
+| M2b — Toasts con ios-fade-in | Nuevo keyframe `ios-toast-in` (opacity + translateY 8px + scale 0.98). Aplicado a `.toast-success/error/warning/info` dentro de `.preset-ios` con blur 20px y radio 14px |
+| M2c — Alpine.js x-show scale-in | Regla `.preset-ios [x-show]:not([style*="display: none"])` aplica `animate-ios-scale-in` a dropdowns/modales Twig. Duración `--dur-fast` (250ms) |
+| V-final — Build + lint + manifest | `npm run build` ✅ 8.47s 0 errores. Lint ✅. Manifest regen ✅. CSS +0.48 KB → 89.35 KB total |
+
+### Decisión deliberada: desviación de iOS oficial en secondary label
+
+iOS usa `secondaryLabel = rgba(60,60,67,0.60)` en light mode. Esto da 3.41:1 contra elevated surface — falla WCAG AA (4.5:1). Bump a 0.75 → 5.05:1 ✅. La diferencia visual es mínima (128 → 108 luminancia) pero cumple accesibilidad. Comentario en el CSS documenta la decisión.
+
+### Retrospective Fase 2
+
+- **Auto-descubrimiento:** al empezar Fase 2 revisé cada tarea contra el código y encontré que 3 de 6 ya estaban shipeadas. Esto ahorró tiempo pero también es una señal de que el plan original sobredescribió Fase 2 vs. lo que fluía naturalmente durante Fase 1. Lección: escribir el preset incluyendo overrides de componentes relacionados (badges, maplibre) es más eficiente que separarlos en waves posteriores — el contexto mental ya está cargado.
+- **WCAG vs. autenticidad iOS:** surgió un trade-off explícito (0.60 iOS puro vs. 0.75 WCAG compliant). Elegimos compliance con comentario; esto debería graduar a decision log si vuelve a aparecer en otros presets.
+- **Estimate accuracy:** 4 tareas estimadas, 4 completadas. +20 líneas netas en `index.css` (vs. el +215 de Fase 1). Ratio de esfuerzo Fase 1 / Fase 2 ≈ 10:1 — el preset base absorbe la mayor parte del trabajo.
