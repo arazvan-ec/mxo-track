@@ -55,6 +55,10 @@ agentes paralelos.
   5. Test `children render-prop receives detailed boolean` → fail
   6. Soportar `children: ReactNode | ((detailed: boolean) => ReactNode)` → green
   7. Test `does not render detail button when supportsDetail is false` → green
+- **iOS preset compat:** transiciones del chevron, max-height del contenido y
+  rotate del botón de detalle deben usar el patrón **CSS var con doble fallback**:
+  `transition: max-height var(--dur-fast, 200ms) var(--ease-ios, ease-in-out)`.
+  Sin acoplamiento al preset; otros presets mantienen comportamiento actual.
 - **Produce:** API completa del componente para que widgets puedan recibir
   `detailed` y renderizar dos modos
 

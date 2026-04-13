@@ -317,6 +317,34 @@ Minimizado por defecto (current) + `supportsDetail`: compact 10 últimas, detail
 └──────────────────────────────────────────────┘
 ```
 
+## Compatibilidad con preset iOS Liquid Glass
+
+Tras el merge de `main` (commit `4f64bb1`), el codebase tiene un nuevo preset `ios`
+(`.preset-ios` en `index.css`) opt-in que aporta tokens de animación
+(`--ease-ios: cubic-bezier(0.32, 0.72, 0, 1)`, `--dur-fast: 250ms`, `--dur-std: 400ms`,
+`--dur-sheet: 500ms`) y un wrapper `IOSPageTransition` activado solo cuando preset='ios'.
+
+**Aplicación al diseño del dashboard:**
+
+1. **`theme-card` ya es preset-aware** — los nuevos widgets que usan `theme-card`
+   adaptan radii, padding, sombras y blur según el preset activo sin cambios JSX.
+2. **CollapsibleWidget extendido (Wave 1b)**: las transiciones del chevron y de
+   la altura del contenido deben usar el patrón **CSS var con doble fallback**:
+   ```css
+   transition: max-height var(--dur-fast, 200ms) var(--ease-ios, ease-in-out);
+   transform: rotate(...) var(--dur-fast, 200ms) var(--ease-ios, ease-out);
+   ```
+   Esto preserva el comportamiento actual con presets default/glass/command/bento/dense
+   y activa spring iOS cuando preset='ios'.
+3. **AdminDashboardPage refactor (Wave 3)**: como queda dentro de `<Outlet/>` ya
+   envuelto en `IOSPageTransition`, hereda automáticamente el page transition iOS
+   sin acción adicional.
+4. **Componentes SVG existentes** (`SparklineSVG`, `RadialGauge`, `AnimatedCounter`,
+   `AnimatedBarChart`): no requieren cambios — sus animaciones internas son JS-driven
+   y mantienen su look-and-feel en todos los presets.
+
+**Coste añadido:** 3-4 líneas de CSS en CollapsibleWidget. Cero impacto en otras tareas.
+
 ## Phasing
 
 ### Phase 1 (v0) — En este PR
