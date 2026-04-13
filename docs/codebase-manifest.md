@@ -3,7 +3,7 @@
 > **Auto-generated** by `make manifest` (`backend/bin/generate-manifest.sh`).
 > Do not edit manually — regenerate with `make manifest`.
 
-**Generated:** 2026-04-13 23:04
+**Generated:** 2026-04-13 23:15
 **Regenerate:** `make manifest`
 
 ## Project Overview
@@ -11,7 +11,7 @@
 | Area | Path | Files | Tech |
 |------|------|------:|------|
 | Backend | `backend/` | 533 PHP | Symfony 7.4, PHP 8.4 |
-| Frontend | `frontend/` | 149 JS/TS | React |
+| Frontend | `frontend/` | 153 JS/TS | React |
 | ML Service | `ml-service/` | 17 Python | FastAPI |
 | Docker/Infra | `docker/` + `scripts/` | 9 + 5 | Docker, OSRM, VROOM, Traccar |
 | OpenSpec | `openspec/` | 28 specs | YAML specs |
@@ -37,7 +37,7 @@
 | Event Listeners | 11 |
 | Messenger Messages | 4 |
 | Message Handlers | 4 |
-| Tests | 144 |
+| Tests | 145 |
 | Migrations | 39 |
 
 ## Entity List
@@ -216,8 +216,8 @@ View
 
 | Category | Count |
 |----------|------:|
-| JS/TS files total | 149 |
-| Pages | 20 |
+| JS/TS files total | 153 |
+| Pages | 22 |
 
 ### Directory Tree
 
@@ -620,7 +620,7 @@ Provider factories (critical for Constructor Signature Changes pattern):
 | Functional | 8 |
 | Domain | 6 |
 | Factory (test factories) | 1 |
-| **Total** | **144** |
+| **Total** | **145** |
 
 ---
 
