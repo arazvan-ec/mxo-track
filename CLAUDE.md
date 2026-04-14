@@ -1001,6 +1001,7 @@ changed files (threshold: ≥5 files or new files in a pattern).
 | Design patterns | `design-patterns.md` |
 | Security, roles | `security.md` |
 | UI, Twig, React | `ui-frontend.md` |
+| CSS layout, positioning | `ui-layout-contracts.md` |
 | Full index | `index.md` |
 
 **Freshness:** < 14 days → trust directly. Older → spot-check 2-3 claims before trusting.
