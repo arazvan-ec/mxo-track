@@ -43,6 +43,22 @@ else
   check "Found $LINT_ERRORS syntax errors" "1"
 fi
 
+# ── 1b. Frontend deps ──
+echo "▸ Frontend deps"
+if [ -d "$REPO/frontend/node_modules" ]; then
+  check "frontend/node_modules present" "0"
+else
+  check "frontend/node_modules missing — run: cd frontend && npm install" "1"
+fi
+
+# ── 1c. Backend deps ──
+echo "▸ Backend deps"
+if [ -d "$REPO/backend/vendor" ]; then
+  check "backend/vendor present" "0"
+else
+  check "backend/vendor missing — run: cd backend && composer install" "1"
+fi
+
 # ── 2. Unit Tests ──
 echo "▸ Unit Tests"
 if [ -f "$REPO/backend/vendor/bin/phpunit" ]; then

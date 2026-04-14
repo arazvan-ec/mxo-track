@@ -90,6 +90,22 @@ function TopDriversList({ drivers }: { drivers: TopDriver[] }) {
   );
 }
 
+export function MiniReportsSummary({ data: _data }: WidgetProps) {
+  const { data: reports } = useQuery({
+    queryKey: ['dashboard-reports'],
+    queryFn: () => api.get<ReportsResponse>('/api/admin/dashboard-reports'),
+    staleTime: 60 * 1000,
+    refetchInterval: 30 * 1000,
+  });
+  const total = reports?.daily_deliveries.reduce((s, d) => s + d.deliveries, 0) ?? 0;
+  return (
+    <span className="text-xs tabular-nums" style={{ color: 'var(--color-text-secondary)' }}>
+      <span className="font-semibold" style={{ color: 'var(--color-text-primary)' }}>{total}</span>{' '}
+      entregas 7d
+    </span>
+  );
+}
+
 export function MiniReportsWidget({ data: _data }: WidgetProps) {
   const { data: reports } = useQuery({
     queryKey: ['dashboard-reports'],

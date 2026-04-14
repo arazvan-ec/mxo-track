@@ -26,11 +26,13 @@ export function WidgetRenderer({ layout, sheetState, pageData, mode = 'sheet' }:
         const rendered = <Component key={`${type}-${position}`} data={pageData} expanded={expanded} />;
 
         if (mode === 'page' && entry.collapsible && entry.sectionTitle) {
+          const Summary = entry.summaryComponent;
           return (
             <CollapsibleWidget
               key={`${type}-${position}`}
               title={entry.sectionTitle}
               storageKey={`mxo-dashboard-widget-${type}-minimized`}
+              summary={Summary ? <Summary data={pageData} expanded={expanded} /> : undefined}
             >
               <Component data={pageData} expanded={expanded} />
             </CollapsibleWidget>

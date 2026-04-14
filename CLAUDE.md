@@ -483,11 +483,25 @@ The model writes task_progress → the UserPromptSubmit hook reads it → the ho
 it into the status line → the model sees its position in the next turn.
 
 Three transitions maintain the counter:
-1. **Enter implementation:** Initialize with plan's task count and first label
-2. **Start each new task:** Advance `current`, archive previous label in `completed_labels`
-3. **All tasks done:** Reset to zero before transitioning to verification
+1. **Enter implementation:** `phase-advance.sh implementation` auto-runs
+   `plan-progress.sh init` when `task_progress.total == 0` and `plan_path` is set.
+   Manual invocation (`bash .claude/hooks/plan-progress.sh init`) is only needed if
+   the plan was written after entering implementation.
+2. **Start each new task:** `bash .claude/hooks/plan-progress.sh advance <task_id>`
+   (e.g. `advance 1a`) advances `current`. Before advancing the next task, run
+   `plan-progress.sh complete` to archive the current label.
+3. **All tasks done:** `plan-progress.sh complete` on the last task auto-resets
+   `current` and `label` to null.
 
 This produces: `📍 full | Implementation (4/8) | ✅🔄⬚⬚⬚ t2/5: Add toggle button`
+
+**Alternative — TodoWrite-driven flows:** if you use TodoWrite instead of (or
+alongside) a parsed plan, `todowrite-mirror.sh` automatically mirrors the todo
+list to `task_progress` — total = item count, current = completed + 1, label =
+active form of the `in_progress` item. The mirror is suppressed if
+`task_progress.task_index` is populated (plan is authoritative). Use TodoWrite
+for process/wiring flows where tasks are enumerated ad-hoc rather than parsed
+from a plan with waves.
 
 #### Multi-problem tracking via work_context.problems
 
@@ -664,6 +678,35 @@ para que el estado sea visible de un vistazo. Idioma: español.
 ---
 
 <!-- GENERIC-START: Verification and closure -->
+### Shared Component Modifications
+
+Mid-implementation, if you need to modify a component consumed by more than one file
+(a UI primitive, a base class, a registry schema, a shared interface), **STOP editing**.
+Shared modifications silently widen the scope beyond what was brainstormed.
+
+The sequence is:
+
+1. **Do not edit.** Revert any partial change to the shared component.
+2. **Update the spec** with the new requirement and the reason it emerged.
+3. **Re-enter brainstorming** with the user. Present the new requirement, alternatives
+   you've considered (including "don't modify the shared component — work around it"),
+   and ask for approval.
+4. **Only after approval,** make the change.
+
+Why this matters: an unreviewed extension to a shared API becomes load-bearing the
+moment a second consumer uses it. Rolling back becomes expensive. The brainstorming
+gate caught the full design once — bypassing it mid-impl means the new design is
+never reviewed.
+
+Examples of "shared component" in this repo:
+- `CollapsibleWidget`, `BottomSheet`, `AnimatedCounter` and other UI primitives
+- `WidgetProps`, `WidgetRegistryEntry` and other public types
+- Base classes like `AbstractController` extensions, Domain service interfaces
+- Registry/enum schemas (`WidgetType`, `PageKey`, `SheetState`)
+
+Counter-example (not shared): a private helper used by only one component — free to
+modify.
+
 ## After Writing Code: Verify and Close
 
 ### Evidence Before Claims

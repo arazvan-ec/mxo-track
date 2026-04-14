@@ -135,4 +135,14 @@ jq --arg phase "$NEXT_PHASE" --arg ts "$TIMESTAMP" --arg prev "$CURRENT_PHASE" \
   "$STATE_FILE" > /tmp/pa.json && mv /tmp/pa.json "$STATE_FILE"
 
 echo "✅ Phase advanced: $CURRENT_PHASE → $NEXT_PHASE (at $TIMESTAMP)"
+
+# Auto-init plan progress when entering implementation (non-blocking)
+if [ "$NEXT_PHASE" = "implementation" ]; then
+  CURRENT_TOTAL=$(jq -r '.evidence.task_progress.total // 0' "$STATE_FILE" 2>/dev/null || echo "0")
+  PLAN_PATH=$(jq -r '.evidence.plan_path // ""' "$STATE_FILE" 2>/dev/null || echo "")
+  if [ "$CURRENT_TOTAL" = "0" ] && [ -n "$PLAN_PATH" ] && [ -f "$REPO/$PLAN_PATH" ]; then
+    bash "$REPO/.claude/hooks/plan-progress.sh" init 2>&1 | sed 's/^/  [auto-init] /' || true
+  fi
+fi
+
 exit 0

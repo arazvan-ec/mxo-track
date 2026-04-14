@@ -287,6 +287,14 @@ export interface DashboardMetrics {
   pending_stops: number;
   import_runs_today: number;
   positions_ingested_last_hour: number;
+  total_routes: number;
+  total_stops: number;
+  route_status_breakdown: Record<string, number>;
+  stop_status_breakdown: Record<string, number>;
+  deliveries_today: number;
+  failed_today: number;
+  import_runs_last_7d: number;
+  positions_last_24h: number;
 }
 
 export interface DailyDelivery {

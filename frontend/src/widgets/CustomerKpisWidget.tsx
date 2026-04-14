@@ -10,6 +10,18 @@ const KPI_CONFIG = [
   { key: 'exceptions' as const, label: 'Excepciones', color: 'var(--color-error)' },
 ];
 
+export function CustomerKpisSummary({ data: _data }: WidgetProps) {
+  const { data: kpis } = useCustomerKpis();
+  if (!kpis) return null;
+  return (
+    <span className="text-xs tabular-nums" style={{ color: 'var(--color-text-secondary)' }}>
+      <span className="font-semibold" style={{ color: 'var(--color-success)' }}>
+        {kpis.completed_today}
+      </span>{' '}entregas hoy
+    </span>
+  );
+}
+
 export function CustomerKpisWidget({ data: _data }: WidgetProps) {
   const { data: kpis } = useCustomerKpis();
   if (!kpis) return null;
