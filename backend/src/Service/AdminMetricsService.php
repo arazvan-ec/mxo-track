@@ -33,8 +33,8 @@ final class AdminMetricsService
             'total_stops' => $this->countAll('route_stop'),
             'route_status_breakdown' => $this->countByStatusGroup('route_plan'),
             'stop_status_breakdown' => $this->countByStatusGroup('route_stop'),
-            'deliveries_today' => $this->countByValueSince('route_stop', 'status', 'DELIVERED', 'updated_at', $todayStart),
-            'failed_today' => $this->countByValueSince('route_stop', 'status', 'FAILED', 'updated_at', $todayStart),
+            'deliveries_today' => $this->countByValueSince('route_stop', 'status', 'DELIVERED', 'delivered_at', $todayStart),
+            'failed_today' => $this->countByValueSince('route_stop', 'status', 'FAILED', 'delivered_at', $todayStart),
             'import_runs_last_7d' => $this->countSince('csv_import_run', 'created_at', $weekAgo),
             'positions_last_24h' => $this->countSince('vehicle_positions', 'server_time', $dayAgo),
         ];
