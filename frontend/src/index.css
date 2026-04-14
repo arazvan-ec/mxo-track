@@ -314,6 +314,7 @@ body {
   backdrop-filter: blur(var(--glass-blur, 16px)) brightness(var(--glass-brightness, 1)) saturate(var(--glass-saturate, 1));
   -webkit-backdrop-filter: blur(var(--glass-blur, 16px)) brightness(var(--glass-brightness, 1)) saturate(var(--glass-saturate, 1));
   border: 1px solid var(--glass-border, var(--color-border-subtle));
+  position: relative;
 }
 
 /* ── Animations ── */
@@ -455,6 +456,8 @@ body {
   --glass-saturate: 1.8;
   --glass-bg: rgba(255, 255, 255, 0.72);
   --glass-border: rgba(255, 255, 255, 0.6);
+  --glass-noise: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.80' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --glass-reflection: linear-gradient(168deg, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0.12) 25%, rgba(255,255,255,0) 50%, rgba(255,255,255,0.08) 85%, rgba(255,255,255,0.18) 100%);
 
   /* Card tokens — radios iOS + specular highlights */
   --card-radius: 1.25rem;
@@ -465,12 +468,14 @@ body {
     0 0 0 0.5px rgba(0, 0, 0, 0.04),
     0 1px 2px rgba(0, 0, 0, 0.04),
     0 8px 24px rgba(0, 0, 0, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    inset 0 1px 1px rgba(255, 255, 255, 0.8),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.02);
   --card-hover-shadow:
     0 0 0 0.5px rgba(0, 0, 0, 0.06),
     0 2px 4px rgba(0, 0, 0, 0.06),
     0 12px 32px rgba(0, 0, 0, 0.10),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    inset 0 1px 1px rgba(255, 255, 255, 0.9),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.03);
   --card-padding: 1.25rem;
   --section-gap: 1.5rem;
 
@@ -511,7 +516,8 @@ body {
   --color-warning: #FF9F0A;
 
   --glass-bg: rgba(28, 28, 30, 0.64);
-  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --glass-reflection: linear-gradient(168deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0) 50%, rgba(255,255,255,0.03) 85%, rgba(255,255,255,0.06) 100%);
 
   --card-bg: rgba(28, 28, 30, 0.68);
   --card-border: 0.5px solid rgba(84, 84, 88, 0.40);
@@ -519,12 +525,72 @@ body {
     0 0 0 0.5px rgba(255, 255, 255, 0.06),
     0 1px 2px rgba(0, 0, 0, 0.30),
     0 8px 24px rgba(0, 0, 0, 0.40),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    inset 0 1px 1px rgba(255, 255, 255, 0.12),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.2);
   --card-hover-shadow:
     0 0 0 0.5px rgba(255, 255, 255, 0.08),
     0 2px 4px rgba(0, 0, 0, 0.40),
     0 12px 32px rgba(0, 0, 0, 0.50),
-    inset 0 1px 0 rgba(255, 255, 255, 0.10);
+    inset 0 1px 1px rgba(255, 255, 255, 0.15),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.25);
+}
+
+/* ── iOS Liquid Glass — Noise texture + specular reflection ── */
+.preset-ios .glass-overlay,
+.preset-ios .theme-card {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Noise grain — gives glass material texture */
+.preset-ios .glass-overlay::before,
+.preset-ios .theme-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--glass-noise);
+  opacity: 0.035;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.preset-ios.dark .glass-overlay::before,
+.preset-ios.dark .theme-card::before {
+  opacity: 0.07;
+}
+
+/* Specular reflection — edge highlights like wet glass */
+.preset-ios .glass-overlay::after,
+.preset-ios .theme-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--glass-reflection);
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* ── Glass Enhanced — toggleable intensity boost ── */
+.preset-ios.glass-enhanced {
+  --glass-blur: 40px;
+  --glass-brightness: 1.15;
+  --glass-saturate: 2.2;
+  --glass-bg: rgba(255, 255, 255, 0.55);
+  --glass-border: rgba(255, 255, 255, 0.75);
+  --card-bg: rgba(255, 255, 255, 0.58);
+  --card-blur: blur(36px) saturate(220%);
+  --color-surface-glass: rgba(255, 255, 255, 0.52);
+  --color-surface-elevated: rgba(255, 255, 255, 0.60);
+}
+
+.preset-ios.glass-enhanced.dark {
+  --glass-bg: rgba(28, 28, 30, 0.50);
+  --glass-border: rgba(255, 255, 255, 0.16);
+  --card-bg: rgba(28, 28, 30, 0.52);
+  --card-blur: blur(36px) saturate(220%);
+  --color-surface-glass: rgba(28, 28, 30, 0.48);
+  --color-surface-elevated: rgba(28, 28, 30, 0.58);
 }
 
 /* ── iOS Motion — Keyframes ── */

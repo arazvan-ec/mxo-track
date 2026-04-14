@@ -47,7 +47,7 @@ interface ThemeSwitcherProps {
 }
 
 export function ThemeSwitcher({ mode = 'floating' }: ThemeSwitcherProps) {
-  const { preset, setPreset, resolved, toggle } = useTheme();
+  const { preset, setPreset, resolved, toggle, glassEnhanced, setGlassEnhanced } = useTheme();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -80,6 +80,29 @@ export function ThemeSwitcher({ mode = 'floating' }: ThemeSwitcherProps) {
           {ALL_PRESETS.map((p) => (
             <PresetSwatch key={p} preset={p} active={preset === p} onClick={() => setPreset(p)} />
           ))}
+
+          {preset === 'ios' && (
+            <>
+              <div className="my-2 border-t" style={{ borderColor: 'var(--color-border)' }} />
+              <button
+                type="button"
+                onClick={() => setGlassEnhanced(!glassEnhanced)}
+                className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-left transition-colors"
+                style={{ color: 'var(--color-text-primary)' }}
+              >
+                <span className="text-sm font-medium flex-1">Liquid Glass</span>
+                <div
+                  className="relative w-9 h-5 rounded-full transition-colors"
+                  style={{ backgroundColor: glassEnhanced ? 'var(--color-accent)' : 'var(--color-border)' }}
+                >
+                  <div
+                    className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform"
+                    style={{ transform: glassEnhanced ? 'translateX(17px)' : 'translateX(2px)' }}
+                  />
+                </div>
+              </button>
+            </>
+          )}
 
           <div className="my-2 border-t" style={{ borderColor: 'var(--color-border)' }} />
 
