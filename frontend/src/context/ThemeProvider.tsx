@@ -8,8 +8,10 @@ interface ThemeContextValue {
   mode: ThemeMode;
   resolved: ResolvedTheme;
   preset: ThemePreset;
+  glassEnhanced: boolean;
   setMode: (mode: ThemeMode) => void;
   setPreset: (preset: ThemePreset) => void;
+  setGlassEnhanced: (v: boolean) => void;
   toggle: () => void;
 }
 
@@ -17,6 +19,7 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 const STORAGE_KEY = 'mxo-theme';
 const PRESET_KEY = 'mxo-theme-preset';
+const GLASS_KEY = 'mxo-glass-enhanced';
 const ALL_PRESETS: ThemePreset[] = ['default', 'glass', 'command', 'bento', 'dense', 'ios'];
 
 function getSystemTheme(): ResolvedTheme {
@@ -40,6 +43,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     return stored && ALL_PRESETS.includes(stored) ? stored : 'default';
   });
 
+  const [glassEnhanced, setGlassEnhancedState] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem(GLASS_KEY) === 'true';
+  });
+
   const resolved = resolveTheme(mode);
 
   const setMode = useCallback((m: ThemeMode) => {
@@ -52,11 +60,16 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(PRESET_KEY, p);
   }, []);
 
+  const setGlassEnhanced = useCallback((v: boolean) => {
+    setGlassEnhancedState(v);
+    localStorage.setItem(GLASS_KEY, String(v));
+  }, []);
+
   const toggle = useCallback(() => {
     setMode(resolved === 'dark' ? 'light' : 'dark');
   }, [resolved, setMode]);
 
-  // Apply dark class and preset class on <html>
+  // Apply dark class, preset class, and glass-enhanced on <html>
   useEffect(() => {
     const root = document.documentElement;
 
@@ -72,7 +85,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     if (preset !== 'default') {
       root.classList.add(`preset-${preset}`);
     }
-  }, [resolved, preset]);
+
+    // Glass enhanced — only meaningful with iOS preset
+    if (preset === 'ios' && glassEnhanced) {
+      root.classList.add('glass-enhanced');
+    } else {
+      root.classList.remove('glass-enhanced');
+    }
+  }, [resolved, preset, glassEnhanced]);
 
   // Listen for system theme changes when in 'system' mode
   useEffect(() => {
@@ -84,7 +104,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [mode]);
 
   return (
-    <ThemeContext.Provider value={{ mode, resolved, preset, setMode, setPreset, toggle }}>
+    <ThemeContext.Provider value={{ mode, resolved, preset, glassEnhanced, setMode, setPreset, setGlassEnhanced, toggle }}>
       {children}
     </ThemeContext.Provider>
   );

@@ -229,6 +229,16 @@ consult → brainstorming → planning → implementation → verification → c
    retrospectives                                               
 ```
 
+**Retrospective visibility rule:** The retrospective MUST be presented to the user as a
+visible message BEFORE writing it to the execution log. The retrospective is not a
+formality to file away — it's a conversation with the user about what worked and what
+didn't. Three mandatory points:
+1. **Estimate accuracy** — estimated vs. actual (lines, files, time). Root cause of any gap.
+2. **Process gap** — what allowed something to go wrong or deviate? What's the fix?
+3. **Emergent patterns** — any new pattern? If 3+ occurrences, graduate to knowledge module.
+
+Only after the user has seen the retrospective, write it to the execution log.
+
 **Scope change detection:** If the user requests something NOT in the current plan,
 it's a new interaction. Increment `interaction_id`, reclassify, restart the flow.
 

@@ -137,6 +137,16 @@ jq --arg phase "$NEXT_PHASE" --arg ts "$TIMESTAMP" --arg prev "$CURRENT_PHASE" \
 
 echo "✅ Phase advanced: $CURRENT_PHASE → $NEXT_PHASE (at $TIMESTAMP)"
 
+# Retrospective reminder when entering that phase
+if [ "$NEXT_PHASE" = "retrospective" ]; then
+  cat <<'RETRO'
+📋 RETROSPECTIVE — Presentar al usuario ANTES de escribir al execution log:
+  1. Estimate accuracy: estimado vs. real (líneas, archivos, tiempo)
+  2. Process gap: ¿qué permitió que algo saliera mal o se desviara?
+  3. Emergent patterns: ¿algún patrón nuevo? (si 3+ ocurrencias → graduar a knowledge module)
+RETRO
+fi
+
 # Auto-init plan progress when entering implementation (non-blocking)
 if [ "$NEXT_PHASE" = "implementation" ]; then
   CURRENT_TOTAL=$(jq -r '.evidence.task_progress.total // 0' "$STATE_FILE" 2>/dev/null || echo "0")
