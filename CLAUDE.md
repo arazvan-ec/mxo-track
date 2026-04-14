@@ -664,6 +664,35 @@ para que el estado sea visible de un vistazo. Idioma: español.
 ---
 
 <!-- GENERIC-START: Verification and closure -->
+### Shared Component Modifications
+
+Mid-implementation, if you need to modify a component consumed by more than one file
+(a UI primitive, a base class, a registry schema, a shared interface), **STOP editing**.
+Shared modifications silently widen the scope beyond what was brainstormed.
+
+The sequence is:
+
+1. **Do not edit.** Revert any partial change to the shared component.
+2. **Update the spec** with the new requirement and the reason it emerged.
+3. **Re-enter brainstorming** with the user. Present the new requirement, alternatives
+   you've considered (including "don't modify the shared component — work around it"),
+   and ask for approval.
+4. **Only after approval,** make the change.
+
+Why this matters: an unreviewed extension to a shared API becomes load-bearing the
+moment a second consumer uses it. Rolling back becomes expensive. The brainstorming
+gate caught the full design once — bypassing it mid-impl means the new design is
+never reviewed.
+
+Examples of "shared component" in this repo:
+- `CollapsibleWidget`, `BottomSheet`, `AnimatedCounter` and other UI primitives
+- `WidgetProps`, `WidgetRegistryEntry` and other public types
+- Base classes like `AbstractController` extensions, Domain service interfaces
+- Registry/enum schemas (`WidgetType`, `PageKey`, `SheetState`)
+
+Counter-example (not shared): a private helper used by only one component — free to
+modify.
+
 ## After Writing Code: Verify and Close
 
 ### Evidence Before Claims

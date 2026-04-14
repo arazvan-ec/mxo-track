@@ -109,6 +109,27 @@ const TruckIcon = () => (
   </svg>
 );
 
+export function SystemHealthSummary({ data }: WidgetProps) {
+  const { health } = data as SystemHealthData;
+  if (!health) return null;
+  const keys: Array<keyof NonNullable<SystemHealthData['health']>> = [
+    'db_ok', 'redis_ok', 'traccar_ok', 'mercure_ok', 'osrm_ok', 'vroom_ok',
+  ];
+  const okCount = keys.filter((k) => health[k]).length;
+  const allOk = okCount === keys.length;
+  return (
+    <span
+      className="text-xs font-medium px-2 py-0.5 rounded-full tabular-nums"
+      style={{
+        backgroundColor: allOk ? 'var(--color-accent-muted)' : 'rgba(239,68,68,0.1)',
+        color: allOk ? 'var(--color-success)' : 'var(--color-error)',
+      }}
+    >
+      {okCount}/{keys.length} OK
+    </span>
+  );
+}
+
 export function SystemHealthWidget({ data }: WidgetProps) {
   const { health, live } = data as SystemHealthData;
   if (!health || !live) return null;

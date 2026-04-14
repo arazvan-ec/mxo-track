@@ -141,6 +141,30 @@ Pattern: `x-data="{ open: false }"` + `x-show` + `x-transition` for dropdowns/mo
 | `sidebar-widget.tsx` | Standalone entry point — mounts `NavigationSidebar` in Twig pages |
 | `sidebar-widget.css` | Minimal styles for widget container + hamburger button |
 
+## Collapsible Components UX
+
+When designing a component that can collapse (e.g. widgets wrapped in
+`CollapsibleWidget`), explicitly enumerate what information disappears in the
+collapsed state. For each piece of lost info, decide:
+
+1. **Keep visible** — promote to the summary/header slot (`summary` prop on
+   `CollapsibleWidget`, `summaryComponent` in `WidgetRegistryEntry`).
+2. **Accept loss** — the info is non-critical and discoverable by expanding.
+3. **Don't collapse** — if too much critical info would vanish, the component
+   shouldn't be collapsible at all.
+
+**Anti-pattern:** shipping a collapsible widget where the collapsed state shows
+only the title. Users lose all actionable info by clicking collapse — worse
+than no-collapse-at-all.
+
+**Infrastructure available:**
+- `CollapsibleWidget` accepts `summary?: ReactNode` — rendered inline in the
+  header next to the title, visible regardless of expanded state
+  (`components/widgets/CollapsibleWidget.tsx`).
+- `WidgetRegistryEntry` accepts `summaryComponent?: ComponentType<WidgetProps>`
+  — auto-wired by `WidgetRenderer` when `mode='page'` and the widget is
+  collapsible (`widgets/registry.ts`, `components/bottom-sheet/WidgetRenderer.tsx`).
+
 ## Common Patterns
 
 **Adding a new admin page:**

@@ -11,13 +11,13 @@ import { VehicleInfoWidget } from './VehicleInfoWidget';
 import { DriverInfoWidget } from './DriverInfoWidget';
 import { ShipmentDetailsWidget } from './ShipmentDetailsWidget';
 import { DeliveryTimelineWidget } from './DeliveryTimelineWidget';
-import { SystemHealthWidget } from './SystemHealthWidget';
-import { InfrastructureMetricsWidget } from './InfrastructureMetricsWidget';
-import { DashboardKpisWidget } from './DashboardKpisWidget';
-import { MiniReportsWidget } from './MiniReportsWidget';
+import { SystemHealthWidget, SystemHealthSummary } from './SystemHealthWidget';
+import { InfrastructureMetricsWidget, InfrastructureMetricsSummary } from './InfrastructureMetricsWidget';
+import { DashboardKpisWidget, DashboardKpisSummary } from './DashboardKpisWidget';
+import { MiniReportsWidget, MiniReportsSummary } from './MiniReportsWidget';
 import { ActivityFeedWidget } from './ActivityFeedWidget';
-import { CustomerKpisWidget } from './CustomerKpisWidget';
-import { CustomerOptimizationWidget } from './CustomerOptimizationWidget';
+import { CustomerKpisWidget, CustomerKpisSummary } from './CustomerKpisWidget';
+import { CustomerOptimizationWidget, CustomerOptimizationSummary } from './CustomerOptimizationWidget';
 import { ReportsBannerWidget } from './ReportsBannerWidget';
 
 export interface WidgetRegistryEntry extends WidgetRegistryMeta {
@@ -79,6 +79,7 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetRegistryEntry> = {
   },
   system_health: {
     component: SystemHealthWidget,
+    summaryComponent: SystemHealthSummary,
     label: 'System Health',
     description: '6 service status cards (DB, Redis, Traccar, Mercure, OSRM, VROOM)',
     collapsible: true,
@@ -86,6 +87,7 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetRegistryEntry> = {
   },
   infrastructure_metrics: {
     component: InfrastructureMetricsWidget,
+    summaryComponent: InfrastructureMetricsSummary,
     label: 'Infrastructure Metrics',
     description: '3 metric cards (positions table, DB size, last ingestion)',
     collapsible: true,
@@ -93,6 +95,7 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetRegistryEntry> = {
   },
   dashboard_kpis: {
     component: DashboardKpisWidget,
+    summaryComponent: DashboardKpisSummary,
     label: 'Dashboard KPIs',
     description: '4 KPI cards (routes, stops, imports, positions/hour)',
     collapsible: true,
@@ -100,6 +103,7 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetRegistryEntry> = {
   },
   mini_reports: {
     component: MiniReportsWidget,
+    summaryComponent: MiniReportsSummary,
     label: 'Mini Reports',
     description: 'Chart (7-day deliveries) + top 5 drivers',
     collapsible: true,
@@ -114,6 +118,7 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetRegistryEntry> = {
   },
   customer_kpis: {
     component: CustomerKpisWidget,
+    summaryComponent: CustomerKpisSummary,
     label: 'Customer KPIs',
     description: '5 customer KPI cards (shipments, routes, deliveries, completed, exceptions)',
     collapsible: true,
@@ -121,6 +126,7 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetRegistryEntry> = {
   },
   customer_optimization: {
     component: CustomerOptimizationWidget,
+    summaryComponent: CustomerOptimizationSummary,
     label: 'Customer Optimization',
     description: 'Optimization value cards (km saved, time saved, success rate, savings %)',
     collapsible: true,

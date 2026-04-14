@@ -9,6 +9,19 @@ function formatMinutes(minutes: number): string {
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
+export function CustomerOptimizationSummary({ data: _data }: WidgetProps) {
+  const { data: kpis } = useCustomerOptimizationKpis();
+  if (!kpis) return null;
+  const km = Math.round(kpis.monthly_km_saved);
+  return (
+    <span className="text-xs tabular-nums" style={{ color: 'var(--color-text-secondary)' }}>
+      <span className="font-semibold" style={{ color: 'var(--color-success)' }}>
+        {km.toLocaleString('es-ES')} km
+      </span>{' '}ahorrados
+    </span>
+  );
+}
+
 export function CustomerOptimizationWidget({ data: _data }: WidgetProps) {
   const { data: kpis } = useCustomerOptimizationKpis();
   if (!kpis) return null;

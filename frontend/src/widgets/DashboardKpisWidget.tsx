@@ -83,6 +83,21 @@ const SignalIcon = () => (
   </svg>
 );
 
+export function DashboardKpisSummary({ data }: WidgetProps) {
+  const { metrics } = data as DashboardKpisData;
+  if (!metrics) return null;
+  return (
+    <span className="text-xs tabular-nums" style={{ color: 'var(--color-text-secondary)' }}>
+      <span className="font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+        {metrics.active_routes}
+      </span>{' '}rutas ·{' '}
+      <span className="font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+        {metrics.pending_stops}
+      </span>{' '}paradas
+    </span>
+  );
+}
+
 export function DashboardKpisWidget({ data }: WidgetProps) {
   const { metrics, daily_deliveries } = data as DashboardKpisData;
   if (!metrics) return null;

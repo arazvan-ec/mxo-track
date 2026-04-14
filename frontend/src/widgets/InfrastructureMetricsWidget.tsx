@@ -32,6 +32,21 @@ function ProgressBar({ value, max, warn }: { value: number; max: number; warn: b
   );
 }
 
+export function InfrastructureMetricsSummary({ data }: WidgetProps) {
+  const { live } = data as InfrastructureData;
+  if (!live) return null;
+  const secs = live.last_ingestion.seconds_ago;
+  const stale = secs !== null && secs > 1800;
+  return (
+    <span
+      className="text-xs tabular-nums"
+      style={{ color: stale ? 'var(--color-warning)' : 'var(--color-text-secondary)' }}
+    >
+      {formatSecondsAgo(secs)}
+    </span>
+  );
+}
+
 export function InfrastructureMetricsWidget({ data }: WidgetProps) {
   const { live } = data as InfrastructureData;
   if (!live) return null;
