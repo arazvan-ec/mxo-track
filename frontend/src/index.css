@@ -314,66 +314,6 @@ body {
   backdrop-filter: blur(var(--glass-blur, 16px)) brightness(var(--glass-brightness, 1)) saturate(var(--glass-saturate, 1));
   -webkit-backdrop-filter: blur(var(--glass-blur, 16px)) brightness(var(--glass-brightness, 1)) saturate(var(--glass-saturate, 1));
   border: 1px solid var(--glass-border, var(--color-border-subtle));
-  position: relative;
-}
-
-/* Enhanced Liquid Glass effects for iOS preset */
-.preset-ios .glass-overlay::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image: var(--glass-noise);
-  opacity: 0.04;
-  mix-blend-mode: overlay;
-  pointer-events: none;
-  z-index: -1;
-  border-radius: inherit;
-}
-
-.preset-ios .glass-overlay::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: var(--glass-reflection);
-  pointer-events: none;
-  z-index: -1;
-  border-radius: inherit;
-}
-
-.preset-ios.dark .glass-overlay::before {
-  opacity: 0.08;
-}
-
-/* Apply Liquid Glass effects to theme-card in iOS preset */
-.preset-ios .theme-card {
-  position: relative;
-  overflow: hidden;
-}
-
-.preset-ios .theme-card::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image: var(--glass-noise);
-  opacity: 0.04;
-  mix-blend-mode: overlay;
-  pointer-events: none;
-  z-index: -1;
-  border-radius: inherit;
-}
-
-.preset-ios .theme-card::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: var(--glass-reflection);
-  pointer-events: none;
-  z-index: -1;
-  border-radius: inherit;
-}
-
-.preset-ios.dark .theme-card::before {
-  opacity: 0.08;
 }
 
 /* ── Animations ── */
@@ -510,13 +450,11 @@ body {
   --color-warning: #FF9500;
 
   /* Glass tuning — Liquid Glass */
-  --glass-blur: 32px;
-  --glass-brightness: 1.12;
-  --glass-saturate: 2.1;
-  --glass-bg: rgba(255, 255, 255, 0.65);
-  --glass-border: rgba(255, 255, 255, 0.7);
-  --glass-noise: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.80' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-  --glass-reflection: linear-gradient(135deg, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0) 35%, rgba(255,255,255,0) 65%, rgba(255,255,255,0.15) 100%);
+  --glass-blur: 28px;
+  --glass-brightness: 1.08;
+  --glass-saturate: 1.8;
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.6);
 
   /* Card tokens — radios iOS + specular highlights */
   --card-radius: 1.25rem;
@@ -527,14 +465,12 @@ body {
     0 0 0 0.5px rgba(0, 0, 0, 0.04),
     0 1px 2px rgba(0, 0, 0, 0.04),
     0 8px 24px rgba(0, 0, 0, 0.06),
-    inset 0 1px 1px rgba(255, 255, 255, 0.8),
-    inset 0 -1px 1px rgba(0, 0, 0, 0.02);
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
   --card-hover-shadow:
     0 0 0 0.5px rgba(0, 0, 0, 0.06),
     0 2px 4px rgba(0, 0, 0, 0.06),
     0 12px 32px rgba(0, 0, 0, 0.10),
-    inset 0 1px 1px rgba(255, 255, 255, 0.9),
-    inset 0 -1px 1px rgba(0, 0, 0, 0.03);
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
   --card-padding: 1.25rem;
   --section-gap: 1.5rem;
 
@@ -574,9 +510,8 @@ body {
   --color-error: #FF453A;
   --color-warning: #FF9F0A;
 
-  --glass-bg: rgba(28, 28, 30, 0.60);
-  --glass-border: rgba(255, 255, 255, 0.12);
-  --glass-reflection: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 35%, rgba(255,255,255,0) 65%, rgba(255,255,255,0.05) 100%);
+  --glass-bg: rgba(28, 28, 30, 0.64);
+  --glass-border: rgba(255, 255, 255, 0.08);
 
   --card-bg: rgba(28, 28, 30, 0.68);
   --card-border: 0.5px solid rgba(84, 84, 88, 0.40);
@@ -584,14 +519,12 @@ body {
     0 0 0 0.5px rgba(255, 255, 255, 0.06),
     0 1px 2px rgba(0, 0, 0, 0.30),
     0 8px 24px rgba(0, 0, 0, 0.40),
-    inset 0 1px 1px rgba(255, 255, 255, 0.12),
-    inset 0 -1px 1px rgba(0, 0, 0, 0.2);
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
   --card-hover-shadow:
     0 0 0 0.5px rgba(255, 255, 255, 0.08),
     0 2px 4px rgba(0, 0, 0, 0.40),
     0 12px 32px rgba(0, 0, 0, 0.50),
-    inset 0 1px 1px rgba(255, 255, 255, 0.15),
-    inset 0 -1px 1px rgba(0, 0, 0, 0.25);
+    inset 0 1px 0 rgba(255, 255, 255, 0.10);
 }
 
 /* ── iOS Motion — Keyframes ── */
