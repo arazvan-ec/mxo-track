@@ -1,4 +1,5 @@
 import { useState, useCallback, type ReactNode } from 'react';
+import { useUserPreferencesContext } from '@/context/UserPreferencesContext';
 
 interface CollapsibleWidgetProps {
   title: string;
@@ -6,10 +7,27 @@ interface CollapsibleWidgetProps {
   summary?: ReactNode;
   storageKey: string;
   defaultExpanded?: boolean;
+  /**
+   * Override the initial expanded state. Takes priority over user preferences
+   * and `defaultExpanded`, but localStorage (user's per-widget toggle) wins if set.
+   *
+   * Resolution order (first non-empty wins):
+   *   1. localStorage entry for this storageKey (user previously toggled)
+   *   2. `initialMode` prop (if set)
+   *   3. UserPreferencesContext `widget_default_mode` (if context present)
+   *   4. `defaultExpanded` prop (default: true)
+   */
+  initialMode?: 'expanded' | 'collapsed';
   children: ReactNode;
 }
 
-function getInitialExpanded(storageKey: string, defaultExpanded: boolean): boolean {
+function resolveInitialExpanded(
+  storageKey: string,
+  defaultExpanded: boolean,
+  initialMode: 'expanded' | 'collapsed' | undefined,
+  contextMode: 'expanded' | 'collapsed' | undefined,
+): boolean {
+  // 1. localStorage wins (user explicitly toggled this widget)
   try {
     const stored = localStorage.getItem(storageKey);
     if (stored === 'false') return false;
@@ -17,6 +35,14 @@ function getInitialExpanded(storageKey: string, defaultExpanded: boolean): boole
   } catch {
     // localStorage unavailable
   }
+
+  // 2. initialMode prop
+  if (initialMode) return initialMode === 'expanded';
+
+  // 3. User preference from context
+  if (contextMode) return contextMode === 'expanded';
+
+  // 4. defaultExpanded prop
   return defaultExpanded;
 }
 
@@ -26,9 +52,15 @@ export function CollapsibleWidget({
   summary,
   storageKey,
   defaultExpanded = true,
+  initialMode,
   children,
 }: CollapsibleWidgetProps) {
-  const [expanded, setExpanded] = useState(() => getInitialExpanded(storageKey, defaultExpanded));
+  const { preferences } = useUserPreferencesContext();
+  const contextMode = preferences?.widget_default_mode;
+
+  const [expanded, setExpanded] = useState(() =>
+    resolveInitialExpanded(storageKey, defaultExpanded, initialMode, contextMode),
+  );
 
   const toggle = useCallback(() => {
     setExpanded((prev) => {

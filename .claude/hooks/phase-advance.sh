@@ -37,6 +37,7 @@ fi
 declare -A FLOW_PHASES
 FLOW_PHASES[full]="consult brainstorming planning implementation verification capture retrospective finalize"
 FLOW_PHASES[debug]="root_cause pattern_wide fix verification capture retrospective finalize"
+FLOW_PHASES[agent]="implementation verification"
 
 # Read current state
 CURRENT_PHASE=$(jq -r '.current_phase // "null"' "$STATE_FILE" 2>/dev/null || echo "null")

@@ -164,9 +164,34 @@ than no-collapse-at-all.
 - `CollapsibleWidget` accepts `summary?: ReactNode` — rendered inline in the
   header next to the title, visible regardless of expanded state
   (`components/widgets/CollapsibleWidget.tsx`).
+- `CollapsibleWidget` accepts `initialMode?: 'expanded' | 'collapsed'` — override
+  for initial state. Resolution priority: localStorage → `initialMode` prop →
+  `UserPreferencesContext.widget_default_mode` → `defaultExpanded` prop.
 - `WidgetRegistryEntry` accepts `summaryComponent?: ComponentType<WidgetProps>`
   — auto-wired by `WidgetRenderer` when `mode='page'` and the widget is
   collapsible (`widgets/registry.ts`, `components/bottom-sheet/WidgetRenderer.tsx`).
+
+## User Preferences System
+
+- `UserPreferencesContext` (`context/UserPreferencesContext.tsx`) — React context
+  providing `{ preferences, isLoading }`. Mounted at app root in `main.tsx`.
+- `useUserPreferences` hook (`api/hooks/useUserPreferences.ts`) — React Query hook
+  for GET/mutation PATCH `/api/me/preferences`.
+- `ProfilePage` (`pages/ProfilePage.tsx`) at route `/app/profile` — radio selector
+  for widget default mode (expanded/collapsed). Saves via PATCH.
+- `CollapsibleWidget` reads `UserPreferencesContext` automatically as fallback when
+  no `initialMode` prop or localStorage entry exists.
+
+## Registry-Driven Dashboard
+
+`AdminDashboardPage` (`pages/admin/AdminDashboardPage.tsx`) uses
+`usePageLayout('admin_dashboard')` + `WidgetRenderer` in `mode='page'` to render
+all dashboard widgets from the registry. The page only provides the greeting header
+(date, user name, last ingestion timestamp) as page chrome. All KPI, system health,
+infrastructure, reports, and banner sections come from the widget registry.
+
+Widgets in the `admin_dashboard` layout (position order): `dashboard_kpis`,
+`system_health`, `infrastructure_metrics`, `mini_reports`, `reports_banner`.
 
 ## Common Patterns
 

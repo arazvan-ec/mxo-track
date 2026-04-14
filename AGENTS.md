@@ -21,6 +21,60 @@ Anti-patterns:
 
 ---
 
+## Light Agent Mode (`flow_type = "agent"`)
+
+**When:** The main agent has already completed consult → brainstorming → planning and
+now dispatches a sub-agent (typically with `isolation: "worktree"`) to execute
+implementation. The sub-agent should NOT repeat the workflow engine phases — it just
+needs to write code, test, and commit.
+
+**How to set up the sub-agent:**
+
+1. In the prompt, tell the sub-agent to set `flow_type = "agent"` in session-state:
+   ```bash
+   jq '.flow_type = "agent" | .current_phase = "implementation"' \
+     .claude/session-state.json > /tmp/ss.json && mv /tmp/ss.json .claude/session-state.json
+   ```
+2. The `agent` flow type has **zero workflow gates** — all file classes (code, test,
+   spec, docs) are writable without passing validators.
+3. Phase sequence is minimal: `implementation → verification` (only 2 phases).
+4. The sub-agent does NOT need to write spec, plan, or execution log. Those are the
+   main agent's responsibility.
+
+**Why this exists:** In the 2026-04-14 session, two sub-agents hit rate limits (~8 min
+each) because they spent ~50% of their token budget on the workflow engine (writing spec,
+plan, advancing phases, session-state). The actual code was only ~40% of their work.
+Light agent mode eliminates the overhead so sub-agents focus exclusively on coding.
+
+**What the main agent must provide in the prompt:**
+- Exact file paths to create/modify (with ownership boundaries)
+- The design decision (what to build, not how to discover what to build)
+- Verification commands to run before committing
+- Branch name to push to
+
+**What the sub-agent must NOT do:**
+- Write to `.claude/session-state.json` in the MAIN repo (worktree has its own copy)
+- Follow the full 8-phase workflow (that's the main agent's job)
+- Create GitHub PRs (main agent coordinates merges)
+
+### Session-State Isolation in Worktrees
+
+Git worktrees have independent working directories. `.claude/session-state.json` is
+gitignored, so each worktree gets its own copy (created by session-start hook or by
+the sub-agent's initial `jq` command).
+
+**Rule:** After sub-agent completion, the main agent should verify its own
+`session-state.json` hasn't changed. If the sub-agent's worktree somehow shares the
+same `.claude/` directory (shouldn't happen, but defensive), re-set the main agent's
+`plan_path` and `spec_path` before continuing.
+
+**Stale paths after agent completion:** When resuming after agents complete, verify
+that `evidence.plan_path` and `evidence.spec_path` still point to valid files. A
+sub-agent may have overwritten these with its own worktree paths during its run. Fix
+by re-setting to the main agent's spec/plan paths.
+
+---
+
 ## Subagent-Driven Development (Skill 5)
 
 **Why:** Fresh subagent per task + two-stage review (spec then quality) = high quality, fast

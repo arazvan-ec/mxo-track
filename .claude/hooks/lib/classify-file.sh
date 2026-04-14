@@ -22,12 +22,12 @@ classify_file() {
 }
 
 # Valid flow types — used for validation
-VALID_FLOW_TYPES="micro light debug full explore"
+VALID_FLOW_TYPES="micro light debug full explore agent"
 
 is_valid_flow_type() {
   local flow="$1"
   case "$flow" in
-    micro|micro-flow|light|light-flow|debug|debug-flow|full|full-flow|explore|explore-flow)
+    micro|micro-flow|light|light-flow|debug|debug-flow|full|full-flow|explore|explore-flow|agent|agent-flow)
       return 0 ;;
     *)
       return 1 ;;

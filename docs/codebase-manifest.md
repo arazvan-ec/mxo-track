@@ -4,14 +4,15 @@
 > Do not edit manually — regenerate with `make manifest`.
 
 **Generated:** 2026-04-14 19:21
+**Generated:** 2026-04-14 19:04
 **Regenerate:** `make manifest`
 
 ## Project Overview
 
 | Area | Path | Files | Tech |
 |------|------|------:|------|
-| Backend | `backend/` | 533 PHP | Symfony 7.4, PHP 8.4 |
-| Frontend | `frontend/` | 149 JS/TS | React |
+| Backend | `backend/` | 537 PHP | Symfony 7.4, PHP 8.4 |
+| Frontend | `frontend/` | 152 JS/TS | React |
 | ML Service | `ml-service/` | 17 Python | FastAPI |
 | Docker/Infra | `docker/` + `scripts/` | 9 + 5 | Docker, OSRM, VROOM, Traccar |
 | OpenSpec | `openspec/` | 28 specs | YAML specs |
@@ -23,22 +24,22 @@
 
 | Category | Count |
 |----------|------:|
-| Entities (src/Entity/) | 38 |
+| Entities (src/Entity/) | 39 |
 | Domain Models (src/Domain/*/Model/) | 16 |
 | Enums — core (src/Enum/) | 20 |
 | Enums — provider | 4 |
 | **Enums total** | **24** |
-| Controllers | 76 |
+| Controllers | 77 |
 | Application Services (src/Application/) | 23 |
 | Domain/Infra Services (src/Service/) | 77 |
-| Repositories | 22 |
+| Repositories | 23 |
 | Console Commands | 18 |
-| DTOs | 17 |
+| DTOs | 18 |
 | Event Listeners | 11 |
 | Messenger Messages | 4 |
 | Message Handlers | 4 |
-| Tests | 145 |
-| Migrations | 39 |
+| Tests | 146 |
+| Migrations | 41 |
 
 ## Entity List
 
@@ -73,6 +74,7 @@
 - RoutePlanTemplate
 - SoftDeletableInterface
 - User
+- UserPreference
 - Vehicle
 - VehicleCheckpoint
 - VehicleInspection
@@ -216,8 +218,8 @@ View
 
 | Category | Count |
 |----------|------:|
-| JS/TS files total | 149 |
-| Pages | 20 |
+| JS/TS files total | 152 |
+| Pages | 21 |
 
 ### Directory Tree
 
@@ -420,6 +422,7 @@ Key Doctrine relationships (auto-extracted from entity attributes):
 - **RoutePerformanceMetric** → Customer, Route
 - **RoutePlanTemplate** → Customer
 - **User** → Customer
+- **UserPreference** → User
 - **VehicleCheckpoint** → Vehicle
 - **VehicleInspection** → Route, User
 - **VehicleLastPosition** → Vehicle
@@ -451,6 +454,7 @@ Controller endpoints (auto-extracted from `#[Route]` attributes):
 | GET | `/api/admin/widgets` | WidgetDefinitionApiController | list |
 | GET | `/api/csrf-token/{intention}` | CsrfTokenController | __invoke |
 | GET | `/api/fleet/map-data` | FleetMapDataController | __invoke |
+| GET | `/api/me/preferences` | UserPreferenceController | get |
 | GET | `/api/me` | MeController | __invoke |
 | GET | `/api/mercure-token` | MercureTokenController | __invoke |
 | GET | `/api/navigation` | NavigationController | __invoke |
@@ -616,11 +620,11 @@ Provider factories (critical for Constructor Signature Changes pattern):
 
 | Type | Count |
 |------|------:|
-| Unit | 129 |
+| Unit | 130 |
 | Functional | 8 |
 | Domain | 6 |
 | Factory (test factories) | 1 |
-| **Total** | **145** |
+| **Total** | **146** |
 
 ---
 
