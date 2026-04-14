@@ -20,6 +20,7 @@ import { OptimizationDashboardPage } from './pages/admin/OptimizationDashboardPa
 import { CustomerRouteDetailPage } from './pages/customer/CustomerRouteDetailPage';
 import { CustomerDashboardPage } from './pages/customer/CustomerDashboardPage';
 import { DriverRoutePage } from './pages/driver/DriverRoutePage';
+import { ProfilePage } from './pages/ProfilePage';
 
 export const router = createBrowserRouter([
   {
@@ -46,6 +47,7 @@ export const router = createBrowserRouter([
       { path: 'customer/dashboard', element: <CustomerDashboardPage /> },
       { path: 'customer/routes/:publicId', element: <CustomerRouteDetailPage /> },
       { path: 'driver/routes/:publicId', element: <DriverRoutePage /> },
+      { path: 'profile', element: <ProfilePage /> },
       { index: true, element: <Navigate to="admin/dashboard" replace /> },
     ],
   },
