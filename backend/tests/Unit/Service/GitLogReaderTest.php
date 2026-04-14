@@ -105,10 +105,12 @@ STAT;
 
     public function testGetCommitsReturnsStructuredArray(): void
     {
-        // Test against the actual repo - get last 3 commits from current branch
+        // Test against the actual repo - get recent commits from current branch.
+        // Note: assertNotEmpty instead of assertCount(3) because merge commits
+        // cause HEAD~3..HEAD to include more than 3 commits.
         $commits = $this->reader->getCommits('HEAD', 'HEAD~3');
 
-        self::assertCount(3, $commits);
+        self::assertNotEmpty($commits);
 
         foreach ($commits as $commit) {
             self::assertArrayHasKey('hash', $commit);

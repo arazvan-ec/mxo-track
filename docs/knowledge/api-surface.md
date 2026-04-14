@@ -53,6 +53,10 @@ API keys almacenadas como SHA-256 hash en `ApiKey` entity.
 | `/api/search` | GET | Búsqueda full-text |
 | `/api/routes/{publicId}/events` | GET | Historial de eventos de ruta |
 | `/api/routes/{publicId}/etas` | GET | ETAs de paradas (snapshot-first, fallback OSRM) |
+| `/api/admin/dashboard` | GET | Dashboard admin: health + live + metrics + daily_deliveries + top_drivers |
+| `/api/page-layouts/{pageKey}` | GET | Layout de widgets para una página (cascada: customer → global) |
+| `/api/me/preferences` | GET | Preferencias del usuario autenticado (auto-crea defaults si no existe) |
+| `/api/me/preferences` | PATCH | Actualizar preferencias (`widget_default_mode`: 'expanded'\|'collapsed') |
 
 ## Public (Sin Auth)
 
