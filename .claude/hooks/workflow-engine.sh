@@ -158,6 +158,13 @@ get_validators_for_flow() {
       echo ""
       ;;
 
+    # ── Agent-flow: sub-agent executing pre-planned work ──
+    # No validators — main agent already completed spec/plan/brainstorm.
+    # All file classes allowed. See AGENTS.md "Light Agent Mode".
+    agent|agent-flow)
+      echo ""
+      ;;
+
     # ── Full-flow: feature development ──
     # Full phase validation (existing behavior).
     # ── Full-flow validator routing ──
