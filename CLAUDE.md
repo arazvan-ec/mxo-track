@@ -483,11 +483,25 @@ The model writes task_progress → the UserPromptSubmit hook reads it → the ho
 it into the status line → the model sees its position in the next turn.
 
 Three transitions maintain the counter:
-1. **Enter implementation:** Initialize with plan's task count and first label
-2. **Start each new task:** Advance `current`, archive previous label in `completed_labels`
-3. **All tasks done:** Reset to zero before transitioning to verification
+1. **Enter implementation:** `phase-advance.sh implementation` auto-runs
+   `plan-progress.sh init` when `task_progress.total == 0` and `plan_path` is set.
+   Manual invocation (`bash .claude/hooks/plan-progress.sh init`) is only needed if
+   the plan was written after entering implementation.
+2. **Start each new task:** `bash .claude/hooks/plan-progress.sh advance <task_id>`
+   (e.g. `advance 1a`) advances `current`. Before advancing the next task, run
+   `plan-progress.sh complete` to archive the current label.
+3. **All tasks done:** `plan-progress.sh complete` on the last task auto-resets
+   `current` and `label` to null.
 
 This produces: `📍 full | Implementation (4/8) | ✅🔄⬚⬚⬚ t2/5: Add toggle button`
+
+**Alternative — TodoWrite-driven flows:** if you use TodoWrite instead of (or
+alongside) a parsed plan, `todowrite-mirror.sh` automatically mirrors the todo
+list to `task_progress` — total = item count, current = completed + 1, label =
+active form of the `in_progress` item. The mirror is suppressed if
+`task_progress.task_index` is populated (plan is authoritative). Use TodoWrite
+for process/wiring flows where tasks are enumerated ad-hoc rather than parsed
+from a plan with waves.
 
 #### Multi-problem tracking via work_context.problems
 

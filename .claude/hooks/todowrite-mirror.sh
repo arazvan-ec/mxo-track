@@ -40,4 +40,25 @@ jq --argjson total "$TOTAL" \
   }
 ' "$STATE_FILE" > /tmp/todo_mirror.json && mv /tmp/todo_mirror.json "$STATE_FILE"
 
+# Mirror into task_progress unless a plan has been parsed (plan is authoritative).
+# This enables the status line to show TodoWrite-driven progress for flows where
+# the model uses TodoWrite directly instead of a parsed plan file.
+HAS_PLAN_INDEX=$(jq -r '(.evidence.task_progress.task_index // []) | length' "$STATE_FILE" 2>/dev/null || echo "0")
+if [ "$HAS_PLAN_INDEX" = "0" ] && [ "$TOTAL" != "0" ]; then
+  COMPLETED_LABELS=$(echo "$TODOS" | jq -c '[.[] | select(.status == "completed") | (.activeForm // .content // "" | .[0:60])]' 2>/dev/null || echo "[]")
+  CURRENT_IDX=$((COMPLETED + 1))
+  if [ "$CURRENT_IDX" -gt "$TOTAL" ]; then
+    CURRENT_IDX="$TOTAL"
+  fi
+  jq --argjson total "$TOTAL" \
+     --argjson cur "$CURRENT_IDX" \
+     --arg lbl "$IN_PROGRESS_LABEL" \
+     --argjson cl "$COMPLETED_LABELS" '
+    .evidence.task_progress.total = $total |
+    .evidence.task_progress.current = $cur |
+    .evidence.task_progress.label = (if $lbl == "" then null else $lbl end) |
+    .evidence.task_progress.completed_labels = $cl
+  ' "$STATE_FILE" > /tmp/todo_task.json && mv /tmp/todo_task.json "$STATE_FILE"
+fi
+
 exit 0
