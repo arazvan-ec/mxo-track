@@ -44,3 +44,11 @@
 - **Reverted commit 683dc49 was directionally correct** — noise + specular + enhanced shadows is the right approach. The revert was branch cleanup, not a quality issue. Reusing the pattern with refined values saved design time.
 - **SVG feTurbulence as data URI** is the most portable noise solution for CSS — no build step, no external file, works as `background-image` in pseudo-elements. Key tuning: `baseFrequency='0.80'` + `numOctaves='4'` for fine grain without visible patterns.
 - **Toggle pattern for sub-preset options** works well: CSS class on `<html>`, state in ThemeProvider, UI conditional on active preset. Reusable if other presets want similar sub-options.
+
+## Retrospective
+
+**Estimate accuracy:** ~125 líneas estimadas → ~97 netas (22% overestimate). **Root cause:** estimated by concept ("noise + specular + enhanced block + toggle") instead of by CSS selector blocks. Pseudo-elements for `.glass-overlay` and `.theme-card` consolidated into shared selectors, producing fewer blocks than the per-concept estimate assumed.
+
+**Process fix:** Added CSS estimation rule to `docs/knowledge/ui-frontend.md` — count by selector blocks, not by concept. This prevents the ~20% overestimation pattern in CSS-heavy tasks.
+
+**Emergent pattern — sub-preset toggle:** CSS class on `<html>` + state in ThemeProvider + UI conditional in ThemeSwitcher. **Occurrence count: 1.** If this pattern appears 2 more times, graduate to `docs/knowledge/design-patterns.md` as a documented pattern per the 3-occurrence rule in CLAUDE.md.

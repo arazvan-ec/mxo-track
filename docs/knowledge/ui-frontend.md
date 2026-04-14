@@ -73,9 +73,12 @@ flex flex-col h-screen w-full
 
 **CSS Architecture:**
 - Theme CSS variables defined in `frontend/src/index.css` (loaded on ALL pages via `<link>`)
-- `index.css` includes: design tokens (`:root`, `.dark`), presets (glass, command, bento, dense), `theme-card` class, animations
+- `index.css` includes: design tokens (`:root`, `.dark`), presets (glass, command, bento, dense, ios), `theme-card` class, animations
 - Vite builds CSS with predictable name (`index.css`, no hash) so `base.html.twig` can link it
 - Tailwind CDN on Twig pages for utility classes; Tailwind v4 via `@tailwindcss/vite` in React build
+
+**CSS Estimation Rule:**
+When estimating CSS line counts, count by **selector blocks**, not by concept. Pseudo-elements (`::before`/`::after`) that share the same structure across multiple selectors consolidate into fewer blocks than it seems. Example: "noise texture + specular reflection" sounds like 2 large features but produces ~4 shared selector blocks, not 8 separate ones. This prevents overestimation (~20% typical).
 
 ## Template Organization
 
