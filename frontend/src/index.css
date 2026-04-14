@@ -544,8 +544,11 @@ body {
 }
 
 /* ── iOS Liquid Glass — Noise texture + specular reflection ── */
+/* position:relative enables ::before/::after pseudo-elements (noise + specular).
+   Exclude .absolute/.fixed to avoid overriding Tailwind positioning utilities
+   on elements that use theme-card purely for visual styling (e.g. dropdowns). */
 .preset-ios .glass-overlay,
-.preset-ios .theme-card {
+.preset-ios .theme-card:not(.absolute):not(.fixed) {
   position: relative;
 }
 
@@ -607,11 +610,11 @@ body {
 }
 @keyframes ios-scale-in {
   from { transform: scale(0.96); opacity: 0; }
-  to   { transform: scale(1); opacity: 1; }
+  to   { opacity: 1; }
 }
 @keyframes ios-push-in {
   from { transform: translateX(16px); opacity: 0; }
-  to   { transform: translateX(0); opacity: 1; }
+  to   { opacity: 1; }
 }
 @keyframes ios-fade-in {
   from { opacity: 0; }
