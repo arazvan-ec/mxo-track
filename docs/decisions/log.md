@@ -8,6 +8,27 @@ Registro de decisiones de diseño significativas. Cada entrada captura el contex
 
 ---
 
+### [2026-04-14] Dashboard widget enhancement: phased roadmap + parallel agent strategy
+
+- **Problema:** El usuario pidió widgets colapsables con info enriquecida, migración al widget-registry, y preferencias de usuario. Alcance estimado ~1200 líneas totales. Implementar en una sesión arriesgaba compactación y regresión.
+- **Decisión:** Faseo en 3 PRs: (1) enriquecimiento + CollapsibleWidget, (2) migración a registry, (3) user preferences. PRs 2 y 3 se intentaron en paralelo con agentes background en worktree isolation.
+- **Alternativas descartadas:** Todo en 1 PR (riesgo de compactación >15 steps), secuencial estricto (más lento sin beneficio técnico)
+- **Resultado:** PR 1 éxito total. PR 2+3 paralelo: ambos agentes hit rate limit (~8 min). Trabajo parcial rescatado de worktrees, completado manualmente. El paralelismo no fue efectivo por el rate limit compartido. **Lección: agentes background son viables solo si cada tarea < 30 tool calls estimados.** Agentes que deben seguir el full workflow engine (phase-advance, spec, plan) consumen ~50% del budget en proceso antes de escribir código.
+
+### [2026-04-14] User preferences: dedicated entity vs JSON column on User
+
+- **Problema:** Almacenar preferencia de widget default mode ('expanded'|'collapsed') por usuario. Dos opciones: columna JSON en `User.php` o entidad dedicada `UserPreference`.
+- **Decisión:** Entidad dedicada `UserPreference` con OneToOne FK a User (unique constraint). Modelo similar a `NotificationPreference`.
+- **Alternativas descartadas:** JSON column en User (más simple, pero User ya tiene 5 responsabilidades mezcladas — known violation documentada en `backend/CLAUDE.md`; añadir otra columna empeora el SRP violation)
+- **Resultado:** Entity + migration + controller + DTO + tests en 381 líneas. Endpoint GET auto-crea defaults. Extensible para futuras preferencias sin tocar User.
+
+### [2026-04-14] CollapsibleWidget: 4-level resolution cascade for initial state
+
+- **Problema:** Múltiples fuentes de verdad para el estado inicial de un widget colapsable: localStorage (toggle del usuario), prop `initialMode`, user preference (DB), y prop `defaultExpanded`.
+- **Decisión:** Cascada de 4 niveles en `resolveInitialExpanded`: (1) localStorage → (2) `initialMode` prop → (3) `UserPreferencesContext.widget_default_mode` → (4) `defaultExpanded`. Cada nivel es fallback del anterior.
+- **Alternativas descartadas:** Combinar localStorage + DB en un solo hook (complejo, pierde claridad), solo localStorage (no cumple requisito de preferencia en perfil), solo DB (pierde toggle per-widget del usuario)
+- **Resultado:** Prop 100% aditiva y backwards-compatible. Todos los consumidores existentes siguen funcionando sin cambios. El Context provider se monta en app root y está disponible globalmente.
+
 ### [2026-04-12] Extract ListFilterApplier service for dual QueryBuilder pattern
 
 - **Problema:** 5 admin list controllers repetían la mecánica de aplicar filtros a `$qb` + `$countQb` en paralelo (~80 líneas duplicadas). Riesgo de count mismatch si se olvida aplicar filtro al countQb.
