@@ -539,7 +539,6 @@ body {
 .preset-ios .glass-overlay,
 .preset-ios .theme-card {
   position: relative;
-  overflow: hidden;
 }
 
 /* Noise grain — gives glass material texture */
