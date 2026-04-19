@@ -21,6 +21,95 @@ Anti-patterns:
 
 ---
 
+## Subagent Mini-Flow: consult → implement → verify
+
+**Why:** Subagents don't follow the full 8-phase workflow, but experience shows they
+produce higher quality output when they consult context first and verify their output
+before reporting. Skipping these adds rework: subagents rediscover problems already
+documented, or report "done" on broken output.
+
+**Not the full flow.** Brainstorm/plan are orchestrator-level decisions (the prompt
+encapsulates them). Capture/retrospective are orchestrator-level learning. But
+**consult + verify are high-leverage for every subagent**.
+
+**Mandatory instructions to include in EVERY agent prompt:**
+
+```
+## Before starting (consult, ~1 min)
+- Read the most recent execution log in docs/superpowers/execution-logs/ that relates
+  to this area. If a previous attempt failed or surfaced a gap, know it now.
+- Read the relevant knowledge module in docs/knowledge/ if one exists for the area.
+
+## Before reporting complete (verify)
+- If you created/modified code: run the relevant check (tsc, phpunit, lint) and
+  report the result.
+- If you created/modified documentation: verify it doesn't contradict existing modules
+  and that internal cross-references point to real files.
+- Report "done" only when the verification passed. Report "failed" with specifics
+  otherwise.
+```
+
+Paste this verbatim into the "Constraints" section of each agent prompt.
+
+---
+
+## Parallel Task Progress Tracking
+
+**Why:** When dispatching 2+ subagents concurrently, the orchestrator only knows task
+state via completion notifications. During execution, agents are opaque — no way to
+see "which are reading, which are writing, which are blocked" without polling (which
+pollutes context).
+
+**Mechanism:** Shared state file `.claude/parallel-tasks.json` updated atomically by
+each subagent via `.claude/scripts/task-progress.sh`. The `parallel-tasks-status.sh`
+hook reads it and injects active task summary into the orchestrator's status line on
+every prompt.
+
+**Phases (5 valid values):** `started` `reading` `implementing` `verifying` `done` `failed`
+
+**Mandatory boilerplate to include in EVERY parallel agent prompt:**
+
+```
+## Progress tracking (mandatory for parallel dispatch)
+
+At each phase transition, run ONE bash command to update shared state:
+
+    bash .claude/scripts/task-progress.sh <TASK_ID> <phase> [note]
+
+Where <TASK_ID> is: <assign a unique slug per agent, e.g. "widget-system">
+
+Phases to report:
+1. `started`      — at the very start of your work
+2. `reading`      — while reading source files (optional note: "N/M files")
+3. `implementing` — while writing your output (optional note: current section)
+4. `verifying`    — while running checks before reporting
+5. `done`         — final state, with summary note (e.g. "222 lines written")
+6. `failed`       — on error, with brief cause
+
+Update at minimum: started, implementing, done. More granular updates help the
+orchestrator see progress.
+```
+
+**Orchestrator usage:**
+1. Assign a unique `task_id` per agent (short slug, e.g. `widget-system`, `map-components`).
+2. Paste the boilerplate into each prompt, substituting `<TASK_ID>`.
+3. Agents update state autonomously as they work.
+4. Between every tool call, the orchestrator sees current state in the status line:
+   ```
+   🔀 Parallel tasks: 3 active, 2 done, 0 failed
+     ✍️ widget-system — implementing: section 4/7
+     📖 map-components — reading: 5/12 files
+     🟢 driver-experience — started
+   ```
+
+**Automatic cleanup:** The hook prunes entries in terminal state (`done`/`failed`)
+after 1 hour. Manually delete `.claude/parallel-tasks.json` to reset.
+
+**When NOT to use:** Single agent dispatches don't benefit — the overhead (~3 bash
+calls) exceeds the value. Only use for 2+ concurrent agents.
+
+---
+
 ## Light Agent Mode (`flow_type = "agent"`)
 
 **When:** The main agent has already completed consult → brainstorming → planning and
