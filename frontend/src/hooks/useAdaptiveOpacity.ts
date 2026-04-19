@@ -10,20 +10,23 @@ const DEBOUNCE_MS = 300;
  *
  * - Bright map background → lower brightness (more darkening) for readability
  * - Dark map background → higher brightness (less darkening)
- * - No map canvas / read fails → default value (CSS-only fallback)
+ * - No map canvas / read fails → null (let the theme's --glass-brightness apply)
  */
-export function useAdaptiveOpacity(isOpen: boolean): { brightnessValue: number } {
-  const [brightnessValue, setBrightnessValue] = useState(DEFAULT_BRIGHTNESS);
+export function useAdaptiveOpacity(isOpen: boolean): { brightnessValue: number | null } {
+  const [brightnessValue, setBrightnessValue] = useState<number | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     if (!isOpen) {
-      setBrightnessValue(DEFAULT_BRIGHTNESS);
+      setBrightnessValue(null);
       return;
     }
 
     const canvas = document.querySelector('.maplibregl-canvas') as HTMLCanvasElement | null;
-    if (!canvas) return; // Not on a map page — CSS handles it
+    if (!canvas) {
+      setBrightnessValue(null);
+      return;
+    }
 
     const measure = () => {
       try {
