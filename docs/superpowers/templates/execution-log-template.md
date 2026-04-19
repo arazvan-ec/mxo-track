@@ -1,7 +1,27 @@
+---
+type: feature
+tags: []
+files_touched: []
+patterns: []
+outcome: null
+outcome_verified_at: null
+regressions_later: []
+pr_number: null
+estimated_lines: null
+actual_lines: null
+duration_minutes: null
+consulted_in_future: []
+---
+
 # Execution Log — YYYY-MM-DD — <Feature Name>
 
 **Type:** feature | bugfix | refactor
 **Branch:** `<branch-name>`
+
+> **Frontmatter schema** (above): set `type` to one of `feature|bugfix|refactor|docs|process`.
+> Fill `tags`, `files_touched`, `patterns` manually. `outcome`, `outcome_verified_at`,
+> `pr_number`, `actual_lines`, `duration_minutes` can be filled post-implementation.
+> `regressions_later` and `consulted_in_future` are auto-populated by hooks.
 
 ---
 
