@@ -43,25 +43,13 @@ output_context() {
 
   echo ""
 
-  # Recent commits
-  echo "Recent commits (last 10):"
+  # Recent commits (5 most recent)
+  echo "Recent commits:"
   local commits
-  commits=$(git -C "$REPO" log --oneline -10 2>/dev/null || echo "  (no commits available)")
+  commits=$(git -C "$REPO" log --oneline -5 2>/dev/null || echo "  (no commits available)")
   echo "$commits" | while IFS= read -r line; do
     echo "  $line"
   done
-
-  echo ""
-
-  # Merged claude/* branches
-  local merged
-  merged=$(git -C "$REPO" branch --merged main 2>/dev/null | grep 'claude/' | sed 's/^[* ]*//' || true)
-  if [ -n "$merged" ]; then
-    echo "Recently merged branches (claude/*):"
-    echo "$merged" | while IFS= read -r line; do
-      echo "  $line"
-    done
-  fi
 
   # Pending work items
   if [ -f "$STATE_FILE" ]; then
@@ -75,18 +63,13 @@ output_context() {
     fi
   fi
 
-  # Last execution log with preview
+  # Last execution log (filename only)
   if [ -d "$EXEC_LOGS_DIR" ]; then
     local latest_log
     latest_log=$(ls -t "$EXEC_LOGS_DIR"/*.md 2>/dev/null | head -1 || true)
     if [ -n "$latest_log" ]; then
-      local log_name
-      log_name=$(basename "$latest_log")
       echo ""
-      echo "Last execution log: $log_name"
-      head -6 "$latest_log" 2>/dev/null | while IFS= read -r line; do
-        echo "  $line"
-      done
+      echo "Last execution log: $(basename "$latest_log")"
     fi
   fi
 
