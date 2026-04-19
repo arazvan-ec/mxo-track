@@ -1,20 +1,25 @@
 # UI Layout Contracts
 
-**Ultima actualizacion:** 2026-04-14
+**Ultima actualizacion:** 2026-04-19
 **Estado:** Vigente
 **Consultar cuando:** Cualquier cambio que toque CSS, layout, posicionamiento, animaciones, o presets visuales.
 
 ## Por que existe este modulo
 
-Los ultimos 4 bugs de regresion (PR#252, PR#254, y 2 en esta rama) fueron CSS que rompio layout existente. Todos se habrian prevenido consultando estas reglas **antes** de escribir codigo. Este modulo se lee en brainstorming (paso 3: inventory existing functionality) cuando el cambio toca CSS/layout.
+Los ultimos 5 bugs de regresion (PR#252, PR#254, PR#258, PR#259, y esta rama) fueron CSS que rompio layout existente. Todos se habrian prevenido consultando estas reglas **antes** de escribir codigo. Este modulo se lee en brainstorming (paso 3: inventory existing functionality) cuando el cambio toca CSS/layout.
 
 ---
 
 ## Contrato 1: Positioning Hierarchy
 
-**Regla:** Nunca aplicar `position: relative` con especificidad > (0,1,0) a una clase que tambien se usa con `position: absolute` o `position: fixed`.
+**Regla:** Nunca aplicar `position: relative` (ni en **regla base** ni en overrides de preset) a una clase que tambien se usa con `position: absolute`/`fixed`/`sticky`, sin guard `:not(.absolute):not(.fixed):not(.sticky)`.
 
-**Contexto:** Tailwind genera `.absolute { position: absolute }` con especificidad (0,1,0). Cualquier regla custom con mayor especificidad (e.g. `.preset-X .mi-clase`) sobrescribe la utilidad y el elemento pierde su posicionamiento.
+**Contexto:** Tailwind genera `.absolute`/`.fixed`/`.sticky` con especificidad (0,1,0). Cualquier regla custom que toque la misma clase con igual o mayor especificidad sobrescribe la utilidad.
+
+**Dos modos de fallo, ambos reales:**
+
+1. **Override con mayor especificidad** (e.g. `.preset-X .mi-clase` — especificidad 0,2,0 > 0,1,0): gana siempre.
+2. **Empate de especificidad resuelto por orden** (e.g. `.mi-clase` base — especificidad 0,1,0 == 0,1,0): gana la declaracion posterior. Como `@import "tailwindcss"` esta en linea 1 de `index.css`, **cualquier regla custom en el mismo archivo gana el empate sobre las utilidades de Tailwind**.
 
 **Clases afectadas:**
 
@@ -23,21 +28,41 @@ Los ultimos 4 bugs de regresion (PR#252, PR#254, y 2 en esta rama) fueron CSS qu
 | `.glass-overlay` | No | Si (BottomSheet, NavigationSidebar) | Si (TopBar, cards) |
 | `.theme-card` | Si (ThemeSwitcher dropdown, SearchBar results) | No | Si (dashboard widgets, cards) |
 
-**Patron seguro:** Usar `:not(.absolute):not(.fixed)` cuando una regla CSS custom necesita `position: relative` en una clase compartida:
+**Patron seguro: guard en TODAS las declaraciones de `position: relative`, no solo en presets:**
 
 ```css
-/* Correcto */
-.preset-ios .theme-card:not(.absolute):not(.fixed) {
+/* Correcto — regla base separada con guard */
+.glass-overlay {
+  background: ...;
+  backdrop-filter: ...;
+  border: ...;
+  /* SIN position: relative aqui */
+}
+
+.glass-overlay:not(.absolute):not(.fixed):not(.sticky) {
   position: relative;
 }
 
-/* Incorrecto — rompe dropdowns */
+/* Correcto — override de preset con guard */
+.preset-ios .theme-card:not(.absolute):not(.fixed):not(.sticky) {
+  position: relative;
+}
+
+/* Incorrecto — regla base sin guard, rompe fixed/absolute por empate de especificidad */
+.glass-overlay {
+  position: relative;
+}
+
+/* Incorrecto — override de preset sin guard, rompe por mayor especificidad */
 .preset-ios .theme-card {
   position: relative;
 }
 ```
 
-**Antes de anadir `position` a una regla CSS custom:** Buscar todos los usos de la clase target con `Grep` y verificar que ninguno usa `.absolute` o `.fixed`.
+**Antes de anadir `position: relative` a una regla CSS custom (base o override):**
+1. Buscar todos los usos de la clase target con `Grep` — verificar que ninguno usa `.absolute`/`.fixed`/`.sticky`.
+2. Si al menos uno lo usa → separar `position: relative` en su propia regla con guard `:not(.absolute):not(.fixed):not(.sticky)`.
+3. **Aplicar el guard tanto en la regla base como en cualquier override de preset** — ambos modos de fallo son reales.
 
 ---
 
@@ -127,7 +152,9 @@ Los ultimos 4 bugs de regresion (PR#252, PR#254, y 2 en esta rama) fueron CSS qu
 |-------|-----|-----------|-----|
 | 2026-04-14 | Dropdowns clipeados | `overflow: hidden` en `.glass-overlay` para contener pseudo-elements | Eliminado overflow:hidden (pseudo-elements ya usan `inset:0` + `border-radius:inherit`) |
 | 2026-04-14 | BottomSheet desaparece | `transform: translateX(0)` retenido en animacion | Eliminado transform del keyframe `to` |
-| 2026-04-14 | ThemeSwitcher mal posicionado | `position: relative` en `.theme-card` sobrescribia `absolute` | Anadido `:not(.absolute):not(.fixed)` |
+| 2026-04-14 | ThemeSwitcher mal posicionado | `position: relative` en `.theme-card` preset iOS sobrescribia `absolute` | Anadido `:not(.absolute):not(.fixed)` en preset |
+| 2026-04-19 | Sidebar sin scroll (PR #259) | `position: relative` en `.preset-ios .glass-overlay` sobrescribia Tailwind `.fixed` (especificidad 0,2,0 > 0,1,0) | Anadido `:not(.absolute):not(.fixed)` en preset |
+| 2026-04-19 | Sidebar sin scroll (rama actual) | `position: relative` en **regla base** `.glass-overlay` empataba con `.fixed` y ganaba por orden de declaracion | Separado en regla aparte con `:not(.absolute):not(.fixed):not(.sticky)` |
 
 **Checklist al modificar CSS del preset iOS:**
 1. La regla usa `overflow: hidden`? → Verificar que no clipea hijos absolute/fixed
