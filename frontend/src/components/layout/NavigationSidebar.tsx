@@ -171,10 +171,8 @@ export function NavigationSidebar({ onClose, mode = 'overlay' }: Props) {
           inline
             ? { backgroundColor: 'var(--color-surface-elevated)', borderColor: 'var(--color-border)' }
             : {
-                '--glass-blur': '24px',
-                '--glass-brightness': String(brightnessValue),
-                '--glass-saturate': '0.3',
                 '--glass-border': 'var(--color-border-accent)',
+                ...(brightnessValue !== null ? { '--glass-brightness': String(brightnessValue) } : {}),
               } as React.CSSProperties
         }
       >
