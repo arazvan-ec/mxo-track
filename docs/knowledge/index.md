@@ -1,6 +1,6 @@
 # Knowledge Modules Index
 
-**Última actualización:** 2026-03-19
+**Última actualización:** 2026-04-19
 **Estado:** Vigente
 
 Índice de módulos de conocimiento del proyecto mxo-track. Cada módulo cubre un subsistema específico y se consulta bajo demanda.
@@ -29,6 +29,14 @@
 | Superpowers Skills | `superpowers-skills.md` | -- | Skills completas: TDD, brainstorming, debugging, verification, etc. | Aplicar cualquier skill de desarrollo |
 | Feedback & Learning | `feedback-learning.md` | -- | Sistema de captura de datos, execution logs, retrospectives, learning loop, métricas de negocio | Feedback, execution logs, learning loop, retrospectives |
 | UI & Frontend | `ui-frontend.md` | 2026-03-22 | Templates Twig, Alpine.js, Tailwind, componentes, React frontend, layout architecture | Trabajar con templates, UI, sidebar, frontend |
+| UI Layout Contracts | `ui-layout-contracts.md` | 2026-04-14 | Invariantes de positioning, containing blocks, flex scroll, preset independence | Cualquier cambio a CSS, layout, animaciones, o presets |
+| Widget System | `widget-system.md` | 2026-04-19 | WidgetDefinition/PageLayout entities, frontend registry, WidgetRenderer, BottomSheet integration, cómo añadir widgets | Añadir/modificar widgets, dashboards, layouts configurables |
+| Map Components | `map-components.md` | 2026-04-19 | MapLibre GL, MapCanvas API, 9 layers, SSE subscriptions, flyTo con BottomSheet padding | Trabajar con mapas, layers de vehículos/rutas/paradas, map pages |
+| Shipment & Delivery Lifecycle | `shipment-delivery-lifecycle.md` | 2026-04-19 | Flujo end-to-end: creation → dispatch → delivery → POD → rating. Slots, zonas, risk scoring, eventos | Trabajar con envíos, entregas, slots, zonas, POD, ratings |
+| Driver Experience | `driver-experience.md` | 2026-04-19 | APIs de driver, briefing, manifest, push notifications, POD capture, DriverRoutePage | Trabajar con la experiencia del conductor (mobile/web) |
+| Analytics & Reporting | `analytics-reporting.md` | 2026-04-19 | KPIs, SLA, A/B testing de optimización, dashboards admin/operator, RoutePerformanceMetric | KPIs, reports, SLA, strategy comparison, dashboards |
+| Data Import/Export | `data-import-export.md` | 2026-04-19 | CSV shipment imports, quality analysis, run tracking, accounting/position exports | Import CSV, export de datos, pipelines ETL |
+| Public Tracking | `public-tracking.md` | 2026-04-19 | Tracking público sin auth vía tokens, RecipientAction, rescheduling, rating | Tracking público, recipient experience, rescheduling |
 
 ## Cómo Usar
 
@@ -52,3 +60,5 @@
 - 2026-03-16: Añadido módulo `architecture-ddd.md` — guía de desacoplamiento DDD/SOLID con bounded contexts y patrones de migración
 - 2026-03-16: Añadido módulo `design-patterns.md` — catálogo completo GoF + DDD con 15 patrones en uso y 4 candidatos
 - 2026-03-19: Añadida columna `Verificado` para tracking de frescura; regla de spot-check para módulos potencialmente obsoletos
+- 2026-04-14: Añadido módulo `ui-layout-contracts.md` — contratos de CSS positioning, containing blocks, flex scroll, preset independence
+- 2026-04-19: Añadidos 7 módulos en paralelo: `widget-system.md`, `map-components.md`, `shipment-delivery-lifecycle.md`, `driver-experience.md`, `analytics-reporting.md`, `data-import-export.md`, `public-tracking.md`

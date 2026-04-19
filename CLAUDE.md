@@ -835,6 +835,15 @@ manual approval**. If a tool requires confirmation, the agent receives "denied" 
 work on an isolated copy and you merge their changes. For agents creating new files,
 standard mode usually works because Write-to-new-file is typically auto-approved.
 
+**Subagent mini-flow:** Every agent prompt should include `consult` + `verify` boilerplate
+— subagents skip the full 8-phase workflow but these two steps produce higher quality
+output. See "Subagent Mini-Flow" in `AGENTS.md`.
+
+**Parallel dispatch (2+ agents):** Include the progress-tracking boilerplate so agents
+update `.claude/parallel-tasks.json` via `task-progress.sh`. The orchestrator sees live
+status in the status line instead of waiting for completion notifications. See
+"Parallel Task Progress Tracking" in `AGENTS.md`.
+
 **Full instructions:** `AGENTS.md` (Skill 5, 6, 10, 11)
 <!-- GENERIC-END -->
 
@@ -1001,6 +1010,7 @@ changed files (threshold: ≥5 files or new files in a pattern).
 | Design patterns | `design-patterns.md` |
 | Security, roles | `security.md` |
 | UI, Twig, React | `ui-frontend.md` |
+| CSS layout, positioning | `ui-layout-contracts.md` |
 | Full index | `index.md` |
 
 **Freshness:** < 14 days → trust directly. Older → spot-check 2-3 claims before trusting.
