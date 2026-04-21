@@ -72,6 +72,8 @@ class RouteListApiController extends AbstractController
 
         // Stop counts per route
         $stopCounts = [];
+        $nextStops = [];
+        $histograms = [];
         if (\count($routes) > 0) {
             $rows = $this->em->createQueryBuilder()
                 ->select('IDENTITY(s.route) as routeId, COUNT(s.id) as total, SUM(CASE WHEN s.status = :delivered THEN 1 ELSE 0 END) as delivered')
@@ -89,11 +91,16 @@ class RouteListApiController extends AbstractController
                     'delivered' => (int) $row['delivered'],
                 ];
             }
+
+            $nextStops = $this->fetchNextPendingStops($routes);
+            $histograms = $this->fetchTodaysDeliveryHistograms($routes);
         }
 
         $items = [];
         foreach ($routes as $route) {
             $counts = $stopCounts[$route->getId()] ?? ['total' => 0, 'delivered' => 0];
+            $nextStop = $nextStops[$route->getId()] ?? null;
+            $histogram = $histograms[$route->getId()] ?? null;
             $items[] = [
                 'publicId' => $route->getPublicIdString(),
                 'name' => $route->getName(),
@@ -104,6 +111,12 @@ class RouteListApiController extends AbstractController
                 'status' => $route->getStatus()->value,
                 'deliveredStops' => $counts['delivered'],
                 'totalStops' => $counts['total'],
+                'totalDistanceKm' => $route->getTotalDistanceKm(),
+                'estimatedDurationMinutes' => $route->getEstimatedDurationMinutes(),
+                'totalWeightKg' => $route->getTotalWeightKg(),
+                'totalParcels' => $route->getTotalParcels(),
+                'nextStop' => $nextStop,
+                'deliveryHistogram' => $histogram,
             ];
         }
 
@@ -113,6 +126,119 @@ class RouteListApiController extends AbstractController
             'page' => $page,
             'pages' => $totalPages,
         ]);
+    }
+
+    /**
+     * Returns, per route id, the next pending stop (lowest sequence where
+     * status = PENDING) projected as an array suitable for JSON output.
+     * Mirrors the `stopCounts` aggregation pattern in list().
+     *
+     * @param list<Route> $routes
+     * @return array<string, array{sequence:int, address:string, recipientName:?string, windowStart:?string, windowEnd:?string}>
+     */
+    private function fetchNextPendingStops(array $routes): array
+    {
+        // Step 1: per-route minimum pending sequence.
+        $minRows = $this->em->createQueryBuilder()
+            ->select('IDENTITY(s.route) as routeId, MIN(s.sequence) as minSeq')
+            ->from(RouteStop::class, 's')
+            ->where('s.route IN (:routes) AND s.status = :pending')
+            ->setParameter('routes', $routes)
+            ->setParameter('pending', RouteStopStatus::PENDING)
+            ->groupBy('s.route')
+            ->getQuery()
+            ->getResult();
+
+        if (\count($minRows) === 0) {
+            return [];
+        }
+
+        // Build (routeId => minSeq) map so we can match hydrated stops later.
+        $minByRoute = [];
+        foreach ($minRows as $row) {
+            $minByRoute[(string) $row['routeId']] = (int) $row['minSeq'];
+        }
+
+        // Step 2: hydrate the actual RouteStop entities for each (route, sequence) pair.
+        /** @var list<RouteStop> $stops */
+        $stops = $this->em->createQueryBuilder()
+            ->select('s')
+            ->from(RouteStop::class, 's')
+            ->where('s.route IN (:routes) AND s.status = :pending')
+            ->setParameter('routes', $routes)
+            ->setParameter('pending', RouteStopStatus::PENDING)
+            ->getQuery()
+            ->getResult();
+
+        $out = [];
+        foreach ($stops as $stop) {
+            $routeId = $stop->getRoute()->getId();
+            if ($routeId === null) {
+                continue;
+            }
+            if (!isset($minByRoute[$routeId])) {
+                continue;
+            }
+            if ($stop->getSequence() !== $minByRoute[$routeId]) {
+                continue;
+            }
+            $out[$routeId] = [
+                'sequence' => $stop->getSequence(),
+                'address' => $stop->getAddress(),
+                'recipientName' => $stop->getRecipientName(),
+                'windowStart' => $stop->getDeliveryWindowStart()?->format(\DateTimeInterface::ATOM),
+                'windowEnd' => $stop->getDeliveryWindowEnd()?->format(\DateTimeInterface::ATOM),
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * Returns, per route id, a 24-element int array counting deliveries per
+     * server-local hour for today only.
+     *
+     * @param list<Route> $routes
+     * @return array<string, list<int>>
+     */
+    private function fetchTodaysDeliveryHistograms(array $routes): array
+    {
+        $today = new \DateTimeImmutable('today');
+        $tomorrow = $today->modify('+1 day');
+
+        $rows = $this->em->createQueryBuilder()
+            ->select('IDENTITY(s.route) as routeId, s.deliveredAt as deliveredAt')
+            ->from(RouteStop::class, 's')
+            ->where('s.route IN (:routes) AND s.status = :delivered AND s.deliveredAt >= :start AND s.deliveredAt < :end')
+            ->setParameter('routes', $routes)
+            ->setParameter('delivered', RouteStopStatus::DELIVERED)
+            ->setParameter('start', $today)
+            ->setParameter('end', $tomorrow)
+            ->getQuery()
+            ->getResult();
+
+        if (\count($rows) === 0) {
+            return [];
+        }
+
+        /** @var array<string, list<int>> $out */
+        $out = [];
+        foreach ($rows as $row) {
+            $routeId = (string) $row['routeId'];
+            $deliveredAt = $row['deliveredAt'];
+            if (!$deliveredAt instanceof \DateTimeInterface) {
+                continue;
+            }
+            if (!isset($out[$routeId])) {
+                $out[$routeId] = array_fill(0, 24, 0);
+            }
+            $hour = (int) $deliveredAt->format('G');
+            if ($hour >= 0 && $hour <= 23) {
+                ++$out[$routeId][$hour];
+            }
+        }
+
+        return $out;
     }
 
     #[SymfonyRoute('/filters', name: 'api_admin_routes_filters', methods: ['GET'])]
