@@ -1,0 +1,109 @@
+# _graduations.yaml — single source of truth for tag/pattern graduation status.
+#
+# Consumed by:
+#   - .claude/hooks/pattern-audit.sh  (detection: is this tag graduated?)
+#   - scripts/suggest-tags.sh         (keyword → tag mapping for backfill)
+#   - scripts/graduate.sh             (blessed path to add entries)
+#   - scripts/test-graduations-validator.sh (drift detection)
+#
+# Rules:
+#   - A tag lives in EITHER `tags:` OR `patterns:`, not both.
+#   - `section: "*"` means the entire module documents the tag.
+#   - `keyword_mappings` values are canonical tag names; they do NOT need to be
+#     graduated yet. Only graduated items appear under `tags:` / `patterns:`.
+#   - Always prefer graduate.sh over hand-editing.
+
+tags:
+  # Group 1: pointer-only (sections existed before PR4)
+  glass-overlay:
+    module: ui-layout-contracts.md
+    section: "Contrato 1: Positioning Hierarchy"
+  map:
+    module: map-components.md
+    section: "Layers Inventory"
+  route:
+    module: route-optimization.md
+    section: "*"
+  widget:
+    module: widget-system.md
+    section: "*"
+  dashboard:
+    module: ui-frontend.md
+    section: "Registry-Driven Dashboard"
+
+  # Group 2: sections written in PR4 Wave 3
+  workflow:
+    module: superpowers-skills.md
+    section: "Workflow Phases Overview"
+  menu:
+    module: ui-frontend.md
+    section: "Navigation Menu"
+  stop:
+    module: domain-model.md
+    section: "Stops and Delivery Points"
+  sidebar:
+    module: ui-frontend.md
+    section: "Sidebar System"
+  hook:
+    module: superpowers-skills.md
+    section: "Workflow Hooks"
+  filter:
+    module: api-surface.md
+    section: "List Filters"
+  memory:
+    module: superpowers-skills.md
+    section: "Harness as Memory"
+  harness:
+    module: superpowers-skills.md
+    section: "Harness as Memory"
+
+patterns:
+  harness-memory-separation:
+    module: superpowers-skills.md
+    section: "Harness as Memory"
+  workflow-script-conventions:
+    module: superpowers-skills.md
+    section: "Workflow Script Conventions"
+
+keyword_mappings:
+  # Keyword (substring in filename slug, lowercased) → canonical tag name.
+  # Values are tag names used in log frontmatter; they may or may not be graduated.
+  glass: glass-overlay
+  sidebar: sidebar
+  menu: menu
+  overlay: overlay
+  dark: dark-theme
+  theme: theme
+  ios: ios-preset
+  widget: widget
+  dashboard: dashboard
+  card: card
+  route: route
+  fleet: fleet
+  vehicle: vehicle
+  stop: stop
+  shipment: shipment
+  hook: hook
+  workflow: workflow
+  retrospective: retrospective
+  session: session
+  refactor: refactor
+  cleanup: cleanup
+  migrate: migration
+  migration: migration
+  test: testing
+  gps: gps
+  traccar: traccar
+  driver: driver
+  customer: customer
+  portal: portal
+  kpi: kpi
+  map: map
+  layer: map
+  marker: map
+  notification: notification
+  filter: filter
+  exception: exception
+  deviation: deviation
+  scroll: scroll
+  mobile: mobile
