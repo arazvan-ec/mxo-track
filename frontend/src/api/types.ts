@@ -326,6 +326,14 @@ export interface PaginatedResponse<T> {
   pages: number;
 }
 
+export interface RouteNextStop {
+  sequence: number;
+  address: string;
+  recipientName: string | null;
+  windowStart: string | null;  // ISO 8601
+  windowEnd: string | null;    // ISO 8601
+}
+
 export interface RouteListItem {
   publicId: string;
   name: string;
@@ -336,6 +344,12 @@ export interface RouteListItem {
   status: 'PLANNED' | 'ACTIVE' | 'DONE' | 'CANCELLED';
   deliveredStops: number;
   totalStops: number;
+  totalDistanceKm: number | null;
+  estimatedDurationMinutes: number | null;
+  totalWeightKg: number | null;
+  totalParcels: number | null;
+  nextStop: RouteNextStop | null;
+  deliveryHistogram: number[] | null;
 }
 
 export interface VehicleListItem {
