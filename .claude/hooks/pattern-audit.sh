@@ -11,7 +11,7 @@ set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$(readlink -f "$0")")/../.." && pwd)"
 CONSULT="$REPO_ROOT/.claude/hooks/consult.sh"
-KNOWLEDGE_DIR="$REPO_ROOT/docs/knowledge"
+KNOWLEDGE_DIR="${PATTERN_AUDIT_KNOWLEDGE_DIR:-$REPO_ROOT/docs/knowledge}"
 
 if [ ! -x "$CONSULT" ]; then
   echo "pattern-audit: consult.sh not found or not executable" >&2
