@@ -26,6 +26,7 @@ php bin/console about                   # Verify Symfony is working
 php bin/console doctrine:migrations:migrate -n  # Run migrations
 php bin/console doctrine:fixtures:load -n       # Load fixtures
 make lint                               # PHP syntax lint
+make lint-shell                         # Shellcheck .claude/hooks/*.sh + scripts/*.sh
 php vendor/bin/phpunit                  # Run tests
 cd frontend && npm run build            # Frontend: TypeScript + Vite (EXACT deploy command)
 ```
@@ -801,6 +802,14 @@ with data from each phase (alternatives considered, blockers hit, test results, 
 When the same lesson appears 3+ times across execution logs, it graduates to the relevant
 knowledge module — that's the signal it's a pattern, not an incident.
 
+**Graduating a pattern (the blessed path):** use `scripts/graduate.sh <name>
+--module=<file> --section=<heading>` to atomically register the graduation in
+`docs/knowledge/_graduations.yaml`. The script validates (a) the module exists,
+(b) the section appears as heading in that module, (c) the tag/pattern has ≥3
+occurrences in logs. `pattern-audit.sh` runs at `retrospective → finalize` and
+surfaces candidates with a ready-to-paste `graduate.sh` command. Add `--pattern`
+to register under `patterns:` instead of `tags:`.
+
 ### Querying past execution logs: `consult.sh`
 
 Execution logs carry YAML frontmatter (`type`, `tags`, `files_touched`, `patterns`, `outcome`).
@@ -1028,6 +1037,11 @@ changed files (threshold: ≥5 files or new files in a pattern).
 | Full index | `index.md` |
 
 **Freshness:** < 14 days → trust directly. Older → spot-check 2-3 claims before trusting.
+
+**Graduated tags/patterns:** registered in `docs/knowledge/_graduations.yaml`
+(single source of truth). Query via `consult.sh tag <name>` for related logs;
+detect drift via `scripts/validate-graduations.sh`. Add new graduations via
+`scripts/graduate.sh` (blessed atomic path — see "Closing the Cycle").
 <!-- PROJECT-SPECIFIC-END -->
 
 ---
