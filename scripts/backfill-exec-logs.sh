@@ -34,7 +34,7 @@ extract_type() {
   local text
   text=$(grep -m1 -i '\*\*type:\*\*' "$1" 2>/dev/null | sed -E 's/.*\*\*[Tt]ype:\*\*[[:space:]]*//' | tr '[:upper:]' '[:lower:]')
   case "$text" in
-    *bug*|*fix*|*debug*) echo "bugfix" ;;
+    *bug*|*fix*) echo "bugfix" ;;
     *feature*|*feat*) echo "feature" ;;
     *refactor*) echo "refactor" ;;
     *doc*) echo "docs" ;;

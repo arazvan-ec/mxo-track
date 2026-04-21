@@ -25,7 +25,6 @@ source "$REPO/.claude/hooks/lib/classify-file.sh"
 
 # Parse tool input from stdin
 INPUT=$(cat)
-TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // ""')
 FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // .tool_input.command // ""')
 
 deny() {
@@ -149,13 +148,6 @@ get_validators_for_flow() {
         code|test)  echo "debug-code" ;;
         *)          echo "" ;;  # docs, config, other: pass during debug
       esac
-      ;;
-
-    # ── Agent-flow: sub-agent executing pre-planned work ──
-    # No validators — main agent already completed spec/plan/brainstorm.
-    # All file classes allowed. See AGENTS.md "Light Agent Mode".
-    agent|agent-flow)
-      echo ""
       ;;
 
     # ── Agent-flow: sub-agent executing pre-planned work ──

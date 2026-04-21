@@ -29,12 +29,12 @@ IN_PROGRESS_LABEL=$(echo "$TODOS" | jq -r '[.[] | select(.status == "in_progress
 ITEMS=$(echo "$TODOS" | jq -c '[.[] | {status: .status, label: (.activeForm // .content // "" | .[0:60])}]')
 
 jq --argjson total "$TOTAL" \
-   --argjson done "$COMPLETED" \
+   --argjson ndone "$COMPLETED" \
    --arg ip "$IN_PROGRESS_LABEL" \
    --argjson items "$ITEMS" '
   .evidence.todo_progress = {
     "total": $total,
-    "completed": $done,
+    "completed": $ndone,
     "in_progress_label": (if $ip == "" then null else $ip end),
     "items": $items
   }

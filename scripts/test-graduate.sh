@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # test-graduate.sh — tests for scripts/graduate.sh
+# shellcheck disable=SC2034  # `out` captured then discarded by design
 set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
@@ -148,7 +149,7 @@ grep -q 'section: "\*"' "$GRADUATE_REGISTRY"; code=$?
 assert "T11b star section written" "0" "$code"
 
 # T12: --pattern writes under patterns:
-out=$(run new-pattern --module=skills.md --section="Workflow Script Conventions" --pattern 2>&1); code=$?
+run new-pattern --module=skills.md --section="Workflow Script Conventions" --pattern >/dev/null 2>&1; code=$?
 assert "T12 --pattern → exit 0" "0" "$code"
 # Verify it went into patterns: (should appear after 'patterns:' line, before 'keyword_mappings:')
 added_to_patterns=$(awk '

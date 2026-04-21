@@ -116,9 +116,12 @@ expect_warn() {
 }
 
 SRC_FILE="$REPO/backend/src/Controller/SomeController.php"
-TEST_FILE="$REPO/backend/tests/SomeTest.php"
 DOC_FILE="$REPO/docs/some-doc.md"
+# shellcheck disable=SC2034  # reserved for future test expansion
+TEST_FILE="$REPO/backend/tests/SomeTest.php"
+# shellcheck disable=SC2034
 SPEC_FILE="$REPO/docs/superpowers/specs/test-workflow-spec.md"
+# shellcheck disable=SC2034
 PLAN_FILE="$REPO/docs/superpowers/plans/${TODAY}-test-workflow.md"
 
 # =====================================================

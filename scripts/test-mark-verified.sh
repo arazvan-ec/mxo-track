@@ -3,7 +3,7 @@
 set -uo pipefail
 
 TMPDIR=$(mktemp -d)
-trap "rm -rf $TMPDIR" EXIT
+trap 'rm -rf "$TMPDIR"' EXIT
 
 LOGS_DIR="$TMPDIR/logs"
 mkdir -p "$LOGS_DIR"
