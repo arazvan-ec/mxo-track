@@ -1,3 +1,18 @@
+---
+type: feature
+tags: [widget]
+files_touched: []
+patterns: []
+outcome: success
+outcome_verified_at: null
+regressions_later: []
+pr_number: 220
+estimated_lines: null
+actual_lines: null
+duration_minutes: null
+consulted_in_future: []
+---
+
 # Execution Log — 2026-04-08 — Widget Minimize (AdminDashboardPage → Widget System)
 
 **Type:** feature

@@ -1,7 +1,27 @@
+---
+type: feature
+tags: []
+files_touched: []
+patterns: []
+outcome: null
+outcome_verified_at: null
+regressions_later: []
+pr_number: null
+estimated_lines: null
+actual_lines: null
+duration_minutes: null
+consulted_in_future: []
+---
+
 # Execution Log — YYYY-MM-DD — <Feature Name>
 
 **Type:** feature | bugfix | refactor
 **Branch:** `<branch-name>`
+
+> **Frontmatter schema** (above): set `type` to one of `feature|bugfix|refactor|docs|process`.
+> Fill `tags`, `files_touched`, `patterns` manually. `outcome`, `outcome_verified_at`,
+> `pr_number`, `actual_lines`, `duration_minutes` can be filled post-implementation.
+> `regressions_later` and `consulted_in_future` are auto-populated by hooks.
 
 ---
 
@@ -47,3 +67,4 @@
   1. [item]
 - **Business context tags:** [route-optimization, delivery, fleet, notifications, etc.]
 - **Decision log entry needed?** yes / no — [topic if yes]
+- **Fixes previously:** `YYYY-MM-DD-xxx.md` (optional — if this log is a fix for a bug introduced in a prior log, include this line; post-commit-validator will auto-update the prior log's `regressions_later`)

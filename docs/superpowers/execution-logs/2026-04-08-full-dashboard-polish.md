@@ -1,3 +1,18 @@
+---
+type: feature
+tags: [dashboard]
+files_touched: [docs/superpowers/visual-testing-guide.md]
+patterns: []
+outcome: null
+outcome_verified_at: null
+regressions_later: []
+pr_number: null
+estimated_lines: null
+actual_lines: null
+duration_minutes: null
+consulted_in_future: []
+---
+
 # Execution Log — 2026-04-08 — Full Dashboard Polish
 
 **Type:** feature (3 specs: colors + customer dashboard + visual guide)

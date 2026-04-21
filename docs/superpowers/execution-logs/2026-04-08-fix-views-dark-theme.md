@@ -1,3 +1,18 @@
+---
+type: bugfix
+tags: [dark-theme]
+files_touched: [frontend/src/index.css]
+patterns: []
+outcome: success
+outcome_verified_at: null
+regressions_later: []
+pr_number: 228
+estimated_lines: null
+actual_lines: null
+duration_minutes: null
+consulted_in_future: []
+---
+
 # Execution Log — 2026-04-08 — Fix Views Dark Theme + Consolidate Hooks
 
 **Type:** bug fix

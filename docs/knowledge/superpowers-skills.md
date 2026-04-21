@@ -836,3 +836,78 @@ Add a calibration entry after any task that was:
 - Significantly faster or slower than expected
 - A new type not yet represented in this table
 - A repeat of an existing type (validates the estimate)
+
+---
+
+## Workflow Script Conventions
+
+Patrón observado 3+ veces en PR1/PR2 (`backfill-exec-logs.sh`, `mark-verified.sh`,
+`link-regression.sh`). Gradúa a convención para scripts en `scripts/` y
+`.claude/hooks/` que modifican artefactos del workflow (execution logs, session
+state, etc.).
+
+### Reglas
+
+1. **Idempotent.** Detect existing state first. If the operation was already
+   done, output `SKIP: ...` and exit with code 1 (valid but no-op). Never fail
+   on repeat invocations.
+
+2. **`--force` flag** for explicit overwrite when skip-by-default is not
+   desired. Default should always be safe (skip); `--force` signals the user
+   accepts overwriting.
+
+3. **Env-overrideable paths** using `<SCRIPT_NAME>_<PURPOSE>_DIR` convention.
+   Examples:
+   - `CONSULT_LOGS_DIR` in `consult.sh`
+   - `MARK_VERIFIED_LOGS_DIR` in `mark-verified.sh`
+   - `LINK_REGRESSION_LOGS_DIR` in `link-regression.sh`
+   - `PATTERN_AUDIT_KNOWLEDGE_DIR` in `pattern-audit.sh`
+
+   This enables isolated test fixtures without modifying the real corpus.
+
+4. **Exit codes.**
+   - `0` = success, changes applied
+   - `1` = success, no changes needed (skip, empty result, already done)
+   - `2` = error (missing args, invalid input, precondition failed)
+
+   Consumers should distinguish `1` from `2` — the former is often expected.
+
+5. **`--dry-run` mode** for destructive scripts. Preview what would change
+   without writing. Required for scripts that modify multiple files at once
+   (backfill patterns).
+
+### Example template
+
+```bash
+#!/usr/bin/env bash
+set -uo pipefail
+
+LOGS_DIR="${EXAMPLE_LOGS_DIR:-docs/superpowers/execution-logs}"
+FORCE=0
+DRY_RUN=0
+
+for arg in "$@"; do
+  case "$arg" in
+    --force) FORCE=1 ;;
+    --dry-run) DRY_RUN=1 ;;
+    -*) echo "ERROR: unknown flag: $arg" >&2; exit 2 ;;
+    *) TARGET="$arg" ;;
+  esac
+done
+
+[ -z "${TARGET:-}" ] && { echo "Usage: $0 <target> [--force] [--dry-run]" >&2; exit 2; }
+
+# Detect existing state
+if already_done "$TARGET" && [ "$FORCE" = "0" ]; then
+  echo "SKIP: $TARGET already processed"
+  exit 1
+fi
+
+# Apply (respect dry-run)
+if [ "$DRY_RUN" = "1" ]; then
+  echo "WOULD apply to $TARGET"
+else
+  apply "$TARGET"
+fi
+exit 0
+```

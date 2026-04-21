@@ -137,6 +137,11 @@ jq --arg phase "$NEXT_PHASE" --arg ts "$TIMESTAMP" --arg prev "$CURRENT_PHASE" \
 
 echo "✅ Phase advanced: $CURRENT_PHASE → $NEXT_PHASE (at $TIMESTAMP)"
 
+# Pattern audit advisory when entering finalize (non-blocking)
+if [ "$NEXT_PHASE" = "finalize" ] && [ -x "$REPO/.claude/hooks/pattern-audit.sh" ]; then
+  bash "$REPO/.claude/hooks/pattern-audit.sh" 2>&1 || true
+fi
+
 # Retrospective reminder when entering that phase
 if [ "$NEXT_PHASE" = "retrospective" ]; then
   cat <<'RETRO'

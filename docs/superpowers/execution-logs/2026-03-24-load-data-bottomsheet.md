@@ -1,3 +1,18 @@
+---
+type: process
+tags: []
+files_touched: [frontend/src/pages/admin/TestRoutingPage.tsx]
+patterns: []
+outcome: null
+outcome_verified_at: null
+regressions_later: []
+pr_number: null
+estimated_lines: null
+actual_lines: null
+duration_minutes: null
+consulted_in_future: []
+---
+
 # Execution Log — 2026-03-24 — Load Data in BottomSheet
 
 **Type:** enhancement

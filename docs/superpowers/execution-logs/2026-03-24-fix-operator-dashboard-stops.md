@@ -1,3 +1,18 @@
+---
+type: bugfix
+tags: [dashboard, stop]
+files_touched: [frontend/src/pages/admin/OperatorDashboardPage.tsx]
+patterns: []
+outcome: null
+outcome_verified_at: null
+regressions_later: []
+pr_number: null
+estimated_lines: null
+actual_lines: null
+duration_minutes: null
+consulted_in_future: []
+---
+
 # Execution Log — 2026-03-24 — Fix Operator Dashboard Stops
 
 **Type:** bug fix

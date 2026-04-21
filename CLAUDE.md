@@ -800,6 +800,20 @@ with data from each phase (alternatives considered, blockers hit, test results, 
 **Update decision log:** If design decisions were made, add entry to `docs/decisions/log.md`.
 When the same lesson appears 3+ times across execution logs, it graduates to the relevant
 knowledge module — that's the signal it's a pattern, not an incident.
+
+### Querying past execution logs: `consult.sh`
+
+Execution logs carry YAML frontmatter (`type`, `tags`, `files_touched`, `patterns`, `outcome`).
+During Step 0 of brainstorming, use `.claude/hooks/consult.sh` instead of manual grep:
+
+```bash
+.claude/hooks/consult.sh file frontend/src/index.css  # logs that touched this file
+.claude/hooks/consult.sh tag glass-overlay            # logs tagged with this
+.claude/hooks/consult.sh pattern tailwind-override    # logs documenting this pattern
+.claude/hooks/consult.sh stats                        # tag frequency + 3+ alerts
+```
+
+Output: `date | type | outcome | filename | title` (parseable).
 <!-- GENERIC-END -->
 
 ---

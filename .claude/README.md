@@ -462,6 +462,46 @@ Other flows:
 
 ---
 
+## Compaction Contract
+
+Compaction is silent — the model doesn't notice when old messages are dropped. The
+contract below makes explicit which artefacts survive compaction and which don't,
+so the model knows what it can rely on after a compaction event.
+
+### Artefact classification
+
+| Artefacto | Compaction-safe | Ephemeral | Re-inyectado vía |
+|---|---|---|---|
+| `.claude/session-state.json` | ✅ | | `UserPromptSubmit` hook (status line cada turno) |
+| CLAUDE.md hierarchy | ✅ | | Claude Code autoload por directorio |
+| `docs/decisions/log.md` | ✅ | | Lectura bajo demanda (Step 0 brainstorm) |
+| `docs/superpowers/execution-logs/*.md` | ✅ | | Lectura bajo demanda + `consult.sh` |
+| `docs/superpowers/specs/*`, `plans/*` | ✅ | | Lectura bajo demanda |
+| Knowledge modules (`docs/knowledge/*`) | ✅ | | Lectura bajo demanda |
+| `task_progress.{current,label,total}` | ✅ | | Status line entre tool calls |
+| `work_context.{description,wave,problems}` | ✅ | | Status line entre tool calls |
+| `last_work_summary` | ✅ | | `SessionStart` hook en nuevo día |
+| Conversación previa (mensajes del usuario/asistente) | | ✅ | — (se pierden en compaction) |
+| Resultados de tool calls (output) | | ✅ | — (se pierden, re-ejecutar si se necesitan) |
+| Skills cargados (resultado de Skill tool) | | ✅ | Re-invocar Skill tool |
+| TodoWrite state | (parcial) | | `todowrite-mirror.sh` → task_progress safe; contenido detallado puede perderse |
+
+### Reglas derivadas
+
+1. **No confiar en resultados de tool calls anteriores** — si necesitas un dato después de compaction, re-ejecuta la herramienta
+2. **Estado persistente va en session-state** — cualquier cosa que debas recordar cross-compaction debe vivir en `.claude/session-state.json` o en docs
+3. **Lectura bajo demanda es segura** — los archivos markdown siempre están disponibles; no hace falta cargarlos preventivamente
+4. **Status line es el canal post-compaction** — el único mecanismo que el modelo tiene de ver estado sin re-leer archivos. Mantenlo compacto y informativo
+
+### Cómo validar en debugging
+
+Si sospechas que un valor se perdió en compaction:
+1. Check `jq '.' .claude/session-state.json` — si está ahí, sobrevivió
+2. Check si el archivo relevante (spec/plan/log) existe — si existe, se puede releer
+3. Si el dato solo existía en una respuesta previa del asistente o en output de Bash, está perdido — re-ejecuta o pregunta al usuario
+
+---
+
 ## Known Tooling Issues
 
 These are client-side bugs in the Claude Code / Agent SDK, not in the workflow or

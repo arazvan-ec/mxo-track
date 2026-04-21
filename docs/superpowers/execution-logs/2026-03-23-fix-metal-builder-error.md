@@ -1,3 +1,18 @@
+---
+type: bugfix
+tags: []
+files_touched: []
+patterns: []
+outcome: null
+outcome_verified_at: null
+regressions_later: []
+pr_number: null
+estimated_lines: null
+actual_lines: null
+duration_minutes: null
+consulted_in_future: []
+---
+
 # Execution Log — 2026-03-23 — Fix Metal Builder TS2322 Error
 
 **Type:** bug fix

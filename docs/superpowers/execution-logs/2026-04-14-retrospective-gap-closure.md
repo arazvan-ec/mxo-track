@@ -1,3 +1,18 @@
+---
+type: process
+tags: [retrospective]
+files_touched: [.claude/test-baseline.txt, backend/bin/preflight.sh, docs/knowledge/ui-frontend.md, docs/superpowers/plans/2026-04-14-retrospective-gap-closure.md, docs/superpowers/specs/2026-04-14-retrospective-gap-closure-design.md, frontend/src/components/bottom-sheet/WidgetRenderer.tsx, frontend/src/widgets/types.ts]
+patterns: []
+outcome: null
+outcome_verified_at: null
+regressions_later: []
+pr_number: null
+estimated_lines: null
+actual_lines: null
+duration_minutes: null
+consulted_in_future: []
+---
+
 # Execution Log — 2026-04-14 — Retrospective Gap Closure
 
 **Type:** chore (process + tech debt)

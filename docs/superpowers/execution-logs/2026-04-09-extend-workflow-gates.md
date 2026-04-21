@@ -1,3 +1,18 @@
+---
+type: process
+tags: [workflow]
+files_touched: [.claude/README.md]
+patterns: []
+outcome: success
+outcome_verified_at: null
+regressions_later: []
+pr_number: 235
+estimated_lines: null
+actual_lines: null
+duration_minutes: null
+consulted_in_future: []
+---
+
 # Execution Log — 2026-04-09 — Extend Workflow Gates to All Business Folders
 
 **Type:** code change (hooks infrastructure)

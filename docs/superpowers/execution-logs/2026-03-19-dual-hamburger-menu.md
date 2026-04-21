@@ -1,3 +1,18 @@
+---
+type: feature
+tags: [menu]
+files_touched: []
+patterns: []
+outcome: null
+outcome_verified_at: null
+regressions_later: []
+pr_number: null
+estimated_lines: null
+actual_lines: null
+duration_minutes: null
+consulted_in_future: []
+---
+
 # Execution Log — 2026-03-19 — Unified Dual Hamburger Menu for SPA Pages
 
 **Type:** feature

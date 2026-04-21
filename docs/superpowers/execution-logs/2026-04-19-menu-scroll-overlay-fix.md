@@ -1,3 +1,18 @@
+---
+type: bugfix
+tags: [menu, overlay, scroll]
+files_touched: [frontend/src/index.css]
+patterns: []
+outcome: success
+outcome_verified_at: null
+regressions_later: []
+pr_number: 260
+estimated_lines: null
+actual_lines: 12
+duration_minutes: null
+consulted_in_future: []
+---
+
 # Execution Log — 2026-04-19 — Menu Scroll + Overlay Transparency
 
 **Type:** debug (bug fix)

@@ -1,3 +1,18 @@
+---
+type: feature
+tags: [glass-overlay, ios-preset]
+files_touched: [docs/superpowers/plans/2026-04-13-ios-liquid-glass-preset.md, docs/superpowers/specs/2026-04-13-ios-liquid-glass-preset-design.md, frontend/src/components/bottom-sheet/useBottomSheet.ts, frontend/src/components/layout/AppLayout.tsx, frontend/src/components/transitions/IOSPageTransition.tsx, frontend/src/components/ui/ThemeSwitcher.tsx, frontend/src/context/ThemeProvider.tsx, frontend/src/index.css]
+patterns: []
+outcome: success
+outcome_verified_at: null
+regressions_later: []
+pr_number: 247
+estimated_lines: null
+actual_lines: null
+duration_minutes: null
+consulted_in_future: []
+---
+
 # Execution Log — 2026-04-13 — iOS Liquid Glass Preset
 
 **Type:** feature (UI redesign)
