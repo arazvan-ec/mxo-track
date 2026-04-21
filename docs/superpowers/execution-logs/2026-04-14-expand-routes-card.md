@@ -1,3 +1,18 @@
+---
+type: feature
+tags: []
+files_touched: [docs/superpowers/plans/2026-04-14-expand-routes-card.md, docs/superpowers/specs/2026-04-14-expand-routes-card-design.md, frontend/src/api/hooks/useActiveRoutes.ts, frontend/src/widgets/DashboardKpisWidget.tsx]
+patterns: []
+outcome: success
+outcome_verified_at: null
+regressions_later: []
+pr_number: 253
+estimated_lines: null
+actual_lines: null
+duration_minutes: null
+consulted_in_future: []
+---
+
 # Execution Log — 2026-04-14 — Expandable Routes Card
 
 **Type:** feature

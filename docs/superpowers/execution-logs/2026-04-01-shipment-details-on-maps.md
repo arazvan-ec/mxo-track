@@ -1,3 +1,18 @@
+---
+type: feature
+tags: []
+files_touched: [docs/superpowers/plans/2026-04-01-shipment-details-on-maps.md, docs/superpowers/specs/2026-04-01-shipment-details-on-maps-design.md]
+patterns: []
+outcome: null
+outcome_verified_at: null
+regressions_later: []
+pr_number: null
+estimated_lines: null
+actual_lines: null
+duration_minutes: null
+consulted_in_future: []
+---
+
 # Execution Log — 2026-04-01 — Shipment Details on Maps
 
 **Type:** feature (architecture + enhancement)

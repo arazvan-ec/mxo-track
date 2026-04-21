@@ -1,3 +1,18 @@
+---
+type: feature
+tags: []
+files_touched: [backend/src/Service/AdminMetricsService.php, backend/tests/Unit/Service/AdminMetricsServiceTest.php, docs/superpowers/plans/2026-04-13-dashboard-widget-expansion.md, docs/superpowers/specs/2026-04-13-dashboard-widget-expansion-design.md, frontend/src/api/types.ts, frontend/src/components/bottom-sheet/WidgetRenderer.tsx, frontend/src/components/widgets/CollapsibleWidget.tsx, frontend/src/pages/admin/AdminDashboardPage.tsx]
+patterns: []
+outcome: null
+outcome_verified_at: null
+regressions_later: []
+pr_number: null
+estimated_lines: null
+actual_lines: null
+duration_minutes: null
+consulted_in_future: []
+---
+
 # Execution Log — 2026-04-13 — Dashboard Widget Expansion (PR 1)
 
 **Type:** feature

@@ -1,3 +1,18 @@
+---
+type: bugfix
+tags: []
+files_touched: []
+patterns: []
+outcome: null
+outcome_verified_at: null
+regressions_later: []
+pr_number: null
+estimated_lines: null
+actual_lines: null
+duration_minutes: null
+consulted_in_future: []
+---
+
 # Execution Log — 2026-04-14 — Fix iOS Preset Breaking BottomSheet + ThemeSwitcher
 
 **Type:** bug fix (2 root causes, same file)

@@ -1,3 +1,18 @@
+---
+type: bugfix
+tags: []
+files_touched: [docs/knowledge/ui-layout-contracts.md, frontend/src/index.css]
+patterns: []
+outcome: null
+outcome_verified_at: null
+regressions_later: []
+pr_number: null
+estimated_lines: null
+actual_lines: 1
+duration_minutes: null
+consulted_in_future: []
+---
+
 # Execution Log — 2026-04-19 — Sidebar Scroll Fix (iOS Preset)
 
 **Type:** debug (bug fix)

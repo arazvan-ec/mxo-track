@@ -1,3 +1,18 @@
+---
+type: bugfix
+tags: []
+files_touched: [docs/knowledge/ui-frontend.md, frontend/src/components/layout/NavigationSidebar.tsx, frontend/src/hooks/useAdaptiveOpacity.ts]
+patterns: []
+outcome: null
+outcome_verified_at: null
+regressions_later: []
+pr_number: null
+estimated_lines: null
+actual_lines: 11
+duration_minutes: null
+consulted_in_future: []
+---
+
 # Execution Log — 2026-04-19 — Sidebar Glass Theme Fix
 
 **Type:** debug (bug fix)
