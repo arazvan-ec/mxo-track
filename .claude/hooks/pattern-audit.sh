@@ -1,16 +1,21 @@
 #!/usr/bin/env bash
-# pattern-audit.sh — surface tags with 3+ occurrences in execution logs that
-# haven't yet graduated to a knowledge module.
+# pattern-audit.sh — surface tags/patterns with ≥3 occurrences in execution logs
+# that haven't yet been registered in docs/knowledge/_graduations.yaml.
 #
 # Called automatically by phase-advance.sh after retrospective → finalize.
 # Can also be invoked on-demand.
 #
 # Exit 0 always — advisory only, never blocks.
+#
+# Env overrides:
+#   PATTERN_AUDIT_REGISTRY     — path to _graduations.yaml (default docs/knowledge/)
+#   PATTERN_AUDIT_KNOWLEDGE_DIR — path to knowledge dir (for suggestion heuristic)
 
 set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$(readlink -f "$0")")/../.." && pwd)"
 CONSULT="$REPO_ROOT/.claude/hooks/consult.sh"
+REGISTRY="${PATTERN_AUDIT_REGISTRY:-$REPO_ROOT/docs/knowledge/_graduations.yaml}"
 KNOWLEDGE_DIR="${PATTERN_AUDIT_KNOWLEDGE_DIR:-$REPO_ROOT/docs/knowledge}"
 
 if [ ! -x "$CONSULT" ]; then
@@ -18,13 +23,40 @@ if [ ! -x "$CONSULT" ]; then
   exit 0
 fi
 
-# Extract lines marked with ⚠ PATTERN (≥3) from consult.sh stats output.
-# Line format: "  <tag-name>                : N logs ⚠ PATTERN (≥3)"
+# Extract ≥3 tags/patterns from consult.sh stats output.
+# Line format: "  <name>                : N logs ⚠ PATTERN (≥3)"
 patterns=$("$CONSULT" stats 2>/dev/null | awk '/⚠ PATTERN/ { print $1, $3 }' || true)
 
 if [ -z "$patterns" ]; then
   exit 0
 fi
+
+# Parse graduated names from registry (keys under tags: and patterns:)
+graduated_names=""
+if [ -f "$REGISTRY" ]; then
+  graduated_names=$(awk '
+    /^tags:$/             { s="tags"; next }
+    /^patterns:/          { s="patterns"; next }
+    /^keyword_mappings:/  { s="km"; next }
+    /^[a-z]/ && !/^#/     { s=""; next }
+    (s=="tags" || s=="patterns") && /^  [a-z][a-z0-9-]*:$/ {
+      name=$1; sub(/:$/, "", name); print name
+    }
+  ' "$REGISTRY")
+fi
+
+# Heuristic: find best-guess module for an ungraduated name via substring match.
+suggest_module() {
+  local name="$1"
+  [ ! -d "$KNOWLEDGE_DIR" ] && { echo "???"; return; }
+  local hit
+  hit=$(grep -lF "$name" "$KNOWLEDGE_DIR"/*.md 2>/dev/null | head -1)
+  if [ -z "$hit" ]; then
+    echo "???"
+  else
+    basename "$hit"
+  fi
+}
 
 CANDIDATES=()
 while IFS= read -r row; do
@@ -33,8 +65,7 @@ while IFS= read -r row; do
   count=$(echo "$row" | awk '{print $2}')
   [ -z "$tag" ] && continue
 
-  # Check if the tag appears in any knowledge module
-  if [ -d "$KNOWLEDGE_DIR" ] && grep -rq --include='*.md' -F "$tag" "$KNOWLEDGE_DIR" 2>/dev/null; then
+  if echo "$graduated_names" | grep -qxF "$tag"; then
     continue
   fi
 
@@ -46,11 +77,13 @@ if [ ${#CANDIDATES[@]} -eq 0 ]; then
 fi
 
 echo ""
-echo "⚠ pattern-audit: tags with ≥3 occurrences not yet in knowledge modules:"
+echo "⚠ pattern-audit: tags/patterns with ≥3 occurrences not in _graduations.yaml:"
 for c in "${CANDIDATES[@]}"; do
   tag="${c%%|*}"
   count="${c##*|}"
-  printf "  • %-30s (%s logs) — consider graduation to docs/knowledge/\n" "$tag" "$count"
+  module=$(suggest_module "$tag")
+  printf "  • %-30s (%s logs)\n" "$tag" "$count"
+  printf "    → graduate.sh %s --module=%s --section=\"???\"\n" "$tag" "$module"
 done
 echo ""
 

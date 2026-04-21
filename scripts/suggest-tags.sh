@@ -11,6 +11,7 @@
 set -uo pipefail
 
 LOGS_DIR="${SUGGEST_TAGS_LOGS_DIR:-docs/superpowers/execution-logs}"
+REGISTRY="${SUGGEST_TAGS_REGISTRY:-docs/knowledge/_graduations.yaml}"
 MODE="dry-run"
 FORCE=0
 
@@ -24,48 +25,28 @@ for arg in "$@"; do
   esac
 done
 
-# Keyword → tag mapping (substring match on lowercased filename)
-declare -A KEYWORD_TAGS=(
-  [glass]="glass-overlay"
-  [sidebar]="sidebar"
-  [menu]="menu"
-  [overlay]="overlay"
-  [dark]="dark-theme"
-  [theme]="theme"
-  [ios]="ios-preset"
-  [widget]="widget"
-  [dashboard]="dashboard"
-  [card]="card"
-  [route]="route"
-  [fleet]="fleet"
-  [vehicle]="vehicle"
-  [stop]="stop"
-  [shipment]="shipment"
-  [hook]="hook"
-  [workflow]="workflow"
-  [retrospective]="retrospective"
-  [session]="session"
-  [refactor]="refactor"
-  [cleanup]="cleanup"
-  [migrate]="migration"
-  [migration]="migration"
-  [test]="testing"
-  [gps]="gps"
-  [traccar]="traccar"
-  [driver]="driver"
-  [customer]="customer"
-  [portal]="portal"
-  [kpi]="kpi"
-  [map]="map"
-  [layer]="map"
-  [marker]="map"
-  [notification]="notification"
-  [filter]="filter"
-  [exception]="exception"
-  [deviation]="deviation"
-  [scroll]="scroll"
-  [mobile]="mobile"
-)
+# Keyword → tag mapping loaded from _graduations.yaml (keyword_mappings: section).
+# Consumed for substring match on lowercased filename slug.
+if [ ! -f "$REGISTRY" ]; then
+  echo "ERROR: registry not found: $REGISTRY" >&2
+  exit 2
+fi
+
+declare -A KEYWORD_TAGS=()
+while IFS=":" read -r kw tag; do
+  kw=$(echo "$kw" | tr -d ' ')
+  tag=$(echo "$tag" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+  [ -n "$kw" ] && [ -n "$tag" ] && KEYWORD_TAGS[$kw]="$tag"
+done < <(awk '
+  /^keyword_mappings:/  { s="km"; next }
+  /^[a-z]/ && !/^#/     { s=""; next }
+  s=="km" && /^  [a-z]/ && /:/ { print }
+' "$REGISTRY")
+
+if [ "${#KEYWORD_TAGS[@]}" -eq 0 ]; then
+  echo "ERROR: no keyword_mappings loaded from $REGISTRY" >&2
+  exit 2
+fi
 
 has_frontmatter() {
   head -1 "$1" 2>/dev/null | grep -q '^---[[:space:]]*$'

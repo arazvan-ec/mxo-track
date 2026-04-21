@@ -10,7 +10,7 @@ TESTS_FAILED=0
 FAILED_NAMES=()
 
 TMPDIR=$(mktemp -d)
-trap "rm -rf $TMPDIR" EXIT
+trap 'rm -rf "$TMPDIR"' EXIT
 
 LOGS_DIR="$TMPDIR/logs"
 mkdir -p "$LOGS_DIR"

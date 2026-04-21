@@ -92,6 +92,7 @@ if [ -n "$CHANGED_LOGS" ]; then
 fi
 
 # ── Unpushed commits warning ──
+# shellcheck disable=SC1083  # @{u} is git revision syntax, not brace expansion
 UNPUSHED=$(git log @{u}..HEAD --oneline 2>/dev/null | wc -l || echo "0")
 if [ "$UNPUSHED" -gt 3 ]; then
   ITEMS="${ITEMS}⚠ $UNPUSHED commits sin push"

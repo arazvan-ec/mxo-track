@@ -207,6 +207,7 @@ echo ""
 echo "── Phase 2: Complete walk with evidence at each gate ──"
 
 reset_state
+# shellcheck disable=SC2034  # ALL_PASS reserved for future summary assertion
 ALL_PASS=true
 
 # Phase 1: null → consult
@@ -217,7 +218,7 @@ if "$ADVANCE" consult > /dev/null 2>&1; then
 else
   FAIL=$((FAIL + 1))
   echo "  ❌ failed to advance to consult"
-  ALL_PASS=false
+  : # ALL_PASS write removed (var unused)
 fi
 
 # Phase 2: consult → brainstorming (needs decisions_read)
@@ -229,7 +230,7 @@ if "$ADVANCE" brainstorming > /dev/null 2>&1; then
 else
   FAIL=$((FAIL + 1))
   echo "  ❌ failed to advance to brainstorming"
-  ALL_PASS=false
+  : # ALL_PASS write removed (var unused)
 fi
 
 # Phase 3: brainstorming → planning (needs user_turns, alternatives, approval, spec)
@@ -246,7 +247,7 @@ if "$ADVANCE" planning > /dev/null 2>&1; then
 else
   FAIL=$((FAIL + 1))
   echo "  ❌ failed to advance to planning"
-  ALL_PASS=false
+  : # ALL_PASS write removed (var unused)
 fi
 
 # Phase 4: planning → implementation (needs plan file)
@@ -258,7 +259,7 @@ if "$ADVANCE" implementation > /dev/null 2>&1; then
 else
   FAIL=$((FAIL + 1))
   echo "  ❌ failed to advance to implementation"
-  ALL_PASS=false
+  : # ALL_PASS write removed (var unused)
 fi
 
 # Phase 5: implementation → verification (plan must exist — already set)
@@ -269,7 +270,7 @@ if "$ADVANCE" verification > /dev/null 2>&1; then
 else
   FAIL=$((FAIL + 1))
   echo "  ❌ failed to advance to verification"
-  ALL_PASS=false
+  : # ALL_PASS write removed (var unused)
 fi
 
 # Phase 6: verification → capture (needs tests_passed + lint_clean)
@@ -281,7 +282,7 @@ if "$ADVANCE" capture > /dev/null 2>&1; then
 else
   FAIL=$((FAIL + 1))
   echo "  ❌ failed to advance to capture"
-  ALL_PASS=false
+  : # ALL_PASS write removed (var unused)
 fi
 
 # Phase 7: capture → retrospective (needs execution_log_path)
@@ -293,7 +294,7 @@ if "$ADVANCE" retrospective > /dev/null 2>&1; then
 else
   FAIL=$((FAIL + 1))
   echo "  ❌ failed to advance to retrospective"
-  ALL_PASS=false
+  : # ALL_PASS write removed (var unused)
 fi
 
 # Phase 8: retrospective → finalize (needs lessons section in log)
@@ -304,7 +305,6 @@ if "$ADVANCE" finalize > /dev/null 2>&1; then
 else
   FAIL=$((FAIL + 1))
   echo "  ❌ failed to advance to finalize"
-  ALL_PASS=false
 fi
 
 # ── Test 3: Verify final state ──

@@ -911,3 +911,74 @@ else
 fi
 exit 0
 ```
+
+## Workflow Phases Overview
+
+El workflow tiene 8 fases secuenciales para flujos `full` y una variante reducida
+para `debug`. Cada fase produce un artefacto que alimenta a la siguiente:
+
+```
+consult → brainstorming → planning → implementation → verification → capture → retrospective → finalize
+```
+
+- **Motor de fases:** `.claude/hooks/phase-advance.sh` enforces legal transitions
+  (no skips, no backwards) y añade timestamps a `phase_history`
+- **Gates:** `.claude/hooks/workflow-engine-validator.sh` bloquea edits en
+  `src/`, `templates/`, `config/`, etc. si las fases previas no completaron
+- **Estado persistente:** `.claude/session-state.json` (campo `current_phase`)
+- **Detalle completo:** `CLAUDE.md` sección "The Workflow: Every Interaction Has Structure"
+
+Logs representativos: `2026-04-12-enforce-interaction-classification.md`,
+`2026-04-14-task-progress-automation.md`.
+
+## Workflow Hooks
+
+Los hooks en `.claude/hooks/` son el runtime del workflow engine — disparados por
+eventos de Claude Code (SessionStart, UserPromptSubmit, PreToolUse, PostToolUse,
+Stop).
+
+- **SessionStart** (`session-start.sh`): inyecta contexto inicial, restaura
+  `user_approved` si el trabajo está mid-flow, surfacea logs relacionados al
+  branch actual (≤5 files)
+- **UserPromptSubmit** (`user-prompt-state.sh`): clasifica mensaje del usuario
+  (aprobación, rechazo, decision-IDs) y actualiza `evidence.user_approved`
+- **PreToolUse validators**: bloquean edits cuando gates no se cumplen
+- **PostToolUse** (`post-commit-validator.sh`): detecta nuevos execution logs,
+  dispara `link-regression.sh` sobre convención `**Fixes previously:**`
+- **Stop**: git check, plan-progress reporting
+
+Convención: todos los hooks son scripts bash que leen/escriben
+`.claude/session-state.json` vía `jq` (atomicidad).
+
+Logs representativos: `2026-03-20-process-enforcement-hooks.md`,
+`2026-04-07-workflow-hook-tests.md`, `2026-04-08-consolidate-posttooluse-hooks.md`.
+
+## Harness as Memory
+
+Concepto central del sistema memory-harness (PR1-PR4, abril 2026). El harness
+alrededor del modelo — hooks, status line, execution logs, knowledge modules,
+session-state — **es la memoria real del sistema**. Los pesos del modelo son
+stateless; la continuidad entre sesiones (y tras compactación) depende
+íntegramente del harness.
+
+**Pattern: harness-memory-separation**
+
+- **Lo que sobrevive a compactación** (compaction-safe): `session-state.json`,
+  CLAUDE.md hierarchy, execution logs, knowledge modules, `task_progress` y
+  `work_context` re-inyectados vía status line
+- **Lo que se pierde:** conversación previa, tool call results, skills cargados
+- **Contrato explícito:** `.claude/README.md` sección "Compaction Contract"
+
+**Consumers del harness:**
+- `consult.sh`: query sobre execution log frontmatter (tags, files_touched,
+  patterns, outcome)
+- `session-start.sh` surfacing: auto-inyecta logs relacionados al branch actual
+- `pattern-audit.sh`: detecta patterns con ≥3 ocurrencias no graduados
+- `mark-verified.sh` + auto-verify: cierra outcome tracking post-merge
+- `graduate.sh`: graduación atómica al registro `_graduations.yaml`
+
+**Registro de graduaciones:** `docs/knowledge/_graduations.yaml` es single source
+of truth para qué tags/patterns están documentados como patrones canónicos.
+
+Logs representativos: `2026-04-19-memory-harness-pr1.md`,
+`2026-04-21-memory-harness-pr2.md`, `2026-04-21-memory-harness-pr3.md`.

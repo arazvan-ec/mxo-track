@@ -1,8 +1,9 @@
 SHELL := /bin/bash
 
-.PHONY: help lint manifest preflight workflow-status workflow-reset hooks-health
+.PHONY: help lint lint-shell manifest preflight workflow-status workflow-reset hooks-health
 help:
 	@echo "make lint            - Sintaxis PHP"
+	@echo "make lint-shell      - Shellcheck sobre .claude/hooks/*.sh y scripts/*.sh (severity=warning)"
 	@echo "make preflight       - Validar proceso antes de push"
 	@echo "make manifest        - Regenerar codebase manifest"
 	@echo "make workflow-status - Show current workflow status"
@@ -11,6 +12,10 @@ help:
 
 lint:
 	@find backend/src -name '*.php' -print0 | xargs -0 -n1 php -l
+
+lint-shell:
+	@command -v shellcheck >/dev/null 2>&1 || { echo "ERROR: shellcheck not installed (apt-get install shellcheck)" >&2; exit 2; }
+	@shellcheck -S warning .claude/hooks/*.sh scripts/*.sh
 
 manifest:
 	@bash backend/bin/generate-manifest.sh

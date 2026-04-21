@@ -89,7 +89,6 @@ if [ "$FLOW_TYPE" = "full" ] && [ -n "$USER_PROMPT" ]; then
     fi
   fi
 fi
-INTERACTION_ID=$(echo "$STATE" | jq -r '.interaction_id // 0')
 DEV_ACTIVE=$(echo "$STATE" | jq -r '.deviation.active // false')
 
 # Work context — hierarchical progress tracking

@@ -195,6 +195,20 @@ Motor de proyección de eventos para actualización de mapa en tiempo real. DDD 
 | `DeviationEnded` | EtaRecalculationListener | RouteEventLogListener |
 | `ShipmentCreated` | ShipmentService | ShipmentEmbeddingListener |
 
+## Stops and Delivery Points
+
+Una "stop" representa un punto de entrega/recogida en una ruta. Se modela como
+`RouteStep` asociado a un `Shipment` (cuando es delivery/pickup) o a waypoint.
+
+- **Entidad:** `src/Entity/RouteStep.php`
+- **Relaciones:** `ManyToOne` a `Route`, opcional `ManyToOne` a `Shipment`
+- **Orden:** campo `sequenceIndex` define secuencia; VROOM/optimizer lo reordena
+- **Estado de entrega:** `ShipmentStatus` transiciona vía POD (proof-of-delivery)
+- **Domain events:** `ShipmentCreated`, `DeviationDetected` impactan stops
+
+Logs representativos: `2026-03-25-route-step-reorder.md`,
+`2026-04-12-customer-advanced-filters.md` (filtros por stop status).
+
 ## Historial
 
 - 2026-03-11: Creación inicial

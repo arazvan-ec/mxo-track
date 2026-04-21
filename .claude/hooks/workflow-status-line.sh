@@ -101,7 +101,6 @@ PATTERN_WIDE=$(echo "$STATE" | jq -r '.evidence.pattern_wide_search_done // fals
 TASK_CURRENT=$(echo "$STATE" | jq -r '.evidence.task_progress.current // 0')
 TASK_TOTAL=$(echo "$STATE" | jq -r '.evidence.task_progress.total // 0')
 TASK_LABEL=$(echo "$STATE" | jq -r '.evidence.task_progress.label // ""')
-TASK_COMPLETED=$(echo "$STATE" | jq -r '.evidence.task_progress.completed_labels // [] | length')
 
 # Wave progress fields (design structure: Phase 1-A, Wave 2/5)
 WAVE_CURRENT=$(echo "$STATE" | jq -r '.evidence.task_progress.wave_current // 0')
@@ -143,7 +142,8 @@ current_evidence() {
       echo "spec=$([ -n "$SPEC_PATH" ] && echo "Y" || echo "N") plan=$plan_yn"
       ;;
     implementation)
-      local ev="plan=$([ -n "$PLAN_PATH" ] && echo "Y" || echo "N") tests_written=$TESTS_WRITTEN"
+      local ev
+      ev="plan=$([ -n "$PLAN_PATH" ] && echo "Y" || echo "N") tests_written=$TESTS_WRITTEN"
       if [ "$TASK_TOTAL" -gt 0 ] 2>/dev/null; then
         ev="$ev task=${TASK_CURRENT}/${TASK_TOTAL}"
         [ -n "$TASK_LABEL" ] && ev="$ev ($TASK_LABEL)"
@@ -242,12 +242,14 @@ phase_evidence() {
       local ev="t${USER_TURNS}"
       [ "$ALTERNATIVES" = "true" ] && ev="$ev,alt"
       [ "$USER_APPROVED" = "true" ] && ev="$ev,ok"
-      local sp=$(base_name "$SPEC_PATH")
+      local sp
+      sp=$(base_name "$SPEC_PATH")
       [ -n "$sp" ] && ev="$ev,${sp:0:20}"
       echo "(${ev})"
       ;;
     planning)
-      local sp=$(base_name "$PLAN_PATH")
+      local sp
+      sp=$(base_name "$PLAN_PATH")
       [ -n "$sp" ] && echo "(${sp:0:25})" || echo "(—)"
       ;;
     implementation)
@@ -268,7 +270,8 @@ phase_evidence() {
       echo "(${ev})"
       ;;
     capture)
-      local sp=$(base_name "$EXEC_LOG")
+      local sp
+      sp=$(base_name "$EXEC_LOG")
       [ -n "$sp" ] && echo "(${sp:0:25})" || echo "(—)"
       ;;
     retrospective)

@@ -193,6 +193,34 @@ infrastructure, reports, and banner sections come from the widget registry.
 Widgets in the `admin_dashboard` layout (position order): `dashboard_kpis`,
 `system_health`, `infrastructure_metrics`, `mini_reports`, `reports_banner`.
 
+## Navigation Menu
+
+Menu primario de la aplicación web. Implementación en React como single source of
+truth para todos los contextos (admin, customer, driver).
+
+- Componente principal: `frontend/src/components/layout/NavigationSidebar.tsx`
+- Configuración por rol: mismo componente, items filtrados por `ROLE_*`
+- Estado persistente: `UserPreferencesContext` (collapsed/expanded)
+- Glass theme coordinado con `ui-layout-contracts.md` (Contrato 4)
+
+Logs representativos: `2026-03-19-dual-hamburger-menu.md`,
+`2026-03-22-gmail-unified-menu.md`, `2026-04-19-menu-scroll-overlay-fix.md`.
+
+## Sidebar System
+
+Sistema de paneles laterales — navegación primaria (izquierda) + utilidades
+contextuales (derecha, cuando aplica). Deriva del Navigation Menu pero merece
+sección propia porque las reglas de layout/escaladura son distintas.
+
+- Desktop: sidebar izquierdo fijo, scroll independiente del main content
+- Mobile: overlay sobre content con backdrop-filter (liquid glass preset)
+- Scroll containment: respeta `ui-layout-contracts.md` Contrato 3 (Flex Scroll)
+- Inline vs overlay: `frontend/src/components/layout/NavigationSidebar.tsx`
+  cambia de mode según viewport
+
+Logs representativos: `2026-03-19-inline-nav-sidebar.md`,
+`2026-04-19-sidebar-scroll-fix.md`, `2026-04-19-sidebar-glass-theme-fix.md`.
+
 ## Common Patterns
 
 **Adding a new admin page:**

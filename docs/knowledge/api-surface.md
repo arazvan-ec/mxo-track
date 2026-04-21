@@ -102,6 +102,22 @@ API keys almacenadas como SHA-256 hash en `ApiKey` entity.
 - **Rate limiting**: `ApiRateLimitSubscriber` por API key
 - **CSRF**: `CsrfApiSubscriber` para APIs con sesión
 
+## List Filters
+
+Patrón unificado para filtrado de listados en endpoints admin/customer. El filter
+applier parsea query params, valida contra allowlist por controller, y aplica a
+Doctrine QueryBuilder de forma composable.
+
+- **Clase central:** `src/Service/List/ListFilterApplier.php`
+- **Consumers:** controllers de `Route`, `Shipment`, `Customer`, `Driver`,
+  `Vehicle` (admin listings)
+- **Valor semántico:** cada filter se modela como `FilterCriterion` value object
+  (field + operator + value). Avanzado (`FilterPredicateSet`) compone con AND/OR
+- **Tests:** `backend/tests/Service/List/ListFilterApplierTest.php`
+
+Logs representativos: `2026-04-10-advanced-filters-all-views.md`,
+`2026-04-12-list-filter-applier-refactor.md`, `2026-04-12-customer-advanced-filters.md`.
+
 ## Historial
 
 - 2026-03-11: Creación inicial

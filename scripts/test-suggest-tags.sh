@@ -3,7 +3,7 @@
 set -uo pipefail
 
 TMPDIR=$(mktemp -d)
-trap "rm -rf $TMPDIR" EXIT
+trap 'rm -rf "$TMPDIR"' EXIT
 
 LOGS_DIR="$TMPDIR/logs"
 mkdir -p "$LOGS_DIR"
@@ -135,6 +135,34 @@ if ! grep -q "^---" "$LOGS_DIR/2026-01-04-widget-no-fm.md"; then
 else
   TESTS_FAILED=$((TESTS_FAILED+1)); echo "  ❌ log without frontmatter was modified"
 fi
+
+# Case 8: custom registry via env var
+FIX_REG="$TMPDIR/custom.yaml"
+cat > "$FIX_REG" <<'EOF'
+tags: {}
+patterns: {}
+keyword_mappings:
+  unique: unique-tag
+EOF
+rm -f "$LOGS_DIR"/*.md
+mkfx "2026-01-05-unique-case.md" "[]"
+SUGGEST_TAGS_REGISTRY="$FIX_REG" "$ST" --apply >/dev/null 2>&1
+check_tags_contain "$LOGS_DIR/2026-01-05-unique-case.md" "unique-tag" "custom registry keyword applied"
+
+# Case 9: missing registry → exit 2
+rm -f "$LOGS_DIR"/*.md
+SUGGEST_TAGS_REGISTRY="/nonexistent/reg.yaml" "$ST" --apply >/dev/null 2>&1; rc=$?
+check_exit "missing registry → exit 2" 2 $rc
+
+# Case 10: empty keyword_mappings → exit 2
+EMPTY_REG="$TMPDIR/empty.yaml"
+cat > "$EMPTY_REG" <<'EOF'
+tags: {}
+patterns: {}
+keyword_mappings: {}
+EOF
+SUGGEST_TAGS_REGISTRY="$EMPTY_REG" "$ST" --apply >/dev/null 2>&1; rc=$?
+check_exit "empty keyword_mappings → exit 2" 2 $rc
 
 echo ""
 echo "Results: $TESTS_RUN run · $TESTS_PASSED passed · $TESTS_FAILED failed"
