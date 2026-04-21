@@ -67,3 +67,4 @@ consulted_in_future: []
   1. [item]
 - **Business context tags:** [route-optimization, delivery, fleet, notifications, etc.]
 - **Decision log entry needed?** yes / no — [topic if yes]
+- **Fixes previously:** `YYYY-MM-DD-xxx.md` (optional — if this log is a fix for a bug introduced in a prior log, include this line; post-commit-validator will auto-update the prior log's `regressions_later`)
