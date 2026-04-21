@@ -49,8 +49,14 @@ waves = []
 tasks = []
 current_wave = 0
 
-# Wave header: ### Wave N [— label] [trailing brackets]
-re_wave = re.compile(r'^###\s+Wave\s+(\d+)(?:\s*[—\-:]\s*(.+?))?(?:\s*\[.*\])?\s*$')
+# Wave header: ### [opt-prefix] Wave N [— label] [opt-trailing-brackets]
+# Accepts:
+#   ### Wave 1
+#   ### Wave 1: Title
+#   ### Wave 1 — Title
+#   ### [parallel] Wave 2: Title
+#   ### Wave 3 [parallel]
+re_wave = re.compile(r'^###\s+(?:\[[^\]]*\]\s+)?Wave\s+(\d+)(?:\s*[—\-:]\s*(.+?))?(?:\s*\[.*\])?\s*$')
 # Task header: #### **Na — Title** ...   OR   - **Na — Title** ...
 re_task = re.compile(r'^(?:####\s+|-\s+)\*\*([0-9]+[a-z]?)\s*[—\-:]\s*(.+?)\*\*')
 
