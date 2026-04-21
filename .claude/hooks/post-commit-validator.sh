@@ -70,6 +70,27 @@ if ! ls "$EXEC_LOG_DIR/${TODAY}-"*.md 1>/dev/null 2>&1; then
   fi
 fi
 
+# ── Regressions link: detect "Fixes previously: `...`" in new execution logs ──
+# If the commit added an execution log containing that line, invoke link-regression.sh
+# to update the referenced older log's regressions_later array.
+CHANGED_LOGS=$(git show --name-only --format="" HEAD 2>/dev/null \
+  | grep -E '^docs/superpowers/execution-logs/[0-9]{4}-[0-9]{2}-[0-9]{2}-.*\.md$' || true)
+if [ -n "$CHANGED_LOGS" ]; then
+  while IFS= read -r new_log_path; do
+    [ -z "$new_log_path" ] && continue
+    [ -f "$new_log_path" ] || continue
+    new_log_name=$(basename "$new_log_path")
+    # Extract "Fixes previously: `YYYY-MM-DD-xxx.md`" reference
+    old_log_ref=$(grep -oE '\*\*Fixes previously:\*\*[[:space:]]*`[0-9]{4}-[0-9]{2}-[0-9]{2}-[^`]+\.md`' "$new_log_path" \
+      | head -1 | sed -E "s/.*\`([^\`]+)\`.*/\\1/" || true)
+    if [ -n "$old_log_ref" ] && [ -x "$REPO/scripts/link-regression.sh" ]; then
+      bash "$REPO/scripts/link-regression.sh" "$new_log_name" "$old_log_ref" >/dev/null 2>&1 \
+        && ITEMS="${ITEMS}🔗 linked regression $old_log_ref | " \
+        || true
+    fi
+  done <<< "$CHANGED_LOGS"
+fi
+
 # ── Unpushed commits warning ──
 UNPUSHED=$(git log @{u}..HEAD --oneline 2>/dev/null | wc -l || echo "0")
 if [ "$UNPUSHED" -gt 3 ]; then
