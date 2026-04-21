@@ -1,6 +1,6 @@
 ---
 type: process
-tags: []
+tags: [workflow]
 files_touched: [.claude/README.md]
 patterns: []
 outcome: success

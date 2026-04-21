@@ -1,6 +1,6 @@
 ---
 type: feature
-tags: []
+tags: [glass-overlay, ios-preset]
 files_touched: [docs/superpowers/plans/2026-04-13-ios-liquid-glass-preset.md, docs/superpowers/specs/2026-04-13-ios-liquid-glass-preset-design.md, frontend/src/components/bottom-sheet/useBottomSheet.ts, frontend/src/components/layout/AppLayout.tsx, frontend/src/components/transitions/IOSPageTransition.tsx, frontend/src/components/ui/ThemeSwitcher.tsx, frontend/src/context/ThemeProvider.tsx, frontend/src/index.css]
 patterns: []
 outcome: success

@@ -1,6 +1,6 @@
 ---
 type: feature
-tags: []
+tags: [dashboard]
 files_touched: [components/ui/{AnimatedCounter, SparklineSVG, RadialGauge, StaggeredEntrance, ThemeSwitcher}.tsx]
 patterns: []
 outcome: null

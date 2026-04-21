@@ -1,6 +1,6 @@
 ---
 type: bugfix
-tags: []
+tags: [fleet, route]
 files_touched: []
 patterns: []
 outcome: success

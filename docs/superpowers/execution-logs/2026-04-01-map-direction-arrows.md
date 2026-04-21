@@ -1,6 +1,6 @@
 ---
 type: feature
-tags: []
+tags: [map]
 files_touched: [docs/superpowers/plans/2026-04-01-map-direction-arrows.md, docs/superpowers/specs/2026-04-01-map-direction-arrows-design.md]
 patterns: []
 outcome: null

@@ -1,6 +1,6 @@
 ---
 type: process
-tags: []
+tags: [menu]
 files_touched: []
 patterns: []
 outcome: null

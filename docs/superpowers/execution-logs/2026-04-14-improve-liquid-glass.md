@@ -1,6 +1,6 @@
 ---
 type: feature
-tags: []
+tags: [glass-overlay]
 files_touched: [docs/knowledge/design-patterns.md, docs/knowledge/ui-frontend.md, docs/superpowers/plans/2026-04-14-improve-liquid-glass.md, docs/superpowers/specs/2026-04-14-improve-liquid-glass-design.md, frontend/src/components/ui/ThemeSwitcher.tsx, frontend/src/context/ThemeProvider.tsx, frontend/src/index.css]
 patterns: []
 outcome: null

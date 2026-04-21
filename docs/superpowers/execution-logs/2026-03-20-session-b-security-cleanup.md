@@ -1,6 +1,6 @@
 ---
 type: feature
-tags: []
+tags: [cleanup, session]
 files_touched: []
 patterns: []
 outcome: null

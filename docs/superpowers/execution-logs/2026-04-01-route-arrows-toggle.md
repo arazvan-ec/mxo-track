@@ -1,6 +1,6 @@
 ---
 type: feature
-tags: []
+tags: [route]
 files_touched: [docs/superpowers/plans/2026-04-01-route-arrows-toggle.md, docs/superpowers/specs/2026-04-01-route-arrows-toggle-design.md]
 patterns: []
 outcome: null

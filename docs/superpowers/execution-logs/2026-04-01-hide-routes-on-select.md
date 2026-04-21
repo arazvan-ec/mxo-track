@@ -1,6 +1,6 @@
 ---
 type: process
-tags: []
+tags: [route]
 files_touched: [docs/superpowers/plans/2026-04-01-hide-routes-on-select.md, docs/superpowers/specs/2026-04-01-hide-routes-on-select-design.md, frontend/src/pages/admin/OperatorDashboardPage.tsx]
 patterns: []
 outcome: null

@@ -1,6 +1,6 @@
 ---
 type: bugfix
-tags: []
+tags: [ios-preset]
 files_touched: []
 patterns: []
 outcome: null

@@ -1,6 +1,6 @@
 ---
 type: bugfix
-tags: []
+tags: [dashboard, stop]
 files_touched: [frontend/src/pages/admin/OperatorDashboardPage.tsx]
 patterns: []
 outcome: null

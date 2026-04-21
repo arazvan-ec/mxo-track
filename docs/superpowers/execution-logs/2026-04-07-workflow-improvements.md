@@ -1,6 +1,6 @@
 ---
 type: refactor
-tags: []
+tags: [workflow]
 files_touched: []
 patterns: []
 outcome: null

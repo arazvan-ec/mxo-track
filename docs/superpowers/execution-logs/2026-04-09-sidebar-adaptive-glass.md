@@ -1,6 +1,6 @@
 ---
 type: feature
-tags: []
+tags: [glass-overlay, sidebar]
 files_touched: [frontend/src/components/layout/NavigationSidebar.tsx, frontend/src/components/maps/MapCanvas.tsx, frontend/src/hooks/useAdaptiveOpacity.ts, frontend/src/index.css]
 patterns: []
 outcome: null

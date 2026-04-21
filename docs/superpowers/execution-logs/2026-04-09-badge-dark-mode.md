@@ -1,6 +1,6 @@
 ---
 type: process
-tags: []
+tags: [dark-theme]
 files_touched: []
 patterns: []
 outcome: null

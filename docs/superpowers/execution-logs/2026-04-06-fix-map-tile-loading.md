@@ -1,6 +1,6 @@
 ---
 type: bugfix
-tags: []
+tags: [map]
 files_touched: []
 patterns: []
 outcome: null

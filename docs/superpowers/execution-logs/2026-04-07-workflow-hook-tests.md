@@ -1,6 +1,6 @@
 ---
 type: refactor
-tags: []
+tags: [hook, testing, workflow]
 files_touched: [validators/${phase}-validator.sh]
 patterns: []
 outcome: null

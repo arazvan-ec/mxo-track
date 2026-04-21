@@ -1,6 +1,6 @@
 ---
 type: feature
-tags: []
+tags: [menu]
 files_touched: []
 patterns: []
 outcome: null

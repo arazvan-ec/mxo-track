@@ -1,6 +1,6 @@
 ---
 type: bugfix
-tags: []
+tags: [route]
 files_touched: [frontend/src/pages/admin/RouteDetailPage.tsx, frontend/src/pages/customer/CustomerRouteDetailPage.tsx, frontend/src/pages/driver/DriverRoutePage.tsx]
 patterns: []
 outcome: success

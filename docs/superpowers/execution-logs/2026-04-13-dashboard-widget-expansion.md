@@ -1,6 +1,6 @@
 ---
 type: feature
-tags: []
+tags: [dashboard, widget]
 files_touched: [backend/src/Service/AdminMetricsService.php, backend/tests/Unit/Service/AdminMetricsServiceTest.php, docs/superpowers/plans/2026-04-13-dashboard-widget-expansion.md, docs/superpowers/specs/2026-04-13-dashboard-widget-expansion-design.md, frontend/src/api/types.ts, frontend/src/components/bottom-sheet/WidgetRenderer.tsx, frontend/src/components/widgets/CollapsibleWidget.tsx, frontend/src/pages/admin/AdminDashboardPage.tsx]
 patterns: []
 outcome: null

@@ -1,6 +1,6 @@
 ---
 type: bugfix
-tags: []
+tags: [filter, refactor]
 files_touched: []
 patterns: []
 outcome: success

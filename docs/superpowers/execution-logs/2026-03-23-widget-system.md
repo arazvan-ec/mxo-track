@@ -1,6 +1,6 @@
 ---
 type: feature
-tags: []
+tags: [widget]
 files_touched: [docs/superpowers/plans/admin-routing-view/2026-03-23-widget-system.md, docs/superpowers/specs/admin-routing-view/2026-03-23-widget-system-design.md]
 patterns: []
 outcome: null

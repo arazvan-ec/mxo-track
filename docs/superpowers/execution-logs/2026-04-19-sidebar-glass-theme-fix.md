@@ -1,6 +1,6 @@
 ---
 type: bugfix
-tags: []
+tags: [glass-overlay, sidebar, theme]
 files_touched: [docs/knowledge/ui-frontend.md, frontend/src/components/layout/NavigationSidebar.tsx, frontend/src/hooks/useAdaptiveOpacity.ts]
 patterns: []
 outcome: null

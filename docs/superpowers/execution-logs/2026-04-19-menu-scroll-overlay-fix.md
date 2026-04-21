@@ -1,6 +1,6 @@
 ---
 type: bugfix
-tags: []
+tags: [menu, overlay, scroll]
 files_touched: [frontend/src/index.css]
 patterns: []
 outcome: success

@@ -1,6 +1,6 @@
 ---
 type: feature
-tags: []
+tags: [map]
 files_touched: []
 patterns: []
 outcome: null

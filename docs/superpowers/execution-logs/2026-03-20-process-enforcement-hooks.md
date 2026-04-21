@@ -1,6 +1,6 @@
 ---
 type: feature
-tags: []
+tags: [hook]
 files_touched: []
 patterns: []
 outcome: null

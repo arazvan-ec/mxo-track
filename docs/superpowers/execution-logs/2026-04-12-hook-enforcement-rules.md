@@ -1,6 +1,6 @@
 ---
 type: process
-tags: []
+tags: [hook]
 files_touched: []
 patterns: []
 outcome: success

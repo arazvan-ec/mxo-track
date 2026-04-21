@@ -1,6 +1,6 @@
 ---
 type: feature
-tags: []
+tags: [migration]
 files_touched: [docs/codebase-manifest.md, docs/superpowers/specs/admin-routing-view/2026-03-23-widget-system-design.md]
 patterns: []
 outcome: null

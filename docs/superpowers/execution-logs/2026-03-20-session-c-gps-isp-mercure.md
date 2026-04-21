@@ -1,6 +1,6 @@
 ---
 type: refactor
-tags: []
+tags: [gps, session]
 files_touched: []
 patterns: []
 outcome: null

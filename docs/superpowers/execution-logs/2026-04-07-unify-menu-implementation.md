@@ -1,6 +1,6 @@
 ---
 type: refactor
-tags: []
+tags: [menu]
 files_touched: []
 patterns: []
 outcome: null

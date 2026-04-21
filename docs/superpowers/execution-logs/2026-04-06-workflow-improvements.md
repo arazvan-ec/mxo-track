@@ -1,6 +1,6 @@
 ---
 type: process
-tags: []
+tags: [workflow]
 files_touched: [.claude/README.md, .claude/hooks/pre-push-gate.sh, docs/knowledge/superpowers-skills.md]
 patterns: []
 outcome: null

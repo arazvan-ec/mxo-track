@@ -1,6 +1,6 @@
 ---
 type: bugfix
-tags: []
+tags: [dark-theme]
 files_touched: [frontend/src/index.css]
 patterns: []
 outcome: success

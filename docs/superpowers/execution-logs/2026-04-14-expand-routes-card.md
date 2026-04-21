@@ -1,6 +1,6 @@
 ---
 type: feature
-tags: []
+tags: [card, route]
 files_touched: [docs/superpowers/plans/2026-04-14-expand-routes-card.md, docs/superpowers/specs/2026-04-14-expand-routes-card-design.md, frontend/src/api/hooks/useActiveRoutes.ts, frontend/src/widgets/DashboardKpisWidget.tsx]
 patterns: []
 outcome: success

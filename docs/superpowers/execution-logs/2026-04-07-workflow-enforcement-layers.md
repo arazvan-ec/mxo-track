@@ -1,6 +1,6 @@
 ---
 type: feature
-tags: []
+tags: [map, workflow]
 files_touched: [docs/superpowers/plans/2026-04-07-workflow-enforcement-layers.md, docs/superpowers/specs/2026-04-07-workflow-enforcement-layers-design.md]
 patterns: []
 outcome: null

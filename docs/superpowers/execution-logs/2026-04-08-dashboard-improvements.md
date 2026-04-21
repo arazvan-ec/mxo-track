@@ -1,6 +1,6 @@
 ---
 type: feature
-tags: []
+tags: [dashboard]
 files_touched: []
 patterns: []
 outcome: null

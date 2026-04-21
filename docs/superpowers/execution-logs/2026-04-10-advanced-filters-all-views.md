@@ -1,6 +1,6 @@
 ---
 type: feature
-tags: []
+tags: [filter]
 files_touched: []
 patterns: []
 outcome: success

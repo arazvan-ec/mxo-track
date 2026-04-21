@@ -1,6 +1,6 @@
 ---
 type: bugfix
-tags: []
+tags: [scroll, sidebar]
 files_touched: [docs/knowledge/ui-layout-contracts.md, frontend/src/index.css]
 patterns: []
 outcome: null

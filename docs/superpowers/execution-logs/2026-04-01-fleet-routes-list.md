@@ -1,6 +1,6 @@
 ---
 type: feature
-tags: []
+tags: [fleet, route]
 files_touched: [docs/superpowers/plans/2026-04-01-fleet-routes-list.md, docs/superpowers/specs/2026-04-01-fleet-routes-list-design.md]
 patterns: []
 outcome: null

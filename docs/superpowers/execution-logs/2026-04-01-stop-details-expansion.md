@@ -1,6 +1,6 @@
 ---
 type: process
-tags: []
+tags: [stop]
 files_touched: [docs/superpowers/plans/2026-04-01-stop-details-expansion.md, docs/superpowers/specs/2026-04-01-stop-details-expansion-design.md]
 patterns: []
 outcome: null

@@ -1,6 +1,6 @@
 ---
 type: process
-tags: []
+tags: [customer, filter]
 files_touched: []
 patterns: []
 outcome: success

@@ -1,6 +1,6 @@
 ---
 type: refactor
-tags: []
+tags: [glass-overlay]
 files_touched: []
 patterns: []
 outcome: null

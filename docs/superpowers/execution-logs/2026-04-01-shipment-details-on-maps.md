@@ -1,6 +1,6 @@
 ---
 type: feature
-tags: []
+tags: [map, shipment]
 files_touched: [docs/superpowers/plans/2026-04-01-shipment-details-on-maps.md, docs/superpowers/specs/2026-04-01-shipment-details-on-maps-design.md]
 patterns: []
 outcome: null

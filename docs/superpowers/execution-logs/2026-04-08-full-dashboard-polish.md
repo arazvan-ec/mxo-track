@@ -1,6 +1,6 @@
 ---
 type: feature
-tags: []
+tags: [dashboard]
 files_touched: [docs/superpowers/visual-testing-guide.md]
 patterns: []
 outcome: null

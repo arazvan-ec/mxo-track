@@ -1,6 +1,6 @@
 ---
 type: feature
-tags: []
+tags: [dashboard, widget]
 files_touched: [docs/superpowers/plans/2026-04-07-dashboard-widget-minimize.md, docs/superpowers/specs/2026-04-07-dashboard-widget-minimize-design.md]
 patterns: []
 outcome: null

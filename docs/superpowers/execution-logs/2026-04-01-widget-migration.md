@@ -1,6 +1,6 @@
 ---
 type: feature
-tags: []
+tags: [migration, widget]
 files_touched: [docs/superpowers/plans/2026-04-01-widget-migration.md, docs/superpowers/specs/2026-04-01-widget-migration-design.md]
 patterns: []
 outcome: null

@@ -1,6 +1,6 @@
 ---
 type: bugfix
-tags: []
+tags: [sidebar]
 files_touched: [docs/superpowers/plans/2026-03-19-inline-nav-sidebar.md, docs/superpowers/specs/2026-03-19-inline-nav-sidebar-design.md]
 patterns: []
 outcome: null

@@ -1,6 +1,6 @@
 ---
 type: process
-tags: []
+tags: [glass-overlay]
 files_touched: [frontend/src/index.css]
 patterns: []
 outcome: success
