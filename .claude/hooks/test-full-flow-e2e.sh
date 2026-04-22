@@ -175,7 +175,7 @@ assert_fail "blocks without decisions_read" "$ADVANCE" "brainstorming"
 
 # brainstorming → planning without spec/approval
 reset_state
-jq '.current_phase = "consult" | .evidence.decisions_read = true' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE"
+jq '.current_phase = "consult" | .evidence.decisions_read = true | .evidence.logs_scanned = true' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE"
 "$ADVANCE" brainstorming > /dev/null 2>&1
 echo "Test 1b: brainstorming → planning blocked without spec and approval"
 assert_fail "blocks without spec and approval" "$ADVANCE" "planning"
@@ -221,9 +221,9 @@ else
   : # ALL_PASS write removed (var unused)
 fi
 
-# Phase 2: consult → brainstorming (needs decisions_read)
+# Phase 2: consult → brainstorming (needs decisions_read AND logs_scanned)
 echo "Step 2/8: consult → brainstorming"
-jq '.evidence.decisions_read = true' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE"
+jq '.evidence.decisions_read = true | .evidence.logs_scanned = true' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE"
 if "$ADVANCE" brainstorming > /dev/null 2>&1; then
   PASS=$((PASS + 1))
   echo "  ✅ advanced to brainstorming"
@@ -297,8 +297,9 @@ else
   : # ALL_PASS write removed (var unused)
 fi
 
-# Phase 8: retrospective → finalize (needs lessons section in log)
+# Phase 8: retrospective → finalize (needs lessons section + retrospective_shown)
 echo "Step 8/8: retrospective → finalize"
+jq '.evidence.retrospective_shown = true' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE"
 if "$ADVANCE" finalize > /dev/null 2>&1; then
   PASS=$((PASS + 1))
   echo "  ✅ advanced to finalize"
