@@ -152,6 +152,7 @@ if [ "$FLOW_TYPE" = "full" ] && [ "$CURRENT_PHASE" = "finalize" ]; then
       .evidence.lint_clean = null |
       .evidence.execution_log_path = null |
       .evidence.branch_strategy = null |
+      .evidence.retrospective_shown = false |
       .evidence.root_cause_identified = false |
       .evidence.pattern_wide_search_done = false |
       .evidence.task_progress = {"current": 0, "total": 0, "label": null, "completed_labels": [], "task_index": []} |
