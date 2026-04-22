@@ -1244,3 +1244,34 @@ Freshness of knowledge modules (parsed from `docs/knowledge/index.md`):
 | GPS tracking, Traccar | `docs/knowledge/gps-tracking.md` |
 | Route optimization, VROOM/OSRM | `docs/knowledge/route-optimization.md` |
 | AI/ML | -- | Not verified |
+| Route Optimization | -- | Not verified |
+| Architecture DDD/SOLID | 2026-03-19 | 2026-03-19 |
+| Design Patterns | -- | Not verified |
+| Security | -- | Not verified |
+| Superpowers Skills | -- | Not verified |
+| Feedback & Learning | -- | Not verified |
+| UI & Frontend | 2026-03-22 | 2026-03-22 |
+| UI Layout Contracts | 2026-04-14 | 2026-04-14 |
+| Widget System | 2026-04-19 | 2026-04-19 |
+| Map Components | 2026-04-19 | 2026-04-19 |
+| Shipment & Delivery Lifecycle | 2026-04-19 | 2026-04-19 |
+| Driver Experience | 2026-04-19 | 2026-04-19 |
+| Analytics & Reporting | 2026-04-19 | 2026-04-19 |
+| Data Import/Export | 2026-04-19 | 2026-04-19 |
+| Public Tracking | 2026-04-19 | 2026-04-19 |
+
+---
+
+## Deep Reference
+
+| Topic | Document |
+|-------|----------|
+| Entity details, relations, traits | `docs/knowledge/domain-model.md` |
+| Full feature inventory | `docs/FEATURES.md` |
+| Architecture, bounded contexts | `docs/knowledge/architecture-ddd.md` |
+| API endpoints, controllers | `docs/knowledge/api-surface.md` |
+| Design patterns in use | `docs/knowledge/design-patterns.md` |
+| All knowledge modules | `docs/knowledge/index.md` |
+| Deployment, Docker, Railway | `docs/knowledge/deployment.md` |
+| GPS tracking, Traccar | `docs/knowledge/gps-tracking.md` |
+| Route optimization, VROOM/OSRM | `docs/knowledge/route-optimization.md` |
