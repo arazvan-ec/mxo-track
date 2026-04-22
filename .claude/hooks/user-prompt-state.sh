@@ -34,6 +34,10 @@ set -euo pipefail
 REPO="/home/user/mxo-track"
 STATE_FILE="$REPO/.claude/session-state.json"
 
+# Load phase sequences from the single source of truth
+# shellcheck source=./lib/flow-phases.sh
+source "$REPO/.claude/hooks/lib/flow-phases.sh"
+
 # Graceful fallback
 if [ ! -f "$STATE_FILE" ]; then
   echo "📍 Sin estado — session-state.json no encontrado"
@@ -227,14 +231,30 @@ case "$FLOW_TYPE" in
     ROOT_CAUSE=$(echo "$STATE" | jq -r '.evidence.root_cause_identified // false')
     PATTERN_WIDE=$(echo "$STATE" | jq -r '.evidence.pattern_wide_search_done // false')
     TESTS_PASSED_DBG=$(echo "$STATE" | jq -r '.evidence.tests_passed // false')
-    if [ "$ROOT_CAUSE" = "true" ] && [ "$PATTERN_WIDE" = "true" ]; then
-      DEBUG_PHASE="fix"; DEBUG_INDEX=4
-    elif [ "$ROOT_CAUSE" = "true" ]; then
-      DEBUG_PHASE="pattern_search"; DEBUG_INDEX=3
-    else
-      DEBUG_PHASE="root_cause"; DEBUG_INDEX=2
-    fi
-    DEBUG_PHASES=("consult" "root_cause" "pattern_search" "fix")
+    # Prefer explicit current_phase for late phases (verification onward);
+    # otherwise derive from evidence flags for the detective portion.
+    case "$CURRENT_PHASE" in
+      verification|capture|retrospective|finalize)
+        DEBUG_PHASE="$CURRENT_PHASE"
+        DEBUG_INDEX=0
+        for i in "${!DEBUG_PHASES[@]}"; do
+          if [ "${DEBUG_PHASES[$i]}" = "$CURRENT_PHASE" ]; then
+            DEBUG_INDEX=$((i + 1))
+            break
+          fi
+        done
+        ;;
+      *)
+        if [ "$ROOT_CAUSE" = "true" ] && [ "$PATTERN_WIDE" = "true" ]; then
+          DEBUG_PHASE="fix"; DEBUG_INDEX=3
+        elif [ "$ROOT_CAUSE" = "true" ]; then
+          DEBUG_PHASE="pattern_wide"; DEBUG_INDEX=2
+        else
+          DEBUG_PHASE="root_cause"; DEBUG_INDEX=1
+        fi
+        ;;
+    esac
+    DEBUG_TOTAL=${#DEBUG_PHASES[@]}
     DISPLAY_PHASE="$(echo "${DEBUG_PHASE:0:1}" | tr '[:lower:]' '[:upper:]')${DEBUG_PHASE:1}"
     # Build problem suffix: " — Problema 1/2: label" (only if multiple problems)
     PROB_SUFFIX=""
@@ -245,7 +265,7 @@ case "$FLOW_TYPE" in
       PROB_SUFFIX=" — ${WC_DESC_SHORT}"
     fi
     PREFIX=$(render_problem_prefix)
-    echo "📍 ${PREFIX}Debug: ${DISPLAY_PHASE} (${DEBUG_INDEX}/4)${PROB_SUFFIX}"
+    echo "📍 ${PREFIX}Debug: ${DISPLAY_PHASE} (${DEBUG_INDEX}/${DEBUG_TOTAL})${PROB_SUFFIX}"
     TODO_LINE=$(render_todo_line)
     [ -n "$TODO_LINE" ] && echo "$TODO_LINE"
     # Timeline
@@ -272,8 +292,12 @@ case "$FLOW_TYPE" in
     NEXT=""
     case "$DEBUG_PHASE" in
       root_cause) NEXT="identificar causa raiz" ;;
-      pattern_search) NEXT="busqueda patron-wide" ;;
+      pattern_wide) NEXT="busqueda patron-wide" ;;
       fix) NEXT="TDD fix + verificar" ;;
+      verification) NEXT="tests + lint verdes" ;;
+      capture) NEXT="escribir execution log" ;;
+      retrospective) NEXT="presentar retro + set retrospective_shown=true" ;;
+      finalize) NEXT="branch strategy + push" ;;
     esac
     echo "  Siguiente: $NEXT"
     exit 0
