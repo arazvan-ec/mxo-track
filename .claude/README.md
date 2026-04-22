@@ -287,14 +287,29 @@ checks completion (current phase).
 
 | Fase | Evidencia requerida | Nivel |
 |------|---------------------|-------|
-| `consult` | `decisions_read` OR `logs_scanned` | HARD |
+| `consult` | `decisions_read` AND `logs_scanned` (hardened 2026-04-22 — was OR) | HARD |
 | `brainstorming` | `user_turns ≥ 1` (HARD) + SOFT warn if `< 3` + `alternatives_proposed` + `user_approved` + `spec_path` (archivo ≥500B) | MIXED |
 | `planning` | `plan_path` (archivo ≥300B con keywords) | HARD |
 | `implementation` | plan exists (HARD) + `tests_written > 0` (SOFT warning) | MIXED |
 | `verification` | `tests_passed` = `true` or `skipped` + `lint_clean` = `true` or `skipped` | MIXED |
-| `capture` | `execution_log_path` exists | SOFT |
-| `retrospective` | `execution_log_path` exists + `## Lessons`/`## Retrospectiva` section ≥100 chars | HARD |
+| `capture` | `execution_log_path` set + file exists (hardened 2026-04-22 — was SOFT) | HARD |
+| `retrospective` | `retrospective_shown=true` (visibility gate) + `execution_log_path` + `## Lessons`/`## Retrospectiva` section ≥100 chars | HARD |
 | `finalize` | `branch_strategy` declared (`merge\|pr\|keep\|discard`) + knowledge module check | SOFT |
+
+### Additional PreToolUse gates (Option 3-Enforced, 2026-04-22)
+
+Two hooks run on every tool call, orthogonal to the phase validators:
+
+| Hook | Matcher | Effect | Bypass |
+|------|---------|--------|--------|
+| `validators/classify-validator.sh` | Edit\|Write | Blocks edits to framework/code paths when `interaction_classification ∈ {micro, light, explore, informational, null}`. Carve-outs: `docs/`, `*.md`, `/tmp/`, `.claude/session-state.json`. | `SKIP_CLASSIFY_GATE=1` |
+| `pre-tool-freshness.sh` | `.*` (all tools) | Non-blocking warning: prints `⚠ POSIBLE STALE STATE:` when upcoming tool call signals evidence/phase mismatch (spec write outside brainstorming, plan write outside planning, exec-log write outside capture, git commit during consult, git push in finalize without branch_strategy). | — (non-blocking) |
+
+And an enhancement to the TodoWrite PostToolUse hook:
+
+| Hook | Effect |
+|------|--------|
+| `todowrite-mirror.sh` | Rejects input with >1 `in_progress` todo (exit 2). Derives `work_context.problems.current` from `[prefix]` of active todo, case-insensitive substring match against `problems.labels`. |
 
 ### Verification: the "skipped" state
 
