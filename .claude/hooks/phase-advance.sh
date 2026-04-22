@@ -18,7 +18,7 @@
 set -euo pipefail
 
 REPO="/home/user/mxo-track"
-STATE_FILE="$REPO/.claude/session-state.json"
+STATE_FILE="${STATE_FILE:-$REPO/.claude/session-state.json}"
 
 if [ ! -f "$STATE_FILE" ]; then
   echo "ERROR: session-state.json not found" >&2
@@ -85,10 +85,13 @@ if [ "$NEXT_INDEX" -eq -1 ]; then
 fi
 
 # Validate transition is legal
-# From null → only consult is allowed
+# From null → only the first phase of the current flow is allowed.
+# Looks up FLOW_PHASES[$FLOW_TYPE][0] instead of hardcoding "consult" so that
+# debug (root_cause) and agent (implementation) flows can also enter legally.
 if [ "$CURRENT_PHASE" = "null" ] || [ "$CURRENT_INDEX" -eq -1 ]; then
-  if [ "$NEXT_PHASE" != "consult" ]; then
-    echo "ERROR: From null/undeclared phase, can only advance to 'consult'. Got: '$NEXT_PHASE'" >&2
+  FIRST_PHASE="${PHASES[0]}"
+  if [ "$NEXT_PHASE" != "$FIRST_PHASE" ]; then
+    echo "ERROR: From null/undeclared phase, can only advance to '$FIRST_PHASE' (flow: $FLOW_TYPE). Got: '$NEXT_PHASE'" >&2
     exit 1
   fi
 else
