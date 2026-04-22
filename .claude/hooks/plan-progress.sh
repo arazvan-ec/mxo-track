@@ -41,6 +41,10 @@ parse_plan() {
   # Robust against UTF-8 (em-dash, accented chars). Supports both:
   #   #### **1a — Title** (extra notes)
   #   - **1a — Title** (extra notes)
+  #   **A1 — Title** (letter-prefixed ids like A1, A2, ...)
+  # Also captures the task's files list if the next lines include:
+  #   - Files: `path1`, `path2`
+  #   → files: path1, path2
   python3 - "$plan_abs" <<'PYEOF'
 import sys, json, re
 
@@ -50,31 +54,50 @@ tasks = []
 current_wave = 0
 
 # Wave header: ### [opt-prefix] Wave N [— label] [opt-trailing-brackets]
-# Accepts:
-#   ### Wave 1
-#   ### Wave 1: Title
-#   ### Wave 1 — Title
-#   ### [parallel] Wave 2: Title
-#   ### Wave 3 [parallel]
 re_wave = re.compile(r'^###\s+(?:\[[^\]]*\]\s+)?Wave\s+(\d+)(?:\s*[—\-:]\s*(.+?))?(?:\s*\[.*\])?\s*$')
-# Task header: #### **Na — Title** ...   OR   - **Na — Title** ...
-re_task = re.compile(r'^(?:####\s+|-\s+)\*\*([0-9]+[a-z]?)\s*[—\-:]\s*(.+?)\*\*')
+# Task header: accepts:
+#   #### **1a — Title**, - **1a — Title**, **A1 — Title**, - **A1 — Title**
+re_task = re.compile(r'^(?:####\s+|-\s+)?\*\*([0-9]+[a-z]?|[A-Z][0-9]+)\s*[—\-:]\s*(.+?)\*\*')
+# Files line (bullet or arrow), captures everything after the marker
+re_files = re.compile(r'^\s*[-\*]?\s*(?:Files?:|→\s*files?:)\s*(.+?)\s*$', re.IGNORECASE)
+
+def extract_paths(raw):
+    """Strip backticks/asterisks/commas/spaces, return list of file paths."""
+    # Split on comma OR whitespace (after stripping backticks)
+    cleaned = raw.replace('`', '').replace('*', '')
+    parts = re.split(r'[,\s]+', cleaned)
+    return [p.strip() for p in parts if p.strip() and not p.strip().startswith('#')]
 
 with open(path, 'r', encoding='utf-8') as f:
-    for raw in f:
-        line = raw.rstrip('\n')
-        m = re_wave.match(line)
-        if m:
-            n = int(m.group(1))
-            label = (m.group(2) or '').strip()
-            waves.append({"n": n, "label": label})
-            current_wave = n
-            continue
-        m = re_task.match(line)
-        if m:
-            tid = m.group(1).strip()
-            title = m.group(2).strip()
-            tasks.append({"id": tid, "wave": current_wave, "label": title})
+    lines = f.readlines()
+
+i = 0
+while i < len(lines):
+    line = lines[i].rstrip('\n')
+    m = re_wave.match(line)
+    if m:
+        n = int(m.group(1))
+        label = (m.group(2) or '').strip()
+        waves.append({"n": n, "label": label})
+        current_wave = n
+        i += 1
+        continue
+    m = re_task.match(line)
+    if m:
+        tid = m.group(1).strip()
+        title = m.group(2).strip()
+        files = []
+        # Look ahead up to 5 lines for a Files: line (stop on next task/wave header)
+        for j in range(i + 1, min(i + 6, len(lines))):
+            la = lines[j].rstrip('\n')
+            if re_task.match(la) or re_wave.match(la):
+                break
+            fm = re_files.match(la)
+            if fm:
+                files = extract_paths(fm.group(1))
+                break
+        tasks.append({"id": tid, "wave": current_wave, "label": title, "files": files})
+    i += 1
 
 sys.stdout.write(json.dumps(waves, ensure_ascii=False) + "|||" + json.dumps(tasks, ensure_ascii=False))
 PYEOF
@@ -180,6 +203,63 @@ action_complete() {
   fi
 }
 
+# ── Action: auto_advance <file_path> ─────────────────────────────────────────
+# Derives task_progress.current from the file_path of an Edit/Write tool call.
+# Matches the given path (absolute or relative) against each task's files list.
+# On first match (case-sensitive substring, either direction), advances current.
+# Never decrements. Silent no-op if no match or no files declared.
+action_auto_advance() {
+  local fp="${1:-}"
+  if [ -z "$fp" ]; then
+    exit 0
+  fi
+  # Normalize to repo-relative path
+  local rel="${fp#"$REPO/"}"
+  rel="${rel#/}"
+
+  # Find first task whose files list matches. jq returns ordinal+1 of match or 0.
+  local result
+  result=$(jq -r --arg p "$rel" --arg abs "$fp" '
+    (.evidence.task_progress.task_index // [])
+    | to_entries
+    | map(select(
+        (.value.files // [])
+        | any(. as $f | ($p | contains($f)) or ($f | contains($p)) or ($abs | contains($f)) or ($f | contains($abs)))
+      ))
+    | .[0]
+    | if . == null then "" else "\(.key + 1)|\(.value.wave)|\(.value.label)" end
+  ' "$STATE_FILE" 2>/dev/null || echo "")
+
+  if [ -z "$result" ]; then
+    exit 0
+  fi
+
+  local ordinal wave_n task_label cur wave_label
+  ordinal="${result%%|*}"
+  local rest="${result#*|}"
+  wave_n="${rest%%|*}"
+  task_label="${rest#*|}"
+
+  cur=$(jq -r '.evidence.task_progress.current // 0' "$STATE_FILE")
+  # Never go backwards
+  if [ "$ordinal" -le "$cur" ] 2>/dev/null; then
+    exit 0
+  fi
+
+  wave_label=$(jq -r --argjson n "$wave_n" '
+    .evidence.work_context.wave.labels // [] | .[$n - 1] // ""
+  ' "$STATE_FILE")
+
+  jq --argjson o "$ordinal" --arg tl "$task_label" --argjson wn "$wave_n" --arg wl "$wave_label" '
+    .evidence.task_progress.current = $o |
+    .evidence.task_progress.label = $tl |
+    .evidence.work_context.wave.current = $wn |
+    .evidence.work_context.wave.label = $wl
+  ' "$STATE_FILE" > /tmp/pp_aa.json && mv /tmp/pp_aa.json "$STATE_FILE"
+
+  exit 0
+}
+
 # ── Action: show ─────────────────────────────────────────────────────────────
 action_show() {
   jq '{
@@ -192,12 +272,13 @@ action_show() {
 # ── Dispatch ─────────────────────────────────────────────────────────────────
 ACTION="${1:-}"
 case "$ACTION" in
-  init)     action_init ;;
-  advance)  action_advance "${2:-}" ;;
-  complete) action_complete ;;
-  show)     action_show ;;
+  init)         action_init ;;
+  advance)      action_advance "${2:-}" ;;
+  complete)     action_complete ;;
+  auto_advance) action_auto_advance "${2:-}" ;;
+  show)         action_show ;;
   *)
-    echo "Usage: $0 {init|advance <task_id>|complete|show}" >&2
+    echo "Usage: $0 {init|advance <task_id>|auto_advance <file_path>|complete|show}" >&2
     exit 1
     ;;
 esac
