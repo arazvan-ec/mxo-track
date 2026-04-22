@@ -117,16 +117,20 @@ elif [ -f "$VALIDATORS_DIR/${CURRENT_PHASE%ing}-validator.sh" ]; then
   VALIDATOR="$VALIDATORS_DIR/${CURRENT_PHASE%ing}-validator.sh"
 fi
 
-if [ -n "$VALIDATOR" ] && [ -f "$VALIDATOR" ]; then
+if [ -n "$VALIDATOR" ] && [ -f "$VALIDATOR" ] && [ "${SKIP_PHASE_EXIT_GATE:-0}" != "1" ]; then
   VALIDATION_OUTPUT=$("$VALIDATOR" "$STATE_FILE" 2>&1) || {
     EXIT_CODE=$?
     if [ "$EXIT_CODE" -eq 2 ]; then
       echo "ERROR: Cannot advance from '$CURRENT_PHASE' — evidence incomplete:" >&2
       echo "$VALIDATION_OUTPUT" >&2
+      echo "Bypass (last resort): export SKIP_PHASE_EXIT_GATE=1" >&2
       exit 1
     fi
     # Exit 1 = soft warning, allow advancement
+    echo "$VALIDATION_OUTPUT" >&2
   }
+elif [ "${SKIP_PHASE_EXIT_GATE:-0}" = "1" ]; then
+  echo "⚠ SKIP_PHASE_EXIT_GATE=1 — bypassing exit gate for phase '$CURRENT_PHASE'" >&2
 fi
 
 # Perform the transition

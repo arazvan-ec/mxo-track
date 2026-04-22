@@ -294,6 +294,37 @@ The gates are deliberately strict. A false negative (blocking a legitimate edit)
 minutes to reclassify. A false positive (allowing an unreviewed edit) costs hours to
 debug the resulting regression.
 
+#### Enforcement gates — shortcuts they catch
+
+The workflow engine pairs each CLAUDE.md discipline rule with a hook that
+enforces it. The enforcement layers catalog eight concrete shortcuts the model
+is prone to taking and maps each to the gate that blocks it:
+
+| Shortcut | Gate that catches it |
+|----------|---------------------|
+| Calling framework changes "light" to skip brainstorm | `classify-validator.sh` (Layer A) — blocks edits to `.claude/`, `scripts/`, `backend/src/`, `frontend/src/`, `ml-service/`, `docker/` unless classification is `full` or `debug` |
+| `consult → brainstorm` without reading decisions/logs | `consult-validator.sh` (Layer B) — requires BOTH `decisions_read=true` AND `logs_scanned=true` |
+| `brainstorm → planning` without alternatives or approval | `brainstorm-validator.sh` — requires `alternatives_proposed`, `user_approved`, `spec_path`, ≥1 user turn |
+| `verification → capture` without running tests/lint | `verification-validator.sh` — `tests_passed` and `lint_clean` must be `true` (no `skipped` in full/debug) |
+| `capture → retrospective` without writing the execution log | `capture-validator.sh` (Layer B, HARD) — `execution_log_path` must be set and file must exist |
+| `retrospective → finalize` without presenting retrospective to user | `retrospective-validator.sh` — requires `evidence.retrospective_shown=true` flag set after visible chat presentation |
+| Forgetting to advance `problems.current` when switching petitions | `todowrite-mirror.sh` (Layer C) — auto-derives `problems.current` from `[prefix]` of active todo |
+| Multiple `in_progress` todos at once | `todowrite-mirror.sh` (Layer C) — rejects input with >1 `in_progress` (exit 2) |
+| Stale session-state when committing/writing artifacts | `pre-tool-freshness.sh` (Layer D, non-blocking) — emits `⚠ POSIBLE STALE STATE:` warning when upcoming tool call signals inconsistency |
+
+#### Bypass env vars (documented escape hatches)
+
+Every HARD gate has a documented bypass for false positives. Using a bypass
+requires an entry in `docs/decisions/log.md` explaining the case.
+
+| Env var | Effect | When to use |
+|---------|--------|-------------|
+| `SKIP_CLASSIFY_GATE=1` | Disables `classify-validator.sh` | Emergency edits to framework paths when reclassification has already been discussed but session-state is stuck |
+| `SKIP_PHASE_EXIT_GATE=1` | Disables all phase exit validators in `phase-advance.sh` | Recovery from corrupted evidence state; rebuild session after interruption |
+
+Never bypass without thinking. A gate that blocks legitimate work is a gate
+that needs its conditions tuned — not a gate to silence.
+
 **Full reference:** `.claude/README.md` (gates, validators, deviation mode, harness assumptions)
 <!-- GENERIC-END -->
 

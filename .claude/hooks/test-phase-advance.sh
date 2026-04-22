@@ -196,8 +196,8 @@ for phase in "${PHASES[@]}"; do
   # Set required evidence before each gated transition
   case "$phase" in
     brainstorming)
-      # consult validator: decisions_read or logs_scanned
-      jq '.evidence.decisions_read = true' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE"
+      # consult validator (hardened AND): decisions_read AND logs_scanned
+      jq '.evidence.decisions_read = true | .evidence.logs_scanned = true' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE"
       ;;
     planning)
       # brainstorm validator: spec + approval + turns + alternatives
@@ -222,7 +222,8 @@ for phase in "${PHASES[@]}"; do
       jq --arg lp "$TEST_LOG2" '.evidence.execution_log_path = $lp' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE"
       ;;
     finalize)
-      # retrospective validator: lessons section in log
+      # retrospective validator (hardened): retrospective_shown flag + lessons section
+      jq '.evidence.retrospective_shown = true' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE"
       ;;
   esac
 
@@ -263,6 +264,77 @@ else
   echo "  ❌ phase_history length = $HISTORY_LEN (expected 8)"
   FAIL=$((FAIL + 1))
 fi
+
+# ── Option 3-Enforced hardened gates (2026-04-22) ──
+
+# Test 13: consult → brainstorming blocked when only decisions_read (was OR, now AND)
+reset_state "full"
+jq '.current_phase = "consult" | .evidence.decisions_read = true | .evidence.logs_scanned = false' \
+  "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE"
+echo "Test 13: consult → brainstorming blocked when only decisions_read=true (AND gate)"
+assert_fail "blocks when logs_scanned=false" "$ADVANCE" "brainstorming"
+
+# Test 14: consult → brainstorming blocked when only logs_scanned
+reset_state "full"
+jq '.current_phase = "consult" | .evidence.decisions_read = false | .evidence.logs_scanned = true' \
+  "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE"
+echo "Test 14: consult → brainstorming blocked when only logs_scanned=true (AND gate)"
+assert_fail "blocks when decisions_read=false" "$ADVANCE" "brainstorming"
+
+# Test 15: consult → brainstorming passes when BOTH true
+reset_state "full"
+jq '.current_phase = "consult" | .evidence.decisions_read = true | .evidence.logs_scanned = true' \
+  "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE"
+echo "Test 15: consult → brainstorming passes when both flags true"
+assert_pass "passes when both evidence flags set" "$ADVANCE" "brainstorming"
+
+# Test 16: capture → retrospective blocked (HARD gate, was SOFT)
+reset_state "full"
+jq '.current_phase = "capture" | .evidence.execution_log_path = null' \
+  "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE"
+echo "Test 16: capture → retrospective blocked without execution_log_path (HARD)"
+assert_fail "blocks (HARD) when execution_log_path missing" "$ADVANCE" "retrospective"
+
+# Test 17: retrospective → finalize blocked when retrospective_shown=false
+TEST_LOG3="/tmp/test-pa-log3.md"
+cat > "$TEST_LOG3" <<'LOGEOF'
+# Execution Log
+
+## Lessons
+- A lesson long enough to pass the 100-char minimum check. This is to verify the retrospective_shown flag is what blocks, not the section content.
+- Another lesson with enough content to be considered complete.
+LOGEOF
+reset_state "full"
+jq --arg lp "$TEST_LOG3" '.current_phase = "retrospective" | .evidence = {
+  "execution_log_path": $lp,
+  "retrospective_shown": false
+}' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE"
+echo "Test 17: retrospective → finalize blocked without retrospective_shown=true"
+assert_fail "blocks when retrospective_shown=false" "$ADVANCE" "finalize"
+
+# Test 18: retrospective → finalize passes with retrospective_shown=true
+reset_state "full"
+jq --arg lp "$TEST_LOG3" '.current_phase = "retrospective" | .evidence = {
+  "execution_log_path": $lp,
+  "retrospective_shown": true
+}' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE"
+echo "Test 18: retrospective → finalize passes with retrospective_shown=true"
+assert_pass "passes with retrospective_shown=true" "$ADVANCE" "finalize"
+
+# Test 19: SKIP_PHASE_EXIT_GATE=1 bypass (capture with no log)
+reset_state "full"
+jq '.current_phase = "capture" | .evidence.execution_log_path = null' \
+  "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE"
+echo "Test 19: SKIP_PHASE_EXIT_GATE=1 bypass allows advance"
+if SKIP_PHASE_EXIT_GATE=1 "$ADVANCE" "retrospective" > /dev/null 2>&1; then
+  echo "  ✅ SKIP_PHASE_EXIT_GATE bypass works"
+  PASS=$((PASS + 1))
+else
+  echo "  ❌ SKIP_PHASE_EXIT_GATE bypass failed"
+  FAIL=$((FAIL + 1))
+fi
+
+rm -f "$TEST_LOG3"
 
 # Restore original state
 cp "$BACKUP" "$STATE_FILE"

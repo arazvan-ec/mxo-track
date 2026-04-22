@@ -113,6 +113,27 @@ if [ "${#WC_DESC_SHORT}" -gt 40 ]; then
   WC_DESC_SHORT="${WC_DESC_SHORT:0:37}..."
 fi
 
+# Todo progress (mirror of TodoWrite) — read early so all flow branches can render.
+TODO_TOTAL_EARLY=$(echo "$STATE" | jq -r '.evidence.todo_progress.total // 0')
+TODO_DONE_EARLY=$(echo "$STATE" | jq -r '.evidence.todo_progress.completed // 0')
+TODO_IP_EARLY=$(echo "$STATE" | jq -r '.evidence.todo_progress.in_progress_label // ""')
+
+# Multi-problem prefix helper — returns "[label] " for ≥2 problems, empty otherwise.
+render_problem_prefix() {
+  if [ "$WC_PROB_TOTAL" -ge 2 ] 2>/dev/null; then
+    if [ "$WC_PROB_CURRENT" -gt 0 ] 2>/dev/null && [ -n "$WC_PROB_LABEL" ]; then
+      echo "[${WC_PROB_LABEL}] "
+    fi
+  fi
+}
+
+# Todo progress line helper — returns "  · <label> (done/total)" or empty.
+render_todo_line() {
+  if [ "$TODO_TOTAL_EARLY" -gt 0 ] 2>/dev/null && [ -n "$TODO_IP_EARLY" ]; then
+    echo "  · ${TODO_IP_EARLY} (${TODO_DONE_EARLY}/${TODO_TOTAL_EARLY})"
+  fi
+}
+
 # Warn if flow_type is set but interaction_classification is missing
 if [ "$FLOW_TYPE" != "null" ] && [ -n "$FLOW_TYPE" ] && [ -z "$INTERACTION_CLASS" ]; then
   echo "  ⚠ Falta interaction_classification — setear antes de continuar"
@@ -152,6 +173,7 @@ if [ "$FLOW_TYPE" = "full" ] && [ "$CURRENT_PHASE" = "finalize" ]; then
       .evidence.lint_clean = null |
       .evidence.execution_log_path = null |
       .evidence.branch_strategy = null |
+      .evidence.retrospective_shown = false |
       .evidence.root_cause_identified = false |
       .evidence.pattern_wide_search_done = false |
       .evidence.task_progress = {"current": 0, "total": 0, "label": null, "completed_labels": [], "task_index": []} |
@@ -166,29 +188,38 @@ fi
 # Simple flows — one line each
 case "$FLOW_TYPE" in
   micro)
+    PREFIX=$(render_problem_prefix)
     if [ -n "$WC_DESC_SHORT" ]; then
-      echo "📍 micro | $WC_DESC_SHORT"
+      echo "📍 ${PREFIX}micro | $WC_DESC_SHORT"
     else
-      echo "📍 micro | responder"
+      echo "📍 ${PREFIX}micro | responder"
     fi
+    TODO_LINE=$(render_todo_line)
+    [ -n "$TODO_LINE" ] && echo "$TODO_LINE"
     echo "Header: 💬 [respuesta concisa]"
     exit 0
     ;;
   light)
+    PREFIX=$(render_problem_prefix)
     if [ -n "$WC_DESC_SHORT" ]; then
-      echo "📍 light | $WC_DESC_SHORT"
+      echo "📍 ${PREFIX}light | $WC_DESC_SHORT"
     else
-      echo "📍 light | documentar"
+      echo "📍 ${PREFIX}light | documentar"
     fi
+    TODO_LINE=$(render_todo_line)
+    [ -n "$TODO_LINE" ] && echo "$TODO_LINE"
     echo "Header: 📝 Light — [completado]"
     exit 0
     ;;
   explore)
+    PREFIX=$(render_problem_prefix)
     if [ -n "$WC_DESC_SHORT" ]; then
-      echo "📍 explore | $WC_DESC_SHORT"
+      echo "📍 ${PREFIX}explore | $WC_DESC_SHORT"
     else
-      echo "📍 explore | investigar"
+      echo "📍 ${PREFIX}explore | investigar"
     fi
+    TODO_LINE=$(render_todo_line)
+    [ -n "$TODO_LINE" ] && echo "$TODO_LINE"
     echo "Header: 🔍 Explore — [encontrado]"
     exit 0
     ;;
@@ -213,7 +244,10 @@ case "$FLOW_TYPE" in
     elif [ -n "$WC_DESC_SHORT" ]; then
       PROB_SUFFIX=" — ${WC_DESC_SHORT}"
     fi
-    echo "📍 Debug: ${DISPLAY_PHASE} (${DEBUG_INDEX}/4)${PROB_SUFFIX}"
+    PREFIX=$(render_problem_prefix)
+    echo "📍 ${PREFIX}Debug: ${DISPLAY_PHASE} (${DEBUG_INDEX}/4)${PROB_SUFFIX}"
+    TODO_LINE=$(render_todo_line)
+    [ -n "$TODO_LINE" ] && echo "$TODO_LINE"
     # Timeline
     TIMELINE=""
     for i in "${!DEBUG_PHASES[@]}"; do
@@ -357,7 +391,13 @@ if [ "$FLOW_TYPE" = "full" ]; then
   echo "  $TIMELINE"
 
   # ── Line 2.5: Plan progress (when plan parsed and we're in execution phases) ──
+  # Also renders todo line in consult/brainstorming so early phases get granularity.
   case "$CURRENT_PHASE" in
+    consult|brainstorming)
+      if [ "$TODO_TOTAL" -gt 0 ] 2>/dev/null && [ -n "$TODO_IP" ]; then
+        echo "  Todos: 🔄 ${TODO_IP} (${TODO_DONE}/${TODO_TOTAL})"
+      fi
+      ;;
     planning|implementation|verification|capture|retrospective)
       if [ "$TASK_TOTAL" -gt 0 ] 2>/dev/null; then
         # Build a compact ✅✅⬚⬚⬚ visual (max 12 cells to keep line short)

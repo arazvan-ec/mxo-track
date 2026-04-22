@@ -137,11 +137,12 @@ PHASES=("consult" "brainstorming" "planning" "implementation" "verification" "ca
 ALL_OK=true
 for p in "${PHASES[@]}"; do
   case "$p" in
-    brainstorming) jq '.evidence.decisions_read = true' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE" ;;
+    brainstorming) jq '.evidence.decisions_read = true | .evidence.logs_scanned = true' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE" ;;
     planning) jq --arg sp "$TEST_SPEC" '.evidence = (.evidence + {"user_turns": 3, "alternatives_proposed": true, "user_approved": true, "spec_path": $sp})' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE" ;;
     implementation) jq --arg pp "$TEST_PLAN" '.evidence.plan_path = $pp' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE" ;;
     capture) jq '.evidence.tests_passed = true | .evidence.lint_clean = true' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE" ;;
     retrospective) jq --arg lp "$TEST_LOG" '.evidence.execution_log_path = $lp' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE" ;;
+    finalize) jq '.evidence.retrospective_shown = true' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE" ;;
   esac
   if ! "$ADVANCE" "$p" > /dev/null 2>&1; then
     echo "  ❌ Failed at $p"
@@ -191,7 +192,7 @@ set -e
 assert_eq "Consult blocks (exit 2)" "2" "$EXIT_CODE"
 
 echo "Test 2.2: Consult validator passes with evidence"
-jq '.evidence.decisions_read = true' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE"
+jq '.evidence.decisions_read = true | .evidence.logs_scanned = true' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE"
 set +e
 "$REPO/.claude/hooks/validators/consult-validator.sh" "$STATE_FILE" > /dev/null 2>&1
 EXIT_CODE=$?

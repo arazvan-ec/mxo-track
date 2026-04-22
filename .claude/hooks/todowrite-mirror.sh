@@ -20,6 +20,16 @@ fi
 # Extract todos array from tool_input. Defensive: tolerate missing fields.
 TODOS=$(echo "$INPUT" | jq -c '.tool_input.todos // []' 2>/dev/null || echo "[]")
 
+# Reject input with >1 in_progress (Layer C discipline).
+# Single in_progress is the invariant per TodoWrite contract and CLAUDE.md.
+N_IP=$(echo "$TODOS" | jq '[.[] | select(.status == "in_progress")] | length')
+if [ "$N_IP" -gt 1 ] 2>/dev/null; then
+  echo "BLOCKED: TodoWrite has $N_IP in_progress items. Exactly 1 allowed." >&2
+  echo "Offending items:" >&2
+  echo "$TODOS" | jq -r '.[] | select(.status == "in_progress") | "  - \(.content)"' >&2
+  exit 2
+fi
+
 # Compute summary
 TOTAL=$(echo "$TODOS" | jq 'length')
 COMPLETED=$(echo "$TODOS" | jq '[.[] | select(.status == "completed")] | length')
@@ -59,6 +69,25 @@ if [ "$HAS_PLAN_INDEX" = "0" ] && [ "$TOTAL" != "0" ]; then
     .evidence.task_progress.label = (if $lbl == "" then null else $lbl end) |
     .evidence.task_progress.completed_labels = $cl
   ' "$STATE_FILE" > /tmp/todo_task.json && mv /tmp/todo_task.json "$STATE_FILE"
+fi
+
+# Derive problems.current from in_progress label's [prefix] (Layer C).
+# Avoids manual jq bookkeeping; the active todo's prefix dictates current problem.
+if [ -n "$IN_PROGRESS_LABEL" ]; then
+  IP_PREFIX=$(echo "$IN_PROGRESS_LABEL" | sed -n 's/^\[\([^]]*\)\].*/\1/p')
+  if [ -n "$IP_PREFIX" ]; then
+    NEW_CURRENT=$(jq --arg p "$IP_PREFIX" '
+      (.evidence.work_context.problems.labels // [])
+      | to_entries
+      | map(select(.value | ascii_downcase | contains($p | ascii_downcase)))
+      | .[0].key // -1
+      | if . >= 0 then . + 1 else 0 end
+    ' "$STATE_FILE" 2>/dev/null || echo "0")
+    if [ "$NEW_CURRENT" -gt 0 ] 2>/dev/null; then
+      jq --argjson cur "$NEW_CURRENT" '.evidence.work_context.problems.current = $cur' \
+        "$STATE_FILE" > /tmp/todo_prob.json && mv /tmp/todo_prob.json "$STATE_FILE"
+    fi
+  fi
 fi
 
 exit 0

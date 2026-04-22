@@ -41,6 +41,12 @@
             "command": "/home/user/mxo-track/.claude/hooks/workflow-engine.sh",
             "timeout": 5,
             "statusMessage": "Workflow..."
+          },
+          {
+            "type": "command",
+            "command": "/home/user/mxo-track/.claude/hooks/validators/classify-validator.sh",
+            "timeout": 5,
+            "statusMessage": "Classify gate..."
           }
         ]
       },
@@ -63,6 +69,17 @@
             "command": "/home/user/mxo-track/.claude/hooks/pre-agent-check.sh",
             "timeout": 5,
             "statusMessage": "Agent pre-check..."
+          }
+        ]
+      },
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/user/mxo-track/.claude/hooks/pre-tool-freshness.sh",
+            "timeout": 5,
+            "statusMessage": "Freshness check..."
           }
         ]
       }

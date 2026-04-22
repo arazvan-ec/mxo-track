@@ -34,8 +34,9 @@ assert_passes() {
 
 setup_state() {
   local log_path="${1:-}"
+  local retro_shown="${2:-true}"
   cat > "$TEST_STATE" << STATEEOF
-{"evidence":{"execution_log_path":"$log_path"}}
+{"evidence":{"execution_log_path":"$log_path","retrospective_shown":$retro_shown}}
 STATEEOF
 }
 
