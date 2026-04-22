@@ -61,6 +61,44 @@ function KpiCard({ label, value, sparkData, accentColor, icon, delay }: KpiCardP
   );
 }
 
+function formatKm(n: number | null): string | null {
+  if (n === null) return null;
+  if (n < 10) return `${n.toFixed(1)} km`;
+  return `${Math.round(n).toLocaleString('es-AR')} km`;
+}
+
+function formatDuration(min: number | null): string | null {
+  if (min === null) return null;
+  if (min < 60) return `${min}min`;
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return m === 0 ? `${h}h` : `${h}h ${m}min`;
+}
+
+function formatWeight(kg: number | null): string | null {
+  if (kg === null) return null;
+  if (kg >= 1000) return `${(kg / 1000).toFixed(1)}t`;
+  return `${Math.round(kg)} kg`;
+}
+
+function formatParcels(n: number | null): string | null {
+  if (n === null) return null;
+  return n === 1 ? '1 bulto' : `${n} bultos`;
+}
+
+function formatTimeWindow(start: string | null, end: string | null): string | null {
+  if (!start && !end) return null;
+  const fmt = (iso: string) => {
+    const d = new Date(iso);
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    return `${hh}:${mm}`;
+  };
+  if (start && end) return `${fmt(start)}–${fmt(end)}`;
+  if (start) return `≥ ${fmt(start)}`;
+  return `≤ ${fmt(end!)}`;
+}
+
 function ExpandableRouteCard({ value, accentColor }: { value: number; accentColor: string }) {
   const [expanded, setExpanded] = useState(false);
   const { data, isLoading } = useActiveRoutes(expanded);
@@ -114,7 +152,7 @@ function ExpandableRouteCard({ value, accentColor }: { value: number; accentColo
       {/* Expandable route list */}
       <div
         className={`transition-all duration-200 ease-in-out overflow-hidden ${
-          expanded ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'
+          expanded ? 'max-h-[900px] opacity-100' : 'max-h-0 opacity-0'
         }`}
       >
         <div
@@ -134,37 +172,78 @@ function ExpandableRouteCard({ value, accentColor }: { value: number; accentColo
               Sin rutas activas
             </p>
           )}
-          {routes.map((route) => (
-            <div
-              key={route.publicId}
-              className="flex items-center gap-3 py-2"
-              style={{ borderBottom: '1px solid var(--color-border-light, var(--color-border))' }}
-            >
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>
-                  {route.name}
-                </p>
-                <p className="text-xs truncate" style={{ color: 'var(--color-text-secondary)' }}>
-                  {route.driverName ?? route.driverEmail ?? 'Sin conductor'}
-                  {route.vehicleName ? ` · ${route.vehicleName}` : ''}
-                </p>
-              </div>
-              <div className="shrink-0 flex items-center gap-2">
-                <div className="w-16 h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--color-border)' }}>
-                  <div
-                    className="h-full rounded-full transition-all"
-                    style={{
-                      width: route.totalStops > 0 ? `${(route.deliveredStops / route.totalStops) * 100}%` : '0%',
-                      backgroundColor: accentColor,
-                    }}
-                  />
+          {routes.map((route) => {
+            const metricLine = [
+              formatKm(route.totalDistanceKm),
+              formatDuration(route.estimatedDurationMinutes),
+              formatWeight(route.totalWeightKg),
+              formatParcels(route.totalParcels),
+            ].filter(Boolean).join(' · ');
+            const windowLine = formatTimeWindow(
+              route.nextStop?.windowStart ?? null,
+              route.nextStop?.windowEnd ?? null,
+            );
+            const subtitleParts = [
+              route.driverName ?? route.driverEmail ?? 'Sin conductor',
+              route.vehicleName,
+              route.customerName,
+            ].filter(Boolean);
+            const hasHistogram = route.deliveryHistogram && route.deliveryHistogram.some((v) => v > 0);
+            return (
+              <div
+                key={route.publicId}
+                className="py-2.5"
+                style={{ borderBottom: '1px solid var(--color-border-light, var(--color-border))' }}
+              >
+                <div className="flex items-center gap-3">
+                  <p className="flex-1 min-w-0 text-sm font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>
+                    {route.name}
+                  </p>
+                  <div className="shrink-0 flex items-center gap-2">
+                    <div className="w-16 h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--color-border)' }}>
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{
+                          width: route.totalStops > 0 ? `${(route.deliveredStops / route.totalStops) * 100}%` : '0%',
+                          backgroundColor: accentColor,
+                        }}
+                      />
+                    </div>
+                    <span className="text-xs tabular-nums" style={{ color: 'var(--color-text-secondary)' }}>
+                      {route.deliveredStops}/{route.totalStops}
+                    </span>
+                  </div>
                 </div>
-                <span className="text-xs tabular-nums" style={{ color: 'var(--color-text-secondary)' }}>
-                  {route.deliveredStops}/{route.totalStops}
-                </span>
+                <p className="text-xs truncate mt-0.5" style={{ color: 'var(--color-text-secondary)' }}>
+                  {subtitleParts.join(' · ')}
+                </p>
+                {metricLine && (
+                  <p className="text-xs tabular-nums mt-0.5" style={{ color: 'var(--color-text-secondary)' }}>
+                    {metricLine}
+                  </p>
+                )}
+                {route.nextStop && (
+                  <div className="mt-1">
+                    <p className="text-xs truncate" style={{ color: 'var(--color-text-secondary)' }}>
+                      <span className="font-medium" style={{ color: 'var(--color-text-primary)' }}>Próxima:</span>{' '}
+                      {route.nextStop.address}
+                      {route.nextStop.recipientName ? ` (${route.nextStop.recipientName})` : ''}
+                    </p>
+                    {windowLine && (
+                      <p className="text-xs tabular-nums" style={{ color: 'var(--color-text-muted)' }}>
+                        Ventana: {windowLine}
+                      </p>
+                    )}
+                  </div>
+                )}
+                {hasHistogram && route.deliveryHistogram && (
+                  <div className="mt-1.5">
+                    <SparklineSVG data={route.deliveryHistogram} color={accentColor} width={160} height={16} />
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
