@@ -3,7 +3,7 @@
 > **Auto-generated** by `make manifest` (`backend/bin/generate-manifest.sh`).
 > Do not edit manually — regenerate with `make manifest`.
 
-**Generated:** 2026-04-22 21:01
+**Generated:** 2026-04-22 22:04
 **Regenerate:** `make manifest`
 
 ## Project Overview
@@ -668,6 +668,7 @@ Freshness of knowledge modules (parsed from `docs/knowledge/index.md`):
 | Analytics & Reporting | 2026-04-19 | 2026-04-19 |
 | Data Import/Export | 2026-04-19 | 2026-04-19 |
 | Public Tracking | 2026-04-19 | 2026-04-19 |
+| Workflow Engine | 2026-04-22 | 2026-04-22 |
 
 ---
 
