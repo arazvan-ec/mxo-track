@@ -188,6 +188,28 @@ get_validators_for_flow() {
 
 VALIDATOR_SPEC=$(get_validators_for_flow "$FLOW_TYPE" "$FILE_CLASS")
 
+# ── Carve-out: first-time Write to declared execution_log_path ──
+# The hardened capture-validator requires execution_log_path set AND file on
+# disk. The initial Write that creates the log would fail both checks. Allow
+# the Write ONLY for the path declared in evidence.execution_log_path, ONLY
+# when the file is missing or 0 bytes. Subsequent edits fall back to the
+# regular capture gate.
+if [ "$FILE_CLASS" = "execution-log" ] && [ "$VALIDATOR_SPEC" = "capture" ]; then
+  DECLARED_LOG=$(jq -r '.evidence.execution_log_path // ""' "$STATE_FILE" 2>/dev/null || echo "")
+  if [ -n "$DECLARED_LOG" ]; then
+    REL_FP="${FILE_PATH#"$REPO/"}"
+    REL_FP="${REL_FP#/}"
+    REL_DECLARED="${DECLARED_LOG#"$REPO/"}"
+    REL_DECLARED="${REL_DECLARED#/}"
+    if [ "$REL_FP" = "$REL_DECLARED" ]; then
+      TARGET_FILE="$REPO/$REL_DECLARED"
+      if [ ! -f "$TARGET_FILE" ] || [ ! -s "$TARGET_FILE" ]; then
+        exit 0
+      fi
+    fi
+  fi
+fi
+
 # ── Handle DENY directives (flow doesn't allow this file class) ──
 case "$VALIDATOR_SPEC" in
   DENY:*)

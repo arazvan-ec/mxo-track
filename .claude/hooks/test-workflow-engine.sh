@@ -473,3 +473,41 @@ else
   echo "FAIL: 9.2 session-start did not preserve state (got: $PRESERVED_FLOW)"
   FAIL=$((FAIL + 1))
 fi
+
+echo ""
+echo "=== CAPTURE GATE CARVE-OUT (Wave 1 A1) ==="
+echo ""
+
+# A1.1: initial Write to declared execution_log_path with 0-byte file → allow
+TEST_LOG="$EXEC_LOG_DIR/${TODAY}-test-carveout.md"
+jq --arg lp "docs/superpowers/execution-logs/${TODAY}-test-carveout.md" '
+  .flow_type = "full" |
+  .interaction_classification = "full" |
+  .current_phase = "capture" |
+  .evidence.execution_log_path = $lp |
+  .evidence.tests_passed = true |
+  .evidence.lint_clean = true
+' "$STATE_FILE" > "$STATE_FILE.tmp" && mv "$STATE_FILE.tmp" "$STATE_FILE"
+
+# Ensure file is absent (carve-out condition: missing OR 0-bytes)
+rm -f "$TEST_LOG"
+expect_allow "A1.1 initial Write to declared log path (missing file) → allow" "$TEST_LOG"
+
+# Now make it 0-bytes — still should allow
+: > "$TEST_LOG"
+expect_allow "A1.2 Write to declared log path (0-byte file) → allow" "$TEST_LOG"
+
+# A1.3: Write to unrelated log path when declared log does NOT exist → still block
+# (carve-out doesn't apply because path doesn't match; capture-validator sees missing declared log → deny)
+OTHER_LOG="$EXEC_LOG_DIR/${TODAY}-test-other.md"
+rm -f "$TEST_LOG" "$OTHER_LOG"   # declared log also absent now
+expect_deny "A1.3 Write to unrelated log path (declared log missing) → block" "$OTHER_LOG"
+
+# A1.4: once the declared file has content, carve-out no longer applies (falls back to capture gate)
+echo "existing content" > "$TEST_LOG"
+# The capture gate itself checks execution_log_path is set AND file exists;
+# both are true here, so capture-validator passes → Edit is allowed.
+expect_allow "A1.4 Edit to declared log (non-empty) → allow via capture-validator" "$TEST_LOG"
+
+# Cleanup test files
+rm -f "$TEST_LOG" "$OTHER_LOG"

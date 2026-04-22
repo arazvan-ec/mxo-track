@@ -148,19 +148,49 @@ Light agent mode eliminates the overhead so sub-agents focus exclusively on codi
 
 ### Session-State Isolation in Worktrees
 
-Git worktrees have independent working directories. `.claude/session-state.json` is
-gitignored, so each worktree gets its own copy (created by session-start hook or by
-the sub-agent's initial `jq` command).
+Git worktrees have independent working directories, but the harness's hooks in
+`.claude/settings.json` invoke scripts via **absolute paths** (`/home/user/mxo-track/.claude/hooks/...`),
+and those scripts hard-code `REPO="/home/user/mxo-track"`. Consequence: hooks in a
+worktree agent actually read and write the **main repo's** `session-state.json`,
+not a worktree-local copy. Worktrees inherit state implicitly; they do not get
+their own.
 
-**Rule:** After sub-agent completion, the main agent should verify its own
-`session-state.json` hasn't changed. If the sub-agent's worktree somehow shares the
-same `.claude/` directory (shouldn't happen, but defensive), re-set the main agent's
-`plan_path` and `spec_path` before continuing.
+This creates a concurrency risk: the orchestrator and its sibling worktree agents
+write to the same state file. A brief null-classification window — from a hook
+reset or any other race — becomes visible to every sibling at once and trips the
+`classify-validator` for their first framework Edit.
 
-**Stale paths after agent completion:** When resuming after agents complete, verify
-that `evidence.plan_path` and `evidence.spec_path` still point to valid files. A
-sub-agent may have overwritten these with its own worktree paths during its run. Fix
-by re-setting to the main agent's spec/plan paths.
+**Mandatory bootstrap for worktree agents doing framework work:**
+
+Every background/worktree agent that will touch framework paths (`.claude/`,
+`scripts/`, `backend/src/`, `frontend/src/`, `ml-service/`, `docker/`, etc.) must
+run the bootstrap helper as its **first shell command**, before any Edit/Write:
+
+```bash
+bash /home/user/mxo-track/.claude/hooks/agent-bootstrap.sh full implementation
+```
+
+The helper is idempotent, safe under concurrency, and only writes when the state
+differs from the requested classification/phase. It never touches evidence, plan
+paths, or retrospectives.
+
+**Agent prompt boilerplate:**
+
+```
+## Bootstrap (run first, before any Edit)
+
+bash /home/user/mxo-track/.claude/hooks/agent-bootstrap.sh full implementation
+
+This ensures the main-repo session-state has interaction_classification=full and
+a valid phase, so the classify-validator does not block your first Edit. The
+orchestrator planned this work as framework scope; reasserting is safe.
+```
+
+**Rule on completion:** The main agent should verify its own `session-state.json`
+after agents return. Specifically, re-check `evidence.plan_path` and
+`evidence.spec_path` still match the orchestrator's paths (a bootstrap never
+overwrites these, but an agent that made auxiliary jq writes might have). Fix
+by re-setting if needed.
 
 ---
 
