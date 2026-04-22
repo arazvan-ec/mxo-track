@@ -889,6 +889,11 @@ manual approval**. If a tool requires confirmation, the agent receives "denied" 
 work on an isolated copy and you merge their changes. For agents creating new files,
 standard mode usually works because Write-to-new-file is typically auto-approved.
 
+**Sandbox-restricted paths (`.claude/`, `settings*.json`, hooks):** Background agents
+cannot write to harness-owned paths even inside a worktree. Dispatch read-only
+(Grep/Read/Glob only) and apply edits in foreground. Full decision rule and prompt
+template: "Dispatch Patterns for Sandbox-Restricted Paths" in `AGENTS.md`.
+
 **Subagent mini-flow:** Every agent prompt should include `consult` + `verify` boilerplate
 — subagents skip the full 8-phase workflow but these two steps produce higher quality
 output. See "Subagent Mini-Flow" in `AGENTS.md`.

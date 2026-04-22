@@ -110,6 +110,80 @@ calls) exceeds the value. Only use for 2+ concurrent agents.
 
 ---
 
+## Dispatch Patterns for Sandbox-Restricted Paths
+
+**Why:** Background agents run in a sandbox that denies writes to harness-owned
+paths (`.claude/`, `settings*.json`, hooks, `scripts/` used by hooks). An agent
+dispatched to "edit the hook" gets blocked mid-execution and returns partial
+work. This is an architectural constraint — not a permission bug to patch
+around by widening the allowlist.
+
+**Two patterns, different tradeoffs:**
+
+### Pattern A — Explore-then-apply (preferred for restricted paths)
+
+Dispatch the agent **read-only** (Grep, Read, Glob, Bash for non-mutating
+commands). The agent returns structured findings: file paths, line numbers,
+and proposed diffs or exact before/after blocks. The orchestrator applies
+the edits in foreground.
+
+- **Use when:** target paths are sandbox-restricted, OR the change is <30
+  lines and the orchestrator would review every edit anyway.
+- **Cost:** minimal — no merge overhead, no sandbox failures, context-efficient
+  because the agent returns only evidence.
+- **Prompt snippet (paste in Constraints):**
+  ```
+  ## Output format (read-only agent)
+  Do NOT call Edit/Write/NotebookEdit. Return:
+  1. Findings — bullet list of file:line observations
+  2. Proposed changes — one block per file with exact before/after text,
+     or a unified diff. No prose between blocks.
+  The orchestrator will apply the edits in foreground.
+  ```
+
+### Pattern B — Worktree isolation
+
+Dispatch with `isolation: "worktree"`. The agent operates on a git worktree
+copy and can write anywhere in it not blocked by sandbox. The orchestrator
+merges the worktree branch on return.
+
+- **Use when:** agent writes ≥20 new lines in non-restricted paths (`src/`,
+  `docs/`, `tests/`, `frontend/src/`), OR the task creates multiple files
+  the orchestrator wouldn't need to review line-by-line.
+- **Cost:** merge overhead when waves touch overlapping files; worktree
+  setup adds ~5s.
+- **Still blocked by sandbox** for `.claude/` writes even inside a worktree
+  — use Pattern A for any harness-owned path.
+
+### Decision rule
+
+```
+target includes .claude/, settings*.json, hooks/, or scripts invoked by hooks?
+  → Pattern A (mandatory)
+target is ≥20 new lines in src/ / docs/ / tests/ / frontend/src/?
+  → Pattern B
+target is <20 lines in 1-2 files?
+  → direct foreground edit (no agent)
+```
+
+**Never** pre-approve `.claude/` writes globally to "unblock" background
+agents. The sandbox prevents agents from silently mutating harness state;
+widening it removes a guardrail whose alternative (Pattern A) already works.
+
+### Recovery when a dispatch hits the sandbox mid-run
+
+If an agent reports partial writes blocked by sandbox:
+
+1. Do NOT retry the same agent — the sandbox verdict won't change.
+2. Read the agent's returned findings (they are still useful evidence).
+3. Re-dispatch as Pattern A (read-only) if more exploration is needed, OR
+   apply the edits directly in foreground using the partial findings.
+4. Log the mis-dispatch in the execution log's retrospective — three
+   occurrences means this decision rule needs to be re-read at dispatch time,
+   not post-hoc.
+
+---
+
 ## Light Agent Mode (`flow_type = "agent"`)
 
 **When:** The main agent has already completed consult → brainstorming → planning and
