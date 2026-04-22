@@ -96,10 +96,17 @@ else
       if [ -n "$CURRENT_WAVE" ]; then
         FILES_DECL=$(echo "$line" | grep -oE '→ files?:\s*.*' | sed 's/→ files\?:\s*//' || true)
         if [ -n "$FILES_DECL" ]; then
+          # Skip non-file payloads:
+          #   - fully parenthesized annotations like "(no file writes)" or "(none)"
+          #   - payloads with no path-like tokens (no `/` and no `.`)
+          # Real file paths in plans always contain `/` (subdir) or `.` (extension).
+          if echo "$FILES_DECL" | grep -qE '^\s*\([^)]*\)\s*$'; then
+            continue
+          fi
           TASK_LABEL=$(echo "$line" | grep -oE '\*\*[^*]+\*\*' | head -1 | tr -d '*' || true)
           [ -z "$TASK_LABEL" ] && TASK_LABEL=$(echo "$line" | sed 's/^[-* ]*//' | cut -c1-30)
-          # Split by comma or space
-          for f in $(echo "$FILES_DECL" | tr ',' '\n' | tr ' ' '\n' | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//' | grep -v '^$'); do
+          # Split by comma or space; keep only path-like tokens (contain / or .)
+          for f in $(echo "$FILES_DECL" | tr ',' '\n' | tr ' ' '\n' | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//' | grep -v '^$' | grep -E '/|\.'); do
             KEY="${CURRENT_WAVE}::${f}"
             if [ -n "${FILE_TASK[$KEY]+x}" ]; then
               ERRORS="${ERRORS}- CONFLICTO PARALELO: En '$CURRENT_WAVE', tareas '${FILE_TASK[$KEY]}' y '$TASK_LABEL' ambas editan '$f'. Mover a waves secuenciales.\n"
