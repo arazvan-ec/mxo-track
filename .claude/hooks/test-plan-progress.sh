@@ -123,6 +123,75 @@ assert "T6 empty — 0 tasks" "0" "$tasks"
 [ -x "$SCRIPT" ] && exists=yes || exists=no
 assert "T7 plan-progress.sh executable" "yes" "$exists"
 
+# ── on_edit auto-advance tests ────────────────────────────────────────────
+# These invoke the real plan-progress.sh, which hardcodes STATE_FILE to the
+# main repo's .claude/session-state.json. We back it up, overwrite with a
+# controlled fixture, run the action, assert, and restore.
+
+REAL_STATE="/home/user/mxo-track/.claude/session-state.json"
+BACKUP="$FIX/session-state.backup.json"
+
+if [ -f "$REAL_STATE" ]; then
+  cp "$REAL_STATE" "$BACKUP"
+
+  # T8: file_path matches task 1a's files → current = 1, label set
+  cat > "$REAL_STATE" <<'STATE'
+{
+  "evidence": {
+    "task_progress": {
+      "current": 0,
+      "total": 2,
+      "label": null,
+      "completed_labels": [],
+      "task_index": [
+        {"id": "1a", "wave": 1, "label": "First task", "files": ["foo.php"]},
+        {"id": "1b", "wave": 1, "label": "Second task", "files": ["bar.php"]}
+      ]
+    },
+    "work_context": {
+      "wave": {"total": 1, "current": 0, "label": null, "labels": ["Foundation"]}
+    }
+  }
+}
+STATE
+  "$SCRIPT" on_edit "/some/dir/foo.php" >/dev/null 2>&1 || true
+  t8_cur=$(jq -r '.evidence.task_progress.current' "$REAL_STATE")
+  t8_lbl=$(jq -r '.evidence.task_progress.label' "$REAL_STATE")
+  assert "T8 file matches task 1a — current=1"          "1"          "$t8_cur"
+  assert "T8 file matches task 1a — label set"          "First task" "$t8_lbl"
+
+  # T9: file_path does NOT match any task's files → current unchanged
+  cat > "$REAL_STATE" <<'STATE'
+{
+  "evidence": {
+    "task_progress": {
+      "current": 0,
+      "total": 2,
+      "label": null,
+      "completed_labels": [],
+      "task_index": [
+        {"id": "1a", "wave": 1, "label": "First task", "files": ["foo.php"]},
+        {"id": "1b", "wave": 1, "label": "Second task", "files": ["bar.php"]}
+      ]
+    },
+    "work_context": {
+      "wave": {"total": 1, "current": 0, "label": null, "labels": ["Foundation"]}
+    }
+  }
+}
+STATE
+  "$SCRIPT" on_edit "/some/dir/unrelated.php" >/dev/null 2>&1 || true
+  t9_cur=$(jq -r '.evidence.task_progress.current' "$REAL_STATE")
+  t9_lbl=$(jq -r '.evidence.task_progress.label' "$REAL_STATE")
+  assert "T9 unrelated file — current unchanged (0)"    "0"    "$t9_cur"
+  assert "T9 unrelated file — label unchanged (null)"   "null" "$t9_lbl"
+
+  # Restore the real session-state so we don't leak test fixtures.
+  cp "$BACKUP" "$REAL_STATE"
+else
+  echo "  ⚠ SKIPPING T8/T9: $REAL_STATE not found"
+fi
+
 echo ""
 echo "── Summary ──"
 echo "PASS: $PASS"

@@ -2,14 +2,21 @@
 # plan-progress.sh — Parse plan markdown into session-state task/wave structure.
 #
 # Usage:
-#   plan-progress.sh init                 → parse evidence.plan_path, populate task_progress + wave
-#   plan-progress.sh advance <task_id>    → set current to task_id (e.g. "2a")
-#   plan-progress.sh complete             → archive current label, advance, reset if all done
-#   plan-progress.sh show                 → debug: print parsed structure
+#   plan-progress.sh init                   → parse evidence.plan_path, populate task_progress + wave
+#   plan-progress.sh advance <task_id>      → set current to task_id (e.g. "2a")
+#   plan-progress.sh complete               → archive current label, advance, reset if all done
+#   plan-progress.sh on_edit <file_path>    → if file_path matches a task's files:, auto-advance (never decrement)
+#   plan-progress.sh show                   → debug: print parsed structure
 #
 # Parsed plan format expected:
 #   ### Wave N — <label>            (also tolerates "### Wave N [parallel: ...]" or "### Wave N")
 #   #### **Na — <task title>**       (also tolerates "#### **N — title**" without letter suffix)
+#
+# Task file declarations (optional, used by on_edit auto-advance):
+#   → files: path/a.php, path/b.php
+#   files: path/a.php, path/b.php
+#   - Files: path/a.php, path/b.php
+# Lines following a task header until the next task/wave header are scanned for these.
 #
 # Non-blocking: errors print to stderr and exit non-zero, but never corrupt session-state.
 
@@ -36,11 +43,14 @@ parse_plan() {
     echo "ERROR: plan file not found: $plan_abs" >&2
     exit 3
   fi
+  parse_plan_file "$plan_abs"
+}
 
-  # Python parser → emits two JSON arrays separated by '|||'
-  # Robust against UTF-8 (em-dash, accented chars). Supports both:
-  #   #### **1a — Title** (extra notes)
-  #   - **1a — Title** (extra notes)
+# parse_plan_file <absolute_path> — emits "<waves_json>|||<tasks_json>"
+# Each task may include a "files" array when the plan declares `files:` / `→ files:`
+# lines between the task header and the next task/wave.
+parse_plan_file() {
+  local plan_abs="$1"
   python3 - "$plan_abs" <<'PYEOF'
 import sys, json, re
 
@@ -48,6 +58,7 @@ path = sys.argv[1]
 waves = []
 tasks = []
 current_wave = 0
+current_task = None  # ref to tasks[-1] while collecting `files:` lines
 
 # Wave header: ### [opt-prefix] Wave N [— label] [opt-trailing-brackets]
 # Accepts:
@@ -59,6 +70,35 @@ current_wave = 0
 re_wave = re.compile(r'^###\s+(?:\[[^\]]*\]\s+)?Wave\s+(\d+)(?:\s*[—\-:]\s*(.+?))?(?:\s*\[.*\])?\s*$')
 # Task header: #### **Na — Title** ...   OR   - **Na — Title** ...
 re_task = re.compile(r'^(?:####\s+|-\s+)\*\*([0-9]+[a-z]?)\s*[—\-:]\s*(.+?)\*\*')
+# files declaration: optional leading arrow/bullet/whitespace, "Files:" or "files:"
+# Examples matched:
+#   → files: a.php, b.php
+#   - Files: a.php
+#   files: a.php, b.php
+#   * → files: a.php
+re_files = re.compile(r'^[\s\-\*]*(?:→\s*)?[Ff]iles\s*:\s*(.+?)\s*$')
+
+def flush_files(line):
+    if current_task is None:
+        return False
+    m = re_files.match(line)
+    if not m:
+        return False
+    decl = m.group(1).strip()
+    # split by comma, then trim; also split any whitespace inside a token
+    parts = []
+    for chunk in decl.split(','):
+        chunk = chunk.strip().strip('`')
+        if not chunk:
+            continue
+        # Drop trailing punctuation like "." or ")" or markdown emphasis
+        chunk = chunk.rstrip('.,;)')
+        chunk = chunk.strip('*_')
+        if chunk:
+            parts.append(chunk)
+    if parts:
+        current_task.setdefault('files', []).extend(parts)
+    return True
 
 with open(path, 'r', encoding='utf-8') as f:
     for raw in f:
@@ -69,12 +109,18 @@ with open(path, 'r', encoding='utf-8') as f:
             label = (m.group(2) or '').strip()
             waves.append({"n": n, "label": label})
             current_wave = n
+            current_task = None
             continue
         m = re_task.match(line)
         if m:
             tid = m.group(1).strip()
             title = m.group(2).strip()
-            tasks.append({"id": tid, "wave": current_wave, "label": title})
+            tobj = {"id": tid, "wave": current_wave, "label": title}
+            tasks.append(tobj)
+            current_task = tobj
+            continue
+        # Any other line: see if it declares files for the active task.
+        flush_files(line)
 
 sys.stdout.write(json.dumps(waves, ensure_ascii=False) + "|||" + json.dumps(tasks, ensure_ascii=False))
 PYEOF
@@ -180,6 +226,56 @@ action_complete() {
   fi
 }
 
+# ── Action: on_edit <file_path> ──────────────────────────────────────────────
+# Auto-advance task_progress.current when the edited file matches a task's `files:`
+# declaration (substring match, case-sensitive, path-relative). Never decrements.
+# Silent no-op when:
+#   • task_index is empty (no plan loaded)
+#   • file_path is empty
+#   • no task declares a matching file
+# First matching task wins (iteration order = plan order).
+action_on_edit() {
+  local file_path="${1:-}"
+  [ -z "$file_path" ] && exit 0
+
+  # Short-circuit if task_index is not populated.
+  local has_tasks
+  has_tasks=$(jq -r '.evidence.task_progress.task_index // [] | length' "$STATE_FILE" 2>/dev/null || echo 0)
+  [ "$has_tasks" = "0" ] && exit 0
+
+  # Find first task whose `files` array contains an entry that is a substring
+  # of $file_path. Emit "<ordinal>|<label>" or empty string.
+  local found
+  found=$(jq -r --arg fp "$file_path" '
+    .evidence.task_progress.task_index // [] | to_entries
+    | map(select(
+        (.value.files // []) as $fs
+        | any($fs[]; . as $f | ($f != "") and ($fp | contains($f)))
+      ))
+    | if length == 0 then "" else
+        .[0] | "\(.key + 1)|\(.value.label)"
+      end
+  ' "$STATE_FILE" 2>/dev/null || echo "")
+
+  [ -z "$found" ] && exit 0
+
+  local ordinal label
+  ordinal="${found%%|*}"
+  label="${found#*|}"
+
+  # Never decrement: only advance if ordinal > current.
+  local cur
+  cur=$(jq -r '.evidence.task_progress.current // 0' "$STATE_FILE")
+  if [ "$ordinal" -le "$cur" ] 2>/dev/null; then
+    exit 0
+  fi
+
+  jq --argjson o "$ordinal" --arg tl "$label" '
+    .evidence.task_progress.current = $o |
+    .evidence.task_progress.label = $tl
+  ' "$STATE_FILE" > /tmp/pp_onedit.json && mv /tmp/pp_onedit.json "$STATE_FILE"
+}
+
 # ── Action: show ─────────────────────────────────────────────────────────────
 action_show() {
   jq '{
@@ -195,9 +291,10 @@ case "$ACTION" in
   init)     action_init ;;
   advance)  action_advance "${2:-}" ;;
   complete) action_complete ;;
+  on_edit)  action_on_edit "${2:-}" ;;
   show)     action_show ;;
   *)
-    echo "Usage: $0 {init|advance <task_id>|complete|show}" >&2
+    echo "Usage: $0 {init|advance <task_id>|complete|on_edit <file_path>|show}" >&2
     exit 1
     ;;
 esac

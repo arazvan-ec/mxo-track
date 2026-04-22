@@ -88,6 +88,16 @@ if [ -f "$STATE_FILE" ]; then
         if [[ "$FILE_PATH" == *"backend/tests/"* ]]; then
           update_state '.evidence.tests_written = (.evidence.tests_written + 1)'
         fi
+
+        # Auto-advance task_progress.current when the edited file matches a
+        # task's declared `files:` (derive, don't track). Silent no-op when
+        # no plan is loaded or no task matches. Never decrements.
+        if [ -n "$FILE_PATH" ]; then
+          PLAN_PROG="$REPO/.claude/hooks/plan-progress.sh"
+          if [ -x "$PLAN_PROG" ]; then
+            "$PLAN_PROG" on_edit "$FILE_PATH" >/dev/null 2>&1 || true
+          fi
+        fi
         ;;
     esac
   fi
