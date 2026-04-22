@@ -3,7 +3,7 @@
 > **Auto-generated** by `make manifest` (`backend/bin/generate-manifest.sh`).
 > Do not edit manually — regenerate with `make manifest`.
 
-**Generated:** 2026-04-22 20:53
+**Generated:** 2026-04-22 21:00
 **Regenerate:** `make manifest`
 
 ## Project Overview
@@ -37,7 +37,7 @@
 | Event Listeners | 11 |
 | Messenger Messages | 4 |
 | Message Handlers | 4 |
-| Tests | 146 |
+| Tests | 147 |
 | Migrations | 41 |
 
 ## Entity List
@@ -630,11 +630,11 @@ Provider factories (critical for Constructor Signature Changes pattern):
 
 | Type | Count |
 |------|------:|
-| Unit | 130 |
+| Unit | 131 |
 | Functional | 8 |
 | Domain | 6 |
 | Factory (test factories) | 1 |
-| **Total** | **146** |
+| **Total** | **147** |
 
 ---
 
