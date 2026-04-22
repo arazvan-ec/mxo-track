@@ -8,6 +8,7 @@ STATE_FILE="${1:-.claude/session-state.json}"
 REPO="/home/user/mxo-track"
 
 LOG_PATH=$(jq -r '.evidence.execution_log_path // ""' "$STATE_FILE" 2>/dev/null || echo "")
+RETRO_SHOWN=$(jq -r '.evidence.retrospective_shown // false' "$STATE_FILE" 2>/dev/null || echo "false")
 
 # Resolve log file
 LOG_FULL=""
@@ -20,6 +21,14 @@ if [ -n "$LOG_PATH" ]; then
 fi
 
 ERRORS=""
+
+# 0. Retrospective visibility gate (Option 3-Enforced, Layer B).
+#    Model MUST present the retrospective to the user as visible chat text
+#    BEFORE writing it to the execution log. After presenting, set the flag via:
+#      jq '.evidence.retrospective_shown = true' .claude/session-state.json ...
+if [ "$RETRO_SHOWN" != "true" ]; then
+  ERRORS="${ERRORS}- evidence.retrospective_shown=false. Presenta la retrospectiva al usuario (estimación vs real, process gap, patrones emergentes) ANTES de escribir al log o avanzar. Set: jq '.evidence.retrospective_shown=true' ...\n"
+fi
 
 # 1. Execution log must exist
 if [ -z "$LOG_FULL" ] || [ ! -f "$LOG_FULL" ]; then
