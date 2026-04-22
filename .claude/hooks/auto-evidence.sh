@@ -22,15 +22,6 @@ if [ -z "$TOOL_NAME" ]; then
   exit 0
 fi
 
-# Read current state
-STATE=$(cat "$STATE_FILE" 2>/dev/null || echo "{}")
-FLOW_TYPE=$(echo "$STATE" | jq -r '.flow_type // "null"')
-
-# Only detect evidence during active flows
-if [ "$FLOW_TYPE" = "null" ] || [ -z "$FLOW_TYPE" ]; then
-  exit 0
-fi
-
 # Helper: atomic update of session-state.json
 update_state() {
   local filter="$1"
@@ -41,6 +32,25 @@ update_state() {
 FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // ""')
 COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // ""')
 TOOL_EXIT=$(echo "$INPUT" | jq -r '.tool_response.exit_code // ""')
+
+# ── last_action: always recorded (for classification suggestion in status line).
+# Minimal: only tool + file_path + timestamp. Other derivations come in Wave 2.
+# Recorded BEFORE the flow-type gate so unclassified turns still get suggestions.
+case "$TOOL_NAME" in
+  Edit|Write|Bash|Read)
+    LA_TS=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    update_state ".evidence.last_action = {\"tool\": \"$TOOL_NAME\", \"file_path\": \"$FILE_PATH\", \"at\": \"$LA_TS\"}"
+    ;;
+esac
+
+# Read current state (refresh after last_action write)
+STATE=$(cat "$STATE_FILE" 2>/dev/null || echo "{}")
+FLOW_TYPE=$(echo "$STATE" | jq -r '.flow_type // "null"')
+
+# Only detect further evidence during active flows
+if [ "$FLOW_TYPE" = "null" ] || [ -z "$FLOW_TYPE" ]; then
+  exit 0
+fi
 
 case "$TOOL_NAME" in
 

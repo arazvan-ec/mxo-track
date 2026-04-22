@@ -330,6 +330,7 @@ cat > "$STATE_FILE" <<EOJSON
     "branch_strategy": null,
     "root_cause_identified": false,
     "pattern_wide_search_done": false,
+    "last_action": null,
     "task_progress": {"current": 0, "total": 0, "label": null, "completed_labels": [], "task_index": []},
     "work_context": {"description": null, "problems": {"total": 0, "current": 0, "labels": []}, "wave": {"total": 0, "current": 0, "label": null, "labels": []}},
     "todo_progress": {"total": 0, "completed": 0, "in_progress_label": null, "items": []}

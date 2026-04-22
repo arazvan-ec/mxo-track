@@ -118,6 +118,25 @@ if [ "$FLOW_TYPE" != "null" ] && [ -n "$FLOW_TYPE" ] && [ -z "$INTERACTION_CLASS
   echo "  ⚠ Falta interaction_classification — setear antes de continuar"
 fi
 
+# ── Classification suggestion (Feature 4, Wave 1 A4) ──
+# If classification is missing AND the last Edit/Write touched a framework path,
+# suggest reclassifying as 'full'. Non-blocking, additive — does not exit early.
+# Framework regex is kept identical to classify-validator.sh for consistency.
+CLASSIFICATION=$(jq -r '.interaction_classification // "null"' "$STATE_FILE" 2>/dev/null || echo "null")
+LAST_TOOL=$(jq -r '.evidence.last_action.tool // ""' "$STATE_FILE" 2>/dev/null || echo "")
+LAST_PATH=$(jq -r '.evidence.last_action.file_path // ""' "$STATE_FILE" 2>/dev/null || echo "")
+FRAMEWORK_REGEX='^(\.claude/|scripts/|backend/src/|backend/templates/|backend/config/|backend/migrations/|backend/tests/|frontend/src/|ml-service/|docker/)'
+if [ "$CLASSIFICATION" = "null" ] && { [ "$LAST_TOOL" = "Edit" ] || [ "$LAST_TOOL" = "Write" ]; } && [ -n "$LAST_PATH" ]; then
+  # Normalize LAST_PATH the same way classify-validator does
+  REL_LAST="${LAST_PATH#"$REPO/"}"
+  REL_LAST="${REL_LAST#/}"
+  REL_LAST=$(echo "$REL_LAST" | sed -E 's#^.*/(\.claude/|scripts/|backend/|frontend/|ml-service/|docker/)#\1#')
+  if echo "$REL_LAST" | grep -qE "$FRAMEWORK_REGEX"; then
+    echo "💡 Sugerencia: edit a $LAST_PATH detectado → clasificar como 'full'"
+    echo "   Set: jq '.interaction_classification = \"full\" | .flow_type = \"full\"' .claude/session-state.json > /tmp/ss.json && mv /tmp/ss.json .claude/session-state.json"
+  fi
+fi
+
 # No flow declared
 if [ "$FLOW_TYPE" = "null" ] || [ -z "$FLOW_TYPE" ]; then
   echo "📍 Sin clasificar — clasificar antes de proceder"
@@ -154,6 +173,7 @@ if [ "$FLOW_TYPE" = "full" ] && [ "$CURRENT_PHASE" = "finalize" ]; then
       .evidence.branch_strategy = null |
       .evidence.root_cause_identified = false |
       .evidence.pattern_wide_search_done = false |
+      .evidence.last_action = null |
       .evidence.task_progress = {"current": 0, "total": 0, "label": null, "completed_labels": [], "task_index": []} |
       .evidence.work_context = {"description": null, "problems": {"total": 0, "current": 0, "labels": []}, "wave": {"total": 0, "current": 0, "label": null, "labels": []}} |
       .evidence.todo_progress = {"total": 0, "completed": 0, "in_progress_label": null, "items": []}
