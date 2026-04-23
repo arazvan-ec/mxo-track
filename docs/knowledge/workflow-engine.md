@@ -42,6 +42,18 @@ natural bias is to call framework changes "light" to skip brainstorming.
 - **Error output** includes a one-liner `jq` command to reclassify, so recovery
   is a single paste.
 
+### Agent permission model (adjacent to Layer A, not a gate)
+
+Orthogonal to the classification gate: the Claude Code sandbox blocks
+**background-agent writes to `.claude/**`** regardless of auto-approve settings
+or `dangerouslyDisableSandbox: true`. Reads work, writes (Write/Edit/Bash-heredoc)
+deny. This is a harness-level restriction, not a workflow hook. Harness edits
+(`.claude/hooks/**`, `.claude/settings*.json`, `.claude/scripts/**`) must run in
+the foreground session or under `isolation: "worktree"`. See `AGENTS.md` →
+"Agent Permission Model" for full dispatch guidance and the split-parallel-work
+mitigation pattern (evidence: execution log
+`2026-04-22-knowledge-module-and-flow-phases-sot.md`).
+
 ### Layer B — Phase exit gates (phase-advance.sh)
 
 **File:** `.claude/hooks/phase-advance.sh`

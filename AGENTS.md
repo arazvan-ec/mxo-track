@@ -164,6 +164,58 @@ by re-setting to the main agent's spec/plan paths.
 
 ---
 
+## Agent Permission Model
+
+**Why:** Background agents inherit the main session's auto-approve settings but
+**cannot prompt for manual approval**. If a tool call requires confirmation, the
+agent receives "denied" and fails silently. This section catalogs the permission
+surfaces that bite most often.
+
+### Path restrictions for background agents
+
+**The sandbox blocks writes from background agents to `.claude/**` paths
+regardless of auto-approve settings.** Reads succeed; Write, Edit, and any
+Bash-based write (heredoc, `tee`, redirection) are denied. Setting
+`dangerouslyDisableSandbox: true` does NOT lift this restriction — it is a
+harness-level sandbox policy, not a per-call permission.
+
+Writes to `/tmp/`, the repo root, `docs/**`, `backend/**`, `frontend/**`, and
+every other non-`.claude/` path work normally.
+
+**Evidence source:** `docs/superpowers/execution-logs/2026-04-22-knowledge-module-and-flow-phases-sot.md`
+documented the first time the orchestrator discovered this the hard way — a
+background agent tasked with refactoring `.claude/hooks/**` failed every write
+attempt before we realized the sandbox was the cause.
+
+### Consequences for dispatch
+
+- **Docs-only tasks** (`docs/**`, repo-root `*.md` including `AGENTS.md` and
+  `CLAUDE.md`, `backend/**`, `frontend/**`, `ml-service/**`): dispatch to a
+  background agent normally.
+- **Harness tasks** (`.claude/hooks/**`, `.claude/settings*.json`, `.claude/scripts/**`,
+  or any path under `.claude/` the agent must modify): do NOT dispatch to a
+  background agent. Two alternatives:
+  1. **Foreground edit** — do the change directly in the main session.
+  2. **Worktree isolation** — dispatch with `isolation: "worktree"`. The worktree
+     operates on a clone outside the sandboxed `.claude/` of the main repo, so
+     writes succeed; the orchestrator merges the result back.
+- **Mid-task harness surprise** — if a background agent reports "permission
+  denied" on a `.claude/` write it didn't expect to make, accept the partial
+  result and finish the harness portion in the foreground. Do not retry the
+  agent with the same prompt; it will fail identically.
+
+### Mitigation pattern: split parallel work by path surface
+
+When a single interaction touches both docs/source and `.claude/` harness files,
+**split the work so `.claude/**` edits live in the foreground while pure
+docs/source edits run concurrently as background agents**. Example from
+2026-04-22: Problem A (knowledge module refactor under `docs/`) ran as a
+subagent; Problem B (phase-advance refactor under `.claude/hooks/`) ran in the
+foreground. The two finished in roughly the time of the longer one because
+neither blocked the other.
+
+---
+
 ## Subagent-Driven Development (Skill 5)
 
 **Why:** Fresh subagent per task + two-stage review (spec then quality) = high quality, fast
