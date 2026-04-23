@@ -71,14 +71,15 @@ echo "Test 4: null → brainstorming (illegal skip)"
 assert_fail "should reject skipping to brainstorming" "$ADVANCE" "brainstorming"
 
 # Test 5: consult → brainstorming (legal)
+# Requires decisions_read AND logs_scanned evidence (consult-validator hardened 2026-04-22)
 reset_state "full"
-jq '.current_phase = "consult"' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE"
+jq '.current_phase = "consult" | .evidence.decisions_read = true | .evidence.logs_scanned = true' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE"
 echo "Test 5: consult → brainstorming (legal)"
 assert_pass "should advance to brainstorming" "$ADVANCE" "brainstorming"
 
 # Test 6: consult → planning (illegal skip)
 reset_state "full"
-jq '.current_phase = "consult"' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE"
+jq '.current_phase = "consult" | .evidence.decisions_read = true | .evidence.logs_scanned = true' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE"
 echo "Test 6: consult → planning (illegal skip)"
 assert_fail "should reject skipping to planning" "$ADVANCE" "planning"
 
