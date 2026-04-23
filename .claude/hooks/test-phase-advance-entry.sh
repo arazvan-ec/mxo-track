@@ -8,20 +8,19 @@ set -euo pipefail
 
 REPO="/home/user/mxo-track"
 SCRIPT="$REPO/.claude/hooks/phase-advance.sh"
-TMPDIR=$(mktemp -d)
-trap 'rm -rf "$TMPDIR"' EXIT
 
-PASS=0
-FAIL=0
+# shellcheck source=./lib/test-harness.sh
+source "$REPO/.claude/hooks/lib/test-harness.sh"
+init_harness
 
 # Helper: run phase-advance in a fresh temp state file.
 # Args: $1=flow_type, $2=next_phase
-# Writes state to $TMPDIR/state.json, returns script exit code, echoes
+# Writes state to $TEST_TMPDIR/state.json, returns script exit code, echoes
 # "<exit>|<resulting_current_phase>" on stdout.
 run_advance() {
   local flow="$1"
   local next="$2"
-  local state_file="$TMPDIR/state.json"
+  local state_file="$TEST_TMPDIR/state.json"
   cat > "$state_file" <<EOF
 {
   "flow_type": "$flow",
@@ -46,13 +45,9 @@ assert_entry() {
   local actual_exit="${result%%|*}"
   local actual_phase="${result##*|}"
   if [ "$actual_exit" = "$expect_exit" ] && [ "$actual_phase" = "$expect_phase" ]; then
-    echo "  ✅ $name"
-    PASS=$((PASS + 1))
+    pass "$name"
   else
-    echo "  ❌ $name"
-    echo "     expected: exit=$expect_exit phase=$expect_phase"
-    echo "     actual:   exit=$actual_exit phase=$actual_phase"
-    FAIL=$((FAIL + 1))
+    fail "$name" "expected: exit=$expect_exit phase=$expect_phase; actual: exit=$actual_exit phase=$actual_phase"
   fi
 }
 
@@ -63,8 +58,4 @@ assert_entry "debug fix: null → root_cause accepted"             "debug" "root
 assert_entry "debug rejects: null → consult denied"              "debug" "consult"        "1" "null"
 assert_entry "agent fix: null → implementation accepted"         "agent" "implementation" "0" "implementation"
 
-echo
-echo "── Results ──"
-echo "  Passed: $PASS"
-echo "  Failed: $FAIL"
-[ "$FAIL" -eq 0 ]
+summary

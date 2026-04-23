@@ -9,14 +9,13 @@ set -euo pipefail
 
 REPO="/home/user/mxo-track"
 VALIDATOR="$REPO/.claude/hooks/validators/brainstorm-validator.sh"
-TMPDIR=$(mktemp -d)
-trap 'rm -rf "$TMPDIR"' EXIT
 
-PASS=0
-FAIL=0
+# shellcheck source=./lib/test-harness.sh
+source "$REPO/.claude/hooks/lib/test-harness.sh"
+init_harness
 
 # Minimal spec that satisfies all non-parallel checks (keyword, size, sections)
-SPEC="$TMPDIR/spec.md"
+SPEC="$TEST_TMPDIR/spec.md"
 cat > "$SPEC" <<'EOF'
 # Spec
 
@@ -45,7 +44,7 @@ EOF
 # is not considered.
 has_conflict() {
   local plan_path="$1"
-  local state_file="$TMPDIR/state.json"
+  local state_file="$TEST_TMPDIR/state.json"
   cat > "$state_file" <<EOF
 {
   "evidence": {
@@ -62,26 +61,21 @@ EOF
   echo "$output" | grep -q "CONFLICTO PARALELO"
 }
 
-assert() {
+assert_conflict_outcome() {
   local name="$1"
   local expected="$2"  # "conflict" or "clean"
   local plan_path="$3"
+  local actual
   if has_conflict "$plan_path"; then
     actual="conflict"
   else
     actual="clean"
   fi
-  if [ "$actual" = "$expected" ]; then
-    echo "  ✅ $name"
-    PASS=$((PASS + 1))
-  else
-    echo "  ❌ $name — expected=$expected actual=$actual"
-    FAIL=$((FAIL + 1))
-  fi
+  assert_eq "$name" "$expected" "$actual"
 }
 
 # ── Fixture 1: true conflict (regression guard) ──
-PLAN1="$TMPDIR/plan1.md"
+PLAN1="$TEST_TMPDIR/plan1.md"
 cat > "$PLAN1" <<'EOF'
 # Plan
 
@@ -91,7 +85,7 @@ cat > "$PLAN1" <<'EOF'
 EOF
 
 # ── Fixture 2: no conflict baseline (disjoint files) ──
-PLAN2="$TMPDIR/plan2.md"
+PLAN2="$TEST_TMPDIR/plan2.md"
 cat > "$PLAN2" <<'EOF'
 # Plan
 
@@ -101,7 +95,7 @@ cat > "$PLAN2" <<'EOF'
 EOF
 
 # ── Fixture 3: parenthesized annotation (bug fix) ──
-PLAN3="$TMPDIR/plan3.md"
+PLAN3="$TEST_TMPDIR/plan3.md"
 cat > "$PLAN3" <<'EOF'
 # Plan
 
@@ -111,7 +105,7 @@ cat > "$PLAN3" <<'EOF'
 EOF
 
 # ── Fixture 4: mixed — path + annotation in same payload ──
-PLAN4="$TMPDIR/plan4.md"
+PLAN4="$TEST_TMPDIR/plan4.md"
 cat > "$PLAN4" <<'EOF'
 # Plan
 
@@ -121,13 +115,9 @@ cat > "$PLAN4" <<'EOF'
 EOF
 
 echo "── brainstorm-validator parallel-conflict parser ──"
-assert "regression: real conflict on shared path → detected" "conflict" "$PLAN1"
-assert "baseline: disjoint paths → no conflict" "clean" "$PLAN2"
-assert "fix: two parenthesized annotations → no conflict" "clean" "$PLAN3"
-assert "fix: path + annotation mix → annotation ignored" "clean" "$PLAN4"
+assert_conflict_outcome "regression: real conflict on shared path → detected" "conflict" "$PLAN1"
+assert_conflict_outcome "baseline: disjoint paths → no conflict" "clean" "$PLAN2"
+assert_conflict_outcome "fix: two parenthesized annotations → no conflict" "clean" "$PLAN3"
+assert_conflict_outcome "fix: path + annotation mix → annotation ignored" "clean" "$PLAN4"
 
-echo
-echo "── Results ──"
-echo "  Passed: $PASS"
-echo "  Failed: $FAIL"
-[ "$FAIL" -eq 0 ]
+summary
