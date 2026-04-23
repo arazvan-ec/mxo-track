@@ -329,6 +329,7 @@ cat > "$STATE_FILE" <<EOJSON
     "execution_log_path": null,
     "branch_strategy": null,
     "retrospective_shown": false,
+    "last_action": null,
     "root_cause_identified": false,
     "pattern_wide_search_done": false,
     "task_progress": {"current": 0, "total": 0, "label": null, "completed_labels": [], "task_index": []},

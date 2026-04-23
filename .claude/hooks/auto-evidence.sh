@@ -22,6 +22,15 @@ if [ -z "$TOOL_NAME" ]; then
   exit 0
 fi
 
+# Track last action for the classification-suggestion render block. Runs for
+# every tool call regardless of flow_type, so the suggestion can fire even
+# when interaction_classification has drifted to null.
+_LA_FP=$(echo "$INPUT" | jq -r '.tool_input.file_path // ""')
+_LA_TS=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+jq --arg t "$TOOL_NAME" --arg fp "$_LA_FP" --arg at "$_LA_TS" '
+  .evidence.last_action = {"tool": $t, "file_path": (if $fp == "" then null else $fp end), "at": $at}
+' "$STATE_FILE" > /tmp/ae-la.json && mv /tmp/ae-la.json "$STATE_FILE" 2>/dev/null || true
+
 # Read current state
 STATE=$(cat "$STATE_FILE" 2>/dev/null || echo "{}")
 FLOW_TYPE=$(echo "$STATE" | jq -r '.flow_type // "null"')

@@ -139,6 +139,21 @@ if [ "$FLOW_TYPE" != "null" ] && [ -n "$FLOW_TYPE" ] && [ -z "$INTERACTION_CLASS
   echo "  ⚠ Falta interaction_classification — setear antes de continuar"
 fi
 
+# ── Classification suggestion (non-blocking, runs before all exits) ──
+# When interaction_classification is null AND the last action was an Edit/Write
+# to a framework path, print a suggestion for reclassification. The
+# classify-validator will block subsequent framework edits; this line tells
+# the model what to do about it before it hits that block.
+_SUG_CLASS=$(echo "$STATE" | jq -r '.interaction_classification // "null"')
+_SUG_TOOL=$(echo "$STATE" | jq -r '.evidence.last_action.tool // ""')
+_SUG_PATH=$(echo "$STATE" | jq -r '.evidence.last_action.file_path // ""')
+if [ "$_SUG_CLASS" = "null" ] && { [ "$_SUG_TOOL" = "Edit" ] || [ "$_SUG_TOOL" = "Write" ]; }; then
+  if echo "$_SUG_PATH" | grep -qE '(^|/)(\.claude/|scripts/|backend/src/|backend/templates/|backend/config/|backend/migrations/|backend/tests/|frontend/src/|ml-service/|docker/)'; then
+    echo "💡 Sugerencia: edit a ${_SUG_PATH} detectado → clasificar como 'full'"
+    echo "   Set: jq '.interaction_classification = \"full\" | .flow_type = \"full\"' .claude/session-state.json > /tmp/ss.json && mv /tmp/ss.json .claude/session-state.json"
+  fi
+fi
+
 # No flow declared
 if [ "$FLOW_TYPE" = "null" ] || [ -z "$FLOW_TYPE" ]; then
   echo "📍 Sin clasificar — clasificar antes de proceder"
@@ -174,6 +189,7 @@ if [ "$FLOW_TYPE" = "full" ] && [ "$CURRENT_PHASE" = "finalize" ]; then
       .evidence.execution_log_path = null |
       .evidence.branch_strategy = null |
       .evidence.retrospective_shown = false |
+      .evidence.last_action = null |
       .evidence.root_cause_identified = false |
       .evidence.pattern_wide_search_done = false |
       .evidence.task_progress = {"current": 0, "total": 0, "label": null, "completed_labels": [], "task_index": []} |
