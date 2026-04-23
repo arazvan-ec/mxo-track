@@ -124,9 +124,18 @@ case "$TOOL_NAME" in
       fi
     fi
 
-    # tests_written: writing to backend/tests/
-    if [[ "$FILE_PATH" == *"backend/tests/"* ]]; then
-      update_state '.evidence.tests_written = (.evidence.tests_written + 1)'
+    # tests_written: derive from git working tree (ground truth, not a counter).
+    # Counter-based tracking drifted when git state changed mid-session. Git-derived
+    # reflects actual modified/new test files across the current working tree.
+    if [[ "$FILE_PATH" == *"backend/tests/"* ]] || [[ "$FILE_PATH" == *".test."* ]] || [[ "$FILE_PATH" == *".spec."* ]]; then
+      if command -v git >/dev/null 2>&1; then
+        _TW_COUNT=$( { cd "$REPO" 2>/dev/null && \
+          { git diff --name-only -- 'backend/tests/' 'frontend/src/' 2>/dev/null; \
+            git ls-files --others --exclude-standard -- 'backend/tests/' 'frontend/src/' 2>/dev/null; } \
+          | grep -E '(^|/)backend/tests/|\.test\.|\.spec\.' | sort -u | wc -l; } || echo 0)
+        _TW_COUNT=${_TW_COUNT:-0}
+        update_state ".evidence.tests_written = $_TW_COUNT"
+      fi
     fi
 
     # Ephemeral artifact warning

@@ -87,16 +87,53 @@ write_state "$BASE_STATE"
 run_hook '{"tool_name":"Write","tool_input":{"file_path":"/home/user/mxo-track/docs/superpowers/execution-logs/2026-04-01-test.md"},"tool_response":{}}'
 assert_field "execution_log_path set" ".evidence.execution_log_path" "/home/user/mxo-track/docs/superpowers/execution-logs/2026-04-01-test.md"
 
-# --- Test 8: Write test file → tests_written increments ---
-echo "8. Write test file → tests_written increments"
+# --- Test 8: Write test file → tests_written derived from git ---
+# Migration (Wave 2, 2b): tests_written is now ground-truthed from git diff +
+# untracked files, not a counter. Create a real untracked test file so git
+# sees it; verify tests_written reflects the count; clean up.
+echo "8. Write test file → tests_written derived from git (≥1)"
 write_state "$BASE_STATE"
-run_hook '{"tool_name":"Write","tool_input":{"file_path":"/home/user/mxo-track/backend/tests/Unit/SomeTest.php"},"tool_response":{}}'
-assert_field "tests_written incremented" ".evidence.tests_written" "1"
+FAKE_TEST="$REPO/backend/tests/Unit/_AutoEvidenceFakeTest.php"
+mkdir -p "$(dirname "$FAKE_TEST")"
+cat > "$FAKE_TEST" <<'PHP'
+<?php
+// Temporary fixture for test-auto-evidence.sh — removed in cleanup.
+class _AutoEvidenceFakeTest {}
+PHP
+run_hook "{\"tool_name\":\"Write\",\"tool_input\":{\"file_path\":\"$FAKE_TEST\"},\"tool_response\":{}}"
+TW=$(jq -r '.evidence.tests_written' "$STATE_FILE")
+if [ "$TW" -ge 1 ] 2>/dev/null; then
+  echo "  ✅ tests_written ≥ 1 after creating a test file (got $TW)"
+  PASSED=$((PASSED + 1))
+else
+  echo "  ❌ tests_written < 1 after creating a test file (got $TW)"
+  FAILED=$((FAILED + 1))
+fi
 
-# --- Test 9: Write test twice → increments to 2 ---
-echo "9. Write test twice → tests_written = 2"
-run_hook '{"tool_name":"Edit","tool_input":{"file_path":"/home/user/mxo-track/backend/tests/Unit/SomeTest.php"},"tool_response":{}}'
-assert_field "tests_written is 2" ".evidence.tests_written" "2"
+# --- Test 9: Write second test → tests_written reflects total (≥ previous) ---
+echo "9. Write second test file → tests_written reflects git count (not a counter)"
+TW_BEFORE="$TW"
+FAKE_TEST2="$REPO/backend/tests/Unit/_AutoEvidenceFakeTwoTest.php"
+cat > "$FAKE_TEST2" <<'PHP'
+<?php
+class _AutoEvidenceFakeTwoTest {}
+PHP
+run_hook "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"$FAKE_TEST2\"},\"tool_response\":{}}"
+TW_AFTER=$(jq -r '.evidence.tests_written' "$STATE_FILE")
+if [ "$TW_AFTER" -ge "$TW_BEFORE" ] 2>/dev/null && [ "$TW_AFTER" -ge 2 ] 2>/dev/null; then
+  echo "  ✅ tests_written ≥ 2 (previous=$TW_BEFORE, after=$TW_AFTER, two fake files tracked)"
+  PASSED=$((PASSED + 1))
+else
+  echo "  ❌ tests_written did not reflect second file (previous=$TW_BEFORE, after=$TW_AFTER)"
+  FAILED=$((FAILED + 1))
+fi
+rm -f "$FAKE_TEST" "$FAKE_TEST2"
+
+# --- Test 9b: Edit to src (non-test) does NOT trigger tests_written update ---
+echo "9b. Write src file → tests_written unchanged (only test paths trigger)"
+write_state "$BASE_STATE"
+run_hook '{"tool_name":"Write","tool_input":{"file_path":"/home/user/mxo-track/backend/src/Controller/SomeController.php"},"tool_response":{}}'
+assert_field "tests_written untouched by src write" ".evidence.tests_written" "0"
 
 # --- Test 10: Bash phpunit success ---
 echo "10. Bash phpunit success → tests_passed = true"
