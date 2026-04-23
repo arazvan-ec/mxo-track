@@ -16,10 +16,16 @@ INPUT=$(cat 2>/dev/null || echo "{}")
 # Updates session-state.json based on what tool was just used
 echo "$INPUT" | "$HOOKS_DIR/auto-evidence.sh" 2>/dev/null || true
 
-# ── Phase 2: Plan persistence ──
-# Copies conversation plans from /root/.claude/plans/ to repo
+# ── Phase 1.5: Derive task_progress.current from edited file path ──
+# Matches FILE_PATH against the plan's task_index.files[]. Silent if no match.
 TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // ""' 2>/dev/null || true)
 FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // ""' 2>/dev/null || true)
+if [[ "$TOOL_NAME" == "Edit" || "$TOOL_NAME" == "Write" ]] && [ -n "$FILE_PATH" ]; then
+  bash "$HOOKS_DIR/plan-progress.sh" auto_advance "$FILE_PATH" 2>/dev/null || true
+fi
+
+# ── Phase 2: Plan persistence ──
+# Copies conversation plans from /root/.claude/plans/ to repo
 
 if [[ "$TOOL_NAME" == "Write" || "$TOOL_NAME" == "Edit" ]] && [[ "$FILE_PATH" == /root/.claude/plans/* ]]; then
   BASENAME=$(basename "$FILE_PATH")
