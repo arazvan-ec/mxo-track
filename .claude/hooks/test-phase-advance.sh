@@ -70,10 +70,11 @@ reset_state "full"
 echo "Test 4: null → brainstorming (illegal skip)"
 assert_fail "should reject skipping to brainstorming" "$ADVANCE" "brainstorming"
 
-# Test 5: consult → brainstorming (legal)
+# Test 5: consult → brainstorming (legal, with hardened AND-gate evidence)
 reset_state "full"
-jq '.current_phase = "consult"' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE"
-echo "Test 5: consult → brainstorming (legal)"
+jq '.current_phase = "consult" | .evidence.decisions_read = true | .evidence.logs_scanned = true' \
+  "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE"
+echo "Test 5: consult → brainstorming (legal, both evidence flags set)"
 assert_pass "should advance to brainstorming" "$ADVANCE" "brainstorming"
 
 # Test 6: consult → planning (illegal skip)
