@@ -15,7 +15,7 @@ it, gates cannot enforce anything.
 ```jsonc
 {
   "flow_type": "micro|light|debug|full|explore|null",  // Declarar al clasificar interacción
-  "current_phase": "consult|brainstorming|planning|implementation|verification|capture|retrospective|finalize|null",
+  "current_phase": "consult|brainstorming|planning|implementation|verification|socratic_review|capture|retrospective|finalize|null",
   "interaction_id": 0,              // Incrementar al detectar scope change (nueva interacción)
   "last_work_summary": {            // Preservado automáticamente por session-start.sh al resetear por nuevo día
     "previous_date": "YYYY-MM-DD",
@@ -292,18 +292,27 @@ checks completion (current phase).
 | `planning` | `plan_path` (archivo ≥300B con keywords) | HARD |
 | `implementation` | plan exists (HARD) + `tests_written > 0` (SOFT warning) | MIXED |
 | `verification` | `tests_passed` = `true` or `skipped` + `lint_clean` = `true` or `skipped` | MIXED |
+| `socratic_review` | `evidence.socratic_questions` ≥3 entries (each ≥30 chars); when critical paths touched, ≥1 must contain an architectural keyword (endorsed/boundary/DDD/tech-debt/architecture/coupling/pattern/tradeoff) | HARD |
 | `capture` | `execution_log_path` set + file exists (hardened 2026-04-22 — was SOFT) | HARD |
-| `retrospective` | `retrospective_shown=true` (visibility gate) + `execution_log_path` + `## Lessons`/`## Retrospectiva` section ≥100 chars | HARD |
+| `retrospective` | `retrospective_shown=true` (visibility gate) + `execution_log_path` + `## Lessons`/`## Retrospectiva` section ≥100 chars + architectural keyword in section OR `evidence.retrospective_no_architectural_concerns=true` (Layer I, added 2026-04-24) | HARD |
 | `finalize` | `branch_strategy` declared (`merge\|pr\|keep\|discard`) + knowledge module check | SOFT |
 
-### Additional PreToolUse gates (Option 3-Enforced, 2026-04-22)
+### Additional PreToolUse gates (Option 3-Enforced, 2026-04-22; extended 2026-04-24)
 
-Two hooks run on every tool call, orthogonal to the phase validators:
+Three hooks run on every tool call, orthogonal to the phase validators:
 
 | Hook | Matcher | Effect | Bypass |
 |------|---------|--------|--------|
 | `validators/classify-validator.sh` | Edit\|Write | Blocks edits to framework/code paths when `interaction_classification ∈ {micro, light, explore, informational, null}`. Carve-outs: `docs/`, `*.md`, `/tmp/`, `.claude/session-state.json`. | `SKIP_CLASSIFY_GATE=1` |
+| `ddd-boundary-check.sh` (Layer F, added 2026-04-24) | Edit\|Write | Reads `docs/knowledge/_ddd-boundaries.yaml`. Emits a non-blocking warning when an edit outside `backend/src/Infrastructure/` adds new `createQueryBuilder` or `getRepository(` usage in a critical context (Route, Shipment). Known violations listed in the YAML are exempted. | `SKIP_DDD_BOUNDARY_GATE=1` |
 | `pre-tool-freshness.sh` | `.*` (all tools) | Non-blocking warning: prints `⚠ POSIBLE STALE STATE:` when upcoming tool call signals evidence/phase mismatch (spec write outside brainstorming, plan write outside planning, exec-log write outside capture, git commit during consult, git push in finalize without branch_strategy). | — (non-blocking) |
+
+And two 2026-04-24 extensions to the brainstorm validator:
+
+| Gate | Effect | Severity |
+|------|--------|----------|
+| Layer H — Prior Art Audit | When the spec references `src/Domain/{Route,Shipment}/` or `src/Controller/Api/Admin/`, requires a `## Prior Art Audit` section with at least one row classified as ✅ / ❌ tech-debt / new. | HARD |
+| Layer J — Graduation registry check | Warns (non-blocking) when the spec mentions a pattern name absent from `docs/knowledge/_graduations.yaml`. | SOFT |
 
 And an enhancement to the TodoWrite PostToolUse hook:
 

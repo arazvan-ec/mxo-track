@@ -297,16 +297,21 @@ debug the resulting regression.
 #### Enforcement gates — shortcuts they catch
 
 The workflow engine pairs each CLAUDE.md discipline rule with a hook that
-enforces it. The enforcement layers catalog eight concrete shortcuts the model
-is prone to taking and maps each to the gate that blocks it:
+enforces it. Twelve concrete shortcuts the model is prone to taking, each
+mapped to the gate that blocks it:
 
 | Shortcut | Gate that catches it |
 |----------|---------------------|
 | Calling framework changes "light" to skip brainstorm | `classify-validator.sh` (Layer A) — blocks edits to `.claude/`, `scripts/`, `backend/src/`, `frontend/src/`, `ml-service/`, `docker/` unless classification is `full` or `debug` |
 | `consult → brainstorm` without reading decisions/logs | `consult-validator.sh` (Layer B) — requires BOTH `decisions_read=true` AND `logs_scanned=true` |
 | `brainstorm → planning` without alternatives or approval | `brainstorm-validator.sh` — requires `alternatives_proposed`, `user_approved`, `spec_path`, ≥1 user turn |
+| **Spec mirrors tech-debt pattern** without acknowledging | `brainstorm-validator.sh` (Layer H, HARD) — when spec references `src/Domain/{Route,Shipment}/` or `src/Controller/Api/Admin/`, requires a `## Prior Art Audit` section with at least one row classified as ✅, ❌ tech-debt, or `new` |
+| **Mentions ungraduated pattern name** in spec | `brainstorm-validator.sh` (Layer J, SOFT) — warns when a pattern name appears in the spec but is absent from `docs/knowledge/_graduations.yaml` |
+| **Edit adds ORM coupling in critical context** | `ddd-boundary-check.sh` (Layer F, WARNING) — reads `docs/knowledge/_ddd-boundaries.yaml`; emits a warning when a non-Infrastructure edit adds `createQueryBuilder` or `getRepository` against a critical aggregate (Route, Shipment). Known violations are exempted. |
 | `verification → capture` without running tests/lint | `verification-validator.sh` — `tests_passed` and `lint_clean` must be `true` (no `skipped` in full/debug) |
+| **`verification → capture` without adversarial review** | `socratic-review-validator.sh` (Layer C, HARD) — requires `evidence.socratic_questions` array with ≥3 substantive (≥30 char) questions; when critical paths touched, at least one must include an architectural keyword (endorsed, boundary, DDD, tech-debt, architecture, coupling, pattern, tradeoff) |
 | `capture → retrospective` without writing the execution log | `capture-validator.sh` (Layer B, HARD) — `execution_log_path` must be set and file must exist |
+| **Retrospective omits architectural concern** | `retrospective-validator.sh` (Layer I, HARD) — Lessons section must mention adversarial question, prior art, DDD, boundary, coupling, architectural concern, endorsed/tech-debt, OR set `evidence.retrospective_no_architectural_concerns=true` with justification |
 | `retrospective → finalize` without presenting retrospective to user | `retrospective-validator.sh` — requires `evidence.retrospective_shown=true` flag set after visible chat presentation |
 | Forgetting to advance `problems.current` when switching petitions | `todowrite-mirror.sh` (Layer C) — auto-derives `problems.current` from `[prefix]` of active todo |
 | Multiple `in_progress` todos at once | `todowrite-mirror.sh` (Layer C) — rejects input with >1 `in_progress` (exit 2) |
@@ -320,7 +325,8 @@ requires an entry in `docs/decisions/log.md` explaining the case.
 | Env var | Effect | When to use |
 |---------|--------|-------------|
 | `SKIP_CLASSIFY_GATE=1` | Disables `classify-validator.sh` | Emergency edits to framework paths when reclassification has already been discussed but session-state is stuck |
-| `SKIP_PHASE_EXIT_GATE=1` | Disables all phase exit validators in `phase-advance.sh` | Recovery from corrupted evidence state; rebuild session after interruption |
+| `SKIP_PHASE_EXIT_GATE=1` | Disables all phase exit validators in `phase-advance.sh` (incl. consult, verification, socratic-review, capture, retrospective) | Recovery from corrupted evidence state; rebuild session after interruption |
+| `SKIP_DDD_BOUNDARY_GATE=1` | Disables `ddd-boundary-check.sh` | Edits that legitimately touch critical contexts without adding new ORM coupling (e.g., refactoring existing violations); decision log entry describing why required |
 
 Never bypass without thinking. A gate that blocks legitimate work is a gate
 that needs its conditions tuned — not a gate to silence.
