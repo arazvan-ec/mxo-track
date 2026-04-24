@@ -336,6 +336,93 @@ that needs its conditions tuned — not a gate to silence.
 
 ---
 
+## Autonomy Contract
+
+The harness has structured checkpoints where the user's judgment is
+obligatory. **Between checkpoints, the model operates autonomously without
+per-tool-call confirmation.** The goal: concentrate the user's attention
+on high-value decisions (design, scope, retrospective, merge) instead of
+low-value interruptions (individual file edits, local commits, running
+tests).
+
+This contract exists because the repo observed repeatedly that per-edit
+prompts were redundant with phase-level approvals — the user was
+gatekeeping at both levels, paying the attention cost twice.
+
+### Requires user input (always)
+
+- **Design approval** during brainstorming (spec sign-off before planning)
+- **Scope changes** — any user request outside the current plan triggers
+  a new interaction; the model must reclassify
+- **Retrospective approval** before advancing to finalize (visible
+  presentation, user acknowledgment)
+- **Destructive git operations** — `reset --hard`, `push --force`,
+  `branch -D`, amending published commits
+- **Side effects on shared systems** — GitHub PRs, pushes to `main`,
+  Slack/email messages, external API calls, uploads to third-party tools
+  (pastebins, gists, diagram renderers)
+- **Bypass env vars** — using `SKIP_*_GATE=1` requires an entry in
+  `docs/decisions/log.md` explaining the case
+
+### Does NOT require user input (autonomy)
+
+- **File edits** inside the plan's scope — create, modify, delete any
+  file the plan lists or that the brainstormed approach implies
+- **Tests, lint, build, manifest** — run `make lint`, `npm run build`,
+  `phpunit`, `make manifest`, `bash .claude/hooks/test-*.sh` freely
+- **Local git** — `git add`, `git commit`, `git branch <create>`,
+  `git push origin <feature-branch>`
+- **Read / search / explore** — Read, Grep, Glob, read-only Bash
+- **Subagent dispatch** for parallel work already planned
+- **`jq` updates** to `session-state.json` for phase and evidence
+  advancement (these are the model's own state, not user-facing data)
+- **Writing spec / plan / execution-log / retrospective** docs under
+  `docs/superpowers/`
+- **Regenerating `.claude/session-state.json`** during session bootstrap
+  or phase transitions
+
+### Mechanism
+
+Two layers, orthogonal:
+
+1. **Claude Code permission layer** (`.claude/settings.local.json`)
+   controls whether the TOOL surfaces a permission prompt. Recommended
+   config for smooth flow:
+   ```json
+   { "permissions": { "defaultMode": "acceptEdits" } }
+   ```
+   This auto-approves Edit/Write; destructive Bash and external-effect
+   tools still prompt.
+
+2. **Harness hooks** (`.claude/hooks/**`) enforce architectural discipline
+   regardless of permission settings. They run orthogonally — auto-approve
+   does NOT defeat classify-validator, brainstorm-validator, F/H/I/J, or
+   the pre-push-gate.
+
+The combination: user grants the TOOL level autonomy (no prompts); the
+HARNESS keeps the architectural checkpoints. The user stays decisive
+where it matters.
+
+### When the model should still ask
+
+Inside "autonomy" scope above, there are still situations where the model
+pauses and asks:
+- **Ambiguous spec** — approach could be interpreted two ways; pick one
+  is risky, ask user which.
+- **Discovered scope creep** — implementation touches a file not in the
+  plan and the model can't tell if it should include it.
+- **Tool failure with unclear recovery** — `git rebase` conflict, `npm
+  install` fails, etc. — surface to user.
+- **Architectural decision that wasn't in the brainstorm** — e.g., a
+  shared component modification (this is already called out in "Shared
+  Component Modifications" — ALWAYS stops and re-brainstorms).
+
+Asking is not ceremony in these cases; it's honest escalation. The
+contract is not "never ask" — it's "ask only when the answer materially
+changes the outcome."
+
+---
+
 <!-- GENERIC-START: The QA loop -->
 ## Before Writing Code: The QA Loop
 
