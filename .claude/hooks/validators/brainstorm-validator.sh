@@ -63,6 +63,56 @@ else
     ERRORS="${ERRORS}- ANTI-OMISION: Falta seccion '## Omission Decisions' (si no hay omisiones, declarar 'No omissions — all inventory items addressed')\n"
   fi
 
+  # Layer H — Prior Art Audit gate (HARD when critical paths referenced)
+  # If the spec references critical domain contexts or admin API controllers,
+  # require a `## Prior Art Audit` section with at least one classified row.
+  # Use `if grep -qE` rather than `grep -c` to avoid the `grep failure + echo`
+  # concatenation under `set -e` / pipefail.
+  if grep -qE '(src/Domain/(Route|Shipment)/|src/Controller/Api/Admin/)' "$SPEC_FULL" 2>/dev/null; then
+    if ! grep -qE '^## Prior Art Audit' "$SPEC_FULL" 2>/dev/null; then
+      ERRORS="${ERRORS}- H: spec referencia contextos criticos (Route/Shipment/Admin API) pero falta seccion '## Prior Art Audit'. Clasifica cada path existente como endorsed (✅), tech-debt (❌ tech-debt), o nuevo (new).\n"
+    else
+      # Extract Prior Art Audit section (from its header to the next top-level ## header)
+      # and require at least one row classified in the 'Endorsed?' column.
+      if ! awk '/^## Prior Art Audit/{flag=1; next} /^## /{flag=0} flag' "$SPEC_FULL" 2>/dev/null | grep -qE '(✅|❌ tech-debt|\| new \|)'; then
+        ERRORS="${ERRORS}- H: Seccion '## Prior Art Audit' existe pero no contiene filas clasificadas. Cada path debe tener columna 'Endorsed?' con ✅, ❌ tech-debt, o new.\n"
+      fi
+    fi
+  fi
+
+  # Layer J — Graduation registry soft-check
+  # Extract pattern names mentioned in the spec and warn (non-blocking) if any
+  # are not present as keys under tags: or patterns: in _graduations.yaml.
+  # Each sub-pipeline is guarded with `|| true` so an empty result (grep rc=1)
+  # doesn't abort the outer script under `set -e` / pipefail.
+  GRADUATIONS_FILE="$REPO/docs/knowledge/_graduations.yaml"
+  if [ -f "$GRADUATIONS_FILE" ]; then
+    # Heuristic pattern extraction (deliberately simple — this is a soft gate):
+    #   1) **Pattern:** name
+    #   2) pattern: name           (YAML-like)
+    #   3) `backticked-identifier` on lines mentioning "pattern"
+    PATTERN_NAMES=$(
+      {
+        { grep -oE '\*\*Pattern:\*\*[[:space:]]*[A-Za-z0-9_-]+' "$SPEC_FULL" 2>/dev/null \
+            | sed -E 's/\*\*Pattern:\*\*[[:space:]]*//'; } || true
+        { grep -oE '^[[:space:]]*pattern:[[:space:]]*[A-Za-z0-9_-]+' "$SPEC_FULL" 2>/dev/null \
+            | sed -E 's/^[[:space:]]*pattern:[[:space:]]*//'; } || true
+        { grep -iE 'pattern' "$SPEC_FULL" 2>/dev/null \
+            | grep -oE '`[a-z0-9][a-z0-9_-]*`' \
+            | tr -d '`'; } || true
+      } | sort -u
+    )
+    if [ -n "$PATTERN_NAMES" ]; then
+      while IFS= read -r p; do
+        [ -z "$p" ] && continue
+        # Registry entries are keyed by two-space-indented lines like "  name:".
+        if ! grep -qE "^[[:space:]]+${p}:" "$GRADUATIONS_FILE" 2>/dev/null; then
+          WARNINGS="${WARNINGS}- ⚠ J: Spec menciona pattern '${p}' que no esta en _graduations.yaml. Si es nuevo, justifica via Prior Art Audit; si esta tomado de codigo no-endorsed, revisa.\n"
+        fi
+      done <<< "$PATTERN_NAMES"
+    fi
+  fi
+
   # TDD task isolation: plan must not have standalone "add tests" tasks
   PLAN_PATH_VAL=$(jq -r '.evidence.plan_path // ""' "$STATE_FILE" 2>/dev/null || echo "")
   PLAN_FULL=""
