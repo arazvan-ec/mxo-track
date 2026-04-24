@@ -28,8 +28,8 @@ fi
 NEXT_PHASE="${1:-}"
 if [ -z "$NEXT_PHASE" ]; then
   echo "Usage: phase-advance.sh <next_phase>" >&2
-  echo "Phases (full):  consult brainstorming planning implementation verification capture retrospective finalize" >&2
-  echo "Phases (debug): root_cause pattern_wide fix verification capture retrospective finalize" >&2
+  echo "Phases (full):  consult brainstorming planning implementation verification socratic_review capture retrospective finalize" >&2
+  echo "Phases (debug): root_cause pattern_wide fix verification socratic_review capture retrospective finalize" >&2
   exit 1
 fi
 

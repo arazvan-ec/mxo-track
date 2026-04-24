@@ -234,7 +234,7 @@ case "$FLOW_TYPE" in
     # Prefer explicit current_phase for late phases (verification onward);
     # otherwise derive from evidence flags for the detective portion.
     case "$CURRENT_PHASE" in
-      verification|capture|retrospective|finalize)
+      verification|socratic_review|capture|retrospective|finalize)
         DEBUG_PHASE="$CURRENT_PHASE"
         DEBUG_INDEX=0
         for i in "${!DEBUG_PHASES[@]}"; do
@@ -295,6 +295,7 @@ case "$FLOW_TYPE" in
       pattern_wide) NEXT="busqueda patron-wide" ;;
       fix) NEXT="TDD fix + verificar" ;;
       verification) NEXT="tests + lint verdes" ;;
+      socratic_review) NEXT="generar 3+ preguntas adversariales en evidence.socratic_questions" ;;
       capture) NEXT="escribir execution log" ;;
       retrospective) NEXT="presentar retro + set retrospective_shown=true" ;;
       finalize) NEXT="branch strategy + push" ;;
@@ -332,14 +333,14 @@ TODO_DONE=$(echo "$STATE" | jq -r '.evidence.todo_progress.completed // 0')
 TODO_IP=$(echo "$STATE" | jq -r '.evidence.todo_progress.in_progress_label // ""')
 
 if [ "$FLOW_TYPE" = "full" ]; then
-  PHASES=("consult" "brainstorming" "planning" "implementation" "verification" "capture" "retrospective" "finalize")
-  PHASE_SHORT=("consult" "brainstorm" "planning" "impl" "verify" "capture" "retro" "finalize")
+  PHASES=("consult" "brainstorming" "planning" "implementation" "verification" "socratic_review" "capture" "retrospective" "finalize")
+  PHASE_SHORT=("consult" "brainstorm" "planning" "impl" "verify" "socratic" "capture" "retro" "finalize")
   TOTAL=8
 
   # Handle null/undeclared phase
   if [ "$CURRENT_PHASE" = "null" ] || [ -z "$CURRENT_PHASE" ]; then
     echo "📍 Pendiente — avanzar a consult"
-    echo "  ⬚ consult → brainstorm → planning → impl → verify → capture → retro → finalize"
+    echo "  ⬚ consult → brainstorm → planning → impl → verify → socratic → capture → retro → finalize"
     exit 0
   fi
 
@@ -381,7 +382,7 @@ if [ "$FLOW_TYPE" = "full" ]; then
   LINE1="📍 ${PROB_PREFIX}${DISPLAY_PHASE} (${CURRENT_INDEX}/${TOTAL})${DEV_SUFFIX}"
   # Show wave hierarchy from planning onwards (when plan has been parsed)
   case "$CURRENT_PHASE" in
-    planning|implementation|verification|capture|retrospective)
+    planning|implementation|verification|socratic_review|capture|retrospective)
       if [ "$WC_WAVE_TOTAL" -gt 0 ] 2>/dev/null; then
         if [ "$WC_WAVE_CURRENT" -gt 0 ] 2>/dev/null; then
           LINE1="${LINE1} — Wave ${WC_WAVE_CURRENT}/${WC_WAVE_TOTAL}"
@@ -422,7 +423,7 @@ if [ "$FLOW_TYPE" = "full" ]; then
         echo "  Todos: 🔄 ${TODO_IP} (${TODO_DONE}/${TODO_TOTAL})"
       fi
       ;;
-    planning|implementation|verification|capture|retrospective)
+    planning|implementation|verification|socratic_review|capture|retrospective)
       if [ "$TASK_TOTAL" -gt 0 ] 2>/dev/null; then
         # Build a compact ✅✅⬚⬚⬚ visual (max 12 cells to keep line short)
         PLAN_BAR=""
@@ -516,7 +517,10 @@ if [ "$FLOW_TYPE" = "full" ]; then
       fi
       ;;
     verification)
-      [ "$TESTS_PASSED" = "true" ] && [ "$LINT_CLEAN" = "true" ] && NEXT="→ capture" || NEXT="ejecutar tests y lint"
+      [ "$TESTS_PASSED" = "true" ] && [ "$LINT_CLEAN" = "true" ] && NEXT="→ socratic_review" || NEXT="ejecutar tests y lint"
+      ;;
+    socratic_review)
+      NEXT="generar 3+ preguntas adversariales en evidence.socratic_questions"
       ;;
     capture)
       [ -n "$EXEC_LOG" ] && NEXT="→ retrospective" || NEXT="escribir execution log"

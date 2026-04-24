@@ -128,19 +128,20 @@ cat > "$TEST_LOG" << 'LOGEOF'
 ## Implementation
 Did some stuff.
 ## Lessons
-- First lesson about the implementation that was educational and informative for the team overall
-- Second lesson about workflow that revealed gaps worth documenting for future reference and improvement
-- Third lesson about testing patterns discovered during this implementation cycle that we should remember
+- First lesson: the DDD boundary between Domain and Infrastructure layers held up well for this change
+- Second lesson about workflow coupling that revealed gaps worth documenting for future reference and improvement
+- Third lesson about architectural patterns discovered during this implementation cycle that we should remember
 LOGEOF
 
-PHASES=("consult" "brainstorming" "planning" "implementation" "verification" "capture" "retrospective" "finalize")
+PHASES=("consult" "brainstorming" "planning" "implementation" "verification" "socratic_review" "capture" "retrospective" "finalize")
 ALL_OK=true
 for p in "${PHASES[@]}"; do
   case "$p" in
     brainstorming) jq '.evidence.decisions_read = true | .evidence.logs_scanned = true' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE" ;;
     planning) jq --arg sp "$TEST_SPEC" '.evidence = (.evidence + {"user_turns": 3, "alternatives_proposed": true, "user_approved": true, "spec_path": $sp})' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE" ;;
     implementation) jq --arg pp "$TEST_PLAN" '.evidence.plan_path = $pp' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE" ;;
-    capture) jq '.evidence.tests_passed = true | .evidence.lint_clean = true' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE" ;;
+    socratic_review) jq '.evidence.tests_passed = true | .evidence.lint_clean = true' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE" ;;
+    capture) jq '.evidence.socratic_questions = ["Does this refactor respect the DDD boundary between Domain and Infrastructure layers?","Does the new pattern follow the endorsed approach documented in backend/CLAUDE.md?","What tradeoff did we accept on coverage versus implementation simplicity?"]' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE" ;;
     retrospective) jq --arg lp "$TEST_LOG" '.evidence.execution_log_path = $lp' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE" ;;
     finalize) jq '.evidence.retrospective_shown = true' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE" ;;
   esac
@@ -156,7 +157,7 @@ FINAL_PHASE=$(jq -r '.current_phase' "$STATE_FILE")
 assert_eq "Ends at finalize" "finalize" "$FINAL_PHASE"
 
 HISTORY_LEN=$(jq '.phase_history | length' "$STATE_FILE")
-assert_eq "History has 8 entries" "8" "$HISTORY_LEN"
+assert_eq "History has 9 entries" "9" "$HISTORY_LEN"
 
 rm -f "$TEST_SPEC" "$TEST_PLAN" "$TEST_LOG"
 
@@ -166,7 +167,7 @@ reset_full_flow
 "$ADVANCE" consult > /dev/null 2>&1
 cp "$STATE_FILE" "$SNAPSHOT"
 # Fabricate history
-jq '.phase_history = ["consult","brainstorming","planning","implementation","verification","capture","retrospective","finalize"]' \
+jq '.phase_history = ["consult","brainstorming","planning","implementation","verification","socratic_review","capture","retrospective","finalize"]' \
   "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE"
 run_controller_with "jq '.phase_history = [...]' .claude/session-state.json"
 REVERTED_LEN=$(jq '.phase_history | length' "$STATE_FILE")
