@@ -75,6 +75,13 @@ function formatDuration(min: number | null): string | null {
   return m === 0 ? `${h}h` : `${h}h ${m}min`;
 }
 
+// NOTE (consistency audit 2026-04-23): `formatKm` uses a small-value branch
+// (`< 10` → one decimal) and `toLocaleString('es-AR')` for larger values.
+// `formatWeight` uses tonnes for `kg >= 1000` and plain integers below. The
+// kg branch never reaches ≥1000 (tonnes take over first), so `toLocaleString`
+// is unnecessary here. The asymmetry in precision (km: 0.1 for small, weight:
+// integer kg) is a product decision — cargo weight in kg below 1000 doesn't
+// need sub-kg precision. Leaving as-is; revisit if UX requests decimal kg.
 function formatWeight(kg: number | null): string | null {
   if (kg === null) return null;
   if (kg >= 1000) return `${(kg / 1000).toFixed(1)}t`;
@@ -82,10 +89,19 @@ function formatWeight(kg: number | null): string | null {
 }
 
 function formatParcels(n: number | null): string | null {
-  if (n === null) return null;
+  if (n === null || n === 0) return null;
   return n === 1 ? '1 bulto' : `${n} bultos`;
 }
 
+// TZ ASYMMETRY (audit 2026-04-23 — see docs/superpowers/execution-logs/
+// 2026-04-23-three-followups-test5-agents-harness.md and the follow-up audit
+// from the same date): backend bins `deliveryHistogram` in SERVER local TZ
+// via PHP `->format('G')` on `date_default_timezone_get()`, while this
+// formatter parses ISO with `new Date(iso).getHours()` using CLIENT local TZ.
+// For users in a different TZ than the server, the sparkline bars and the
+// "Ventana" display are offset by the TZ delta. Full fix requires a product
+// decision (server-TZ wins with backend-provided label, or bin on the
+// frontend from raw timestamps). Do NOT change behavior here until decided.
 function formatTimeWindow(start: string | null, end: string | null): string | null {
   if (!start && !end) return null;
   const fmt = (iso: string) => {
