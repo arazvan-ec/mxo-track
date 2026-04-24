@@ -42,17 +42,30 @@ natural bias is to call framework changes "light" to skip brainstorming.
 - **Error output** includes a one-liner `jq` command to reclassify, so recovery
   is a single paste.
 
-### Agent permission model (adjacent to Layer A, not a gate)
+### Agent permission model (adjacent to Layer A)
 
-Orthogonal to the classification gate: the Claude Code sandbox blocks
-**background-agent writes to `.claude/**`** regardless of auto-approve settings
-or `dangerouslyDisableSandbox: true`. Reads work, writes (Write/Edit/Bash-heredoc)
-deny. This is a harness-level restriction, not a workflow hook. Harness edits
-(`.claude/hooks/**`, `.claude/settings*.json`, `.claude/scripts/**`) must run in
-the foreground session or under `isolation: "worktree"`. See `AGENTS.md` →
-"Agent Permission Model" for full dispatch guidance and the split-parallel-work
-mitigation pattern (evidence: execution log
-`2026-04-22-knowledge-module-and-flow-phases-sot.md`).
+Subagents inherit the main session's `session-state.json` — they read the same
+file. Writes to framework paths (including `.claude/**`) from subagents are
+subject to the same `classify-validator.sh` gate as the main session, and pass
+iff `interaction_classification ∈ {full, debug}`.
+
+A prior revision of this module (added 2026-04-22) claimed the Claude Code
+**sandbox** blocks subagent writes to `.claude/**` "regardless of auto-approve
+settings or `dangerouslyDisableSandbox: true`." **That diagnosis was wrong.**
+Empirical reproduction (2026-04-24) confirms that with the main classification
+set to `full`, subagents can freely Write/Edit inside `.claude/**`. The actual
+block is Layer A's classify-validator, not a sandbox policy. The misdiagnosis
+stemmed from a single data point in which the main session's classification
+had drifted to a non-`full`/`debug` value at dispatch time — the agent read
+the same state file and hit the same hook. See `AGENTS.md` →
+"Agent Permission Model" for the full dispatch rule-of-thumb table.
+
+**Practical consequence:** always confirm
+`jq '.interaction_classification' .claude/session-state.json` returns
+`"full"` or `"debug"` before dispatching a subagent that must edit
+`.claude/**`. The `pre-agent-check.sh` hook emits a warning when the
+agent prompt references `.claude/**` paths and the classification is
+insufficient.
 
 ### Layer B — Phase exit gates (phase-advance.sh)
 

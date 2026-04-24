@@ -166,53 +166,88 @@ by re-setting to the main agent's spec/plan paths.
 
 ## Agent Permission Model
 
-**Why:** Background agents inherit the main session's auto-approve settings but
-**cannot prompt for manual approval**. If a tool call requires confirmation, the
-agent receives "denied" and fails silently. This section catalogs the permission
-surfaces that bite most often.
+**Why:** Background agents inherit the main session's auto-approve settings and
+**share the parent's `session-state.json`** (same file, same path). They
+**cannot prompt for manual approval**; if a tool call requires confirmation
+the agent receives "denied" and fails silently.
 
-### Path restrictions for background agents
+### `.claude/**` writes from agents: conditional, not absolute
 
-**The sandbox blocks writes from background agents to `.claude/**` paths
-regardless of auto-approve settings.** Reads succeed; Write, Edit, and any
-Bash-based write (heredoc, `tee`, redirection) are denied. Setting
-`dangerouslyDisableSandbox: true` does NOT lift this restriction — it is a
-harness-level sandbox policy, not a per-call permission.
+Prior revisions of this section claimed "the sandbox blocks writes from
+background agents to `.claude/**` paths regardless of settings." **That
+diagnosis is wrong.** Empirical reproduction (2026-04-24) shows that with
+`interaction_classification ∈ {full, debug}`, subagents can Write/Edit
+freely inside `.claude/**`.
 
-Writes to `/tmp/`, the repo root, `docs/**`, `backend/**`, `frontend/**`, and
-every other non-`.claude/` path work normally.
+**The real block:** `classify-validator.sh` (PreToolUse `Edit|Write`).
 
-**Evidence source:** `docs/superpowers/execution-logs/2026-04-22-knowledge-module-and-flow-phases-sot.md`
-documented the first time the orchestrator discovered this the hard way — a
-background agent tasked with refactoring `.claude/hooks/**` failed every write
-attempt before we realized the sandbox was the cause.
+- **What it does:** blocks edits to framework paths matching
+  `^(\.claude/|scripts/|backend/src/|backend/templates/|backend/config/|backend/migrations/|backend/tests/|frontend/src/|ml-service/|docker/)`
+  when `interaction_classification` is any of `micro`, `light`, `explore`,
+  `informational`, `null`, or unset.
+- **Carve-outs:** `docs/*`, `*.md`, `/tmp/*`, `.claude/session-state.json`
+  always pass.
+- **Bypass:** `SKIP_CLASSIFY_GATE=1` on the offending call, with a decision
+  log entry required.
+
+**Why the earlier misdiagnosis persisted for a day:** the 2026-04-22
+background agent that failed was dispatched while the main session was in
+a transient state whose classification was not `full`/`debug` — possibly
+an auto-reset between problems in a multi-problem flow. The subagent read
+the same `session-state.json` the main saw and was blocked by the same
+hook. The orchestrator (me) generalized one data point to "the sandbox
+blocks all `.claude/**` agent writes," which was then copy-pasted into
+this document and into `docs/knowledge/workflow-engine.md`. Both are now
+being corrected.
 
 ### Consequences for dispatch
 
-- **Docs-only tasks** (`docs/**`, repo-root `*.md` including `AGENTS.md` and
-  `CLAUDE.md`, `backend/**`, `frontend/**`, `ml-service/**`): dispatch to a
-  background agent normally.
-- **Harness tasks** (`.claude/hooks/**`, `.claude/settings*.json`, `.claude/scripts/**`,
-  or any path under `.claude/` the agent must modify): do NOT dispatch to a
-  background agent. Two alternatives:
-  1. **Foreground edit** — do the change directly in the main session.
-  2. **Worktree isolation** — dispatch with `isolation: "worktree"`. The worktree
-     operates on a clone outside the sandboxed `.claude/` of the main repo, so
-     writes succeed; the orchestrator merges the result back.
-- **Mid-task harness surprise** — if a background agent reports "permission
-  denied" on a `.claude/` write it didn't expect to make, accept the partial
-  result and finish the harness portion in the foreground. Do not retry the
-  agent with the same prompt; it will fail identically.
+- **All paths, agents included:** writes to framework paths (including
+  `.claude/**`) succeed iff the main session's `interaction_classification`
+  is `full` or `debug` at dispatch time. Everything else is blocked by
+  `classify-validator.sh`.
+- **Set classification first.** Before dispatching a subagent that must
+  touch framework paths, verify:
+  ```bash
+  jq -r '.interaction_classification' .claude/session-state.json
+  # Expect: "full" or "debug"
+  ```
+  If not, reclassify before dispatch.
+- **Carve-outs are safe for any classification:** `docs/**`, repo-root
+  `*.md`, `AGENTS.md`, `CLAUDE.md`, `/tmp/**`, and the session-state file
+  itself.
+- **If a mid-task `.claude/` write fails in a subagent:** investigate the
+  classification, not the agent. Usually the fix is to reclassify in main,
+  then retry the dispatch.
+
+### `pre-agent-check.sh` — pre-dispatch guard
+
+Registered for the `Agent` PreToolUse matcher. Current behavior (2026-04-24):
+
+1. Deny Agent dispatch when the repo has uncommitted changes (historical).
+2. **NEW:** Warn when the agent prompt references `.claude/**` paths AND the
+   main classification is insufficient (`∉ {full, debug}`). The warning
+   points to the classification command and lists the affected paths.
 
 ### Mitigation pattern: split parallel work by path surface
 
-When a single interaction touches both docs/source and `.claude/` harness files,
-**split the work so `.claude/**` edits live in the foreground while pure
-docs/source edits run concurrently as background agents**. Example from
-2026-04-22: Problem A (knowledge module refactor under `docs/`) ran as a
-subagent; Problem B (phase-advance refactor under `.claude/hooks/`) ran in the
-foreground. The two finished in roughly the time of the longer one because
-neither blocked the other.
+The legacy "split so `.claude/**` lives in foreground" pattern is still
+useful when the classification is deliberately kept low (e.g., an
+`explore` session that happens to need an AGENTS.md edit). When the flow
+is genuinely `full` or `debug`, the pattern is no longer necessary —
+dispatch freely across surfaces.
+
+**Rule of thumb:**
+| Main classification | Dispatch `.claude/` work to subagent? |
+|---|---|
+| `full` / `debug` | ✅ Yes |
+| `micro` / `light` / `explore` / `informational` / null | ❌ Do it in foreground or reclassify |
+
+**Evidence sources:**
+- `docs/superpowers/execution-logs/2026-04-24-workflow-enforcement-layers-CHFIJ.md`
+  (this correction, 2026-04-24)
+- `docs/superpowers/execution-logs/2026-04-22-knowledge-module-and-flow-phases-sot.md`
+  (the original misdiagnosed incident)
 
 ---
 
