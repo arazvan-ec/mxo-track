@@ -7,6 +7,7 @@ namespace App\Tests\Unit\Controller\Admin;
 use App\Controller\Api\Admin\RouteListApiController;
 use App\Domain\Route\Model\Route;
 use App\Domain\Route\Model\RouteStop;
+use App\Domain\Route\Repository\RouteStopRepositoryInterface;
 use App\Entity\User;
 use App\Enum\RouteStatus;
 use App\Enum\RouteStopStatus;
@@ -25,16 +26,10 @@ use Symfony\Component\HttpFoundation\Request;
 /**
  * Unit tests for the admin routes list endpoint's enriched DTO projection.
  *
- * The controller uses EntityManagerInterface::createQueryBuilder() four times:
- *   1. Data list (Route + joins)
- *   2. Count
- *   3. stopCounts aggregation
- *   4. nextStops (min PENDING sequence per route)  [NEW]
- *   5. nextStops hydration (full RouteStop by (route, sequence))  [NEW]
- *   6. deliveredAt histogram source (today's deliveries per route) [NEW]
- *
- * Call order is deterministic inside list(); the test queues return values
- * in that order.
+ * The controller now depends on RouteStopRepositoryInterface for all stop-level
+ * aggregations (counts, next pending stop, today's delivery histogram). The EM
+ * is only used for the two route-level queries (list + count). Tests mock the
+ * repository directly rather than scripting DQL result rows.
  */
 #[CoversClass(RouteListApiController::class)]
 final class RouteListApiControllerTest extends TestCase
@@ -83,21 +78,8 @@ final class RouteListApiControllerTest extends TestCase
         $ref->setValue($entity, $id);
     }
 
-    private function makeStop(Route $route, int $seq, string $address, RouteStopStatus $status = RouteStopStatus::PENDING): RouteStop
-    {
-        $stop = new RouteStop($route, $seq, $address);
-        $stop->initializePublicId();
-        $this->setId($stop, (string) (1000 + $seq));
-        if ($status === RouteStopStatus::DELIVERED) {
-            $stop->markDelivered();
-        }
-        return $stop;
-    }
-
     /**
-     * Builds a chainable QueryBuilder double that returns self for fluent calls
-     * and a Query double whose getResult()/getSingleScalarResult() yield the
-     * provided values.
+     * Builds a chainable QueryBuilder double for the route list + count pair.
      *
      * @param list<mixed>|scalar|null $result
      */
@@ -137,8 +119,7 @@ final class RouteListApiControllerTest extends TestCase
     }
 
     /**
-     * Script an EntityManager whose createQueryBuilder() returns a queued
-     * series of QueryBuilder doubles in order.
+     * EntityManager mock scripted for the 2 route-level queries: list + count.
      *
      * @param list<QueryBuilder> $builders
      */
@@ -156,13 +137,29 @@ final class RouteListApiControllerTest extends TestCase
     }
 
     /**
+     * Repository mock with scripted returns for the 3 aggregation methods.
+     *
+     * @param array<string, array{total:int, delivered:int}> $counts
+     * @param array<string, array{sequence:int, address:string, recipientName:?string, windowStart:?string, windowEnd:?string}> $nextStops
+     * @param array<string, list<int>> $histograms
+     */
+    private function repo(array $counts = [], array $nextStops = [], array $histograms = []): RouteStopRepositoryInterface
+    {
+        $repo = $this->createMock(RouteStopRepositoryInterface::class);
+        $repo->method('countsByRoutes')->willReturn($counts);
+        $repo->method('findNextPendingStopsByRoutes')->willReturn($nextStops);
+        $repo->method('findDeliveryHistogramsByRoutes')->willReturn($histograms);
+        return $repo;
+    }
+
+    /**
      * Anonymous subclass that skips AbstractController->json()'s container needs.
      */
-    private function controller(EntityManagerInterface $em): RouteListApiController
+    private function controller(EntityManagerInterface $em, RouteStopRepositoryInterface $repo): RouteListApiController
     {
         $applier = $this->createMock(ListFilterApplier::class);
 
-        return new class ($em, $applier) extends RouteListApiController {
+        return new class ($em, $applier, $repo) extends RouteListApiController {
             protected function json(mixed $data, int $status = 200, array $headers = [], array $context = []): JsonResponse
             {
                 return new JsonResponse($data, $status, $headers);
@@ -195,14 +192,12 @@ final class RouteListApiControllerTest extends TestCase
         ]);
 
         $em = $this->emWithQueue([
-            $this->qb([$route]),                                  // data list
-            $this->qb('1'),                                       // count
-            $this->qb([['routeId' => '1', 'total' => '0', 'delivered' => '0']]), // stopCounts
-            $this->qb([]),                                        // nextStops min
-            $this->qb([]),                                        // histogram source
+            $this->qb([$route]),   // data list
+            $this->qb('1'),        // count
         ]);
+        $repo = $this->repo(counts: ['1' => ['total' => 0, 'delivered' => 0]]);
 
-        $response = $this->controller($em)->list(new Request());
+        $response = $this->controller($em, $repo)->list(new Request());
 
         $item = $this->decodeFirstItem($response);
         self::assertSame(87.4, $item['totalDistanceKm']);
@@ -216,24 +211,22 @@ final class RouteListApiControllerTest extends TestCase
     {
         $route = $this->makeRoute(['id' => '1']);
 
-        $stopSeq2 = $this->makeStop($route, 2, 'Av. Libertador 1234', RouteStopStatus::PENDING);
-        $stopSeq2->setRecipientName('Juan Pérez');
-        $stopSeq2->setDeliveryWindowStart(new DateTimeImmutable('2026-04-21T11:00:00-03:00'));
-        $stopSeq2->setDeliveryWindowEnd(new DateTimeImmutable('2026-04-21T13:00:00-03:00'));
-
         $em = $this->emWithQueue([
             $this->qb([$route]),
             $this->qb('1'),
-            $this->qb([['routeId' => '1', 'total' => '3', 'delivered' => '1']]),
-            // min-pending-sequence per route: route 1 -> sequence 2
-            $this->qb([['routeId' => '1', 'minSeq' => '2']]),
-            // hydration of those (route, sequence) pairs: return the full RouteStop
-            $this->qb([$stopSeq2]),
-            // histogram source
-            $this->qb([]),
         ]);
+        $repo = $this->repo(
+            counts: ['1' => ['total' => 3, 'delivered' => 1]],
+            nextStops: ['1' => [
+                'sequence' => 2,
+                'address' => 'Av. Libertador 1234',
+                'recipientName' => 'Juan Pérez',
+                'windowStart' => '2026-04-21T11:00:00-03:00',
+                'windowEnd' => '2026-04-21T13:00:00-03:00',
+            ]],
+        );
 
-        $response = $this->controller($em)->list(new Request());
+        $response = $this->controller($em, $repo)->list(new Request());
         $item = $this->decodeFirstItem($response);
 
         self::assertIsArray($item['nextStop']);
@@ -249,29 +242,22 @@ final class RouteListApiControllerTest extends TestCase
     {
         $route = $this->makeRoute(['id' => '1']);
 
-        $today = new DateTimeImmutable('today');
-        $deliveredAt1 = $today->setTime(10, 15);
-        $deliveredAt2 = $today->setTime(10, 45);
-        $deliveredAt3 = $today->setTime(14, 0);
-
         $em = $this->emWithQueue([
             $this->qb([$route]),
             $this->qb('1'),
-            $this->qb([['routeId' => '1', 'total' => '3', 'delivered' => '3']]),
-            $this->qb([]), // no pending stops
-            // Histogram source: rows with routeId + deliveredAt; NB: controller
-            // applies a `DATE(s.deliveredAt) = CURRENT_DATE` filter in DQL, so
-            // by the time the result reaches the binning code "yesterday" rows
-            // never appear here. The binning logic itself only has to cope
-            // with today-only timestamps.
-            $this->qb([
-                ['routeId' => '1', 'deliveredAt' => $deliveredAt1],
-                ['routeId' => '1', 'deliveredAt' => $deliveredAt2],
-                ['routeId' => '1', 'deliveredAt' => $deliveredAt3],
-            ]),
         ]);
+        // The repository is the binning boundary; its return value is already
+        // a 24-element array. This test asserts the controller faithfully
+        // forwards it into the response.
+        $expected = array_fill(0, 24, 0);
+        $expected[10] = 2;
+        $expected[14] = 1;
+        $repo = $this->repo(
+            counts: ['1' => ['total' => 3, 'delivered' => 3]],
+            histograms: ['1' => $expected],
+        );
 
-        $response = $this->controller($em)->list(new Request());
+        $response = $this->controller($em, $repo)->list(new Request());
         $item = $this->decodeFirstItem($response);
 
         self::assertIsArray($item['deliveryHistogram']);
@@ -292,12 +278,10 @@ final class RouteListApiControllerTest extends TestCase
         $em = $this->emWithQueue([
             $this->qb([$route]),
             $this->qb('1'),
-            $this->qb([['routeId' => '1', 'total' => '0', 'delivered' => '0']]),
-            $this->qb([]),
-            $this->qb([]),
         ]);
+        $repo = $this->repo(counts: ['1' => ['total' => 0, 'delivered' => 0]]);
 
-        $response = $this->controller($em)->list(new Request());
+        $response = $this->controller($em, $repo)->list(new Request());
         $item = $this->decodeFirstItem($response);
 
         self::assertArrayHasKey('totalDistanceKm', $item);
@@ -318,12 +302,10 @@ final class RouteListApiControllerTest extends TestCase
         $em = $this->emWithQueue([
             $this->qb([$route]),
             $this->qb('1'),
-            $this->qb([['routeId' => '1', 'total' => '3', 'delivered' => '3']]),
-            $this->qb([]), // no min-pending rows
-            $this->qb([]), // histogram
         ]);
+        $repo = $this->repo(counts: ['1' => ['total' => 3, 'delivered' => 3]]);
 
-        $response = $this->controller($em)->list(new Request());
+        $response = $this->controller($em, $repo)->list(new Request());
         $item = $this->decodeFirstItem($response);
 
         self::assertArrayHasKey('nextStop', $item);
