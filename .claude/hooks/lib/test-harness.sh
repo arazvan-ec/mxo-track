@@ -24,7 +24,16 @@ init_harness() {
   PASS=0
   FAIL=0
   TEST_TMPDIR=$(mktemp -d)
-  trap '[ -n "$TEST_TMPDIR" ] && [ -d "$TEST_TMPDIR" ] && rm -rf "$TEST_TMPDIR"' EXIT
+  # Preserve any existing EXIT trap and chain our cleanup after it.
+  # `trap -p EXIT` prints the current trap as a reusable command (or empty).
+  local existing
+  existing=$(trap -p EXIT 2>/dev/null | sed -nE "s/^trap -- '(.*)' EXIT$/\\1/p")
+  local cleanup='[ -n "$TEST_TMPDIR" ] && [ -d "$TEST_TMPDIR" ] && rm -rf "$TEST_TMPDIR"'
+  if [ -n "$existing" ]; then
+    trap "$existing; $cleanup" EXIT
+  else
+    trap "$cleanup" EXIT
+  fi
 }
 
 pass() {
