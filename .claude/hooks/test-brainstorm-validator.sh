@@ -114,10 +114,32 @@ cat > "$PLAN4" <<'EOF'
 - **1b** · → files: b.ts
 EOF
 
+# ── Fixture 5: parenthesized legitimate list — should still detect paths ──
+PLAN5="$TEST_TMPDIR/plan5.md"
+cat > "$PLAN5" <<'EOF'
+# Plan
+
+### [parallel] Wave 1
+- **1a** · → files: (a.ts, b.ts)
+- **1b** · → files: (c.ts, a.ts)
+EOF
+
+# ── Fixture 6: bare filenames without extension (Makefile sentinel) ──
+PLAN6="$TEST_TMPDIR/plan6.md"
+cat > "$PLAN6" <<'EOF'
+# Plan
+
+### [parallel] Wave 1
+- **1a** · → files: Makefile
+- **1b** · → files: Makefile
+EOF
+
 echo "── brainstorm-validator parallel-conflict parser ──"
 assert_conflict_outcome "regression: real conflict on shared path → detected" "conflict" "$PLAN1"
 assert_conflict_outcome "baseline: disjoint paths → no conflict" "clean" "$PLAN2"
 assert_conflict_outcome "fix: two parenthesized annotations → no conflict" "clean" "$PLAN3"
 assert_conflict_outcome "fix: path + annotation mix → annotation ignored" "clean" "$PLAN4"
+assert_conflict_outcome "fix: parenthesized legitimate list → conflict detected on shared a.ts" "conflict" "$PLAN5"
+assert_conflict_outcome "fix: bare Makefile repeated → conflict detected via sentinel" "conflict" "$PLAN6"
 
 summary
