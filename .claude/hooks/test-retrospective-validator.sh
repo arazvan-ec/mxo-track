@@ -35,8 +35,9 @@ assert_passes() {
 setup_state() {
   local log_path="${1:-}"
   local retro_shown="${2:-true}"
+  local no_arch_concerns="${3:-false}"
   cat > "$TEST_STATE" << STATEEOF
-{"evidence":{"execution_log_path":"$log_path","retrospective_shown":$retro_shown}}
+{"evidence":{"execution_log_path":"$log_path","retrospective_shown":$retro_shown,"retrospective_no_architectural_concerns":$no_arch_concerns}}
 STATEEOF
 }
 
@@ -91,9 +92,9 @@ Did some stuff.
 
 ## Lessons
 
-- Router layout routes are the right pattern for shared chrome — should have been done when DualMenuShell was created
+- Router layout routes respect the boundary between shared chrome and page-specific logic — DDD-style separation we should have applied earlier
 - Workflow hooks need integration tests that simulate full session flows, not just unit tests per hook
-- The phase-transition-controller string matching is inherently fragile — consider a different approach for future enforcement
+- The phase-transition-controller string matching is architectural tech-debt — consider a different approach for future enforcement
 
 ## End
 LOGEOF
@@ -108,13 +109,37 @@ cat > "$TEST_LOG" << 'LOGEOF'
 ## Retrospectiva
 
 ### Estimación vs realidad
-La implementación fue rápida. Lo que NO anticipé fue el tiempo perdido luchando contra los hooks.
-El workflow se bloqueó a sí mismo en 4 puntos distintos, requiriendo workarounds diversos para continuar.
+La implementación fue rápida. Lo que NO anticipé fue el tiempo perdido luchando contra el coupling
+entre los hooks y phase-advance. El workflow se bloqueó a sí mismo en 4 puntos distintos debido a una
+architecture de gates demasiado estricta, requiriendo workarounds diversos para continuar.
 
 ## End
 LOGEOF
 setup_state "$TEST_LOG"
 assert_passes "passes with Spanish retrospectiva section" "$VALIDATOR" "$TEST_STATE"
+
+# Test 7 (Layer I): Lessons section exists with content >=100 chars but NO
+# architectural keywords AND no opt-out flag → block.
+echo "Test 7 (I): Lessons without architectural keywords and no opt-out"
+cat > "$TEST_LOG" << 'LOGEOF'
+# Execution Log
+
+## Lessons
+
+- Nice feature landed on schedule.
+- Happy with the user experience — the sparkline looks great in the expanded card.
+- Should plan more time for the final polish pass next sprint.
+- The release announcement got good feedback from stakeholders.
+
+## End
+LOGEOF
+setup_state "$TEST_LOG" "true" "false"
+assert_blocks "Layer I blocks lessons without arch keyword and no opt-out" "$VALIDATOR" "$TEST_STATE"
+
+# Test 8 (Layer I): Same lessons content but with opt-out flag → pass.
+echo "Test 8 (I): Lessons without keywords but opt-out flag set → pass"
+setup_state "$TEST_LOG" "true" "true"
+assert_passes "Layer I passes when opt-out flag set" "$VALIDATOR" "$TEST_STATE"
 
 # Cleanup
 rm -f "$TEST_STATE" "$TEST_LOG"

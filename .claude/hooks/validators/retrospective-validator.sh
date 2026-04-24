@@ -9,6 +9,7 @@ REPO="/home/user/mxo-track"
 
 LOG_PATH=$(jq -r '.evidence.execution_log_path // ""' "$STATE_FILE" 2>/dev/null || echo "")
 RETRO_SHOWN=$(jq -r '.evidence.retrospective_shown // false' "$STATE_FILE" 2>/dev/null || echo "false")
+NO_ARCH_CONCERNS=$(jq -r '.evidence.retrospective_no_architectural_concerns // false' "$STATE_FILE" 2>/dev/null || echo "false")
 
 # Resolve log file
 LOG_FULL=""
@@ -46,6 +47,18 @@ if [ -n "$LOG_FULL" ] && [ -f "$LOG_FULL" ]; then
   RETRO_SIZE=${#RETRO_CONTENT}
   if [ "$RETRO_SIZE" -lt 100 ]; then
     ERRORS="${ERRORS}- Seccion de retrospectiva demasiado corta ($RETRO_SIZE chars, minimo 100). Reflexiona sobre estimacion, blockers, y lecciones.\n"
+  fi
+
+  # 4. Layer I — architectural-concern content gate.
+  # Retrospectives without architectural lens miss DDD/coupling/boundary issues
+  # (see 2026-04-24 socratic audit of routes widget). Force the question by
+  # requiring one of the keywords, OR an explicit opt-out flag with the
+  # author's justification already in the Lessons section.
+  if [ "$NO_ARCH_CONCERNS" != "true" ]; then
+    ARCH_KEYWORDS='adversarial|prior.?art|DDD|boundary|coupling|architectural|endorsed|tech.?debt|architecture'
+    if ! echo "$RETRO_CONTENT" | grep -qiE "$ARCH_KEYWORDS"; then
+      ERRORS="${ERRORS}- I: Retrospectiva sin contenido arquitectonico. Menciona uno de: adversarial question, prior art, DDD, boundary, coupling, architectural concern, endorsed/tech-debt pattern; O declara set evidence.retrospective_no_architectural_concerns=true con justificacion en la seccion de Lessons.\n"
+    fi
   fi
 fi
 
