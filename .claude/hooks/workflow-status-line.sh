@@ -208,11 +208,8 @@ next_action() {
       local parts=""
       [ "$TESTS_PASSED" != "true" ] && parts="run tests"
       [ "$LINT_CLEAN" != "true" ] && parts="${parts:+$parts, }run lint"
-      [ -z "$parts" ] && parts="→ socratic_review"
+      [ -z "$parts" ] && parts="→ capture"
       echo "$parts"
-      ;;
-    socratic_review)
-      echo "generate 3+ adversarial questions in evidence.socratic_questions"
       ;;
     capture)
       [ -z "$EXEC_LOG" ] && echo "write execution log" || echo "→ retrospective"
@@ -334,13 +331,6 @@ phase_needs() {
     capture)
       [ -z "$EXEC_LOG" ] && echo " | Need: execution log"
       ;;
-    socratic_review)
-      local qcount
-      qcount=$(echo "$STATE" | jq -r '(.evidence.socratic_questions // []) | length' 2>/dev/null || echo "0")
-      if [ "$qcount" -lt 3 ]; then
-        echo " | Need: $((3 - qcount)) more adversarial question(s)"
-      fi
-      ;;
     finalize)
       [ -z "$BRANCH_STRATEGY" ] && echo " | Need: branch strategy"
       ;;
@@ -382,14 +372,14 @@ esac
 
 # Full-flow: 8 phases with hierarchical timeline
 if [ "$FLOW_TYPE" = "full" ]; then
-  PHASES=("consult" "brainstorming" "planning" "implementation" "verification" "socratic_review" "capture" "retrospective" "finalize")
-  PHASE_SHORT=("consult" "brainstorm" "planning" "impl" "verify" "socratic" "capture" "retro" "finalize")
+  PHASES=("consult" "brainstorming" "planning" "implementation" "verification" "capture" "retrospective" "finalize")
+  PHASE_SHORT=("consult" "brainstorm" "planning" "impl" "verify" "capture" "retro" "finalize")
   TOTAL=8
 
   # Handle null/undeclared phase
   if [ "$CURRENT_PHASE" = "null" ] || [ -z "$CURRENT_PHASE" ]; then
     { echo "📍 Pendiente — avanzar a consult"
-      echo "  ⬚ consult → brainstorm → planning → impl → verify → socratic → capture → retro → finalize"
+      echo "  ⬚ consult → brainstorm → planning → impl → verify → capture → retro → finalize"
     } | emit
     exit 0
   fi
@@ -513,7 +503,7 @@ if [ "$FLOW_TYPE" = "full" ]; then
   # ── Narration guard: reminder during active work phases ──
   NARRATION_GUARD=""
   case "$CURRENT_PHASE" in
-    implementation|verification|socratic_review|capture|retrospective|finalize)
+    implementation|verification|capture|retrospective|finalize)
       NARRATION_GUARD="  ⛔ No narrar proceso entre tools. Solo texto si: resultado concreto, cambio de fase, o decisión del usuario."
       ;;
   esac
@@ -536,7 +526,7 @@ if [ "$FLOW_TYPE" = "debug" ]; then
 
   # Determine current debug phase
   case "$CURRENT_PHASE" in
-    verification|socratic_review|capture|retrospective|finalize)
+    verification|capture|retrospective|finalize)
       DEBUG_CURRENT="$CURRENT_PHASE"
       DEBUG_INDEX=0
       for i in "${!DEBUG_PHASES[@]}"; do
@@ -598,7 +588,6 @@ if [ "$FLOW_TYPE" = "debug" ]; then
     pattern_wide) NEXT="busqueda patron-wide" ;;
     fix) NEXT="TDD fix + verificar" ;;
     verification) NEXT="tests + lint verdes" ;;
-    socratic_review) NEXT="generar 3+ preguntas adversariales en evidence.socratic_questions" ;;
     capture) NEXT="escribir execution log" ;;
     retrospective) NEXT="presentar retro + set retrospective_shown=true" ;;
     finalize) NEXT="branch strategy + push" ;;

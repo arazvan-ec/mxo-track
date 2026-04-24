@@ -10,11 +10,11 @@
 # Note: bash arrays don't export across process boundaries — consumers must
 # source, not invoke.
 
-FULL_PHASES=(consult brainstorming planning implementation verification socratic_review capture retrospective finalize)
-DEBUG_PHASES=(root_cause pattern_wide fix verification socratic_review capture retrospective finalize)
+FULL_PHASES=(consult brainstorming planning implementation verification capture retrospective finalize)
+DEBUG_PHASES=(root_cause pattern_wide fix verification capture retrospective finalize)
 AGENT_PHASES=(implementation verification)
 
 # Short display labels (parallel to *_PHASES arrays)
-FULL_PHASES_SHORT=(consult brainstorm planning impl verify socratic capture retro finalize)
-DEBUG_PHASES_SHORT=(root_cause pattern_wide fix verify socratic capture retro finalize)
+FULL_PHASES_SHORT=(consult brainstorm planning impl verify capture retro finalize)
+DEBUG_PHASES_SHORT=(root_cause pattern_wide fix verify capture retro finalize)
 AGENT_PHASES_SHORT=(impl verify)

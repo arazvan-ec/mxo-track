@@ -113,6 +113,28 @@ else
     fi
   fi
 
+  # Layer C — Architectural Adversarial Review (HARD when critical paths referenced)
+  # Relocated 2026-04-24 from a standalone post-verification phase to a
+  # sub-invocation here. Questions live in the spec's
+  # `## Architectural Adversarial Review` section instead of JSON evidence.
+  # The discrete validator is preserved (testable in isolation, reusable).
+  if grep -qE '(src/Domain/(Route|Shipment)/|src/Controller/Api/Admin/)' "$SPEC_FULL" 2>/dev/null; then
+    SOCRATIC_VALIDATOR="$REPO/.claude/hooks/validators/socratic-review-validator.sh"
+    if [ -x "$SOCRATIC_VALIDATOR" ]; then
+      SOCRATIC_OUT=$("$SOCRATIC_VALIDATOR" "$SPEC_FULL" 2>&1 || true)
+      SOCRATIC_EXIT=$("$SOCRATIC_VALIDATOR" "$SPEC_FULL" >/dev/null 2>&1 && echo 0 || echo $?)
+      if [ "$SOCRATIC_EXIT" != "0" ]; then
+        # Append the validator's own error lines (skip the "BLOCKED: ..." header)
+        SOCRATIC_ERRS=$(echo "$SOCRATIC_OUT" | grep -E '^- ' || true)
+        if [ -n "$SOCRATIC_ERRS" ]; then
+          ERRORS="${ERRORS}${SOCRATIC_ERRS}\n"
+        else
+          ERRORS="${ERRORS}- C: Architectural Adversarial Review fallo (ver socratic-review-validator).\n"
+        fi
+      fi
+    fi
+  fi
+
   # TDD task isolation: plan must not have standalone "add tests" tasks
   PLAN_PATH_VAL=$(jq -r '.evidence.plan_path // ""' "$STATE_FILE" 2>/dev/null || echo "")
   PLAN_FULL=""

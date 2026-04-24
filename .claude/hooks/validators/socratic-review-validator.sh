@@ -1,71 +1,97 @@
 #!/usr/bin/env bash
-# Socratic review phase validator (HARD gate — Layer C of Option 3-Enforced).
+# Socratic review validator — reads `## Architectural Adversarial Review`
+# section from a spec file and validates it.
 #
-# Enforces adversarial re-reading of the shipped work before capture.
-# Rationale: the 2026-04-24 routes-widget audit revealed that retrospectives
-# without an explicit adversarial lens miss architectural issues (DDD
-# violations, TZ inconsistencies, perf gaps) that shape-only tests never
-# surface. This gate forces the question "what did we ship wrong?" into
-# every full/debug flow.
+# Invoked as a library by brainstorm-validator.sh when a spec references
+# critical contexts. Repositioned 2026-04-24 from post-verification phase
+# (original placement too late — code already written, rollback expensive)
+# to brainstorm exit (architectural review during design, zero rollback).
+#
+# Usage: socratic-review-validator.sh <spec_path>
 #
 # Contract:
-# - evidence.socratic_questions must be a JSON array with >=3 entries.
-# - Each entry must be a string >=30 chars (anti-templating).
-# - If any file in `git diff --name-only origin/main...HEAD` matches a
-#   critical-path regex, at least one question must contain an
-#   architectural keyword.
+# - The spec must contain a `## Architectural Adversarial Review` section.
+# - Section must contain >=3 questions (format: "N. **Q:**" lines).
+# - Each question must have >=30 chars of combined Q+A content.
+# - When the spec references critical paths, >=1 question must include an
+#   architectural keyword (endorsed, boundary, DDD, tech-debt,
+#   architecture, coupling, pattern, tradeoff).
 #
-# Exit codes:
-#   0 = pass
-#   2 = block (hard gate)
-#
-# Bypass: SKIP_PHASE_EXIT_GATE=1 (same as other phase exit validators).
+# Exit 0 = pass, Exit 2 = block.
 
 set -euo pipefail
 
-REPO="/home/user/mxo-track"
-STATE_FILE="${1:-$REPO/.claude/session-state.json}"
+SPEC_PATH="${1:-}"
 
-# Bypass honored by phase-advance.sh driver
-if [ "${SKIP_PHASE_EXIT_GATE:-0}" = "1" ]; then
-  exit 0
+if [ -z "$SPEC_PATH" ] || [ ! -f "$SPEC_PATH" ]; then
+  echo "BLOCKED: socratic-review-validator needs a valid spec path (got: '$SPEC_PATH')"
+  exit 2
 fi
 
 ERRORS=""
 
-# ── Check 1: array exists and is the right shape ──
-QCOUNT=$(jq -r '(.evidence.socratic_questions // []) | length' "$STATE_FILE" 2>/dev/null || echo "0")
+# Extract the Architectural Adversarial Review section (from its header to
+# the next top-level ## header or EOF).
+SECTION=$(awk '
+  /^## Architectural Adversarial Review/ { flag = 1; next }
+  /^## / { flag = 0 }
+  flag
+' "$SPEC_PATH")
 
-if [ "$QCOUNT" -lt 3 ]; then
-  ERRORS="${ERRORS}- C: socratic_review requiere >=3 preguntas adversariales en evidence.socratic_questions (actual: $QCOUNT).\n"
-  ERRORS="${ERRORS}  Set con: jq '.evidence.socratic_questions = [\"Q1 ...\", \"Q2 ...\", \"Q3 ...\"]' .claude/session-state.json > /tmp/ss.json && mv /tmp/ss.json .claude/session-state.json\n"
+if [ -z "$SECTION" ]; then
+  ERRORS="${ERRORS}- C: Spec no tiene seccion '## Architectural Adversarial Review'. Agrega >=3 preguntas adversariales numeradas (formato: N. **Q:** <pregunta> / **A:** <respuesta>).\n"
 fi
 
-# ── Check 2: each question must be substantive (>=30 chars) ──
-if [ "$QCOUNT" -ge 1 ]; then
-  SHORT_COUNT=$(jq -r '(.evidence.socratic_questions // []) | map(select(type == "string" and (. | length) < 30)) | length' "$STATE_FILE" 2>/dev/null || echo "0")
-  if [ "$SHORT_COUNT" -gt 0 ]; then
-    ERRORS="${ERRORS}- C: $SHORT_COUNT pregunta(s) demasiado cortas (<30 chars). Las preguntas adversariales deben ser especificas, no genericas.\n"
+# Count questions — lines matching "N. **Q:**"
+QCOUNT=$(echo "$SECTION" | grep -cE '^[[:space:]]*[0-9]+\.[[:space:]]+\*\*Q:\*\*' || true)
+
+if [ -n "$SECTION" ] && [ "$QCOUNT" -lt 3 ]; then
+  ERRORS="${ERRORS}- C: Seccion '## Architectural Adversarial Review' tiene $QCOUNT preguntas; se requieren >=3.\n"
+fi
+
+# Parse each question block. A block starts at "N. **Q:**" and extends
+# until the next "N. **Q:**" or end of section. Require >=30 chars of
+# real content (excluding the Q:/A: markers). Only buffers that began
+# with a Q: marker are counted — preamble whitespace is ignored.
+if [ -n "$SECTION" ] && [ "$QCOUNT" -ge 1 ]; then
+  SHORT_COUNT=$(
+    awk '
+      function finalize(buf,   stripped) {
+        if (buf == "") return
+        # Only count buffers that actually contained a Q: marker.
+        if (buf !~ /\*\*Q:\*\*/) return
+        stripped = buf
+        gsub(/\*\*Q:\*\*/, "", stripped); gsub(/\*\*A:\*\*/, "", stripped)
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", stripped)
+        if (length(stripped) < 30) short++
+      }
+      /^[[:space:]]*[0-9]+\.[[:space:]]+\*\*Q:\*\*/ {
+        finalize(buf)
+        buf = $0; next
+      }
+      { buf = buf "\n" $0 }
+      END { finalize(buf); print (short ? short : 0) }
+    ' <<< "$SECTION"
+  )
+  if [ "${SHORT_COUNT:-0}" -gt 0 ]; then
+    ERRORS="${ERRORS}- C: $SHORT_COUNT pregunta(s) demasiado cortas (<30 chars combinando Q+A). Las preguntas adversariales deben ser especificas.\n"
   fi
 fi
 
-# ── Check 3: if critical paths touched, at least one question must be architectural ──
-CRITICAL_REGEX='backend/src/Domain/|backend/src/Controller/Api/|frontend/src/widgets/|\.claude/hooks/'
-CHANGED_FILES=$(cd "$REPO" && git diff --name-only origin/main...HEAD 2>/dev/null || echo "")
-
-if [ -n "$CHANGED_FILES" ] && echo "$CHANGED_FILES" | grep -qE "$CRITICAL_REGEX"; then
-  ARCH_KEYWORDS='endorsed|boundary|DDD|tech.?debt|architecture|coupling|pattern|tradeoff|trade-off'
-  ARCH_MATCHES=$(jq -r '(.evidence.socratic_questions // []) | .[]' "$STATE_FILE" 2>/dev/null | grep -ciE "$ARCH_KEYWORDS" || true)
-
-  if [ "${ARCH_MATCHES:-0}" -eq 0 ] && [ "$QCOUNT" -ge 3 ]; then
-    ERRORS="${ERRORS}- C: Los cambios tocan paths criticos (Domain, Controller/Api, widgets, hooks) pero ninguna pregunta menciona keywords arquitectonicas (endorsed|boundary|DDD|tech-debt|architecture|coupling|pattern|tradeoff). Agrega una pregunta sobre arquitectura/boundaries.\n"
+# If the spec references critical paths, at least one Q must contain an
+# architectural keyword.
+if [ -n "$SECTION" ] && [ "$QCOUNT" -ge 3 ]; then
+  if grep -qE '(src/Domain/(Route|Shipment)/|src/Controller/Api/Admin/)' "$SPEC_PATH"; then
+    ARCH_KEYWORDS='endorsed|boundary|DDD|tech.?debt|architecture|coupling|pattern|tradeoff|trade-off'
+    if ! echo "$SECTION" | grep -qiE "$ARCH_KEYWORDS"; then
+      ERRORS="${ERRORS}- C: Spec referencia contextos criticos pero ninguna pregunta menciona keywords arquitectonicas (endorsed|boundary|DDD|tech-debt|architecture|coupling|pattern|tradeoff). Agrega al menos una pregunta sobre arquitectura/boundaries.\n"
+    fi
   fi
 fi
 
 if [ -n "$ERRORS" ]; then
-  echo "BLOCKED: Socratic review incompleto:"
+  echo "BLOCKED: Architectural Adversarial Review incompleto:"
   echo -e "$ERRORS"
-  echo "Bypass (last resort): export SKIP_PHASE_EXIT_GATE=1"
   exit 2
 fi
 

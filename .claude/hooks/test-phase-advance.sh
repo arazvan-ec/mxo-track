@@ -194,7 +194,7 @@ LOGEOF
 reset_state "full"
 echo "Test 11: Full legal sequence walk (with artifacts)"
 ALL_PASS=true
-PHASES=("consult" "brainstorming" "planning" "implementation" "verification" "socratic_review" "capture" "retrospective" "finalize")
+PHASES=("consult" "brainstorming" "planning" "implementation" "verification" "capture" "retrospective" "finalize")
 for phase in "${PHASES[@]}"; do
   # Set required evidence before each gated transition
   case "$phase" in
@@ -216,17 +216,9 @@ for phase in "${PHASES[@]}"; do
     verification)
       # implementation validator: plan exists (HARD), TDD (SOFT — exit 1 allowed)
       ;;
-    socratic_review)
+    capture)
       # verification validator: tests_passed + lint_clean
       jq '.evidence.tests_passed = true | .evidence.lint_clean = true' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE"
-      ;;
-    capture)
-      # socratic_review validator (Layer C): 3+ substantive questions
-      jq '.evidence.socratic_questions = [
-        "Does this refactor respect the DDD boundary between Domain and Infrastructure layers?",
-        "Does the new pattern follow the endorsed approach for phase validators in this codebase?",
-        "What tradeoff did we accept on coverage versus implementation simplicity for this change?"
-      ]' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE"
       ;;
     retrospective)
       # capture validator: execution_log_path (SOFT — exit 1 allowed)
@@ -268,11 +260,11 @@ fi
 
 # Test 10: phase_history length = 8 after full walk
 HISTORY_LEN=$(jq '.phase_history | length' "$STATE_FILE")
-if [ "$HISTORY_LEN" -eq 9 ]; then
+if [ "$HISTORY_LEN" -eq 8 ]; then
   echo "  ✅ phase_history length = 8"
   PASS=$((PASS + 1))
 else
-  echo "  ❌ phase_history length = $HISTORY_LEN (expected 9)"
+  echo "  ❌ phase_history length = $HISTORY_LEN (expected 8)"
   FAIL=$((FAIL + 1))
 fi
 

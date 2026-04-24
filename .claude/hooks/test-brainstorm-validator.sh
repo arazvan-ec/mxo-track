@@ -202,7 +202,8 @@ Padding padding padding padding padding padding padding padding padding padding.
 Padding padding padding padding padding padding padding padding padding padding.
 EOF
 
-# ── Fixture H2: spec references Route AND has Prior Art Audit with ❌ tech-debt ──
+# ── Fixture H2: spec references Route AND has Prior Art Audit with ❌ tech-debt
+#    AND has Architectural Adversarial Review (required by Layer C sub-invocation) ──
 SPEC_H2="$TEST_TMPDIR/spec-h2.md"
 cat > "$SPEC_H2" <<'EOF'
 # Spec
@@ -222,6 +223,17 @@ Approach A vs Approach B. Trade-off discussed.
 | Path | Endorsed? |
 |---|---|
 | backend/src/Domain/Route/RouteOptimizer.php | ❌ tech-debt |
+
+## Architectural Adversarial Review
+
+1. **Q:** Does this refactor respect the DDD boundary between Domain and Infrastructure layers?
+   **A:** Yes, the repository interface stays on the Domain side.
+
+2. **Q:** Does the new approach follow the endorsed Facade pattern documented in backend/CLAUDE.md?
+   **A:** Yes, the Application service composes Repository calls consistently.
+
+3. **Q:** What tradeoff did we accept on coverage versus simplicity for this iteration?
+   **A:** We skipped functional tests for this pass and accepted unit-mock coverage only.
 
 ## Omission Decisions
 
@@ -349,5 +361,100 @@ echo
 echo "── brainstorm-validator Layer J (graduation soft-check) ──"
 assert_eq "J1: known pattern (glass-overlay) → no warning"          "no-warn" "$(run_j_scenario "$SPEC_J1")"
 assert_eq "J2: unknown pattern (totally-made-up-pattern) → warning" "warn-j"  "$(run_j_scenario "$SPEC_J2")"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Layer C (sub-invocation of socratic-review-validator) — called from
+# brainstorm-validator when the spec references critical paths.
+# ─────────────────────────────────────────────────────────────────────────────
+# Helper: similar to run_h_scenario but looks for the C-layer error marker.
+run_c_scenario() {
+  local spec_path="$1"
+  local state_file="$TEST_TMPDIR/state-c.json"
+  cat > "$state_file" <<EOF
+{
+  "evidence": {
+    "user_turns": 3,
+    "alternatives_proposed": true,
+    "user_approved": true,
+    "spec_path": "$spec_path"
+  }
+}
+EOF
+  local output
+  output=$(bash "$VALIDATOR" "$state_file" 2>&1 || true)
+  if echo "$output" | grep -qE '^- C:'; then
+    echo "block-c"
+  else
+    echo "clean"
+  fi
+}
+
+# ── Fixture C1: critical path + Prior Art Audit + NO Architectural Adversarial Review → C blocks
+SPEC_C1="$TEST_TMPDIR/spec-c1.md"
+cat > "$SPEC_C1" <<'EOF'
+# Spec
+
+Touches backend/src/Domain/Route/Planner.php.
+
+## Approaches
+A vs B.
+
+## Existing Functionality Inventory
+- None.
+
+## Prior Art Audit
+| Path | Endorsed? |
+|---|---|
+| backend/src/Domain/Route/Planner.php | ❌ tech-debt |
+
+## Omission Decisions
+- None.
+
+Padding padding padding padding padding padding padding padding padding padding.
+Padding padding padding padding padding padding padding padding padding padding.
+Padding padding padding padding padding padding padding padding padding padding.
+EOF
+
+# ── Fixture C2: critical path + Prior Art Audit + valid Architectural Adversarial Review → pass
+SPEC_C2="$TEST_TMPDIR/spec-c2.md"
+cat > "$SPEC_C2" <<'EOF'
+# Spec
+
+Touches backend/src/Domain/Route/Planner.php.
+
+## Approaches
+A vs B.
+
+## Existing Functionality Inventory
+- None.
+
+## Prior Art Audit
+| Path | Endorsed? |
+|---|---|
+| backend/src/Domain/Route/Planner.php | ❌ tech-debt |
+
+## Architectural Adversarial Review
+
+1. **Q:** Does this refactor respect the DDD boundary between Domain and Infrastructure?
+   **A:** Yes, the Repository stays in Domain.
+
+2. **Q:** Does the approach match the endorsed Facade pattern for this subsystem?
+   **A:** Yes.
+
+3. **Q:** What tradeoff did we accept on test coverage versus simplicity?
+   **A:** Skipped functional tests for this iteration.
+
+## Omission Decisions
+- None.
+
+Padding padding padding padding padding padding padding padding padding padding.
+Padding padding padding padding padding padding padding padding padding padding.
+Padding padding padding padding padding padding padding padding padding padding.
+EOF
+
+echo
+echo "── brainstorm-validator Layer C (architectural review sub-invocation) ──"
+assert_eq "C1: critical path + no Architectural Adversarial Review → C blocks" "block-c" "$(run_c_scenario "$SPEC_C1")"
+assert_eq "C2: critical path + valid Architectural Adversarial Review → pass"  "clean"   "$(run_c_scenario "$SPEC_C2")"
 
 summary

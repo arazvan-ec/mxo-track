@@ -15,7 +15,7 @@ it, gates cannot enforce anything.
 ```jsonc
 {
   "flow_type": "micro|light|debug|full|explore|null",  // Declarar al clasificar interacción
-  "current_phase": "consult|brainstorming|planning|implementation|verification|socratic_review|capture|retrospective|finalize|null",
+  "current_phase": "consult|brainstorming|planning|implementation|verification|capture|retrospective|finalize|null",
   "interaction_id": 0,              // Incrementar al detectar scope change (nueva interacción)
   "last_work_summary": {            // Preservado automáticamente por session-start.sh al resetear por nuevo día
     "previous_date": "YYYY-MM-DD",
@@ -288,11 +288,10 @@ checks completion (current phase).
 | Fase | Evidencia requerida | Nivel |
 |------|---------------------|-------|
 | `consult` | `decisions_read` AND `logs_scanned` (hardened 2026-04-22 — was OR) | HARD |
-| `brainstorming` | `user_turns ≥ 1` (HARD) + SOFT warn if `< 3` + `alternatives_proposed` + `user_approved` + `spec_path` (archivo ≥500B) | MIXED |
+| `brainstorming` | `user_turns ≥ 1` (HARD) + SOFT warn if `< 3` + `alternatives_proposed` + `user_approved` + `spec_path` (archivo ≥500B); when spec references critical contexts: `## Prior Art Audit` (H) + `## Architectural Adversarial Review` (C, via sub-invocation); graduation check (J, SOFT) | MIXED |
 | `planning` | `plan_path` (archivo ≥300B con keywords) | HARD |
 | `implementation` | plan exists (HARD) + `tests_written > 0` (SOFT warning) | MIXED |
 | `verification` | `tests_passed` = `true` or `skipped` + `lint_clean` = `true` or `skipped` | MIXED |
-| `socratic_review` | `evidence.socratic_questions` ≥3 entries (each ≥30 chars); when critical paths touched, ≥1 must contain an architectural keyword (endorsed/boundary/DDD/tech-debt/architecture/coupling/pattern/tradeoff) | HARD |
 | `capture` | `execution_log_path` set + file exists (hardened 2026-04-22 — was SOFT) | HARD |
 | `retrospective` | `retrospective_shown=true` (visibility gate) + `execution_log_path` + `## Lessons`/`## Retrospectiva` section ≥100 chars + architectural keyword in section OR `evidence.retrospective_no_architectural_concerns=true` (Layer I, added 2026-04-24) | HARD |
 | `finalize` | `branch_strategy` declared (`merge\|pr\|keep\|discard`) + knowledge module check | SOFT |
