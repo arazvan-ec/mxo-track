@@ -84,38 +84,15 @@ else
     fi
   fi
 
-  # Layer J — Graduation registry soft-check
-  # Extract pattern names mentioned in the spec and warn (non-blocking) if any
-  # are not present as keys under tags: or patterns: in _graduations.yaml.
-  # Each sub-pipeline is guarded with `|| true` so an empty result (grep rc=1)
-  # doesn't abort the outer script under `set -e` / pipefail.
-  GRADUATIONS_FILE="$REPO/docs/knowledge/_graduations.yaml"
-  if [ -f "$GRADUATIONS_FILE" ]; then
-    # Heuristic pattern extraction (deliberately simple — this is a soft gate):
-    #   1) **Pattern:** name
-    #   2) pattern: name           (YAML-like)
-    #   3) `backticked-identifier` on lines mentioning "pattern"
-    PATTERN_NAMES=$(
-      {
-        { grep -oE '\*\*Pattern:\*\*[[:space:]]*[A-Za-z0-9_-]+' "$SPEC_FULL" 2>/dev/null \
-            | sed -E 's/\*\*Pattern:\*\*[[:space:]]*//'; } || true
-        { grep -oE '^[[:space:]]*pattern:[[:space:]]*[A-Za-z0-9_-]+' "$SPEC_FULL" 2>/dev/null \
-            | sed -E 's/^[[:space:]]*pattern:[[:space:]]*//'; } || true
-        { grep -iE 'pattern' "$SPEC_FULL" 2>/dev/null \
-            | grep -oE '`[a-z0-9][a-z0-9_-]*`' \
-            | tr -d '`'; } || true
-      } | sort -u
-    )
-    if [ -n "$PATTERN_NAMES" ]; then
-      while IFS= read -r p; do
-        [ -z "$p" ] && continue
-        # Registry entries are keyed by two-space-indented lines like "  name:".
-        if ! grep -qE "^[[:space:]]+${p}:" "$GRADUATIONS_FILE" 2>/dev/null; then
-          WARNINGS="${WARNINGS}- ⚠ J: Spec menciona pattern '${p}' que no esta en _graduations.yaml. Si es nuevo, justifica via Prior Art Audit; si esta tomado de codigo no-endorsed, revisa.\n"
-        fi
-      done <<< "$PATTERN_NAMES"
-    fi
-  fi
+  # Layer J — REMOVED 2026-04-26.
+  # Original intent: warn (soft) when spec mentioned a pattern name not in
+  # _graduations.yaml. Removed because: (1) brainstorm-exit was the wrong
+  # phase — registry consultation should inform design, not flag it after;
+  # (2) the heuristic that extracted backticked tokens on lines mentioning
+  # "pattern" produced too many false positives (file paths, controller
+  # names, anti-pattern targets); (3) no execution log ever showed J
+  # catching a real issue. pattern-audit.sh provides post-hoc surfacing
+  # with cleaner data. Analysis: /tmp/layer-j-analysis.md (2026-04-26).
 
   # Layer C — Architectural Adversarial Review (HARD when critical paths referenced)
   # Relocated 2026-04-24 from a standalone post-verification phase to a

@@ -35,9 +35,8 @@ assert_passes() {
 setup_state() {
   local log_path="${1:-}"
   local retro_shown="${2:-true}"
-  local no_arch_concerns="${3:-false}"
   cat > "$TEST_STATE" << STATEEOF
-{"evidence":{"execution_log_path":"$log_path","retrospective_shown":$retro_shown,"retrospective_no_architectural_concerns":$no_arch_concerns}}
+{"evidence":{"execution_log_path":"$log_path","retrospective_shown":$retro_shown}}
 STATEEOF
 }
 
@@ -118,9 +117,10 @@ LOGEOF
 setup_state "$TEST_LOG"
 assert_passes "passes with Spanish retrospectiva section" "$VALIDATOR" "$TEST_STATE"
 
-# Test 7 (Layer I): Lessons section exists with content >=100 chars but NO
-# architectural keywords AND no opt-out flag → block.
-echo "Test 7 (I): Lessons without architectural keywords and no opt-out"
+# Test 7 (Layer I baseline post-removal): Lessons content >=100 chars
+# without any architectural keyword should now PASS (the gate was removed
+# 2026-04-26 — see /tmp/layer-i-analysis.md for the 4-test rationale).
+echo "Test 7: Post-Layer-I-removal — neutral lessons content passes"
 cat > "$TEST_LOG" << 'LOGEOF'
 # Execution Log
 
@@ -133,13 +133,8 @@ cat > "$TEST_LOG" << 'LOGEOF'
 
 ## End
 LOGEOF
-setup_state "$TEST_LOG" "true" "false"
-assert_blocks "Layer I blocks lessons without arch keyword and no opt-out" "$VALIDATOR" "$TEST_STATE"
-
-# Test 8 (Layer I): Same lessons content but with opt-out flag → pass.
-echo "Test 8 (I): Lessons without keywords but opt-out flag set → pass"
-setup_state "$TEST_LOG" "true" "true"
-assert_passes "Layer I passes when opt-out flag set" "$VALIDATOR" "$TEST_STATE"
+setup_state "$TEST_LOG" "true"
+assert_passes "neutral lessons (no arch keyword) passes after Layer I removal" "$VALIDATOR" "$TEST_STATE"
 
 # Cleanup
 rm -f "$TEST_STATE" "$TEST_LOG"

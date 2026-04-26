@@ -8,8 +8,8 @@
 # Additionally exercises:
 #   - Layer H — Prior Art Audit HARD gate when the spec references critical
 #     contexts (Domain/Route, Domain/Shipment, Controller/Api/Admin/).
-#   - Layer J — Graduation registry SOFT warning when the spec mentions a
-#     pattern name that is not present in `docs/knowledge/_graduations.yaml`.
+#   - Layer J was removed 2026-04-26; the brainstorm-validator no longer
+#     runs the graduation soft-check.
 
 set -euo pipefail
 
@@ -277,90 +277,9 @@ assert_eq "H1: Route ref + no Prior Art Audit → H blocks"     "block-h" "$(run
 assert_eq "H2: Route ref + Prior Art Audit w/ tech-debt → pass" "clean"   "$(run_h_scenario "$SPEC_H2")"
 assert_eq "H3: no critical paths referenced → H doesn't fire" "clean"   "$(run_h_scenario "$SPEC_H3")"
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Layer J — Graduation registry soft-check
-# ─────────────────────────────────────────────────────────────────────────────
-# Runs the validator and checks whether a J-warning line appears in combined
-# output. J is soft: exit code is NOT 2 when only J fires.
-run_j_scenario() {
-  local spec_path="$1"
-  local state_file="$TEST_TMPDIR/state-j.json"
-  cat > "$state_file" <<EOF
-{
-  "evidence": {
-    "user_turns": 3,
-    "alternatives_proposed": true,
-    "user_approved": true,
-    "spec_path": "$spec_path"
-  }
-}
-EOF
-  local output
-  output=$(bash "$VALIDATOR" "$state_file" 2>&1 || true)
-  if echo "$output" | grep -qE '⚠ J:'; then
-    echo "warn-j"
-  else
-    echo "no-warn"
-  fi
-}
-
-# ── Fixture J1: spec mentions pattern `glass-overlay` (in _graduations.yaml) → no warning ──
-# We deliberately do NOT mention any other pattern, to keep this case clean.
-SPEC_J1="$TEST_TMPDIR/spec-j1.md"
-cat > "$SPEC_J1" <<'EOF'
-# Spec
-
-Uses the `glass-overlay` pattern for the new component.
-
-## Approaches
-
-Approach A vs Approach B. Trade-off discussed.
-
-## Existing Functionality Inventory
-
-- None affected.
-
-## Omission Decisions
-
-- None.
-
-Padding padding padding padding padding padding padding padding padding padding.
-Padding padding padding padding padding padding padding padding padding padding.
-Padding padding padding padding padding padding padding padding padding padding.
-Padding padding padding padding padding padding padding padding padding padding.
-Padding padding padding padding padding padding padding padding padding padding.
-EOF
-
-# ── Fixture J2: spec mentions a made-up pattern name → warning emitted ──
-SPEC_J2="$TEST_TMPDIR/spec-j2.md"
-cat > "$SPEC_J2" <<'EOF'
-# Spec
-
-Uses the `totally-made-up-pattern` pattern for the new component.
-
-## Approaches
-
-Approach A vs Approach B. Trade-off discussed.
-
-## Existing Functionality Inventory
-
-- None affected.
-
-## Omission Decisions
-
-- None.
-
-Padding padding padding padding padding padding padding padding padding padding.
-Padding padding padding padding padding padding padding padding padding padding.
-Padding padding padding padding padding padding padding padding padding padding.
-Padding padding padding padding padding padding padding padding padding padding.
-Padding padding padding padding padding padding padding padding padding padding.
-EOF
-
-echo
-echo "── brainstorm-validator Layer J (graduation soft-check) ──"
-assert_eq "J1: known pattern (glass-overlay) → no warning"          "no-warn" "$(run_j_scenario "$SPEC_J1")"
-assert_eq "J2: unknown pattern (totally-made-up-pattern) → warning" "warn-j"  "$(run_j_scenario "$SPEC_J2")"
+# Layer J cases REMOVED 2026-04-26 along with the layer itself
+# (brainstorm-validator no longer runs the graduation soft-check).
+# See /tmp/layer-j-analysis.md for the 4-test failure rationale.
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Layer C (sub-invocation of socratic-review-validator) — called from
