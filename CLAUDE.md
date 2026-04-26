@@ -34,6 +34,81 @@ cd frontend && npm run build            # Frontend: TypeScript + Vite (EXACT dep
 
 ---
 
+<!-- GENERIC-START: Why the workflow exists — the mantra + the 4-test -->
+## Why This Workflow Exists
+
+LLMs do not autonomously apply development practices. Without external
+discipline, the model's first instinct is to ship code that works — not
+necessarily code that respects SOLID, was written test-first, learned
+from past mistakes, or honors the architecture's boundaries.
+
+This workflow exists to inject that discipline at the right moments,
+with the right cost. Each phase forces a specific quality practice the
+model wouldn't apply on its own:
+
+| Phase | Practice forced |
+|---|---|
+| `consult` | Read past decisions and execution logs (don't repeat mistakes) |
+| `brainstorming` | Propose ≥2 alternatives, Prior Art Audit, Architectural Adversarial Review |
+| `planning` | Write TDD-shaped tasks, decompose for parallelism |
+| `implementation` | Plan-bound; no scope creep without reclassification |
+| `verification` | Tests + lint must pass before claiming success |
+| `capture` | Write execution log so the next session can consult |
+| `retrospective` | Reflect on estimate accuracy, process gaps, emergent patterns |
+| `finalize` | Branch strategy declared; pre-push gate verifies completion |
+
+Validators (`.claude/hooks/validators/*`) and edit-time hooks
+(`classify-validator`, `ddd-boundary-check`, `pre-tool-freshness`) are the
+**mechanism** — they block exit until the practice was applied.
+
+Skills (Brainstorming, TDD, Verification, etc., catalogued in
+`docs/knowledge/superpowers-skills.md`) are the **playbook** — loaded
+only when the relevant phase is active, so context tokens are spent on
+the right practice at the right moment.
+
+### The 4-Test for Workflow Changes
+
+Any proposal to add, remove, or modify a phase / validator / gate must
+pass ALL of:
+
+1. **Forces a quality practice the LLM wouldn't do spontaneously.**
+   Without this gate, would the model still apply the practice? If
+   yes — the gate is redundant ceremony.
+
+2. **Injected at the right phase.** Not so early it's speculative
+   (e.g., asking for code-level review before planning); not so late
+   it forces rollback (e.g., catching architectural issues
+   post-verification when refactor cost is high).
+
+3. **Token cost proportional to value.** Every byte read, every regex
+   evaluated, every section parsed must pay for itself in solution
+   improvement. Reading a 200-line knowledge module to catch a 3-line
+   bug class is wasteful; reading a 5-line YAML for the same is fine.
+
+4. **Backed by a source.** Knowledge module, decision log, execution
+   log, CLAUDE.md rule, or a cited external convention (SOLID, TDD,
+   DDD, Conway's Law, etc.). Not invented ad-hoc. If you can't point
+   to where the practice originates, the practice itself may not be
+   load-bearing.
+
+A change that fails any of the 4 is ceremony, not flow. Ceremony costs
+attention and tokens without improving the solution — remove or
+rewrite it until it passes.
+
+### Recursive application
+
+This 4-test applies to itself. The mantra + test were codified
+2026-04-26 because: (1) the model would not articulate this reasoning
+spontaneously each session [Test 1 ✓], (2) the test belongs at the
+top of CLAUDE.md so it's read before any decision in every
+interaction [Test 2 ✓], (3) ~80 lines justifies every gate that
+follows in the file — favorable cost/value [Test 3 ✓], (4) grounded
+in 6 execution logs (2026-04-21 through 2026-04-24) that documented
+the same observations bottom-up [Test 4 ✓].
+<!-- GENERIC-END -->
+
+---
+
 <!-- GENERIC-START: Core philosophy — applies to any project using this harness -->
 ## How Claude Thinks in This Repo
 
