@@ -18,7 +18,7 @@
 set -euo pipefail
 
 REPO="/home/user/mxo-track"
-STATE_FILE="$REPO/.claude/session-state.json"
+STATE_FILE="${STATE_FILE:-$REPO/.claude/session-state.json}"
 
 if [ ! -f "$STATE_FILE" ]; then
   echo "ERROR: session-state.json not found" >&2
@@ -33,31 +33,29 @@ if [ -z "$NEXT_PHASE" ]; then
   exit 1
 fi
 
-# Define legal phase sequences per flow type
-declare -A FLOW_PHASES
-FLOW_PHASES[full]="consult brainstorming planning implementation verification capture retrospective finalize"
-FLOW_PHASES[debug]="root_cause pattern_wide fix verification capture retrospective finalize"
-FLOW_PHASES[agent]="implementation verification"
+# Load legal phase sequences from the single source of truth
+# shellcheck source=./lib/flow-phases.sh
+source "$REPO/.claude/hooks/lib/flow-phases.sh"
 
 # Read current state
 CURRENT_PHASE=$(jq -r '.current_phase // "null"' "$STATE_FILE" 2>/dev/null || echo "null")
 FLOW_TYPE=$(jq -r '.flow_type // "null"' "$STATE_FILE" 2>/dev/null || echo "null")
 
 # Select phase sequence for current flow type
-if [ -n "${FLOW_PHASES[$FLOW_TYPE]+x}" ]; then
-  read -ra PHASES <<< "${FLOW_PHASES[$FLOW_TYPE]}"
-elif [ "$FLOW_TYPE" = "full" ] || [ "$FLOW_TYPE" = "debug" ]; then
-  # Shouldn't reach here, but safety net
-  read -ra PHASES <<< "${FLOW_PHASES[full]}"
-else
-  # Unrecognized flow type — allow transition without validation
-  TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-  jq --arg phase "$NEXT_PHASE" --arg ts "$TIMESTAMP" \
-    '.phase_history += [{"phase": $phase, "at": $ts}] | .current_phase = $phase' \
-    "$STATE_FILE" > /tmp/pa.json && mv /tmp/pa.json "$STATE_FILE"
-  echo "✅ Phase advanced: $CURRENT_PHASE → $NEXT_PHASE (flow: $FLOW_TYPE, no sequence validation)"
-  exit 0
-fi
+case "$FLOW_TYPE" in
+  full)  PHASES=("${FULL_PHASES[@]}") ;;
+  debug) PHASES=("${DEBUG_PHASES[@]}") ;;
+  agent) PHASES=("${AGENT_PHASES[@]}") ;;
+  *)
+    # Unrecognized flow type — allow transition without validation
+    TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    jq --arg phase "$NEXT_PHASE" --arg ts "$TIMESTAMP" \
+      '.phase_history += [{"phase": $phase, "at": $ts}] | .current_phase = $phase' \
+      "$STATE_FILE" > /tmp/pa.json && mv /tmp/pa.json "$STATE_FILE"
+    echo "✅ Phase advanced: $CURRENT_PHASE → $NEXT_PHASE (flow: $FLOW_TYPE, no sequence validation)"
+    exit 0
+    ;;
+esac
 
 # Find current phase index (-1 if null/not found)
 CURRENT_INDEX=-1
@@ -85,10 +83,13 @@ if [ "$NEXT_INDEX" -eq -1 ]; then
 fi
 
 # Validate transition is legal
-# From null → only consult is allowed
+# From null → only the first phase of the current flow is allowed.
+# Looks up FLOW_PHASES[$FLOW_TYPE][0] instead of hardcoding "consult" so that
+# debug (root_cause) and agent (implementation) flows can also enter legally.
 if [ "$CURRENT_PHASE" = "null" ] || [ "$CURRENT_INDEX" -eq -1 ]; then
-  if [ "$NEXT_PHASE" != "consult" ]; then
-    echo "ERROR: From null/undeclared phase, can only advance to 'consult'. Got: '$NEXT_PHASE'" >&2
+  FIRST_PHASE="${PHASES[0]}"
+  if [ "$NEXT_PHASE" != "$FIRST_PHASE" ]; then
+    echo "ERROR: From null/undeclared phase, can only advance to '$FIRST_PHASE' (flow: $FLOW_TYPE). Got: '$NEXT_PHASE'" >&2
     exit 1
   fi
 else

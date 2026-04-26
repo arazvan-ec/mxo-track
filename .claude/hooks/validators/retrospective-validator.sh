@@ -47,6 +47,16 @@ if [ -n "$LOG_FULL" ] && [ -f "$LOG_FULL" ]; then
   if [ "$RETRO_SIZE" -lt 100 ]; then
     ERRORS="${ERRORS}- Seccion de retrospectiva demasiado corta ($RETRO_SIZE chars, minimo 100). Reflexiona sobre estimacion, blockers, y lecciones.\n"
   fi
+
+  # Layer I — REMOVED 2026-04-26.
+  # Original intent: require an architectural keyword (adversarial / DDD /
+  # boundary / coupling / etc.) in the Lessons section, or an explicit
+  # opt-out flag. Removed because: (1) Layer C now runs at brainstorm exit
+  # where adversarial review is cheaper (no rollback cost); (2) the keyword
+  # regex was trivial to bypass (an author writing "this change did not
+  # touch architecture" passes); (3) post-Layer-I retros that contain
+  # authentic architectural content plausibly owe that to Layer C + cultural
+  # shift, not to this regex. Analysis: /tmp/layer-i-analysis.md (2026-04-26).
 fi
 
 if [ -n "$ERRORS" ]; then

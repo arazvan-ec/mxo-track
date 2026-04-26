@@ -37,6 +37,7 @@
 | Analytics & Reporting | `analytics-reporting.md` | 2026-04-19 | KPIs, SLA, A/B testing de optimización, dashboards admin/operator, RoutePerformanceMetric | KPIs, reports, SLA, strategy comparison, dashboards |
 | Data Import/Export | `data-import-export.md` | 2026-04-19 | CSV shipment imports, quality analysis, run tracking, accounting/position exports | Import CSV, export de datos, pipelines ETL |
 | Public Tracking | `public-tracking.md` | 2026-04-19 | Tracking público sin auth vía tokens, RecipientAction, rescheduling, rating | Tracking público, recipient experience, rescheduling |
+| Workflow Engine | `workflow-engine.md` | 2026-04-22 | Hooks y validators (Option 3-Enforced): Layer A classify, Layer B phase-advance + validators, Layer C todowrite-mirror, Layer D freshness; evidence matrix, bypass env vars, file index | Debuggear un gate, añadir un validator, entender por qué una edición fue bloqueada |
 
 ## Cómo Usar
 
@@ -62,3 +63,4 @@
 - 2026-03-19: Añadida columna `Verificado` para tracking de frescura; regla de spot-check para módulos potencialmente obsoletos
 - 2026-04-14: Añadido módulo `ui-layout-contracts.md` — contratos de CSS positioning, containing blocks, flex scroll, preset independence
 - 2026-04-19: Añadidos 7 módulos en paralelo: `widget-system.md`, `map-components.md`, `shipment-delivery-lifecycle.md`, `driver-experience.md`, `analytics-reporting.md`, `data-import-export.md`, `public-tracking.md`
+- 2026-04-22: Añadido módulo `workflow-engine.md` — captura las 4 capas de enforcement (Option 3-Enforced) recién mergeadas a main: classify-validator, phase exit gates hardened, todowrite-mirror con invariante in_progress=1, pre-tool-freshness

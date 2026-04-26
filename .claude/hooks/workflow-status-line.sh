@@ -10,6 +10,10 @@ set -euo pipefail
 
 REPO="/home/user/mxo-track"
 STATE_FILE="$REPO/.claude/session-state.json"
+
+# Load phase sequences from the single source of truth
+# shellcheck source=./lib/flow-phases.sh
+source "$REPO/.claude/hooks/lib/flow-phases.sh"
 # --- Read tool context from stdin (PostToolUse JSON) ---
 TOOL_SUFFIX=""
 if INPUT=$(cat 2>/dev/null) && [ -n "$INPUT" ]; then
@@ -516,28 +520,35 @@ if [ "$FLOW_TYPE" = "full" ]; then
   exit 0
 fi
 
-# Debug-flow: 4 phases with hierarchical timeline
+# Debug-flow: hierarchical timeline over the full 7-phase sequence (from lib)
 if [ "$FLOW_TYPE" = "debug" ]; then
-  DEBUG_PHASES=("consult" "root_cause" "pattern_search" "fix")
-  TOTAL=4
+  TOTAL=${#DEBUG_PHASES[@]}
 
   # Determine current debug phase
-  if [ "$CURRENT_PHASE" = "implementation" ] || ([ "$ROOT_CAUSE" = "true" ] && [ "$PATTERN_WIDE" = "true" ]); then
-    DEBUG_CURRENT="fix"
-    DEBUG_INDEX=4
-  elif [ "$PATTERN_WIDE" = "true" ]; then
-    DEBUG_CURRENT="fix"
-    DEBUG_INDEX=4
-  elif [ "$ROOT_CAUSE" = "true" ]; then
-    DEBUG_CURRENT="pattern_search"
-    DEBUG_INDEX=3
-  elif [ "$CURRENT_PHASE" = "consult" ]; then
-    DEBUG_CURRENT="consult"
-    DEBUG_INDEX=1
-  else
-    DEBUG_CURRENT="root_cause"
-    DEBUG_INDEX=2
-  fi
+  case "$CURRENT_PHASE" in
+    verification|capture|retrospective|finalize)
+      DEBUG_CURRENT="$CURRENT_PHASE"
+      DEBUG_INDEX=0
+      for i in "${!DEBUG_PHASES[@]}"; do
+        if [ "${DEBUG_PHASES[$i]}" = "$CURRENT_PHASE" ]; then
+          DEBUG_INDEX=$((i + 1))
+          break
+        fi
+      done
+      ;;
+    *)
+      if [ "$ROOT_CAUSE" = "true" ] && [ "$PATTERN_WIDE" = "true" ]; then
+        DEBUG_CURRENT="fix"
+        DEBUG_INDEX=3
+      elif [ "$ROOT_CAUSE" = "true" ]; then
+        DEBUG_CURRENT="pattern_wide"
+        DEBUG_INDEX=2
+      else
+        DEBUG_CURRENT="root_cause"
+        DEBUG_INDEX=1
+      fi
+      ;;
+  esac
 
   DISPLAY_PHASE="$(echo "${DEBUG_CURRENT:0:1}" | tr '[:lower:]' '[:upper:]')${DEBUG_CURRENT:1}"
 
@@ -573,10 +584,13 @@ if [ "$FLOW_TYPE" = "debug" ]; then
   # ── Line 4: Next action ──
   NEXT=""
   case "$DEBUG_CURRENT" in
-    consult) NEXT="leer decisions/logs" ;;
     root_cause) NEXT="identificar causa raiz" ;;
-    pattern_search) NEXT="busqueda patron-wide" ;;
+    pattern_wide) NEXT="busqueda patron-wide" ;;
     fix) NEXT="TDD fix + verificar" ;;
+    verification) NEXT="tests + lint verdes" ;;
+    capture) NEXT="escribir execution log" ;;
+    retrospective) NEXT="presentar retro + set retrospective_shown=true" ;;
+    finalize) NEXT="branch strategy + push" ;;
   esac
   LINE4="  Siguiente: ${NEXT}"
 

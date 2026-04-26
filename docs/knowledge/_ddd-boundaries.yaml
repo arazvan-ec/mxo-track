@@ -1,0 +1,43 @@
+# _ddd-boundaries.yaml — source of truth for DDD boundary enforcement (Layer F).
+#
+# Consumed by:
+#   - .claude/hooks/ddd-boundary-check.sh  (PreToolUse Edit|Write warning gate)
+#
+# Maintenance:
+#   - When a critical bounded context gains a new aggregate, add it under
+#     critical_contexts[].aggregates.
+#   - When pre-existing tech debt is accepted, add the file under
+#     known_violations with a short justification note. The boundary check
+#     will skip those files silently.
+#   - When a violation is resolved, update the note with "Resolved YYYY-MM-DD"
+#     explaining the new endorsed approach.
+#
+# See backend/CLAUDE.md "Architecture: Two Worlds" and "Known Violations"
+# for the design rationale and the authoritative tech-debt list.
+
+critical_contexts:
+  - path: backend/src/Domain/Route/**
+    aggregates: [Route, RouteStop, RouteSnapshot, RouteEvent]
+  - path: backend/src/Domain/Shipment/**
+    aggregates: [Shipment, Parcel, DeliveryEvidence]
+
+forbidden_in_non_infrastructure:
+  - pattern: "createQueryBuilder"
+    context: "controllers and services outside Infrastructure/"
+    against: "aggregates listed in critical_contexts"
+  - pattern: "getRepository("
+    context: "controllers and services outside Infrastructure/"
+    against: "aggregates listed in critical_contexts"
+
+known_violations:
+  # Pre-existing tech debt; don't extend, don't flag existing edits.
+  # Sourced from backend/CLAUDE.md "Known Violations" table (2026-04-24).
+  - file: backend/src/Controller/Api/Admin/RouteListApiController.php
+    method: list
+    note: "Resolved 2026-04-24 — now uses RouteStopRepositoryInterface"
+  - file: backend/src/Application/Delivery/DeliveryService.php
+    note: "Depends on concrete RouteStopRepository per backend/CLAUDE.md Known Violations — fix in Shipment/Delivery migration sprint"
+  - file: backend/src/Entity/User.php
+    note: "Mixes 5 responsibilities (identity/auth/roles/multi-tenancy/persistence) per backend/CLAUDE.md Known Violations — tech debt, no fix planned"
+  - file: backend/src/Provider/Gps/WebhookGpsProvider.php
+    note: "Stubs for login()/getSessionCookie()/getDevices() (LSP + ISP) per backend/CLAUDE.md Known Violations — fix when third GPS provider is added"

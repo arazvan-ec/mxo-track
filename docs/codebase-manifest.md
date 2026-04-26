@@ -3,6 +3,7 @@
 > **Auto-generated** by `make manifest` (`backend/bin/generate-manifest.sh`).
 > Do not edit manually — regenerate with `make manifest`.
 
+**Generated:** 2026-04-26 20:47
 **Generated:** 2026-04-22 22:04
 **Regenerate:** `make manifest`
 
@@ -37,7 +38,7 @@
 | Event Listeners | 11 |
 | Messenger Messages | 4 |
 | Message Handlers | 4 |
-| Tests | 146 |
+| Tests | 147 |
 | Migrations | 41 |
 
 ## Entity List
@@ -630,11 +631,11 @@ Provider factories (critical for Constructor Signature Changes pattern):
 
 | Type | Count |
 |------|------:|
-| Unit | 130 |
+| Unit | 131 |
 | Functional | 8 |
 | Domain | 6 |
 | Factory (test factories) | 1 |
-| **Total** | **146** |
+| **Total** | **147** |
 
 ---
 
@@ -668,6 +669,7 @@ Freshness of knowledge modules (parsed from `docs/knowledge/index.md`):
 | Analytics & Reporting | 2026-04-19 | 2026-04-19 |
 | Data Import/Export | 2026-04-19 | 2026-04-19 |
 | Public Tracking | 2026-04-19 | 2026-04-19 |
+| Workflow Engine | 2026-04-22 | 2026-04-22 |
 
 ---
 

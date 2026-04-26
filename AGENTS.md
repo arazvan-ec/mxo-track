@@ -194,6 +194,93 @@ by re-setting if needed.
 
 ---
 
+## Agent Permission Model
+
+**Why:** Background agents inherit the main session's auto-approve settings and
+**share the parent's `session-state.json`** (same file, same path). They
+**cannot prompt for manual approval**; if a tool call requires confirmation
+the agent receives "denied" and fails silently.
+
+### `.claude/**` writes from agents: conditional, not absolute
+
+Prior revisions of this section claimed "the sandbox blocks writes from
+background agents to `.claude/**` paths regardless of settings." **That
+diagnosis is wrong.** Empirical reproduction (2026-04-24) shows that with
+`interaction_classification ∈ {full, debug}`, subagents can Write/Edit
+freely inside `.claude/**`.
+
+**The real block:** `classify-validator.sh` (PreToolUse `Edit|Write`).
+
+- **What it does:** blocks edits to framework paths matching
+  `^(\.claude/|scripts/|backend/src/|backend/templates/|backend/config/|backend/migrations/|backend/tests/|frontend/src/|ml-service/|docker/)`
+  when `interaction_classification` is any of `micro`, `light`, `explore`,
+  `informational`, `null`, or unset.
+- **Carve-outs:** `docs/*`, `*.md`, `/tmp/*`, `.claude/session-state.json`
+  always pass.
+- **Bypass:** `SKIP_CLASSIFY_GATE=1` on the offending call, with a decision
+  log entry required.
+
+**Why the earlier misdiagnosis persisted for a day:** the 2026-04-22
+background agent that failed was dispatched while the main session was in
+a transient state whose classification was not `full`/`debug` — possibly
+an auto-reset between problems in a multi-problem flow. The subagent read
+the same `session-state.json` the main saw and was blocked by the same
+hook. The orchestrator (me) generalized one data point to "the sandbox
+blocks all `.claude/**` agent writes," which was then copy-pasted into
+this document and into `docs/knowledge/workflow-engine.md`. Both are now
+being corrected.
+
+### Consequences for dispatch
+
+- **All paths, agents included:** writes to framework paths (including
+  `.claude/**`) succeed iff the main session's `interaction_classification`
+  is `full` or `debug` at dispatch time. Everything else is blocked by
+  `classify-validator.sh`.
+- **Set classification first.** Before dispatching a subagent that must
+  touch framework paths, verify:
+  ```bash
+  jq -r '.interaction_classification' .claude/session-state.json
+  # Expect: "full" or "debug"
+  ```
+  If not, reclassify before dispatch.
+- **Carve-outs are safe for any classification:** `docs/**`, repo-root
+  `*.md`, `AGENTS.md`, `CLAUDE.md`, `/tmp/**`, and the session-state file
+  itself.
+- **If a mid-task `.claude/` write fails in a subagent:** investigate the
+  classification, not the agent. Usually the fix is to reclassify in main,
+  then retry the dispatch.
+
+### `pre-agent-check.sh` — pre-dispatch guard
+
+Registered for the `Agent` PreToolUse matcher. Current behavior (2026-04-24):
+
+1. Deny Agent dispatch when the repo has uncommitted changes (historical).
+2. **NEW:** Warn when the agent prompt references `.claude/**` paths AND the
+   main classification is insufficient (`∉ {full, debug}`). The warning
+   points to the classification command and lists the affected paths.
+
+### Mitigation pattern: split parallel work by path surface
+
+The legacy "split so `.claude/**` lives in foreground" pattern is still
+useful when the classification is deliberately kept low (e.g., an
+`explore` session that happens to need an AGENTS.md edit). When the flow
+is genuinely `full` or `debug`, the pattern is no longer necessary —
+dispatch freely across surfaces.
+
+**Rule of thumb:**
+| Main classification | Dispatch `.claude/` work to subagent? |
+|---|---|
+| `full` / `debug` | ✅ Yes |
+| `micro` / `light` / `explore` / `informational` / null | ❌ Do it in foreground or reclassify |
+
+**Evidence sources:**
+- `docs/superpowers/execution-logs/2026-04-24-workflow-enforcement-layers-CHFIJ.md`
+  (this correction, 2026-04-24)
+- `docs/superpowers/execution-logs/2026-04-22-knowledge-module-and-flow-phases-sot.md`
+  (the original misdiagnosed incident)
+
+---
+
 ## Subagent-Driven Development (Skill 5)
 
 **Why:** Fresh subagent per task + two-stage review (spec then quality) = high quality, fast

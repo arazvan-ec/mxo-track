@@ -128,9 +128,9 @@ cat > "$TEST_LOG" << 'LOGEOF'
 ## Implementation
 Did some stuff.
 ## Lessons
-- First lesson about the implementation that was educational and informative for the team overall
-- Second lesson about workflow that revealed gaps worth documenting for future reference and improvement
-- Third lesson about testing patterns discovered during this implementation cycle that we should remember
+- First lesson: the DDD boundary between Domain and Infrastructure layers held up well for this change
+- Second lesson about workflow coupling that revealed gaps worth documenting for future reference and improvement
+- Third lesson about architectural patterns discovered during this implementation cycle that we should remember
 LOGEOF
 
 PHASES=("consult" "brainstorming" "planning" "implementation" "verification" "capture" "retrospective" "finalize")

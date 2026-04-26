@@ -63,6 +63,59 @@ else
     ERRORS="${ERRORS}- ANTI-OMISION: Falta seccion '## Omission Decisions' (si no hay omisiones, declarar 'No omissions — all inventory items addressed')\n"
   fi
 
+  # Layer H — Prior Art Audit gate (HARD when critical paths referenced)
+  # If the spec references critical domain contexts or admin API controllers,
+  # require a `## Prior Art Audit` section with at least one classified row.
+  # Critical-context paths come from docs/knowledge/_ddd-boundaries.yaml via
+  # the shared lib (single source of truth, shared with Layer F).
+  # shellcheck source=../lib/ddd-boundaries.sh
+  source "$REPO/.claude/hooks/lib/ddd-boundaries.sh"
+  CRITICAL_REGEX=$(ddd_critical_regex)
+
+  if grep -qE "($CRITICAL_REGEX)" "$SPEC_FULL" 2>/dev/null; then
+    if ! grep -qE '^## Prior Art Audit' "$SPEC_FULL" 2>/dev/null; then
+      ERRORS="${ERRORS}- H: spec referencia contextos criticos pero falta seccion '## Prior Art Audit'. Clasifica cada path existente como endorsed (✅), tech-debt (❌ tech-debt), o nuevo (new). Critical contexts source: docs/knowledge/_ddd-boundaries.yaml.\n"
+    else
+      # Extract Prior Art Audit section (from its header to the next top-level ## header)
+      # and require at least one row classified in the 'Endorsed?' column.
+      if ! awk '/^## Prior Art Audit/{flag=1; next} /^## /{flag=0} flag' "$SPEC_FULL" 2>/dev/null | grep -qE '(✅|❌ tech-debt|\| new \|)'; then
+        ERRORS="${ERRORS}- H: Seccion '## Prior Art Audit' existe pero no contiene filas clasificadas. Cada path debe tener columna 'Endorsed?' con ✅, ❌ tech-debt, o new.\n"
+      fi
+    fi
+  fi
+
+  # Layer J — REMOVED 2026-04-26.
+  # Original intent: warn (soft) when spec mentioned a pattern name not in
+  # _graduations.yaml. Removed because: (1) brainstorm-exit was the wrong
+  # phase — registry consultation should inform design, not flag it after;
+  # (2) the heuristic that extracted backticked tokens on lines mentioning
+  # "pattern" produced too many false positives (file paths, controller
+  # names, anti-pattern targets); (3) no execution log ever showed J
+  # catching a real issue. pattern-audit.sh provides post-hoc surfacing
+  # with cleaner data. Analysis: /tmp/layer-j-analysis.md (2026-04-26).
+
+  # Layer C — Architectural Adversarial Review (HARD when critical paths referenced)
+  # Relocated 2026-04-24 from a standalone post-verification phase to a
+  # sub-invocation here. Questions live in the spec's
+  # `## Architectural Adversarial Review` section instead of JSON evidence.
+  # The discrete validator is preserved (testable in isolation, reusable).
+  if grep -qE "($CRITICAL_REGEX)" "$SPEC_FULL" 2>/dev/null; then
+    SOCRATIC_VALIDATOR="$REPO/.claude/hooks/validators/socratic-review-validator.sh"
+    if [ -x "$SOCRATIC_VALIDATOR" ]; then
+      SOCRATIC_OUT=$("$SOCRATIC_VALIDATOR" "$SPEC_FULL" 2>&1 || true)
+      SOCRATIC_EXIT=$("$SOCRATIC_VALIDATOR" "$SPEC_FULL" >/dev/null 2>&1 && echo 0 || echo $?)
+      if [ "$SOCRATIC_EXIT" != "0" ]; then
+        # Append the validator's own error lines (skip the "BLOCKED: ..." header)
+        SOCRATIC_ERRS=$(echo "$SOCRATIC_OUT" | grep -E '^- ' || true)
+        if [ -n "$SOCRATIC_ERRS" ]; then
+          ERRORS="${ERRORS}${SOCRATIC_ERRS}\n"
+        else
+          ERRORS="${ERRORS}- C: Architectural Adversarial Review fallo (ver socratic-review-validator).\n"
+        fi
+      fi
+    fi
+  fi
+
   # TDD task isolation: plan must not have standalone "add tests" tasks
   PLAN_PATH_VAL=$(jq -r '.evidence.plan_path // ""' "$STATE_FILE" 2>/dev/null || echo "")
   PLAN_FULL=""
@@ -96,10 +149,19 @@ else
       if [ -n "$CURRENT_WAVE" ]; then
         FILES_DECL=$(echo "$line" | grep -oE '→ files?:\s*.*' | sed 's/→ files\?:\s*//' || true)
         if [ -n "$FILES_DECL" ]; then
+          # Strip a single enclosing pair of parentheses so that payloads like
+          #   "→ files: (a.ts, b.ts)"        → "a.ts, b.ts"         (lista parentizada)
+          #   "→ files: (no file writes)"   → "no file writes"     (sin paths → filter drops all)
+          # become tokenizable. Tokens are still filtered below to only keep
+          # path-like ones (contain `/` OR `.` OR a known bare-name sentinel
+          # such as `Makefile` / `Dockerfile`).
+          STRIPPED=$(echo "$FILES_DECL" | sed -E 's/^[[:space:]]*\((.*)\)[[:space:]]*$/\1/')
           TASK_LABEL=$(echo "$line" | grep -oE '\*\*[^*]+\*\*' | head -1 | tr -d '*' || true)
           [ -z "$TASK_LABEL" ] && TASK_LABEL=$(echo "$line" | sed 's/^[-* ]*//' | cut -c1-30)
-          # Split by comma or space
-          for f in $(echo "$FILES_DECL" | tr ',' '\n' | tr ' ' '\n' | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//' | grep -v '^$'); do
+          # Split by comma or space; keep only path-like tokens.
+          # A path is path-like if it contains `/`, contains `.`, or matches
+          # a known bare-filename sentinel (Makefile, Dockerfile, etc.).
+          for f in $(echo "$STRIPPED" | tr ',' '\n' | tr ' ' '\n' | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//' | grep -v '^$' | grep -E '/|\.|^(Makefile|Dockerfile|Rakefile|Gemfile|Procfile|Caddyfile)$'); do
             KEY="${CURRENT_WAVE}::${f}"
             if [ -n "${FILE_TASK[$KEY]+x}" ]; then
               ERRORS="${ERRORS}- CONFLICTO PARALELO: En '$CURRENT_WAVE', tareas '${FILE_TASK[$KEY]}' y '$TASK_LABEL' ambas editan '$f'. Mover a waves secuenciales.\n"

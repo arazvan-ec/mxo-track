@@ -34,6 +34,81 @@ cd frontend && npm run build            # Frontend: TypeScript + Vite (EXACT dep
 
 ---
 
+<!-- GENERIC-START: Why the workflow exists — the mantra + the 4-test -->
+## Why This Workflow Exists
+
+LLMs do not autonomously apply development practices. Without external
+discipline, the model's first instinct is to ship code that works — not
+necessarily code that respects SOLID, was written test-first, learned
+from past mistakes, or honors the architecture's boundaries.
+
+This workflow exists to inject that discipline at the right moments,
+with the right cost. Each phase forces a specific quality practice the
+model wouldn't apply on its own:
+
+| Phase | Practice forced |
+|---|---|
+| `consult` | Read past decisions and execution logs (don't repeat mistakes) |
+| `brainstorming` | Propose ≥2 alternatives, Prior Art Audit, Architectural Adversarial Review |
+| `planning` | Write TDD-shaped tasks, decompose for parallelism |
+| `implementation` | Plan-bound; no scope creep without reclassification |
+| `verification` | Tests + lint must pass before claiming success |
+| `capture` | Write execution log so the next session can consult |
+| `retrospective` | Reflect on estimate accuracy, process gaps, emergent patterns |
+| `finalize` | Branch strategy declared; pre-push gate verifies completion |
+
+Validators (`.claude/hooks/validators/*`) and edit-time hooks
+(`classify-validator`, `ddd-boundary-check`, `pre-tool-freshness`) are the
+**mechanism** — they block exit until the practice was applied.
+
+Skills (Brainstorming, TDD, Verification, etc., catalogued in
+`docs/knowledge/superpowers-skills.md`) are the **playbook** — loaded
+only when the relevant phase is active, so context tokens are spent on
+the right practice at the right moment.
+
+### The 4-Test for Workflow Changes
+
+Any proposal to add, remove, or modify a phase / validator / gate must
+pass ALL of:
+
+1. **Forces a quality practice the LLM wouldn't do spontaneously.**
+   Without this gate, would the model still apply the practice? If
+   yes — the gate is redundant ceremony.
+
+2. **Injected at the right phase.** Not so early it's speculative
+   (e.g., asking for code-level review before planning); not so late
+   it forces rollback (e.g., catching architectural issues
+   post-verification when refactor cost is high).
+
+3. **Token cost proportional to value.** Every byte read, every regex
+   evaluated, every section parsed must pay for itself in solution
+   improvement. Reading a 200-line knowledge module to catch a 3-line
+   bug class is wasteful; reading a 5-line YAML for the same is fine.
+
+4. **Backed by a source.** Knowledge module, decision log, execution
+   log, CLAUDE.md rule, or a cited external convention (SOLID, TDD,
+   DDD, Conway's Law, etc.). Not invented ad-hoc. If you can't point
+   to where the practice originates, the practice itself may not be
+   load-bearing.
+
+A change that fails any of the 4 is ceremony, not flow. Ceremony costs
+attention and tokens without improving the solution — remove or
+rewrite it until it passes.
+
+### Recursive application
+
+This 4-test applies to itself. The mantra + test were codified
+2026-04-26 because: (1) the model would not articulate this reasoning
+spontaneously each session [Test 1 ✓], (2) the test belongs at the
+top of CLAUDE.md so it's read before any decision in every
+interaction [Test 2 ✓], (3) ~80 lines justifies every gate that
+follows in the file — favorable cost/value [Test 3 ✓], (4) grounded
+in 6 execution logs (2026-04-21 through 2026-04-24) that documented
+the same observations bottom-up [Test 4 ✓].
+<!-- GENERIC-END -->
+
+---
+
 <!-- GENERIC-START: Core philosophy — applies to any project using this harness -->
 ## How Claude Thinks in This Repo
 
@@ -297,14 +372,17 @@ debug the resulting regression.
 #### Enforcement gates — shortcuts they catch
 
 The workflow engine pairs each CLAUDE.md discipline rule with a hook that
-enforces it. The enforcement layers catalog eight concrete shortcuts the model
-is prone to taking and maps each to the gate that blocks it:
+enforces it. Twelve concrete shortcuts the model is prone to taking, each
+mapped to the gate that blocks it:
 
 | Shortcut | Gate that catches it |
 |----------|---------------------|
 | Calling framework changes "light" to skip brainstorm | `classify-validator.sh` (Layer A) — blocks edits to `.claude/`, `scripts/`, `backend/src/`, `frontend/src/`, `ml-service/`, `docker/` unless classification is `full` or `debug` |
 | `consult → brainstorm` without reading decisions/logs | `consult-validator.sh` (Layer B) — requires BOTH `decisions_read=true` AND `logs_scanned=true` |
 | `brainstorm → planning` without alternatives or approval | `brainstorm-validator.sh` — requires `alternatives_proposed`, `user_approved`, `spec_path`, ≥1 user turn |
+| **Spec mirrors tech-debt pattern** without acknowledging | `brainstorm-validator.sh` (Layer H, HARD) — when spec references critical contexts (read from `docs/knowledge/_ddd-boundaries.yaml`) or `src/Controller/Api/Admin/`, requires a `## Prior Art Audit` section with at least one row classified as ✅, ❌ tech-debt, or `new` |
+| **Spec lacks adversarial architectural review** | `brainstorm-validator.sh` invokes `socratic-review-validator.sh` (Layer C, HARD) — when spec references critical paths, requires a `## Architectural Adversarial Review` section with ≥3 numbered Q/A entries (each ≥30 char); at least one question must include an architectural keyword (endorsed, boundary, DDD, tech-debt, architecture, coupling, pattern, tradeoff). Relocated 2026-04-24 from post-verification phase to spec-exit to eliminate rollback cost. |
+| **Edit adds ORM coupling in critical context** | `ddd-boundary-check.sh` (Layer F) — reads `docs/knowledge/_ddd-boundaries.yaml`. **BLOCKS** in full/debug flow when edit adds `createQueryBuilder` or `getRepository` against a critical aggregate AND the spec's Prior Art Audit doesn't cover the file. WARNING-only outside full/debug or when no spec exists yet. Known violations are exempted. |
 | `verification → capture` without running tests/lint | `verification-validator.sh` — `tests_passed` and `lint_clean` must be `true` (no `skipped` in full/debug) |
 | `capture → retrospective` without writing the execution log | `capture-validator.sh` (Layer B, HARD) — `execution_log_path` must be set and file must exist |
 | `retrospective → finalize` without presenting retrospective to user | `retrospective-validator.sh` — requires `evidence.retrospective_shown=true` flag set after visible chat presentation |
@@ -320,13 +398,101 @@ requires an entry in `docs/decisions/log.md` explaining the case.
 | Env var | Effect | When to use |
 |---------|--------|-------------|
 | `SKIP_CLASSIFY_GATE=1` | Disables `classify-validator.sh` | Emergency edits to framework paths when reclassification has already been discussed but session-state is stuck |
-| `SKIP_PHASE_EXIT_GATE=1` | Disables all phase exit validators in `phase-advance.sh` | Recovery from corrupted evidence state; rebuild session after interruption |
+| `SKIP_PHASE_EXIT_GATE=1` | Disables all phase exit validators in `phase-advance.sh` (incl. consult, verification, socratic-review, capture, retrospective) | Recovery from corrupted evidence state; rebuild session after interruption |
+| `SKIP_DDD_BOUNDARY_GATE=1` | Disables `ddd-boundary-check.sh` | Edits that legitimately touch critical contexts without adding new ORM coupling (e.g., refactoring existing violations); decision log entry describing why required |
 
 Never bypass without thinking. A gate that blocks legitimate work is a gate
 that needs its conditions tuned — not a gate to silence.
 
 **Full reference:** `.claude/README.md` (gates, validators, deviation mode, harness assumptions)
 <!-- GENERIC-END -->
+
+---
+
+## Autonomy Contract
+
+The harness has structured checkpoints where the user's judgment is
+obligatory. **Between checkpoints, the model operates autonomously without
+per-tool-call confirmation.** The goal: concentrate the user's attention
+on high-value decisions (design, scope, retrospective, merge) instead of
+low-value interruptions (individual file edits, local commits, running
+tests).
+
+This contract exists because the repo observed repeatedly that per-edit
+prompts were redundant with phase-level approvals — the user was
+gatekeeping at both levels, paying the attention cost twice.
+
+### Requires user input (always)
+
+- **Design approval** during brainstorming (spec sign-off before planning)
+- **Scope changes** — any user request outside the current plan triggers
+  a new interaction; the model must reclassify
+- **Retrospective approval** before advancing to finalize (visible
+  presentation, user acknowledgment)
+- **Destructive git operations** — `reset --hard`, `push --force`,
+  `branch -D`, amending published commits
+- **Side effects on shared systems** — GitHub PRs, pushes to `main`,
+  Slack/email messages, external API calls, uploads to third-party tools
+  (pastebins, gists, diagram renderers)
+- **Bypass env vars** — using `SKIP_*_GATE=1` requires an entry in
+  `docs/decisions/log.md` explaining the case
+
+### Does NOT require user input (autonomy)
+
+- **File edits** inside the plan's scope — create, modify, delete any
+  file the plan lists or that the brainstormed approach implies
+- **Tests, lint, build, manifest** — run `make lint`, `npm run build`,
+  `phpunit`, `make manifest`, `bash .claude/hooks/test-*.sh` freely
+- **Local git** — `git add`, `git commit`, `git branch <create>`,
+  `git push origin <feature-branch>`
+- **Read / search / explore** — Read, Grep, Glob, read-only Bash
+- **Subagent dispatch** for parallel work already planned
+- **`jq` updates** to `session-state.json` for phase and evidence
+  advancement (these are the model's own state, not user-facing data)
+- **Writing spec / plan / execution-log / retrospective** docs under
+  `docs/superpowers/`
+- **Regenerating `.claude/session-state.json`** during session bootstrap
+  or phase transitions
+
+### Mechanism
+
+Two layers, orthogonal:
+
+1. **Claude Code permission layer** (`.claude/settings.local.json`)
+   controls whether the TOOL surfaces a permission prompt. Recommended
+   config for smooth flow:
+   ```json
+   { "permissions": { "defaultMode": "acceptEdits" } }
+   ```
+   This auto-approves Edit/Write; destructive Bash and external-effect
+   tools still prompt.
+
+2. **Harness hooks** (`.claude/hooks/**`) enforce architectural discipline
+   regardless of permission settings. They run orthogonally — auto-approve
+   does NOT defeat classify-validator, brainstorm-validator, F/H/I/J, or
+   the pre-push-gate.
+
+The combination: user grants the TOOL level autonomy (no prompts); the
+HARNESS keeps the architectural checkpoints. The user stays decisive
+where it matters.
+
+### When the model should still ask
+
+Inside "autonomy" scope above, there are still situations where the model
+pauses and asks:
+- **Ambiguous spec** — approach could be interpreted two ways; pick one
+  is risky, ask user which.
+- **Discovered scope creep** — implementation touches a file not in the
+  plan and the model can't tell if it should include it.
+- **Tool failure with unclear recovery** — `git rebase` conflict, `npm
+  install` fails, etc. — surface to user.
+- **Architectural decision that wasn't in the brainstorm** — e.g., a
+  shared component modification (this is already called out in "Shared
+  Component Modifications" — ALWAYS stops and re-brainstorms).
+
+Asking is not ceremony in these cases; it's honest escalation. The
+contract is not "never ask" — it's "ask only when the answer materially
+changes the outcome."
 
 ---
 

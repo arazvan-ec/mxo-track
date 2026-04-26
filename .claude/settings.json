@@ -47,6 +47,12 @@
             "command": "/home/user/mxo-track/.claude/hooks/validators/classify-validator.sh",
             "timeout": 5,
             "statusMessage": "Classify gate..."
+          },
+          {
+            "type": "command",
+            "command": "/home/user/mxo-track/.claude/hooks/ddd-boundary-check.sh",
+            "timeout": 5,
+            "statusMessage": "DDD boundary..."
           }
         ]
       },

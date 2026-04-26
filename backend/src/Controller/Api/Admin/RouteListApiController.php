@@ -5,11 +5,10 @@ declare(strict_types=1);
 namespace App\Controller\Api\Admin;
 
 use App\Domain\Route\Model\Route;
-use App\Domain\Route\Model\RouteStop;
+use App\Domain\Route\Repository\RouteStopRepositoryInterface;
 use App\Entity\Customer;
 use App\Entity\User;
 use App\Enum\RouteStatus;
-use App\Enum\RouteStopStatus;
 use App\Service\Admin\FilterDefinition;
 use App\Service\Admin\ListFilterApplier;
 use Doctrine\ORM\EntityManagerInterface;
@@ -28,6 +27,7 @@ class RouteListApiController extends AbstractController
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly ListFilterApplier $filterApplier,
+        private readonly RouteStopRepositoryInterface $stopRepository,
     ) {}
 
     #[SymfonyRoute('', name: 'api_admin_routes_list', methods: ['GET'])]
@@ -70,30 +70,32 @@ class RouteListApiController extends AbstractController
         $total = (int) $countQb->getQuery()->getSingleScalarResult();
         $totalPages = max(1, (int) ceil($total / $limit));
 
-        // Stop counts per route
+        // Per-route aggregations via the domain repository (DDD boundary:
+        // the controller depends on the interface, not on EntityManager for
+        // RouteStop access).
         $stopCounts = [];
+        $nextStops = [];
+        $histograms = [];
         if (\count($routes) > 0) {
-            $rows = $this->em->createQueryBuilder()
-                ->select('IDENTITY(s.route) as routeId, COUNT(s.id) as total, SUM(CASE WHEN s.status = :delivered THEN 1 ELSE 0 END) as delivered')
-                ->from(RouteStop::class, 's')
-                ->where('s.route IN (:routes)')
-                ->setParameter('routes', $routes)
-                ->setParameter('delivered', RouteStopStatus::DELIVERED)
-                ->groupBy('s.route')
-                ->getQuery()
-                ->getResult();
-
-            foreach ($rows as $row) {
-                $stopCounts[$row['routeId']] = [
-                    'total' => (int) $row['total'],
-                    'delivered' => (int) $row['delivered'],
-                ];
-            }
+            $stopCounts = $this->stopRepository->countsByRoutes($routes);
+            $nextStops = $this->stopRepository->findNextPendingStopsByRoutes($routes);
+            // Histogram is bucketed in the server's configured timezone so the
+            // "today" window and the hour labels stay internally consistent.
+            // See docs/superpowers/execution-logs/2026-04-23-routes-widget-audit-fixes.md
+            // for the cross-TZ asymmetry follow-up.
+            $appTz = new \DateTimeZone(date_default_timezone_get());
+            $histograms = $this->stopRepository->findDeliveryHistogramsByRoutes(
+                $routes,
+                $appTz,
+                new \DateTimeImmutable('now', $appTz),
+            );
         }
 
         $items = [];
         foreach ($routes as $route) {
             $counts = $stopCounts[$route->getId()] ?? ['total' => 0, 'delivered' => 0];
+            $nextStop = $nextStops[$route->getId()] ?? null;
+            $histogram = $histograms[$route->getId()] ?? null;
             $items[] = [
                 'publicId' => $route->getPublicIdString(),
                 'name' => $route->getName(),
@@ -104,6 +106,12 @@ class RouteListApiController extends AbstractController
                 'status' => $route->getStatus()->value,
                 'deliveredStops' => $counts['delivered'],
                 'totalStops' => $counts['total'],
+                'totalDistanceKm' => $route->getTotalDistanceKm(),
+                'estimatedDurationMinutes' => $route->getEstimatedDurationMinutes(),
+                'totalWeightKg' => $route->getTotalWeightKg(),
+                'totalParcels' => $route->getTotalParcels(),
+                'nextStop' => $nextStop,
+                'deliveryHistogram' => $histogram,
             ];
         }
 

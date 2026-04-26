@@ -71,14 +71,15 @@ echo "Test 4: null → brainstorming (illegal skip)"
 assert_fail "should reject skipping to brainstorming" "$ADVANCE" "brainstorming"
 
 # Test 5: consult → brainstorming (legal)
+# Requires decisions_read AND logs_scanned evidence (consult-validator hardened 2026-04-22)
 reset_state "full"
-jq '.current_phase = "consult"' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE"
+jq '.current_phase = "consult" | .evidence.decisions_read = true | .evidence.logs_scanned = true' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE"
 echo "Test 5: consult → brainstorming (legal)"
 assert_pass "should advance to brainstorming" "$ADVANCE" "brainstorming"
 
 # Test 6: consult → planning (illegal skip)
 reset_state "full"
-jq '.current_phase = "consult"' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE"
+jq '.current_phase = "consult" | .evidence.decisions_read = true | .evidence.logs_scanned = true' "$STATE_FILE" > /tmp/t.json && mv /tmp/t.json "$STATE_FILE"
 echo "Test 6: consult → planning (illegal skip)"
 assert_fail "should reject skipping to planning" "$ADVANCE" "planning"
 
@@ -183,9 +184,11 @@ Did some stuff.
 
 ## Lessons
 
-- First lesson learned from the implementation process that was quite informative and educational overall
-- Second lesson about testing that revealed important patterns in the codebase worth documenting for future
+- First lesson about the DDD boundary being respected by this refactor with clear domain separation
+- Second lesson about testing patterns that revealed important coupling concerns in the codebase
 - Third lesson about workflow enforcement that helped identify architectural gaps in the hook system
+
+## End
 LOGEOF
 
 reset_state "full"
@@ -301,8 +304,10 @@ cat > "$TEST_LOG3" <<'LOGEOF'
 # Execution Log
 
 ## Lessons
-- A lesson long enough to pass the 100-char minimum check. This is to verify the retrospective_shown flag is what blocks, not the section content.
-- Another lesson with enough content to be considered complete.
+- A lesson long enough to pass the 100-char minimum check about the DDD boundary being respected. This tests retrospective_shown is the gate.
+- Another lesson about architectural coupling with enough content to be considered complete.
+
+## End
 LOGEOF
 reset_state "full"
 jq --arg lp "$TEST_LOG3" '.current_phase = "retrospective" | .evidence = {

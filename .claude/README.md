@@ -288,7 +288,7 @@ checks completion (current phase).
 | Fase | Evidencia requerida | Nivel |
 |------|---------------------|-------|
 | `consult` | `decisions_read` AND `logs_scanned` (hardened 2026-04-22 — was OR) | HARD |
-| `brainstorming` | `user_turns ≥ 1` (HARD) + SOFT warn if `< 3` + `alternatives_proposed` + `user_approved` + `spec_path` (archivo ≥500B) | MIXED |
+| `brainstorming` | `user_turns ≥ 1` (HARD) + SOFT warn if `< 3` + `alternatives_proposed` + `user_approved` + `spec_path` (archivo ≥500B); when spec references critical contexts (read from `_ddd-boundaries.yaml`): `## Prior Art Audit` (H) + `## Architectural Adversarial Review` (C, via sub-invocation) | MIXED |
 | `planning` | `plan_path` (archivo ≥300B con keywords) | HARD |
 | `implementation` | plan exists (HARD) + `tests_written > 0` (SOFT warning) | MIXED |
 | `verification` | `tests_passed` = `true` or `skipped` + `lint_clean` = `true` or `skipped` | MIXED |
@@ -296,14 +296,22 @@ checks completion (current phase).
 | `retrospective` | `retrospective_shown=true` (visibility gate) + `execution_log_path` + `## Lessons`/`## Retrospectiva` section ≥100 chars | HARD |
 | `finalize` | `branch_strategy` declared (`merge\|pr\|keep\|discard`) + knowledge module check | SOFT |
 
-### Additional PreToolUse gates (Option 3-Enforced, 2026-04-22)
+### Additional PreToolUse gates (Option 3-Enforced, 2026-04-22; extended 2026-04-24)
 
-Two hooks run on every tool call, orthogonal to the phase validators:
+Three hooks run on every tool call, orthogonal to the phase validators:
 
 | Hook | Matcher | Effect | Bypass |
 |------|---------|--------|--------|
 | `validators/classify-validator.sh` | Edit\|Write | Blocks edits to framework/code paths when `interaction_classification ∈ {micro, light, explore, informational, null}`. Carve-outs: `docs/`, `*.md`, `/tmp/`, `.claude/session-state.json`. | `SKIP_CLASSIFY_GATE=1` |
+| `ddd-boundary-check.sh` (Layer F) | Edit\|Write | Reads `docs/knowledge/_ddd-boundaries.yaml`. **BLOCKS** in full/debug flow when an edit outside `backend/src/Infrastructure/` adds new `createQueryBuilder` or `getRepository(` usage in a critical context AND the spec's Prior Art Audit doesn't cover the file. WARNING-only outside full/debug or when no spec exists yet. Known violations listed in the YAML are exempted. (Strengthened 2026-04-26 from WARNING-only to conditional BLOCK.) | `SKIP_DDD_BOUNDARY_GATE=1` |
 | `pre-tool-freshness.sh` | `.*` (all tools) | Non-blocking warning: prints `⚠ POSIBLE STALE STATE:` when upcoming tool call signals evidence/phase mismatch (spec write outside brainstorming, plan write outside planning, exec-log write outside capture, git commit during consult, git push in finalize without branch_strategy). | — (non-blocking) |
+
+And two 2026-04-24 extensions to the brainstorm validator:
+
+| Gate | Effect | Severity |
+|------|--------|----------|
+| Layer H — Prior Art Audit | When the spec references critical contexts (paths read from `docs/knowledge/_ddd-boundaries.yaml`) or `src/Controller/Api/Admin/`, requires a `## Prior Art Audit` section with at least one row classified as ✅ / ❌ tech-debt / new. | HARD |
+| Layer C — Architectural Adversarial Review (sub-invocation) | When critical paths referenced, `socratic-review-validator.sh` requires the spec's `## Architectural Adversarial Review` section to contain ≥3 numbered Q/A entries (each ≥30 chars), with at least one architectural keyword. | HARD |
 
 And an enhancement to the TodoWrite PostToolUse hook:
 

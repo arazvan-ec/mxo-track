@@ -91,9 +91,9 @@ Did some stuff.
 
 ## Lessons
 
-- Router layout routes are the right pattern for shared chrome — should have been done when DualMenuShell was created
+- Router layout routes respect the boundary between shared chrome and page-specific logic — DDD-style separation we should have applied earlier
 - Workflow hooks need integration tests that simulate full session flows, not just unit tests per hook
-- The phase-transition-controller string matching is inherently fragile — consider a different approach for future enforcement
+- The phase-transition-controller string matching is architectural tech-debt — consider a different approach for future enforcement
 
 ## End
 LOGEOF
@@ -108,13 +108,33 @@ cat > "$TEST_LOG" << 'LOGEOF'
 ## Retrospectiva
 
 ### Estimación vs realidad
-La implementación fue rápida. Lo que NO anticipé fue el tiempo perdido luchando contra los hooks.
-El workflow se bloqueó a sí mismo en 4 puntos distintos, requiriendo workarounds diversos para continuar.
+La implementación fue rápida. Lo que NO anticipé fue el tiempo perdido luchando contra el coupling
+entre los hooks y phase-advance. El workflow se bloqueó a sí mismo en 4 puntos distintos debido a una
+architecture de gates demasiado estricta, requiriendo workarounds diversos para continuar.
 
 ## End
 LOGEOF
 setup_state "$TEST_LOG"
 assert_passes "passes with Spanish retrospectiva section" "$VALIDATOR" "$TEST_STATE"
+
+# Test 7 (Layer I baseline post-removal): Lessons content >=100 chars
+# without any architectural keyword should now PASS (the gate was removed
+# 2026-04-26 — see /tmp/layer-i-analysis.md for the 4-test rationale).
+echo "Test 7: Post-Layer-I-removal — neutral lessons content passes"
+cat > "$TEST_LOG" << 'LOGEOF'
+# Execution Log
+
+## Lessons
+
+- Nice feature landed on schedule.
+- Happy with the user experience — the sparkline looks great in the expanded card.
+- Should plan more time for the final polish pass next sprint.
+- The release announcement got good feedback from stakeholders.
+
+## End
+LOGEOF
+setup_state "$TEST_LOG" "true"
+assert_passes "neutral lessons (no arch keyword) passes after Layer I removal" "$VALIDATOR" "$TEST_STATE"
 
 # Cleanup
 rm -f "$TEST_STATE" "$TEST_LOG"
