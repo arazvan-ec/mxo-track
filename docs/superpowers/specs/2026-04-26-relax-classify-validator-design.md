@@ -4,7 +4,7 @@
 **Author:** Sesión `claude/remove-edit-confirmations-f5AhV`
 **Status:** Draft (pendiente aprobación)
 
-## Problem
+## Problema (Approach + Trade-off)
 
 `classify-validator.sh` (Layer A) bloquea cualquier edit en `.claude/`,
 `scripts/`, `backend/src/`, etc. salvo que la clasificación sea `full` o
@@ -87,16 +87,14 @@ No hay tech-debt relevante que el cambio replique. No hay abstracción nueva.
 
 ## Architectural Adversarial Review
 
-**Q1: ¿La carve-out abre puerta a "edits trampa" donde alguien mete lógica en un archivo declarativo?**
-A1: Los archivos en el allowlist (`.gitignore`, `.editorconfig`,
+1. **Q:** ¿La carve-out abre puerta a "edits trampa" donde alguien mete lógica en un archivo declarativo? **A:** Los archivos en el allowlist (`.gitignore`, `.editorconfig`,
 `.gitattributes`, `.claude/settings.local.json`) tienen formatos sin
 sintaxis ejecutable. No se puede meter PHP/bash/JS en `.gitignore`. Para
 `settings.local.json`, el archivo es local-only (gitignored), no afecta
 a otros desarrolladores ni a CI. El blast radius está acotado por
 diseño.
 
-**Q2: ¿Por qué no usar el deviation flow existente en vez de agregar carve-outs?**
-A2: El usuario explícitamente NO aprueba deviations. Más allá de eso,
+2. **Q:** ¿Por qué no usar el deviation flow existente en vez de agregar carve-outs? **A:** El usuario explícitamente NO aprueba deviations. Más allá de eso,
 deviation requiere aprobación verbal cada vez (criterio: "Wait for
 explicit user confirmation"). Para edits triviales recurrentes
 (.gitignore, settings personales), la fricción de pedir aprobación
@@ -104,8 +102,7 @@ verbal es desproporcionada al riesgo (zero design decisions, zero
 runtime effect). Carve-out estática es la herramienta correcta cuando
 el patrón se repite.
 
-**Q3: ¿Qué pasa si se agregan más carve-outs sin disciplina y la gate se vuelve permisiva?**
-A3: Cada nueva entrada al allowlist debe pasar el 4-test (forced
+3. **Q:** ¿Qué pasa si se agregan más carve-outs sin disciplina y la gate se vuelve permisiva (boundary, pattern, architecture)? **A:** Cada nueva entrada al allowlist debe pasar el 4-test (forced
 practice, right phase, token cost, source backed). El criterio de
 admisión está documentado en este spec ("Criterios de qué cuenta como
 config pura"). Si en el futuro alguien quiere agregar `package.json` al
@@ -113,14 +110,12 @@ allowlist, la 4ª regla ("cambios de 1 línea típicamente no requieren
 brainstorming") falla — package.json afecta build, requiere review.
 Auto-corrige.
 
-**Q4 (boundary): ¿Toca el cambio algún critical context (DDD, arquitectura)?**
-A4: No. Modifica `.claude/hooks/validators/classify-validator.sh` y
+4. **Q:** ¿Toca el cambio algún critical context (DDD, arquitectura, boundary)? **A:** No. Modifica `.claude/hooks/validators/classify-validator.sh` y
 `.claude/hooks/test-enforcement-layers.sh`. Ningún archivo en
 `backend/src/Domain/Route/**` o `backend/src/Domain/Shipment/**` es
 tocado. Layer F (DDD boundary) no se activa.
 
-**Q5 (tradeoff): ¿Cuál es el costo de NO hacer este cambio?**
-A5: Cada edit de config pura sigue forzando bypass con
+5. **Q:** ¿Cuál es el costo de NO hacer este cambio (tradeoff)? **A:** Cada edit de config pura sigue forzando bypass con
 `SKIP_CLASSIFY_GATE=1` o reclasificación a `full` (que arrastra
 consult+brainstorm+plan ceremony). Documentado en logs: esta sesión usó
 bypass en la primera Edit. Si el bypass se vuelve hábito, debilita el

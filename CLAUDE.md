@@ -377,7 +377,7 @@ mapped to the gate that blocks it:
 
 | Shortcut | Gate that catches it |
 |----------|---------------------|
-| Calling framework changes "light" to skip brainstorm | `classify-validator.sh` (Layer A) — blocks edits to `.claude/`, `scripts/`, `backend/src/`, `frontend/src/`, `ml-service/`, `docker/` unless classification is `full` or `debug` |
+| Calling framework changes "light" to skip brainstorm | `classify-validator.sh` (Layer A) — blocks edits to `.claude/`, `scripts/`, `backend/src/`, `frontend/src/`, `ml-service/`, `docker/` unless classification is `full` or `debug`. **Pure-config carve-out** (always allowed): `.gitignore`, `.editorconfig`, `.gitattributes`, `.claude/settings.local.json`, plus the existing `docs/*`, `*.md`, `/tmp/*`, `.claude/session-state.json` |
 | `consult → brainstorm` without reading decisions/logs | `consult-validator.sh` (Layer B) — requires BOTH `decisions_read=true` AND `logs_scanned=true` |
 | `brainstorm → planning` without alternatives or approval | `brainstorm-validator.sh` — requires `alternatives_proposed`, `user_approved`, `spec_path`, ≥1 user turn |
 | **Spec mirrors tech-debt pattern** without acknowledging | `brainstorm-validator.sh` (Layer H, HARD) — when spec references critical contexts (read from `docs/knowledge/_ddd-boundaries.yaml`) or `src/Controller/Api/Admin/`, requires a `## Prior Art Audit` section with at least one row classified as ✅, ❌ tech-debt, or `new` |

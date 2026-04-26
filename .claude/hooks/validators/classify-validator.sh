@@ -43,6 +43,12 @@ case "$REL_PATH" in
   *.md) exit 0 ;;
   /tmp/*) exit 0 ;;
   .claude/session-state.json) exit 0 ;;
+  # Pure-config edits: declarative formats with no executable logic.
+  # See docs/superpowers/specs/2026-04-26-relax-classify-validator-design.md
+  .gitignore|*/.gitignore) exit 0 ;;
+  .editorconfig|*/.editorconfig) exit 0 ;;
+  .gitattributes|*/.gitattributes) exit 0 ;;
+  .claude/settings.local.json) exit 0 ;;
 esac
 
 # Framework path patterns that require full/debug classification

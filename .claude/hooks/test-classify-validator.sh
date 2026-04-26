@@ -118,6 +118,27 @@ INPUT11='{"tool_input":{"file_path":"/home/user/mxo-track/.claude/hooks/x.sh"}}'
 RC=$(run_hook "$INPUT11" "$FIX/light.json")
 assert "T11: absolute framework path + light → block" "2" "$RC"
 
+# T12: .gitignore at repo root + null class → allow (pure-config carve-out)
+make_state "$FIX/null.json" "null"
+INPUT12='{"tool_input":{"file_path":".gitignore"}}'
+RC=$(run_hook "$INPUT12" "$FIX/null.json")
+assert "T12: .gitignore at root + null → allow (carve-out)" "0" "$RC"
+
+# T13: nested .gitignore (.claude/.gitignore) + null → allow
+INPUT13='{"tool_input":{"file_path":".claude/.gitignore"}}'
+RC=$(run_hook "$INPUT13" "$FIX/null.json")
+assert "T13: .claude/.gitignore + null → allow (carve-out)" "0" "$RC"
+
+# T14: .claude/settings.local.json + null → allow (personal override)
+INPUT14='{"tool_input":{"file_path":".claude/settings.local.json"}}'
+RC=$(run_hook "$INPUT14" "$FIX/null.json")
+assert "T14: settings.local.json + null → allow (carve-out)" "0" "$RC"
+
+# T15: .claude/settings.json + null → still BLOCK (not in allowlist; defines hooks)
+INPUT15='{"tool_input":{"file_path":".claude/settings.json"}}'
+RC=$(run_hook "$INPUT15" "$FIX/null.json")
+assert "T15: settings.json + null → block (not config-only)" "2" "$RC"
+
 echo ""
 echo "── Summary ──"
 echo "PASS: $PASS"
