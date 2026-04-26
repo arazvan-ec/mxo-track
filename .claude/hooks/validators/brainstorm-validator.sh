@@ -66,11 +66,15 @@ else
   # Layer H — Prior Art Audit gate (HARD when critical paths referenced)
   # If the spec references critical domain contexts or admin API controllers,
   # require a `## Prior Art Audit` section with at least one classified row.
-  # Use `if grep -qE` rather than `grep -c` to avoid the `grep failure + echo`
-  # concatenation under `set -e` / pipefail.
-  if grep -qE '(src/Domain/(Route|Shipment)/|src/Controller/Api/Admin/)' "$SPEC_FULL" 2>/dev/null; then
+  # Critical-context paths come from docs/knowledge/_ddd-boundaries.yaml via
+  # the shared lib (single source of truth, shared with Layer F).
+  # shellcheck source=../lib/ddd-boundaries.sh
+  source "$REPO/.claude/hooks/lib/ddd-boundaries.sh"
+  CRITICAL_REGEX=$(ddd_critical_regex)
+
+  if grep -qE "($CRITICAL_REGEX)" "$SPEC_FULL" 2>/dev/null; then
     if ! grep -qE '^## Prior Art Audit' "$SPEC_FULL" 2>/dev/null; then
-      ERRORS="${ERRORS}- H: spec referencia contextos criticos (Route/Shipment/Admin API) pero falta seccion '## Prior Art Audit'. Clasifica cada path existente como endorsed (✅), tech-debt (❌ tech-debt), o nuevo (new).\n"
+      ERRORS="${ERRORS}- H: spec referencia contextos criticos pero falta seccion '## Prior Art Audit'. Clasifica cada path existente como endorsed (✅), tech-debt (❌ tech-debt), o nuevo (new). Critical contexts source: docs/knowledge/_ddd-boundaries.yaml.\n"
     else
       # Extract Prior Art Audit section (from its header to the next top-level ## header)
       # and require at least one row classified in the 'Endorsed?' column.
@@ -118,7 +122,7 @@ else
   # sub-invocation here. Questions live in the spec's
   # `## Architectural Adversarial Review` section instead of JSON evidence.
   # The discrete validator is preserved (testable in isolation, reusable).
-  if grep -qE '(src/Domain/(Route|Shipment)/|src/Controller/Api/Admin/)' "$SPEC_FULL" 2>/dev/null; then
+  if grep -qE "($CRITICAL_REGEX)" "$SPEC_FULL" 2>/dev/null; then
     SOCRATIC_VALIDATOR="$REPO/.claude/hooks/validators/socratic-review-validator.sh"
     if [ -x "$SOCRATIC_VALIDATOR" ]; then
       SOCRATIC_OUT=$("$SOCRATIC_VALIDATOR" "$SPEC_FULL" 2>&1 || true)

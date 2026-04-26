@@ -81,7 +81,12 @@ fi
 # If the spec references critical paths, at least one Q must contain an
 # architectural keyword.
 if [ -n "$SECTION" ] && [ "$QCOUNT" -ge 3 ]; then
-  if grep -qE '(src/Domain/(Route|Shipment)/|src/Controller/Api/Admin/)' "$SPEC_PATH"; then
+  # Read critical-paths regex from shared lib (single source of truth).
+  REPO="${REPO:-/home/user/mxo-track}"
+  # shellcheck source=../lib/ddd-boundaries.sh
+  source "$REPO/.claude/hooks/lib/ddd-boundaries.sh"
+  CRITICAL_REGEX=$(ddd_critical_regex)
+  if grep -qE "($CRITICAL_REGEX)" "$SPEC_PATH"; then
     ARCH_KEYWORDS='endorsed|boundary|DDD|tech.?debt|architecture|coupling|pattern|tradeoff|trade-off'
     if ! echo "$SECTION" | grep -qiE "$ARCH_KEYWORDS"; then
       ERRORS="${ERRORS}- C: Spec referencia contextos criticos pero ninguna pregunta menciona keywords arquitectonicas (endorsed|boundary|DDD|tech-debt|architecture|coupling|pattern|tradeoff). Agrega al menos una pregunta sobre arquitectura/boundaries.\n"

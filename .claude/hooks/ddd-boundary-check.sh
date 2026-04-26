@@ -126,6 +126,57 @@ PAYLOAD=$(echo "$INPUT" | jq -r '.tool_input.new_string // .tool_input.content /
 [ -z "$PAYLOAD" ] && exit 0
 
 if echo "$PAYLOAD" | grep -qE 'createQueryBuilder|getRepository\('; then
+  # Conditional severity: BLOCK in full/debug flows when the spec's Prior
+  # Art Audit doesn't cover this file. WARNING otherwise (light/explore,
+  # or no spec yet in early brainstorm).
+  STATE_FILE="$REPO/.claude/session-state.json"
+  SHOULD_BLOCK=0
+
+  if [ -f "$STATE_FILE" ]; then
+    FLOW=$(jq -r '.flow_type // "null"' "$STATE_FILE" 2>/dev/null)
+    if [ "$FLOW" = "full" ] || [ "$FLOW" = "debug" ]; then
+      SPEC_PATH=$(jq -r '.evidence.spec_path // ""' "$STATE_FILE" 2>/dev/null)
+      SPEC_FULL=""
+      if [ -n "$SPEC_PATH" ]; then
+        if [ -f "$SPEC_PATH" ]; then
+          SPEC_FULL="$SPEC_PATH"
+        elif [ -f "$REPO/$SPEC_PATH" ]; then
+          SPEC_FULL="$REPO/$SPEC_PATH"
+        fi
+      fi
+      if [ -n "$SPEC_FULL" ]; then
+        # Spec exists. Does its Prior Art Audit section cover this file?
+        AUDIT_SECTION=$(awk '/^## Prior Art Audit/{flag=1; next} /^## /{flag=0} flag' "$SPEC_FULL" 2>/dev/null)
+        if [ -z "$AUDIT_SECTION" ]; then
+          # Spec lacks audit entirely (Layer H should have caught, but be defensive)
+          SHOULD_BLOCK=1
+        elif ! echo "$AUDIT_SECTION" | grep -qF "$REL_PATH"; then
+          SHOULD_BLOCK=1
+        fi
+      fi
+      # If no spec yet (still in consult/early brainstorm), fall through to
+      # WARNING — not enough state to BLOCK.
+    fi
+  fi
+
+  if [ "$SHOULD_BLOCK" -eq 1 ]; then
+    cat >&2 <<EOF
+BLOCKED DDD boundary: adding ORM coupling in critical context at $REL_PATH.
+The current $FLOW-flow spec does NOT include this file in its Prior Art Audit.
+Either:
+  (a) Add this file to the spec's '## Prior Art Audit' table and classify
+      it (✅ endorsed, ❌ tech-debt, or new) with justification, OR
+  (b) Refactor through a RepositoryInterface in Domain/{Context}/Repository/
+      backed by an Infrastructure/{Context}/Doctrine/ implementation, OR
+  (c) Bypass: export SKIP_DDD_BOUNDARY_GATE=1 (decision-log entry required)
+  Background: backend/CLAUDE.md "Architecture: Two Worlds".
+  Boundaries:  docs/knowledge/_ddd-boundaries.yaml
+  Spec:        $SPEC_PATH
+EOF
+    echo "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"DDD boundary BLOCKED at $REL_PATH (full-flow + missing Prior Art Audit row)\"}}"
+    exit 2
+  fi
+
   cat >&2 <<EOF
 WARNING DDD boundary: adding ORM coupling in critical context at $REL_PATH.
 Consider using the RepositoryInterface pattern.
