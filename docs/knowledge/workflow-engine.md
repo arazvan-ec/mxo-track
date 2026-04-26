@@ -2,9 +2,10 @@
 
 ## Status
 
-**[CURRENT]** as of 2026-04-22 — Option 3-Enforced layers live on `main`.
-Last verified: 2026-04-22 (waves 1-5 merged: `95f218c`, `0867a74`, `033159c`,
-`6dd33bb`, `63a4e0a`).
+**[CURRENT]** as of 2026-04-26 — Option 3-Enforced layers live on `main`,
+plus the 4-test pruning sweep (commits `231f951` removed Layers I+J;
+`ad11cc4` strengthened F to conditional BLOCK and consolidated H against
+the YAML SoT). Last verified: 2026-04-26.
 
 ## Purpose
 
@@ -19,8 +20,12 @@ exact failure modes each hook catches.
 
 ## Architecture Layers
 
-Four enforcement layers, orthogonal to each other, each targeting a different class
-of shortcut. All four run on every relevant tool call.
+Six active enforcement layers (A, B, C, D, F, H), orthogonal to each other, each
+targeting a different class of shortcut. All run on every relevant tool call.
+Two further layers (I, J) were retired 2026-04-26 under the 4-test framework —
+they are documented below for archeological reasons (search hits and history),
+but no longer execute. See
+`docs/superpowers/execution-logs/2026-04-26-4test-applied-FIJ.md` for rationale.
 
 ### Layer A — Classification gate (PreToolUse on Edit/Write)
 
@@ -126,6 +131,77 @@ Warning patterns (`pre-tool-freshness.sh:33-83`):
 The warning is visible to the model (stderr) but does not block; the goal is to
 prompt the model to reconcile state, not to gate legitimate checkpoints.
 
+### Layer F — DDD boundary check (PreToolUse on Edit/Write)
+
+**File:** `.claude/hooks/ddd-boundary-check.sh`
+
+Catches edits that introduce ORM coupling (`createQueryBuilder`, `getRepository`,
+or similar) inside a critical aggregate context. Critical contexts are read from
+`docs/knowledge/_ddd-boundaries.yaml` (single source of truth, shared with Layer H
+via `.claude/hooks/lib/ddd-boundaries.sh`).
+
+- **Severity is conditional** (`ddd-boundary-check.sh:127-176`): in `full`/`debug`
+  flow, the gate **BLOCKS** when the spec's `## Prior Art Audit` section does not
+  cover the file being edited. Outside `full`/`debug`, or when no spec exists yet,
+  it emits a WARNING and lets the edit through. Strengthened 2026-04-26 — was
+  WARNING-only before.
+- **Known violations** listed in `_ddd-boundaries.yaml` are exempted (no warning,
+  no block) so the gate doesn't yell about pre-existing tech debt on every edit.
+- **Bypass:** `SKIP_DDD_BOUNDARY_GATE=1`. Requires a decision log entry — the
+  conditional-BLOCK branch is the one most likely to surface false positives, so
+  the bypass is documented as a first-class escape hatch.
+- The gate reads the YAML directly (not via the shared lib) for hot-path
+  performance — every Edit/Write would otherwise pay a `source` cost. The
+  authoritative regex still lives in the YAML.
+
+### Layer H — Prior Art Audit gate (brainstorm exit, embedded in Layer B)
+
+**File:** `.claude/hooks/validators/brainstorm-validator.sh` (the H block)
+
+Runs as part of `brainstorm-validator.sh` when leaving the `brainstorming` phase.
+Triggered when the spec references a critical context. Requires a `## Prior Art
+Audit` section with at least one row classified as ✅ (endorsed), ❌ tech-debt,
+or `new`. The trigger regex is read from `docs/knowledge/_ddd-boundaries.yaml`
+via the shared helper `.claude/hooks/lib/ddd-boundaries.sh`
+(`ddd_critical_regex()`) — the same source Layer F uses, eliminating the class
+of "regex out of sync with YAML" bugs.
+
+- **Pairs with Layer F.** H runs at spec time (cheap, conversation cost only);
+  F runs at edit time (expensive — every keystroke). H catches the design
+  failure early; F is a defense-in-depth net for changes whose spec slipped
+  through audit.
+- **HARD gate.** Brainstorm cannot exit without the section.
+- The shared helper exposes `ddd_critical_regex` as a function; brainstorm-validator
+  sources it. `socratic-review-validator.sh` (the architectural adversarial
+  review hook invoked from brainstorm-validator) uses the same helper for its
+  arch-keyword trigger.
+
+### Layer I — [REMOVED 2026-04-26]
+
+Historically, the retrospective-validator scanned the Lessons section for
+architectural-concern keywords and required either positive content or an
+explicit `retrospective_no_architectural_concerns=true` opt-out flag. Removed
+2026-04-26 under the 4-test framework: the keyword scan failed Test 1 (the
+retrospective phase already forces reflection via the visibility gate, so the
+keyword check did not force a practice the model wouldn't apply spontaneously)
+and Test 3 (the byte-level keyword regex was paying maintenance cost without
+proportional value). The visibility gate, execution-log existence check, and
+the ≥100-char Lessons section requirement are preserved — those tests pass
+the 4-test independently. See execution log
+`docs/superpowers/execution-logs/2026-04-26-4test-applied-FIJ.md`.
+
+### Layer J — [REMOVED 2026-04-26]
+
+Historically, the brainstorm-validator scanned the spec for pattern names and
+cross-referenced `docs/knowledge/_graduations.yaml` to surface "this pattern
+is already graduated" hints. Removed 2026-04-26 under the 4-test framework:
+the scan failed Test 1 (the model already consults the manifest and knowledge
+modules in Step 0 of brainstorming) and Test 2 (the right place to surface
+graduation candidates is post-hoc, not at spec exit). `pattern-audit.sh`,
+which runs at the `retrospective → finalize` boundary, provides the cleaner
+post-hoc surfacing and is retained. See execution log
+`docs/superpowers/execution-logs/2026-04-26-4test-applied-FIJ.md`.
+
 ## Phase Evidence Matrix
 
 Adapted from `.claude/README.md` with the 2026-04-22 hardening annotations.
@@ -151,6 +227,8 @@ Each row pairs a shortcut the model is prone to take with the gate that catches 
 | Calling framework changes "light" to skip brainstorm | `classify-validator.sh` (Layer A) |
 | `consult → brainstorm` without reading decisions/logs | `consult-validator.sh` (Layer B) — requires BOTH flags |
 | `brainstorm → planning` without alternatives or approval | `brainstorm-validator.sh` — requires `alternatives_proposed`, `user_approved`, `spec_path`, ≥1 user turn |
+| Spec mirrors tech-debt pattern without acknowledging | `brainstorm-validator.sh` Layer H — requires `## Prior Art Audit` with ≥1 row classified ✅ / ❌ tech-debt / `new` when spec touches critical contexts (regex from `_ddd-boundaries.yaml` via shared lib) |
+| Edit adds ORM coupling in critical context without audit | `ddd-boundary-check.sh` Layer F — BLOCKS in full/debug when spec's Prior Art Audit doesn't cover the file; WARNING outside full/debug or with no spec; bypass `SKIP_DDD_BOUNDARY_GATE=1` |
 | `verification → capture` without running tests/lint | `verification-validator.sh` — `tests_passed` and `lint_clean` must be `true` (no `skipped` in full/debug) |
 | `capture → retrospective` without writing the execution log | `capture-validator.sh` (Layer B, HARD) — path set AND file exists |
 | `retrospective → finalize` without presenting retrospective to user | `retrospective-validator.sh` — `evidence.retrospective_shown=true` must be set after visible chat presentation |
@@ -168,6 +246,7 @@ explaining the situation.
 |---------|--------|--------------|
 | `SKIP_CLASSIFY_GATE=1` | Disables `classify-validator.sh` | Emergency edits to framework paths when reclassification has already been discussed but session-state is stuck |
 | `SKIP_PHASE_EXIT_GATE=1` | Disables all phase exit validators in `phase-advance.sh` | Recovery from corrupted evidence state; rebuilding session after interruption |
+| `SKIP_DDD_BOUNDARY_GATE=1` | Disables `ddd-boundary-check.sh` (Layer F) | Edits that legitimately touch critical contexts without adding new ORM coupling (e.g., refactoring an existing violation); decision-log entry required |
 
 There is no bypass for Layer C (TodoWrite mirror) — the `in_progress=1` invariant
 is non-negotiable and always correct. Layer D is already non-blocking.
@@ -185,14 +264,17 @@ tuned — not a gate to silence. Bypass is a last resort, not a workflow.
 | `.claude/hooks/workflow-status-line.sh` | Renders the full-format status line (`📍 full \| Phase (n/N) \| ...`) |
 | `.claude/hooks/pre-tool-freshness.sh` | Layer D — stale-state warnings (non-blocking) |
 | `.claude/hooks/todowrite-mirror.sh` | Layer C — `in_progress=1` invariant + task_progress/problems derivation |
+| `.claude/hooks/ddd-boundary-check.sh` | Layer F — PreToolUse Edit/Write gate; conditional BLOCK on ORM coupling in critical contexts (full/debug + missing Prior Art Audit row) |
+| `.claude/hooks/lib/ddd-boundaries.sh` | Shared helper exposing `ddd_critical_regex()`. Reads `docs/knowledge/_ddd-boundaries.yaml`. Single source of truth for "what counts as a critical context"; consumed by Layer H trigger in brainstorm-validator and the arch-keyword trigger in socratic-review-validator. Layer F reads the YAML directly for hot-path performance |
 | `.claude/hooks/validators/classify-validator.sh` | Layer A — blocks framework edits without full/debug classification |
 | `.claude/hooks/validators/consult-validator.sh` | Phase B — requires `decisions_read` AND `logs_scanned` |
-| `.claude/hooks/validators/brainstorm-validator.sh` | Phase B — spec size + keywords + anti-omission + parallel-wave conflict |
+| `.claude/hooks/validators/brainstorm-validator.sh` | Phase B — spec size + keywords + anti-omission + parallel-wave conflict + Layer H Prior Art Audit gate (sources `lib/ddd-boundaries.sh`); also invokes `socratic-review-validator.sh` for the architectural adversarial review check |
+| `.claude/hooks/validators/socratic-review-validator.sh` | Spec-exit hook invoked by brainstorm-validator — requires `## Architectural Adversarial Review` with ≥3 numbered Q/A entries when spec touches critical paths; arch-keyword trigger sources `lib/ddd-boundaries.sh` |
 | `.claude/hooks/validators/planning-validator.sh` | Phase B — plan size/keywords |
 | `.claude/hooks/validators/implementation-validator.sh` | File edit gate during implementation — TDD check |
 | `.claude/hooks/validators/verification-validator.sh` | Phase B — tests_passed + lint_clean with strict/non-strict per flow |
 | `.claude/hooks/validators/capture-validator.sh` | Phase B — execution_log_path set + file exists |
-| `.claude/hooks/validators/retrospective-validator.sh` | Phase B — `retrospective_shown` + log section ≥100 chars |
+| `.claude/hooks/validators/retrospective-validator.sh` | Phase B — `retrospective_shown` + log section ≥100 chars (Layer I architectural-keyword scan REMOVED 2026-04-26) |
 | `.claude/hooks/validators/finalize-validator.sh` | Phase B — branch_strategy + knowledge module freshness |
 | `.claude/hooks/validators/spec-compliance-validator.sh` | File edit gate — verifies code changes align with spec |
 | `.claude/hooks/validators/debug-validator.sh` | File edit gate for debug flow — `root_cause_identified` + `pattern_wide_search_done` |
