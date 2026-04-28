@@ -62,68 +62,26 @@ fi
 # Safeguards) or by spec-reference (path + section token within proximity).
 # Origin: 2026-04-28 hito 4, SPDD REASONS Canvas applied to subagent prompts.
 
-write_prompt_to_tmp() {
-  local f="$1"
-  printf '%s' "$AGENT_PROMPT" > "$f"
-}
+# Use shared lib for section presence + content classification.
+# Lib path is absolute (decoupled from REPO, which the test harness rewrites
+# to point at fixture repos that lack .claude/hooks/lib/).
+# shellcheck source=lib/section-validator.sh
+source "/home/user/mxo-track/.claude/hooks/lib/section-validator.sh"
 
 PROMPT_TMP="$(mktemp)"
 trap 'rm -f "$PROMPT_TMP"' EXIT
-write_prompt_to_tmp "$PROMPT_TMP"
-
-# Helper: check a section satisfies inline criterion or spec-reference criterion.
-# Returns 0 if satisfied, 1 otherwise.
-check_section() {
-  local prompt_file="$1"
-  local heading="$2"          # "Norms" or "Safeguards"
-  local inline_check="$3"     # "imperative" or "risk-mitigation-table"
-
-  # 1. Heading must exist
-  if ! grep -qE "^## $heading" "$prompt_file"; then
-    return 1
-  fi
-
-  # 2. Extract section body (until next ## or EOF)
-  local body
-  body=$(awk -v h="^## $heading" '
-    $0 ~ h {flag=1; next}
-    /^## / {flag=0}
-    flag {print}
-  ' "$prompt_file")
-
-  # 3. Try spec-reference: path + section-token within ~200 chars.
-  # Compact the body to single-line for proximity check.
-  local body_oneline
-  body_oneline=$(echo "$body" | tr '\n' ' ')
-  if echo "$body_oneline" | grep -qE "docs/superpowers/specs/[^[:space:]]+\.md.{0,200}$heading"; then
-    return 0
-  fi
-  # Also accept reverse order (token before path) within proximity
-  if echo "$body_oneline" | grep -qE "$heading.{0,200}docs/superpowers/specs/[^[:space:]]+\.md"; then
-    return 0
-  fi
-
-  # 4. Try inline criterion
-  case "$inline_check" in
-    imperative)
-      if echo "$body" | grep -qiE '\<(must|shall|never|always|no se permite|no debe|siempre|jamás|jamas)\>'; then
-        return 0
-      fi
-      ;;
-    risk-mitigation-table)
-      if echo "$body" | grep -qiE '^\|.*risk.*\|.*mitigation.*\||^\|.*mitigation.*\|.*risk.*\|'; then
-        return 0
-      fi
-      ;;
-  esac
-
-  return 1
-}
+printf '%s' "$AGENT_PROMPT" > "$PROMPT_TMP"
 
 NORMS_OK=0
 SAFEGUARDS_OK=0
-check_section "$PROMPT_TMP" "Norms" "imperative" && NORMS_OK=1
-check_section "$PROMPT_TMP" "Safeguards" "risk-mitigation-table" && SAFEGUARDS_OK=1
+if section_present "$PROMPT_TMP" "Norms"; then
+  NORMS_BODY=$(section_body "$PROMPT_TMP" "Norms")
+  section_satisfied_inline_or_ref "$NORMS_BODY" "Norms" imperative && NORMS_OK=1
+fi
+if section_present "$PROMPT_TMP" "Safeguards"; then
+  SAFE_BODY=$(section_body "$PROMPT_TMP" "Safeguards")
+  section_satisfied_inline_or_ref "$SAFE_BODY" "Safeguards" risk-mitigation-table && SAFEGUARDS_OK=1
+fi
 
 if [ "$NORMS_OK" = "0" ] || [ "$SAFEGUARDS_OK" = "0" ]; then
   MISSING=""

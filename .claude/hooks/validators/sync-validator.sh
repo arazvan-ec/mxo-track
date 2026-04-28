@@ -47,26 +47,9 @@ if [ -z "$PLAN_FULL" ]; then
 fi
 
 # ── Parse `→ files:` declarations from plan ──
-# Mirrors the idiom in brainstorm-validator.sh:228-260: strip a single
-# enclosing pair of parentheses, split on comma/space, keep tokens that
-# look like paths (contain `/` or `.`) or are bare-name sentinels.
-DECLARED=$(awk '
-  /→ files?:/ {
-    # Capture everything after `→ files:`
-    sub(/^[^→]*→ files?:[[:space:]]*/, "")
-    # Strip a single enclosing pair of parentheses
-    if (match($0, /^\([^)]*\)$/)) {
-      sub(/^\(/, "")
-      sub(/\)$/, "")
-    }
-    print
-  }
-' "$PLAN_FULL" | tr ',' '\n' | tr ' ' '\n' \
-  | tr -d '`' \
-  | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//' \
-  | { grep -v '^$' || true; } \
-  | { grep -E '/|\.|^(Makefile|Dockerfile|Rakefile|Gemfile|Procfile|Caddyfile)$' || true; } \
-  | sort -u)
+# shellcheck source=../lib/files-decl-parser.sh
+source "$(dirname "$0")/../lib/files-decl-parser.sh"
+DECLARED=$(parse_files_decl "$PLAN_FULL")
 
 # ── Determine diff baseline ──
 # A branch may accumulate multiple interactions before merge. Compare
