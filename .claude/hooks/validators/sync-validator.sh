@@ -62,6 +62,7 @@ DECLARED=$(awk '
     print
   }
 ' "$PLAN_FULL" | tr ',' '\n' | tr ' ' '\n' \
+  | tr -d '`' \
   | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//' \
   | { grep -v '^$' || true; } \
   | { grep -E '/|\.|^(Makefile|Dockerfile|Rakefile|Gemfile|Procfile|Caddyfile)$' || true; } \
