@@ -92,8 +92,10 @@ pass ALL of:
    load-bearing.
 
 A change that fails any of the 4 is ceremony, not flow. Ceremony costs
-attention and tokens without improving the solution — remove or
-rewrite it until it passes.
+attention and tokens without improving the solution — discard it.
+Rewriting a failing proposal at reduced scope to make it pass is a
+concession, not a fix: if the maximal version fails on cost/value, the
+correct outcome is not to do it.
 
 ### Recursive application
 
