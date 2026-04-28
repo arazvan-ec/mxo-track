@@ -116,6 +116,53 @@ else
     fi
   fi
 
+  # Layer K — Anti-Reduction gate (HARD when reduction markers present)
+  # Detects when a spec uses reduction language (MVP, "minimum viable", v0,
+  # "versión reducida", etc.) outside fenced code blocks. Such specs must
+  # include a `## Maximal Version Considered` section that documents:
+  #   - the maximal version evaluated,
+  #   - the concrete 4-test failure that ruled it out,
+  #   - the proposed (reduced) version,
+  #   - an "Independent superiority" bullet that defends the reduced version
+  #     on grounds OTHER than cost (i.e., contains at least one design-quality
+  #     keyword: patrón/pattern, garantiz/ensure, drift, consistency, boundary,
+  #     correctness, alignment, etc.).
+  # Origin: 2026-04-28 retrospective on Ubiquitous Language System reduction.
+  # Strip fenced code blocks before scanning to avoid matching marker tokens
+  # that appear inside ```...``` (e.g., this very validator's documentation).
+  SPEC_BODY=$(awk '/^```/{f=!f; next} !f' "$SPEC_FULL")
+  if echo "$SPEC_BODY" | grep -qiE '(\<MVP\>|mínimo viable|minimum viable|\<v0\>|\<ligero\>|\<ligera\>|lightweight|versión reducida|reduced version|arrancar vacío|start empty|scope[- ]down)'; then
+    if ! grep -qE '^## Maximal Version Considered' "$SPEC_FULL" 2>/dev/null; then
+      ERRORS="${ERRORS}- K: spec contiene marcadores de reducción (MVP/v0/ligero/etc.) pero falta seccion '## Maximal Version Considered'. Documenta la version maximal evaluada, el fallo concreto del 4-test que la descarto, la version propuesta, y un bullet 'Independent superiority' con argumento independiente del coste.\n"
+    else
+      # Capture the FULL "Independent superiority" bullet, including any
+      # continuation lines (indented text), until the next bullet, the next
+      # `## ` heading, or end of file. Single-line extraction misses positive
+      # signals that fall on continuation lines.
+      K_SUP_BLOCK=$(awk '
+        /^## Maximal Version Considered/ { in_section=1; next }
+        in_section && /^## / { in_section=0 }
+        in_section && /^[[:space:]]*[-*][[:space:]].*([Ii]ndependent [Ss]uperiority|[Ss]uperioridad independiente)/ {
+          capturing=1; block=$0; next
+        }
+        capturing && /^[[:space:]]*[-*][[:space:]]/ { capturing=0 }
+        capturing && /^## / { capturing=0 }
+        capturing { block = block " " $0 }
+        END { print block }
+      ' "$SPEC_FULL")
+      if [ -z "$K_SUP_BLOCK" ]; then
+        ERRORS="${ERRORS}- K: Seccion 'Maximal Version Considered' presente pero falta bullet 'Independent superiority' (o 'superioridad independiente'). Anade un bullet que defienda la version propuesta en terminos no economicos.\n"
+      else
+        # Verify the bullet contains at least one design-quality keyword
+        # (positive-signal closed list). Cost-only language fails.
+        K_SUP_LOWER=$(echo "$K_SUP_BLOCK" | tr '[:upper:]' '[:lower:]')
+        if ! echo "$K_SUP_LOWER" | grep -qE '(patrón|patron|pattern|garantiz|ensure|document|verifica|verified|drift|consist|boundary|principle|principio|prevent|prevenir|alineación|alineacion|align|correctitud|correctness|semantic|invariante|invariant|atomic|decoupl|encapsul|integridad|mantenib|maintain|robust|safety|safe|reliab|fiab)'; then
+          ERRORS="${ERRORS}- K: Bullet 'Independent superiority' apela solo a coste/tamano. Argumenta superioridad independiente del coste (calidad, correctitud, prevencion de un fallo concreto, alineacion con un patron existente).\n"
+        fi
+      fi
+    fi
+  fi
+
   # TDD task isolation: plan must not have standalone "add tests" tasks
   PLAN_PATH_VAL=$(jq -r '.evidence.plan_path // ""' "$STATE_FILE" 2>/dev/null || echo "")
   PLAN_FULL=""

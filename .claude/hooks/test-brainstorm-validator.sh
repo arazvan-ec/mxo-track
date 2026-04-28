@@ -376,4 +376,130 @@ echo "── brainstorm-validator Layer C (architectural review sub-invocation) 
 assert_eq "C1: critical path + no Architectural Adversarial Review → C blocks" "block-c" "$(run_c_scenario "$SPEC_C1")"
 assert_eq "C2: critical path + valid Architectural Adversarial Review → pass"  "clean"   "$(run_c_scenario "$SPEC_C2")"
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Layer K — Anti-Reduction gate
+# Triggers when the spec contains reduction markers (MVP, "minimum viable",
+# "fase 1", "v0", etc.) outside fenced code blocks. Requires a
+# `## Maximal Version Considered` section with 4 bullets including an
+# "Independent superiority" bullet that is NOT solely cost-language.
+# ─────────────────────────────────────────────────────────────────────────────
+run_k_scenario() {
+  local spec_path="$1"
+  local state_file="$TEST_TMPDIR/state-k.json"
+  cat > "$state_file" <<EOF
+{
+  "evidence": {
+    "user_turns": 3,
+    "alternatives_proposed": true,
+    "user_approved": true,
+    "spec_path": "$spec_path"
+  }
+}
+EOF
+  local output
+  output=$(bash "$VALIDATOR" "$state_file" 2>&1 || true)
+  if echo "$output" | grep -qE '^- K:'; then
+    echo "block-k"
+  else
+    echo "clean"
+  fi
+}
+
+# ── Fixture K1: spec without any reduction markers → no Layer K activity ──
+SPEC_K1="$TEST_TMPDIR/spec-k1.md"
+cat > "$SPEC_K1" <<'EOF'
+# Spec
+
+## Approaches
+Approach A vs Approach B. Trade-off discussed.
+
+## Existing Functionality Inventory
+- None affected.
+
+## Omission Decisions
+- None.
+
+Padding padding padding padding padding padding padding padding padding padding.
+Padding padding padding padding padding padding padding padding padding padding.
+Padding padding padding padding padding padding padding padding padding padding.
+Padding padding padding padding padding padding padding padding padding padding.
+EOF
+
+# ── Fixture K2: spec uses "MVP" marker but lacks Maximal Version Considered → K blocks ──
+SPEC_K2="$TEST_TMPDIR/spec-k2.md"
+cat > "$SPEC_K2" <<'EOF'
+# Spec
+
+## Approaches
+We will start with an MVP and grow on demand.
+
+## Existing Functionality Inventory
+- None affected.
+
+## Omission Decisions
+- None.
+
+Padding padding padding padding padding padding padding padding padding padding.
+Padding padding padding padding padding padding padding padding padding padding.
+Padding padding padding padding padding padding padding padding padding padding.
+Padding padding padding padding padding padding padding padding padding padding.
+EOF
+
+# ── Fixture K3: marker + section + cost-only superiority bullet → K blocks ──
+SPEC_K3="$TEST_TMPDIR/spec-k3.md"
+cat > "$SPEC_K3" <<'EOF'
+# Spec
+
+## Approaches
+We will start with an MVP.
+
+## Maximal Version Considered
+- Maximal version: full 400-entry bootstrap with 10 integrations.
+- Why not chosen: Test 3 fails on cost.
+- Proposed (reduced) version: empty start, on-demand graduation.
+- Independent superiority: la versión propuesta es más barata, usa menos tokens y tiene menos líneas.
+
+## Existing Functionality Inventory
+- None.
+
+## Omission Decisions
+- None.
+
+Padding padding padding padding padding padding padding padding padding padding.
+Padding padding padding padding padding padding padding padding padding padding.
+Padding padding padding padding padding padding padding padding padding padding.
+EOF
+
+# ── Fixture K4: marker + section + valid non-cost superiority bullet → pass ──
+SPEC_K4="$TEST_TMPDIR/spec-k4.md"
+cat > "$SPEC_K4" <<'EOF'
+# Spec
+
+## Approaches
+We will start with an MVP.
+
+## Maximal Version Considered
+- Maximal version: full 400-entry bootstrap with 10 integrations.
+- Why not chosen: Test 3 fails — automated extraction produces noise above signal, ~80% of entries become formulaic and unread.
+- Proposed (reduced) version: empty start, on-demand graduation.
+- Independent superiority: la graduación bajo demanda solo registra términos que causaron confusión real (3+ ocurrencias en logs), garantizando que cada entrada documente un drift verificado en lugar de ruido especulativo. Mismo patrón que `_graduations.yaml`.
+
+## Existing Functionality Inventory
+- None.
+
+## Omission Decisions
+- None.
+
+Padding padding padding padding padding padding padding padding padding padding.
+Padding padding padding padding padding padding padding padding padding padding.
+Padding padding padding padding padding padding padding padding padding padding.
+EOF
+
+echo
+echo "── brainstorm-validator Layer K (anti-reduction) ──"
+assert_eq "K1: no reduction markers → K does not fire"                            "clean"   "$(run_k_scenario "$SPEC_K1")"
+assert_eq "K2: MVP marker without Maximal Version Considered section → K blocks"  "block-k" "$(run_k_scenario "$SPEC_K2")"
+assert_eq "K3: marker + section + cost-only superiority bullet → K blocks"        "block-k" "$(run_k_scenario "$SPEC_K3")"
+assert_eq "K4: marker + section + non-cost superiority bullet → pass"             "clean"   "$(run_k_scenario "$SPEC_K4")"
+
 summary

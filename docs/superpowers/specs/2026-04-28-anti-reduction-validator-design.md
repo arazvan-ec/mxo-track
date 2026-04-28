@@ -105,6 +105,31 @@ exit 2 (block).
   rationalization can bypass it. Mitigation: the user reviews the
   spec — this layer is a backstop, not the only line of defense.
 
+## Maximal Version Considered
+
+Required by Layer K itself, applied recursively to this spec. The spec
+contains the marker "MVP" while narrating the motivating incident
+(Ubiquitous Language System reduction). Layer K cannot distinguish
+narration from proposal, so it requires this section unconditionally.
+
+- **Maximal version:** the trigger-based Layer K described in
+  "Approach Chosen". Marker detection + section requirement +
+  positive-signal bullet check. ~35 validator lines + ~110 test lines.
+- **Why not a smaller version:** Approaches B (always-required) and
+  C (warning-only) were both rejected on quality grounds, not cost
+  grounds (see "Alternatives Considered"). B fails Test 3 of the
+  4-test (ceremony for the majority case). C reproduces the exact
+  concession pattern this layer exists to prevent — accepting C
+  here would be self-contradicting.
+- **Proposed version:** identical to maximal. No reduction.
+- **Independent superiority:** Approach A maps directly to the
+  endorsed Layer H pattern (commit `ad11cc4`), preserving
+  architectural consistency in the validator chain. Choosing B or C
+  would fracture the convention and require maintaining two
+  enforcement styles in the same file. The proposed version is
+  superior on consistency and predictability grounds, independent
+  of any cost argument.
+
 ## 4-Test Application (honest, on the maximal version)
 
 | Test | Verdict | Evidence |
