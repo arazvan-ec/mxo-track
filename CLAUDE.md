@@ -407,6 +407,12 @@ requires an entry in `docs/decisions/log.md` explaining the case.
 Never bypass without thinking. A gate that blocks legitimate work is a gate
 that needs its conditions tuned — not a gate to silence.
 
+**Heurística post-bypass:** todo `SKIP_*_GATE=1` debe generar un follow-up
+en el execution log de la interacción. Sin follow-up → la heurística del
+gate era correcta y el caso fue excepción legítima. Con follow-up → la
+heurística necesita ajuste y queda registrada como deuda. Sin esta regla,
+los bypasses se convierten en hábito sin que nadie note el patrón.
+
 **Full reference:** `.claude/README.md` (gates, validators, deviation mode, harness assumptions)
 <!-- GENERIC-END -->
 
@@ -451,7 +457,12 @@ gatekeeping at both levels, paying the attention cost twice.
 - **Read / search / explore** — Read, Grep, Glob, read-only Bash
 - **Subagent dispatch** for parallel work already planned
 - **`jq` updates** to `session-state.json` for phase and evidence
-  advancement (these are the model's own state, not user-facing data)
+  advancement (these are the model's own state, not user-facing data).
+  **Excepción:** NO incluir `user_approved` en comandos `jq` de
+  actualización de evidencia, ni siquiera redundantemente. El hook
+  `user-prompt-state.sh` es el único escritor sancionado; cualquier
+  asignación directa dispara revert en `phase-transition-controller.sh`
+  aunque el valor no cambie.
 - **Writing spec / plan / execution-log / retrospective** docs under
   `docs/superpowers/`
 - **Regenerating `.claude/session-state.json`** during session bootstrap
@@ -579,6 +590,9 @@ Plans go to `docs/superpowers/plans/YYYY-MM-DD-<feature>.md` with:
 - Each task follows TDD: write test → verify fail → implement → verify pass → commit
 - **Never create a separate "add tests" task.** Tests are integral to each task via TDD —
   writing the test IS the first step of implementing the task, not a task on its own.
+- **Estimar contando TODOS los artefactos producidos** — spec, plan, execution log,
+  entradas en decision log — no solo archivos fuente. Un plan de 3 archivos `src/`
+  suele ejecutarse como 6 artefactos.
 
 ### Parallel-First Planning
 
