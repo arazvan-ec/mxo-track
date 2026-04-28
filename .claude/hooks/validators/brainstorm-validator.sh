@@ -63,6 +63,52 @@ else
     ERRORS="${ERRORS}- ANTI-OMISION: Falta seccion '## Omission Decisions' (si no hay omisiones, declarar 'No omissions — all inventory items addressed')\n"
   fi
 
+  # Layer N — Norms gate (HARD, universal)
+  # Every spec must include `## Norms` containing ≥1 bullet with at least
+  # one imperative keyword from the closed list. Bound the keyword scan to
+  # the Norms section via awk state machine to prevent false positives from
+  # imperatives appearing elsewhere in the spec.
+  # Origin: 2026-04-28 hito 1, SPDD REASONS Canvas (Norms dimension).
+  if ! grep -qE '^## Norms' "$SPEC_FULL" 2>/dev/null; then
+    ERRORS="${ERRORS}- N: Falta seccion '## Norms'. Declara los invariantes de negocio/arquitectura que el cambio debe preservar. Cada Norm requiere al menos un keyword imperativo (must/shall/never/always/no se permite/no debe/siempre/jamas).\n"
+  else
+    NORMS_BODY=$(awk '/^## Norms/{flag=1; next} /^## /{flag=0} flag' "$SPEC_FULL")
+    if ! echo "$NORMS_BODY" | grep -qiE '\<(must|shall|never|always|no se permite|no debe|siempre|jamás|jamas)\>'; then
+      ERRORS="${ERRORS}- N: Seccion '## Norms' presente pero sin keyword imperativo (must/shall/never/always/no se permite/no debe/siempre/jamas). Cada Norm debe ser una afirmacion imperativa, no descriptiva.\n"
+    fi
+  fi
+
+  # Layer S — Safeguards gate (HARD, universal)
+  # Every spec must include `## Safeguards` containing a markdown table with
+  # both "Risk" and "Mitigation" header tokens. Forces explicit pairing of
+  # identified risks with concrete mitigations.
+  # Origin: 2026-04-28 hito 1, SPDD REASONS Canvas (Safeguards dimension).
+  if ! grep -qE '^## Safeguards' "$SPEC_FULL" 2>/dev/null; then
+    ERRORS="${ERRORS}- S: Falta seccion '## Safeguards'. Lista los riesgos identificados con sus mitigaciones en una tabla markdown con columnas Risk y Mitigation.\n"
+  else
+    SAFE_BODY=$(awk '/^## Safeguards/{flag=1; next} /^## /{flag=0} flag' "$SPEC_FULL")
+    # Look for a header line that contains both "Risk" and "Mitigation" tokens
+    # (any column order, case-insensitive). Must be followed by at least one
+    # data row (a line starting with `|` that is not a separator).
+    SAFE_HEADER=$(echo "$SAFE_BODY" | grep -iE '^\|.*risk.*\|.*mitigation.*\||^\|.*mitigation.*\|.*risk.*\|' | head -1)
+    if [ -z "$SAFE_HEADER" ]; then
+      ERRORS="${ERRORS}- S: Seccion '## Safeguards' presente pero sin tabla con columnas 'Risk' y 'Mitigation'. Cada riesgo identificado debe tener mitigacion adjunta (forced pairing).\n"
+    else
+      # Verify there's at least one data row (line starting with | that
+      # is not the header itself and not a separator like |---|---|).
+      SAFE_ROWS=$(echo "$SAFE_BODY" | awk '
+        /^\|.*[Rr]isk.*\|.*[Mm]itigation.*\|/ || /^\|.*[Mm]itigation.*\|.*[Rr]isk.*\|/ { in_table=1; header_seen=1; next }
+        in_table && /^\|[[:space:]]*-+[[:space:]]*\|/ { next }
+        in_table && /^\|/ { rows++ }
+        in_table && !/^\|/ { in_table=0 }
+        END { print rows+0 }
+      ')
+      if [ "$SAFE_ROWS" -lt 1 ]; then
+        ERRORS="${ERRORS}- S: Tabla 'Risk|Mitigation' presente pero sin filas de datos. Anade al menos un par riesgo-mitigacion.\n"
+      fi
+    fi
+  fi
+
   # Layer H — Prior Art Audit gate (HARD when critical paths referenced)
   # If the spec references critical domain contexts or admin API controllers,
   # require a `## Prior Art Audit` section with at least one classified row.

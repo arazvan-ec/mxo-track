@@ -502,4 +502,147 @@ assert_eq "K2: MVP marker without Maximal Version Considered section → K block
 assert_eq "K3: marker + section + cost-only superiority bullet → K blocks"        "block-k" "$(run_k_scenario "$SPEC_K3")"
 assert_eq "K4: marker + section + non-cost superiority bullet → pass"             "clean"   "$(run_k_scenario "$SPEC_K4")"
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Layers N + S — Norms & Safeguards (universal HARD gates)
+# Every spec in full/debug must include:
+#   - ## Norms section with ≥1 bullet containing an imperative keyword
+#     (must|shall|never|always|no se permite|no debe|siempre|jamás)
+#   - ## Safeguards section with ≥1 markdown table row that has both
+#     "Risk" and "Mitigation" columns
+# ─────────────────────────────────────────────────────────────────────────────
+run_ns_scenario() {
+  local spec_path="$1"
+  local marker="$2"   # "N" or "S" or "any"
+  local state_file="$TEST_TMPDIR/state-ns.json"
+  cat > "$state_file" <<EOF
+{
+  "evidence": {
+    "user_turns": 3,
+    "alternatives_proposed": true,
+    "user_approved": true,
+    "spec_path": "$spec_path"
+  }
+}
+EOF
+  local output
+  output=$(bash "$VALIDATOR" "$state_file" 2>&1 || true)
+  case "$marker" in
+    N)   echo "$output" | grep -qE '^- N:' && echo "block-n" || echo "clean" ;;
+    S)   echo "$output" | grep -qE '^- S:' && echo "block-s" || echo "clean" ;;
+    any) echo "$output" | grep -qE '^- (N|S):' && echo "block" || echo "clean" ;;
+  esac
+}
+
+# ── Fixture NS1: spec without Norms → N blocks ──
+SPEC_NS1="$TEST_TMPDIR/spec-ns1.md"
+cat > "$SPEC_NS1" <<'EOF'
+# Spec
+
+## Approaches
+A vs B.
+
+## Existing Functionality Inventory
+- None.
+
+## Omission Decisions
+- None.
+
+## Safeguards
+| Risk | Mitigation |
+|---|---|
+| something | something |
+
+Padding padding padding padding padding padding padding padding padding padding.
+Padding padding padding padding padding padding padding padding padding padding.
+Padding padding padding padding padding padding padding padding padding padding.
+Padding padding padding padding padding padding padding padding padding padding.
+EOF
+
+# ── Fixture NS2: spec with Norms heading but no imperative keyword → N blocks ──
+SPEC_NS2="$TEST_TMPDIR/spec-ns2.md"
+cat > "$SPEC_NS2" <<'EOF'
+# Spec
+
+## Approaches
+A vs B.
+
+## Existing Functionality Inventory
+- None.
+
+## Omission Decisions
+- None.
+
+## Norms
+- The system processes data efficiently.
+- Performance is good.
+
+## Safeguards
+| Risk | Mitigation |
+|---|---|
+| something | something |
+
+Padding padding padding padding padding padding padding padding padding padding.
+Padding padding padding padding padding padding padding padding padding padding.
+Padding padding padding padding padding padding padding padding padding padding.
+EOF
+
+# ── Fixture NS3: spec without Safeguards → S blocks ──
+SPEC_NS3="$TEST_TMPDIR/spec-ns3.md"
+cat > "$SPEC_NS3" <<'EOF'
+# Spec
+
+## Approaches
+A vs B.
+
+## Existing Functionality Inventory
+- None.
+
+## Omission Decisions
+- None.
+
+## Norms
+- The validator must never block specs without reduction markers.
+
+Padding padding padding padding padding padding padding padding padding padding.
+Padding padding padding padding padding padding padding padding padding padding.
+Padding padding padding padding padding padding padding padding padding padding.
+Padding padding padding padding padding padding padding padding padding padding.
+EOF
+
+# ── Fixture NS4: both sections valid → pass ──
+SPEC_NS4="$TEST_TMPDIR/spec-ns4.md"
+cat > "$SPEC_NS4" <<'EOF'
+# Spec
+
+## Approaches
+A vs B.
+
+## Existing Functionality Inventory
+- None.
+
+## Omission Decisions
+- None.
+
+## Norms
+- The validator must never block specs without reduction markers.
+- The Risk/Mitigation parser shall accept any column order.
+
+## Safeguards
+| Risk | Mitigation |
+|------|------------|
+| Regex over-match outside section | State machine awk skip |
+| Table format variation | Tolerant grep on header line |
+
+Padding padding padding padding padding padding padding padding padding padding.
+Padding padding padding padding padding padding padding padding padding padding.
+Padding padding padding padding padding padding padding padding padding padding.
+EOF
+
+echo
+echo "── brainstorm-validator Layers N+S (Norms & Safeguards) ──"
+assert_eq "NS1: no Norms section → N blocks"                       "block-n" "$(run_ns_scenario "$SPEC_NS1" N)"
+assert_eq "NS2: Norms section without imperative keyword → N blocks" "block-n" "$(run_ns_scenario "$SPEC_NS2" N)"
+assert_eq "NS3: no Safeguards section → S blocks"                  "block-s" "$(run_ns_scenario "$SPEC_NS3" S)"
+assert_eq "NS4: both sections valid → pass"                        "clean"   "$(run_ns_scenario "$SPEC_NS4" any)"
+
 summary
