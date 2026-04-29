@@ -80,7 +80,7 @@ if [ "$FLOW_TYPE" = "full" ] && [ -n "$USER_PROMPT" ]; then
 
   # Decision-ID approval: 2+ references like "D1a", "D2b" imply confirmation
   # of a numbered decision list (e.g. "1. D1a 2. D2b 3. D3a")
-  DECISION_IDS=$(echo "$PROMPT_LOWER" | grep -oE '\bd[0-9]+[a-e]?\b' | wc -l | tr -d ' ')
+  DECISION_IDS=$(echo "$PROMPT_LOWER" | { grep -oE '\bd[0-9]+[a-e]?\b' || true; } | wc -l | tr -d ' ')
   if [ "$DECISION_IDS" -ge 2 ] && [ "$CURRENT_APPROVED" != "true" ]; then
     jq '.evidence.user_approved = true' "$STATE_FILE" > /tmp/upt.json && mv /tmp/upt.json "$STATE_FILE"
     STATE=$(cat "$STATE_FILE" 2>/dev/null || echo "{}")
