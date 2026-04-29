@@ -469,10 +469,15 @@ didn't consider alternatives, or didn't check how similar problems were solved b
 Each step produces an artifact that the next step needs. The order is not arbitrary —
 it's a dependency chain:
 
-0. **Consult past decisions** — Read `docs/decisions/log.md` and recent execution logs.
-   → produces: context about what was tried before and why.
-   This prevents re-discovering lessons the codebase already learned. Without it, the
-   model proposes approaches that were previously tried and rejected.
+0. **Consult past decisions and vocabulary** — Read `docs/decisions/log.md` and recent
+   execution logs. **Additionally**, when the user mentions any domain term, run
+   `consult.sh vocab <term>` to check if that term has a canonical name in
+   `docs/knowledge/_vocabulary.yaml`. If found, use the canonical name in the spec;
+   if not found, proceed normally and consider whether the new term should graduate.
+   → produces: context about what was tried before and why + vocabulary alignment.
+   This prevents re-discovering lessons the codebase already learned and prevents
+   coining new aliases for concepts that already have canonical names. Without
+   vocabulary consult, drift accumulates (Route vs Tour, ruta vs RoutePlan, etc.).
 
 1. **Classify bounded context** — Is this critical (DDD pure) or pragmatic (Symfony)?
    → produces: the architectural style for this change.

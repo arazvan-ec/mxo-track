@@ -102,7 +102,7 @@ fi
 # These paths are produced by the workflow itself and are categorically
 # out of scope for the plan↔diff comparison. Documented in spec
 # 2026-04-28-sync-validator-design.md as "scope of the gate, not exceptions".
-WORKFLOW_ARTIFACTS_PATHS='^(docs/superpowers/(specs|plans|execution-logs|retrospectives)/|docs/codebase-manifest\.md$|docs/decisions/log\.md$|\.claude/(session-state|parallel-tasks)\.json$)'
+WORKFLOW_ARTIFACTS_PATHS='^(docs/superpowers/(specs|plans|execution-logs|retrospectives)/|docs/codebase-manifest\.md$|docs/knowledge/ubiquitous-language\.md$|docs/decisions/log\.md$|\.claude/(session-state|parallel-tasks)\.json$)'
 
 DIFF_FILTERED=$(echo "$DIFF_RAW" | { grep -vE "$WORKFLOW_ARTIFACTS_PATHS" || true; } | sort -u)
 

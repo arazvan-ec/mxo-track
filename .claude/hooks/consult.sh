@@ -28,12 +28,81 @@ Subcommands:
   stats                  tag frequency + 3+ pattern alerts
   show <filename>        print frontmatter of a specific log
   unverified             success logs with null outcome_verified_at
+  vocab <term>           lookup a term in docs/knowledge/_vocabulary.yaml
+  vocab --all            list all canonical names
+  vocab --context <ctx>  list canonical names in a bounded_context
 
 Env:
   CONSULT_LOGS_DIR       override corpus directory (default: $DEFAULT_DIR)
+  VOCAB_FILE             override vocabulary file (default: docs/knowledge/_vocabulary.yaml)
 
 Output format: date | type | outcome | filename | title
 EOF
+}
+
+# ── vocab subcommand ──
+# Lookup against docs/knowledge/_vocabulary.yaml. Matches case-insensitively
+# against `canonical` and any `aliases[].term`. Never falls back to substring
+# matches against `definition` (per spec Norm).
+VOCAB_FILE="${VOCAB_FILE:-docs/knowledge/_vocabulary.yaml}"
+
+cmd_vocab() {
+  local arg="${1:-}"
+  if [ -z "$arg" ]; then
+    echo "ERROR: vocab requires <term>, --all, or --context <ctx>" >&2
+    return 2
+  fi
+
+  if [ ! -f "$VOCAB_FILE" ]; then
+    echo "ERROR: vocabulary file not found: $VOCAB_FILE" >&2
+    return 2
+  fi
+
+  case "$arg" in
+    --all)
+      awk '/^  - canonical: / { sub(/^  - canonical: /, ""); print }' "$VOCAB_FILE" | sort -u
+      ;;
+    --context)
+      local ctx="${2:-}"
+      [ -z "$ctx" ] && { echo "ERROR: --context requires a value" >&2; return 2; }
+      awk -v ctx="$ctx" '
+        /^  - canonical: / { name=$0; sub(/^  - canonical: /, "", name); next }
+        /^    bounded_context: / {
+          c=$0; sub(/^    bounded_context: /, "", c)
+          if (c == ctx) print name
+        }
+      ' "$VOCAB_FILE" | sort -u
+      ;;
+    *)
+      local term_lc
+      term_lc=$(echo "$arg" | tr '[:upper:]' '[:lower:]')
+      local out
+      out=$(awk -v target="$term_lc" '
+        function flush_if_match() {
+          if (matched) { printf "%s", block; matched=0; hit=1 }
+          block=""
+        }
+        /^  - canonical: / {
+          flush_if_match()
+          c=$0; sub(/^  - canonical: /, "", c)
+          block = $0 "\n"
+          if (tolower(c) == target) matched=1
+          next
+        }
+        /^      - \{term: "/ {
+          t=$0
+          sub(/^      - \{term: "/, "", t)
+          sub(/", lang:.*$/, "", t)
+          if (tolower(t) == target) matched=1
+        }
+        { block = block $0 "\n" }
+        END { flush_if_match(); exit (hit ? 0 : 1) }
+      ' "$VOCAB_FILE")
+      local rc=$?
+      [ -n "$out" ] && printf "%s" "$out"
+      return $rc
+      ;;
+  esac
 }
 
 # Extract frontmatter block between first two --- markers.
@@ -298,6 +367,7 @@ case "$SUBCMD" in
   stats) cmd_stats "$@" ;;
   show) cmd_show "$@" ;;
   unverified) cmd_unverified "$@" ;;
+  vocab) cmd_vocab "$@" ;;
   -h|--help|help|"")
     usage
     [ -z "$SUBCMD" ] && exit 2
