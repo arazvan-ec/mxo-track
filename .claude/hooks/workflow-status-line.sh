@@ -74,7 +74,7 @@ CURRENT_PHASE=$(echo "$STATE" | jq -r '.current_phase // "null"')
 
 # Suppress repeated output: compute state signature, skip cat if unchanged
 SIG_FILE="$REPO/.claude/.workflow-status-sig"
-STATE_SIG=$(echo "$STATE" | jq -Sc '[.flow_type, .current_phase, .interaction_id, .deviation.active, .evidence]' | md5sum | cut -d' ' -f1)
+STATE_SIG=$(echo "$STATE" | jq -Sc '[.flow_type, .current_phase, .interaction_id, .evidence]' | md5sum | cut -d' ' -f1)
 PREV_SIG=""
 [ -f "$SIG_FILE" ] && PREV_SIG=$(cat "$SIG_FILE" 2>/dev/null)
 echo "$STATE_SIG" > "$SIG_FILE"
@@ -83,7 +83,6 @@ STATE_CHANGED=true
 
 # Output helper: only emit to stdout if state changed
 emit() { if [ "$STATE_CHANGED" = true ]; then cat; else cat > /dev/null; fi; }
-DEV_ACTIVE=$(echo "$STATE" | jq -r '.deviation.active // false')
 
 # Evidence fields
 DECISIONS_READ=$(echo "$STATE" | jq -r '.evidence.decisions_read // false')
@@ -117,11 +116,6 @@ PROB_CURRENT=$(echo "$STATE" | jq -r '.evidence.work_context.problems.current //
 PROB_LABEL=""
 if [ "$PROB_TOTAL" -ge 2 ] 2>/dev/null; then
   PROB_LABEL=$(echo "$STATE" | jq -r "if .evidence.work_context.problems.current > 0 then .evidence.work_context.problems.labels[.evidence.work_context.problems.current - 1] // \"\" else \"\" end")
-fi
-
-DEVIATION_SUFFIX=""
-if [ "$DEV_ACTIVE" = "true" ]; then
-  DEVIATION_SUFFIX=" | ⚠ DESVÍO"
 fi
 
 # Interaction ID
@@ -342,7 +336,7 @@ phase_needs() {
 
 # No flow declared
 if [ "$FLOW_TYPE" = "null" ] || [ -z "$FLOW_TYPE" ]; then
-  { echo "📍 no flow declared | i#${INTERACTION_ID}${DEVIATION_SUFFIX}"
+  { echo "📍 no flow declared | i#${INTERACTION_ID}"
     echo "  Clasificar antes de continuar${TOOL_SUFFIX}"
   } | emit
   exit 0
@@ -351,19 +345,19 @@ fi
 # Simple flows
 case "$FLOW_TYPE" in
   micro)
-    { echo "📍 micro | Responder | i#${INTERACTION_ID}${DEVIATION_SUFFIX}"
+    { echo "📍 micro | Responder | i#${INTERACTION_ID}"
       echo "  ${TOOL_SUFFIX:+${TOOL_SUFFIX} · }i#$(echo "$STATE" | jq -r '.interaction_id // 0')"
     } | emit
     exit 0
     ;;
   light)
-    { echo "📍 light | Documentar | i#${INTERACTION_ID}${DEVIATION_SUFFIX}"
+    { echo "📍 light | Documentar | i#${INTERACTION_ID}"
       echo "  ${TOOL_SUFFIX:+${TOOL_SUFFIX} · }i#$(echo "$STATE" | jq -r '.interaction_id // 0')"
     } | emit
     exit 0
     ;;
   explore)
-    { echo "📍 explore | Investigar | i#${INTERACTION_ID}${DEVIATION_SUFFIX}"
+    { echo "📍 explore | Investigar | i#${INTERACTION_ID}"
       echo "  ${TOOL_SUFFIX:+${TOOL_SUFFIX} · }i#$(echo "$STATE" | jq -r '.interaction_id // 0')"
     } | emit
     exit 0
@@ -404,7 +398,7 @@ if [ "$FLOW_TYPE" = "full" ]; then
   done
 
   if [ "$CURRENT_INDEX" -eq 0 ]; then
-    { echo "📍 full | ${CURRENT_PHASE} | ⚠ fase no reconocida${DEVIATION_SUFFIX}"
+    { echo "📍 full | ${CURRENT_PHASE} | ⚠ fase no reconocida"
       echo "  Usar: phase-advance.sh <fase>${TOOL_SUFFIX}"
     } | emit
     exit 0
@@ -429,7 +423,6 @@ if [ "$FLOW_TYPE" = "full" ]; then
     LINE1="${LINE1} · Wave ${WAVE_CURRENT}/${WAVE_TOTAL}"
     [ -n "$WAVE_LABEL" ] && LINE1="${LINE1} · ${WAVE_LABEL}"
   fi
-  [ "$DEV_ACTIVE" = "true" ] && LINE1="${LINE1} [DESVÍO]"
 
   # ── Line 2: Timeline — completed → current → pending ──
   TIMELINE=""
@@ -554,7 +547,6 @@ if [ "$FLOW_TYPE" = "debug" ]; then
 
   # ── Line 1: Current phase prominently ──
   LINE1="📍 Debug: ${DISPLAY_PHASE} (${DEBUG_INDEX}/${TOTAL})"
-  [ "$DEV_ACTIVE" = "true" ] && LINE1="${LINE1} [DESVÍO]"
 
   # ── Line 2: Timeline ──
   TIMELINE=""
@@ -610,7 +602,7 @@ if [ "$FLOW_TYPE" = "debug" ]; then
 fi
 
 # Unknown flow type — show raw
-{ echo "📍 ${FLOW_TYPE} | ${CURRENT_PHASE}${DEVIATION_SUFFIX}"
+{ echo "📍 ${FLOW_TYPE} | ${CURRENT_PHASE}"
   echo "  ${TOOL_SUFFIX:---}"
 } | emit
 exit 0

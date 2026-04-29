@@ -29,7 +29,7 @@ fi
 
 PLAN_PATH=$(jq -r '.evidence.plan_path // ""' "$STATE_FILE" 2>/dev/null || echo "")
 
-# No plan → nothing to validate (deviation/light flows have no plan)
+# No plan → nothing to validate (light/explore/micro flows have no plan)
 if [ -z "$PLAN_PATH" ]; then
   exit 0
 fi
@@ -52,14 +52,24 @@ source "$(dirname "$0")/../lib/files-decl-parser.sh"
 DECLARED=$(parse_files_decl "$PLAN_FULL")
 
 # ── Determine diff baseline ──
-# A branch may accumulate multiple interactions before merge. Compare
-# against the parent of the commit that introduced THIS plan, so the
-# gate scopes to the current interaction's changes only. If the plan
-# is uncommitted (still being authored), diff working tree against HEAD.
-# Fallback: if plan introduction commit cannot be located (e.g. plan
-# lives outside the repo, as in test fixtures), fall back to
-# origin/main as the baseline.
+# A branch may accumulate multiple interactions before merge. Three baseline
+# strategies, in order:
+#   1. Plan committed → baseline = parent of plan-introducing commit
+#      (scopes diff to current interaction's changes).
+#   2. Plan on disk but uncommitted (just authored) → no committed diff;
+#      working-tree-only check (added 2026-04-29 to fix Hitos 2/4/5
+#      recurrence where origin/main fallback captured whole branch).
+#   3. Plan path missing → origin/main fallback (test fixtures with
+#      synthetic state files).
 PLAN_INTRODUCED=$(cd "$REPO" && git log --diff-filter=A --reverse --format=%H -- "$PLAN_PATH" 2>/dev/null | head -1 || true)
+
+# Detect test-fixture case: plan path resolves outside $REPO (absolute path in
+# TMPDIR). Fixtures have isolated git histories where origin/main captures the
+# expected synthetic diff; real sessions have plan paths inside the repo.
+PLAN_IN_REPO=false
+case "$PLAN_FULL" in
+  "$REPO"/*) PLAN_IN_REPO=true ;;
+esac
 
 if [ -n "$PLAN_INTRODUCED" ]; then
   BASELINE=$(cd "$REPO" && git rev-parse "${PLAN_INTRODUCED}^" 2>/dev/null || true)
@@ -67,8 +77,14 @@ if [ -n "$PLAN_INTRODUCED" ]; then
     BASELINE=$(cd "$REPO" && git rev-parse origin/main 2>/dev/null || echo "")
   fi
   DIFF_RAW=$(cd "$REPO" && git diff --name-only "${BASELINE}...HEAD" 2>/dev/null || true)
+elif [ "$PLAN_IN_REPO" = "true" ]; then
+  # Plan exists in repo's working tree but not in git log → authored in
+  # current session and not yet committed. Skip committed-diff scope; the
+  # working-tree merge below covers the actual changes. Avoids the
+  # "origin/main fallback captures whole branch" trap (Hitos 2/4/5).
+  DIFF_RAW=""
 else
-  # Plan not in git log — try origin/main fallback (works for fixtures + first commit)
+  # Test fixture: plan path is outside $REPO. Use origin/main baseline.
   DIFF_RAW=$(cd "$REPO" && git diff --name-only origin/main...HEAD 2>/dev/null || true)
 fi
 

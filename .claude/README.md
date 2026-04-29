@@ -64,13 +64,6 @@ it, gates cannot enforce anything.
         "label": null               // Descripción de la wave actual
       }
     }
-  },
-  "deviation": {
-    "active": false,
-    "reason": null,
-    "skipped_phases": [],
-    "return_to_phase": null,
-    "acknowledged_by_user": false
   }
 }
 ```
@@ -347,23 +340,15 @@ it's escalated to the human who can actually close it.
 
 ---
 
-## Deviation Mode
+## Emergency Escape
 
-Deviation mode exists for genuine emergencies (hotfixes, production outages) where
-waiting for the full flow would cause more harm than the risk of skipping it.
-It requires explicit user acknowledgment — it cannot be self-activated.
-
-**Activate:**
-```bash
-jq '.deviation.active = true
-  | .deviation.reason = "hotfix: production down, needs immediate fix"
-  | .deviation.skipped_phases = ["brainstorming","planning"]
-  | .deviation.acknowledged_by_user = true' \
-  .claude/session-state.json > /tmp/ss.json && mv /tmp/ss.json .claude/session-state.json
-```
-
-When `deviation.active = true`, the engine shows warnings but does not block.
-**Requires explicit user confirmation before activating.**
+Deviation mode was removed 2026-04-29 (commit pending) because it
+contradicted the Layer K principle of "discard, don't recoil to a
+reduced version". The legitimate emergency path is now the same as
+any other false-positive bypass: `SKIP_PHASE_EXIT_GATE=1` with a
+`docs/decisions/log.md` entry explaining the case. This is logged,
+audited, and scoped to one phase advance — structurally different
+from the modal deviation flag it replaces.
 
 ---
 

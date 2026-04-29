@@ -93,7 +93,6 @@ if [ "$FLOW_TYPE" = "full" ] && [ -n "$USER_PROMPT" ]; then
     fi
   fi
 fi
-DEV_ACTIVE=$(echo "$STATE" | jq -r '.deviation.active // false')
 
 # Work context — hierarchical progress tracking
 INTERACTION_CLASS=$(echo "$STATE" | jq -r '.interaction_classification // ""')
@@ -362,9 +361,6 @@ if [ "$FLOW_TYPE" = "full" ]; then
     fi
   done
 
-  DEV_SUFFIX=""
-  [ "$DEV_ACTIVE" = "true" ] && DEV_SUFFIX=" [DESVÍO]"
-
   # Capitalize current phase for display
   DISPLAY_PHASE="$(echo "${CURRENT_PHASE:0:1}" | tr '[:lower:]' '[:upper:]')${CURRENT_PHASE:1}"
 
@@ -378,7 +374,7 @@ if [ "$FLOW_TYPE" = "full" ]; then
       PROB_PREFIX="⚠ MULTI-PROBLEMA (${WC_PROB_TOTAL}) sin current — setear problems.current | "
     fi
   fi
-  LINE1="📍 ${PROB_PREFIX}${DISPLAY_PHASE} (${CURRENT_INDEX}/${TOTAL})${DEV_SUFFIX}"
+  LINE1="📍 ${PROB_PREFIX}${DISPLAY_PHASE} (${CURRENT_INDEX}/${TOTAL})"
   # Show wave hierarchy from planning onwards (when plan has been parsed)
   case "$CURRENT_PHASE" in
     planning|implementation|verification|capture|retrospective)

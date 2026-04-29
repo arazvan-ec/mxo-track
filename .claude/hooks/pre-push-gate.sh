@@ -8,7 +8,6 @@
 #   HARD: capture (execution_log_path exists, file ≥500B)
 #   HARD: retrospective (must be in phase_history)
 #   HARD: finalize (branch_strategy declared)
-# - Deviation mode: converts DENY to WARN
 #
 # Skips git push --dry-run commands.
 
@@ -84,17 +83,11 @@ if ! has_protected_changes; then
   exit 0
 fi
 
-# ── Check deviation mode ──
-DEVIATION_ACTIVE=$(jq -r '.deviation.active // false' "$STATE_FILE" 2>/dev/null || echo "false")
-
-# Helper: gate or warn based on deviation mode
+# Helper: deny on gate failure (deviation mode removed 2026-04-29 —
+# emergency escape is SKIP_PHASE_EXIT_GATE=1 + decision log entry)
 gate() {
   local reason="$1"
-  if [ "$DEVIATION_ACTIVE" = "true" ]; then
-    warn "PRE-PUSH WARNING (deviation): $reason"
-  else
-    deny "PRE-PUSH GATE: $reason"
-  fi
+  deny "PRE-PUSH GATE: $reason"
 }
 
 # Helper: check if a phase is in phase_history or is current_phase
