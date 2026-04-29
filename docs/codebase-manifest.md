@@ -3,7 +3,7 @@
 > **Auto-generated** by `make manifest` (`backend/bin/generate-manifest.sh`).
 > Do not edit manually — regenerate with `make manifest`.
 
-**Generated:** 2026-04-29 20:47
+**Generated:** 2026-04-29 21:50
 **Regenerate:** `make manifest`
 
 ## Project Overview
@@ -13,7 +13,7 @@
 | Backend | `backend/` | 537 PHP | Symfony 7.4, PHP 8.4 |
 | Frontend | `frontend/` | 153 JS/TS | React |
 | ML Service | `ml-service/` | 17 Python | FastAPI |
-| Docker/Infra | `docker/` + `scripts/` | 9 + 18 | Docker, OSRM, VROOM, Traccar |
+| Docker/Infra | `docker/` + `scripts/` | 9 + 24 | Docker, OSRM, VROOM, Traccar |
 | OpenSpec | `openspec/` | 28 specs | YAML specs |
 | Docs | `docs/` | — | Knowledge modules, analysis |
 
@@ -287,6 +287,7 @@ app/routers
 
 - `backfill-exec-logs.sh`
 - `bootstrap-vocabulary.sh`
+- `ci-vocab-deprecation-check.sh`
 - `graduate.sh`
 - `link-regression.sh`
 - `mark-verified.sh`
@@ -296,13 +297,18 @@ app/routers
 - `railway-worker-start.sh`
 - `render-vocabulary.sh`
 - `suggest-tags.sh`
+- `test-ci-vocab-deprecation-check.sh`
 - `test-graduate.sh`
 - `test-link-regression.sh`
 - `test-mark-verified.sh`
 - `test-suggest-tags.sh`
 - `test-validate-graduations.sh`
+- `test-vocab-drift.sh`
+- `test-vocab-rename.sh`
 - `traccar-start.sh`
 - `validate-graduations.sh`
+- `vocab-drift.sh`
+- `vocab-rename.sh`
 
 ---
 
