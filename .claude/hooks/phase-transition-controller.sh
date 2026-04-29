@@ -97,6 +97,19 @@ if [ "$OLD_APPROVED" = "false" ] && [ "$NEW_APPROVED" = "true" ]; then
   fi
 fi
 
+# Check 3: retrospective_shown set to true directly (not via user-prompt-state.sh)
+# Mirrors Check 2 exactly. Origin: 2026-04-29 i10 — closes the
+# "stop-hook as approval proxy" pattern observed in 5+ Hitos.
+OLD_RETRO=$(jq -r '.evidence.retrospective_shown // false' "$SNAPSHOT_FILE" 2>/dev/null || echo "false")
+NEW_RETRO=$(jq -r '.evidence.retrospective_shown // false' "$STATE_FILE" 2>/dev/null || echo "false")
+
+if [ "$OLD_RETRO" = "false" ] && [ "$NEW_RETRO" = "true" ]; then
+  if echo "$COMMAND" | grep -qE 'retrospective_shown\s*=\s*true'; then
+    jq '.evidence.retrospective_shown = false' "$STATE_FILE" > /tmp/ptc-fix.json && mv /tmp/ptc-fix.json "$STATE_FILE"
+    WARNINGS="${WARNINGS}⚠ REVERT: retrospective_shown fue seteado directamente via jq. Solo el hook UserPromptSubmit puede aprobarlo (cuando el usuario aprueba la retrospectiva visiblemente). "
+  fi
+fi
+
 # Update snapshot for next comparison
 cp "$STATE_FILE" "$SNAPSHOT_FILE"
 

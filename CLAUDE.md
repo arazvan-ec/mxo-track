@@ -396,11 +396,13 @@ gatekeeping at both levels, paying the attention cost twice.
 - **Subagent dispatch** for parallel work already planned
 - **`jq` updates** to `session-state.json` for phase and evidence
   advancement (these are the model's own state, not user-facing data).
-  **Excepción:** NO incluir `user_approved` en comandos `jq` de
-  actualización de evidencia, ni siquiera redundantemente. El hook
-  `user-prompt-state.sh` es el único escritor sancionado; cualquier
-  asignación directa dispara revert en `phase-transition-controller.sh`
-  aunque el valor no cambie.
+  **Excepción:** NO incluir `user_approved` ni `retrospective_shown`
+  en comandos `jq` de actualización de evidencia, ni siquiera
+  redundantemente. El hook `user-prompt-state.sh` es el único escritor
+  sancionado para ambos: detecta aprobación verbal del usuario y
+  setea el flag (con phase=retrospective como gate adicional para
+  `retrospective_shown`). Cualquier asignación directa dispara revert
+  en `phase-transition-controller.sh` aunque el valor no cambie.
 - **Writing spec / plan / execution-log / retrospective** docs under
   `docs/superpowers/`
 - **Regenerating `.claude/session-state.json`** during session bootstrap

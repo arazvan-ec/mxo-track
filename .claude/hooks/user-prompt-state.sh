@@ -95,6 +95,20 @@ if [ "$FLOW_TYPE" = "full" ] && [ -n "$USER_PROMPT" ]; then
       cp "$STATE_FILE" /tmp/ptc-state-snapshot.json 2>/dev/null || true
     fi
   fi
+
+  # Retrospective approval: reuse approval regex but gate on phase=retrospective.
+  # The flag gates phase-advance to finalize. Only this hook may set it; the
+  # phase-transition-controller reverts direct jq writes (mirrors user_approved).
+  # Origin: 2026-04-29 i10 — closes "stop-hook as approval proxy" pattern
+  # observed in Hito 1, Hito 2, Hito 4, Phase A, Hito 5.
+  CURRENT_RETRO_SHOWN=$(echo "$STATE" | jq -r '.evidence.retrospective_shown // false')
+  if [ "$CURRENT_PHASE" = "retrospective" ] && [ "$CURRENT_RETRO_SHOWN" != "true" ]; then
+    if echo "$PROMPT_LOWER" | grep -qiE '(^|\s)(sí|si,|si$|yes|ok|dale|adelante|aprobado|apruebo|perfecto|de acuerdo|estoy de acuerdo|me parece bien|prefiero|vamos con|go ahead|approved|lgtm|apruebo el plan|lo apruebo|suena bien|hazlo|implementa|proceed|me gusta|está bien|esta bien|correcto|confirmo|confirm|procede|continua|continúa|igual que|igual a|como las otras)(\s|$|[,.\!])'; then
+      jq '.evidence.retrospective_shown = true' "$STATE_FILE" > /tmp/upt.json && mv /tmp/upt.json "$STATE_FILE"
+      STATE=$(cat "$STATE_FILE" 2>/dev/null || echo "{}")
+      cp "$STATE_FILE" /tmp/ptc-state-snapshot.json 2>/dev/null || true
+    fi
+  fi
 fi
 
 # Work context — hierarchical progress tracking
