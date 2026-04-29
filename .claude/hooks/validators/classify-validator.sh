@@ -58,7 +58,7 @@ CLASS=$(jq -r '.interaction_classification // "null"' "$STATE_FILE" 2>/dev/null)
 
 # Insufficient classifications
 case "$CLASS" in
-  full|debug)
+  full|debug|refactor)
     exit 0
     ;;
   micro|light|explore|informational|null|"")

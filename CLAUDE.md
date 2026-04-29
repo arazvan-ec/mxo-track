@@ -209,7 +209,8 @@ code edits. Each type activates a different gate chain:
 | **Informational** | "what does X do?" | Micro — consult → answer → capture gaps | No code edits allowed (must reclassify if needed) |
 | **Documentation** | Edit docs | Light — check overlap → execute → verify | No `src/` edits (must reclassify if scope grows) |
 | **Bug fix** | Error, unexpected behavior | Debug — root cause → pattern-wide → TDD fix → verification → capture → retrospective | Blocks fix until root cause + pattern-wide search done |
-| **Code change** | New feature, refactor | Full — consult → brainstorming → planning → implementation → verification → capture → retrospective → finalize | Blocks `src/` edits until consult + brainstorming + planning complete |
+| **Code change** | New feature | Full — consult → brainstorming → planning → implementation → verification → capture → retrospective → finalize | Blocks `src/` edits until consult + brainstorming + planning complete |
+| **Refactor** | Behavior-preserving change to existing code (no new feature, no bug fix) | Full — same phases as code change | Same gates as `code change`; semantic intent distinguished for queryability and future refactor-specific gates |
 | **Exploration** | "audit X", "how does Z?" | Explore — manifest → explore → capture | No code edits allowed (must reclassify if needed) |
 
 After classifying: `jq '.flow_type = "<type>"' .claude/session-state.json`
