@@ -74,6 +74,7 @@ if [ "$FLOW_TYPE" = "full" ] && [ -n "$USER_PROMPT" ]; then
     if [ "$CURRENT_APPROVED" != "true" ]; then
       jq '.evidence.user_approved = true' "$STATE_FILE" > /tmp/upt.json && mv /tmp/upt.json "$STATE_FILE"
       STATE=$(cat "$STATE_FILE" 2>/dev/null || echo "{}")
+      cp "$STATE_FILE" /tmp/ptc-state-snapshot.json 2>/dev/null || true
     fi
   fi
 
@@ -83,6 +84,7 @@ if [ "$FLOW_TYPE" = "full" ] && [ -n "$USER_PROMPT" ]; then
   if [ "$DECISION_IDS" -ge 2 ] && [ "$CURRENT_APPROVED" != "true" ]; then
     jq '.evidence.user_approved = true' "$STATE_FILE" > /tmp/upt.json && mv /tmp/upt.json "$STATE_FILE"
     STATE=$(cat "$STATE_FILE" 2>/dev/null || echo "{}")
+    cp "$STATE_FILE" /tmp/ptc-state-snapshot.json 2>/dev/null || true
   fi
 
   # Rejection patterns (reset approval)
@@ -90,6 +92,7 @@ if [ "$FLOW_TYPE" = "full" ] && [ -n "$USER_PROMPT" ]; then
     if [ "$CURRENT_APPROVED" = "true" ]; then
       jq '.evidence.user_approved = false' "$STATE_FILE" > /tmp/upt.json && mv /tmp/upt.json "$STATE_FILE"
       STATE=$(cat "$STATE_FILE" 2>/dev/null || echo "{}")
+      cp "$STATE_FILE" /tmp/ptc-state-snapshot.json 2>/dev/null || true
     fi
   fi
 fi
@@ -153,10 +156,18 @@ if [ "$FLOW_TYPE" = "null" ] || [ -z "$FLOW_TYPE" ]; then
   exit 0
 fi
 
-# Auto-reset completed flows: if finalize is done (branch_strategy set), reset for next interaction
+# Auto-reset completed flows: if finalize is done (branch_strategy set) AND
+# the latest commit is already pushed to upstream, reset for next interaction.
+# The HEAD-vs-upstream check prevents premature reset when the user types
+# something between commit and push (which previously cleared branch_strategy
+# and forced manual re-set before pushing — recurring bug across 5 Hitos).
 if [ "$FLOW_TYPE" = "full" ] && [ "$CURRENT_PHASE" = "finalize" ]; then
   BRANCH_STRATEGY_CHECK=$(echo "$STATE" | jq -r '.evidence.branch_strategy // ""')
-  if [ -n "$BRANCH_STRATEGY_CHECK" ]; then
+  HEAD_SHA=$(cd "$REPO" && git rev-parse HEAD 2>/dev/null || echo "")
+  UPSTREAM_SHA=$(cd "$REPO" && git rev-parse @{upstream} 2>/dev/null || echo "")
+  PUSHED="false"
+  [ -n "$HEAD_SHA" ] && [ "$HEAD_SHA" = "$UPSTREAM_SHA" ] && PUSHED="true"
+  if [ -n "$BRANCH_STRATEGY_CHECK" ] && [ "$PUSHED" = "true" ]; then
     LAST_SUMMARY=$(echo "$STATE" | jq -c '{flow_type: .flow_type, phase: .current_phase, branch_strategy: .evidence.branch_strategy}')
     jq --argjson summary "$LAST_SUMMARY" '
       .flow_type = null |
@@ -183,6 +194,7 @@ if [ "$FLOW_TYPE" = "full" ] && [ "$CURRENT_PHASE" = "finalize" ]; then
       .evidence.work_context = {"description": null, "problems": {"total": 0, "current": 0, "labels": []}, "wave": {"total": 0, "current": 0, "label": null, "labels": []}} |
       .evidence.todo_progress = {"total": 0, "completed": 0, "in_progress_label": null, "items": []}
     ' "$STATE_FILE" > /tmp/ss_reset.json && mv /tmp/ss_reset.json "$STATE_FILE"
+    cp "$STATE_FILE" /tmp/ptc-state-snapshot.json 2>/dev/null || true
     echo "📍 Sin clasificar — clasificar antes de proceder"
     exit 0
   fi
