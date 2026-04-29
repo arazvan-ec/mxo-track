@@ -37,6 +37,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Vocab deprecation gate
+        run: bash scripts/ci-vocab-deprecation-check.sh
 
       - name: Setup PHP 8.4
         uses: shivammathur/setup-php@v2
