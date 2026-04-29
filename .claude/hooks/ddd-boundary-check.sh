@@ -190,4 +190,52 @@ EOF
   exit 0
 fi
 
+# ── Phase B B-2: Vocabulary cross-reference (WARN only) ──
+# When a spec exists and references canonical concepts whose
+# `bounded_context` differs from the inferred context for the touched
+# critical path, emit a WARN via stderr. Informational only —
+# vocabulary metadata is curated, not architectural truth.
+# Origin: 2026-04-29 hito 3 phase B-2.
+VOCAB_FILE="/home/user/mxo-track/docs/knowledge/_vocabulary.yaml"
+SPEC_PATH=$(jq -r '.evidence.spec_path // ""' "/home/user/mxo-track/.claude/session-state.json" 2>/dev/null || echo "")
+if [ -f "$VOCAB_FILE" ] && [ -n "$SPEC_PATH" ] && [ -f "/home/user/mxo-track/$SPEC_PATH" ]; then
+  SPEC_FULL="/home/user/mxo-track/$SPEC_PATH"
+  # Inferred context from path — best-effort: extract context segment from
+  # path like backend/src/Domain/<Context>/ → "<Context>" lowercased.
+  INFERRED_CTX=$(echo "$REL_PATH" | sed -nE 's|^backend/src/Domain/([^/]+)/.*|\1|p' | tr '[:upper:]' '[:lower:]')
+  if [ -n "$INFERRED_CTX" ]; then
+    # Scan vocabulary for canonicals mentioned in the spec whose
+    # bounded_context disagrees with INFERRED_CTX.
+    MISMATCHES=$(awk -v spec_path="$SPEC_FULL" -v inferred="$INFERRED_CTX" '
+      BEGIN {
+        IGNORECASE=1
+        # Read spec into spec_text
+        while ((getline line < spec_path) > 0) spec_text = spec_text " " line
+        close(spec_path)
+      }
+      /^  - canonical: / { canonical=$0; sub(/^  - canonical: /, "", canonical); ctx=""; next }
+      /^    bounded_context: / {
+        ctx=$0; sub(/^    bounded_context: /, "", ctx)
+        # If canonical mentioned in spec AND ctx is curated AND ctx contradicts inferred
+        if (ctx != "" && ctx != "TODO") {
+          pat = "\\<" canonical "\\>"
+          if (match(spec_text, pat)) {
+            # Compare normalized: route-planning vs Route → "route" prefix match
+            ctx_norm = tolower(ctx); gsub(/-.*/, "", ctx_norm)
+            if (ctx_norm != inferred && index(ctx_norm, inferred) == 0 && index(inferred, ctx_norm) == 0) {
+              print canonical " (vocab ctx: " ctx ", path ctx: " inferred ")"
+            }
+          }
+        }
+      }
+    ' "$VOCAB_FILE" 2>/dev/null | head -3)
+
+    if [ -n "$MISMATCHES" ]; then
+      echo "WARNING vocab cross-ref: spec mentions canonicals with bounded_context different from path-inferred:" >&2
+      echo "$MISMATCHES" | sed 's/^/  /' >&2
+      echo "  Review whether the path or the vocab metadata is correct." >&2
+    fi
+  fi
+fi
+
 exit 0

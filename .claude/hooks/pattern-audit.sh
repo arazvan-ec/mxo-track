@@ -87,4 +87,43 @@ for c in "${CANDIDATES[@]}"; do
 done
 echo ""
 
+# ── Phase B B-3: Deprecated-alias scan in execution logs ──
+# Scan recent logs for terms matching aliases with surface: deprecated
+# in _vocabulary.yaml. Surface as suggestion (not blocking).
+# Origin: 2026-04-29 hito 3 phase B-3.
+VOCAB_FILE="${VOCAB_FILE:-$REPO_ROOT/docs/knowledge/_vocabulary.yaml}"
+EXEC_LOGS_DIR="${EXEC_LOGS_DIR:-$REPO_ROOT/docs/superpowers/execution-logs}"
+if [ -f "$VOCAB_FILE" ] && [ -d "$EXEC_LOGS_DIR" ]; then
+  RECENT_LOGS=$(find "$EXEC_LOGS_DIR" -name '*.md' -type f -mtime -30 2>/dev/null | head -10)
+  if [ -n "$RECENT_LOGS" ]; then
+    # Extract deprecated alias → canonical pairs into a temporary map.
+    DEPRECATED_PAIRS=$(awk '
+      /^  - canonical: / { canonical=$0; sub(/^  - canonical: /, "", canonical); next }
+      /^      - \{term: / && /surface: "deprecated"/ {
+        t=$0
+        sub(/^.*term: "/, "", t)
+        sub(/", lang:.*$/, "", t)
+        print t "|" canonical
+      }
+    ' "$VOCAB_FILE" 2>/dev/null)
+
+    DEPRECATED_HITS=""
+    while IFS='|' read -r alias canonical; do
+      [ -z "$alias" ] && continue
+      # Whole-word, case-insensitive match across all recent logs
+      if echo "$RECENT_LOGS" | xargs grep -liwE -- "\b${alias}\b" 2>/dev/null | head -1 | grep -q .; then
+        DEPRECATED_HITS="${DEPRECATED_HITS}  • \"${alias}\" → use canonical \"${canonical}\"\n"
+      fi
+    done <<< "$DEPRECATED_PAIRS"
+
+    DEPRECATED_HITS=$(printf "%b" "$DEPRECATED_HITS" | sort -u | head -5)
+
+    if [ -n "$DEPRECATED_HITS" ]; then
+      echo "⚠ pattern-audit: deprecated-alias mentions in recent logs (≤30 days):"
+      echo "$DEPRECATED_HITS"
+      echo ""
+    fi
+  fi
+fi
+
 exit 0
