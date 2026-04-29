@@ -35,8 +35,7 @@ existing on disk. Wave 6 depends on everything previous.
   workflow.
   → produces: `scripts/ci-vocab-deprecation-check.sh`,
     new "Vocab deprecation gate" step in `deploy.yml`
-  → files: `scripts/ci-vocab-deprecation-check.sh`,
-    `.github/workflows/deploy.yml`
+  → files: `scripts/ci-vocab-deprecation-check.sh`, `.github/workflows/deploy.yml`
 
 - **3 — C-3 vocab-drift.sh** Create `scripts/vocab-drift.sh`. Iterates entries via
   `awk` over `_vocabulary.yaml`, extracting `canonical` +
