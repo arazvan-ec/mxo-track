@@ -92,26 +92,12 @@ if [ "$NORMS_OK" = "0" ] || [ "$SAFEGUARDS_OK" = "0" ]; then
 fi
 
 # ── Gate 4: Vocabulary consultation (Phase B B-1, WARN only) ──
-# Scan agent prompt for tokens matching aliases in _vocabulary.yaml.
-# Surface deprecated aliases and alias-without-canonical mentions as
-# systemMessage warnings (no block — model may legitimately quote
-# deprecated terms in narration).
-# Origin: 2026-04-29 hito 3 phase B-1.
+# Surfaces deprecated-alias mentions in the agent prompt. Migrated to
+# lib/vocabulary-reader.sh in i12 (2026-04-29).
 VOCAB_FILE="/home/user/mxo-track/docs/knowledge/_vocabulary.yaml"
 if [ -f "$VOCAB_FILE" ]; then
-  # Extract deprecated alias → canonical map.
-  # Each entry block has `- canonical: NAME` followed by aliases lines.
-  # We capture aliases with `surface: "deprecated"` and pair with their canonical.
-  # Extract deprecated alias → canonical pairs, then whole-word match via grep.
-  DEPRECATED_PAIRS=$(awk '
-    /^  - canonical: / { canonical=$0; sub(/^  - canonical: /, "", canonical); next }
-    /^      - \{term: / && /surface: "deprecated"/ {
-      t=$0
-      sub(/^.*term: "/, "", t)
-      sub(/", lang:.*$/, "", t)
-      print t "|" canonical
-    }
-  ' "$VOCAB_FILE" 2>/dev/null)
+  # shellcheck source=lib/vocabulary-reader.sh
+  source "/home/user/mxo-track/.claude/hooks/lib/vocabulary-reader.sh"
 
   DEPRECATED_HITS=""
   while IFS='|' read -r alias canonical; do
@@ -119,7 +105,7 @@ if [ -f "$VOCAB_FILE" ]; then
     if echo "$AGENT_PROMPT" | grep -qiwE -- "\b${alias}\b" 2>/dev/null; then
       DEPRECATED_HITS="${DEPRECATED_HITS}vocab: \"${alias}\" is deprecated alias for \"${canonical}\"; "
     fi
-  done <<< "$DEPRECATED_PAIRS"
+  done <<< "$(vocab_deprecated_aliases "$VOCAB_FILE")"
   DEPRECATED_HITS=$(echo "$DEPRECATED_HITS" | sed 's/; $//')
 
   if [ -n "$DEPRECATED_HITS" ]; then

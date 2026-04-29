@@ -96,25 +96,16 @@ EXEC_LOGS_DIR="${EXEC_LOGS_DIR:-$REPO_ROOT/docs/superpowers/execution-logs}"
 if [ -f "$VOCAB_FILE" ] && [ -d "$EXEC_LOGS_DIR" ]; then
   RECENT_LOGS=$(find "$EXEC_LOGS_DIR" -name '*.md' -type f -mtime -30 2>/dev/null | head -10)
   if [ -n "$RECENT_LOGS" ]; then
-    # Extract deprecated alias → canonical pairs into a temporary map.
-    DEPRECATED_PAIRS=$(awk '
-      /^  - canonical: / { canonical=$0; sub(/^  - canonical: /, "", canonical); next }
-      /^      - \{term: / && /surface: "deprecated"/ {
-        t=$0
-        sub(/^.*term: "/, "", t)
-        sub(/", lang:.*$/, "", t)
-        print t "|" canonical
-      }
-    ' "$VOCAB_FILE" 2>/dev/null)
+    # shellcheck source=lib/vocabulary-reader.sh
+    source "$REPO_ROOT/.claude/hooks/lib/vocabulary-reader.sh"
 
     DEPRECATED_HITS=""
     while IFS='|' read -r alias canonical; do
       [ -z "$alias" ] && continue
-      # Whole-word, case-insensitive match across all recent logs
       if echo "$RECENT_LOGS" | xargs grep -liwE -- "\b${alias}\b" 2>/dev/null | head -1 | grep -q .; then
         DEPRECATED_HITS="${DEPRECATED_HITS}  • \"${alias}\" → use canonical \"${canonical}\"\n"
       fi
-    done <<< "$DEPRECATED_PAIRS"
+    done <<< "$(vocab_deprecated_aliases "$VOCAB_FILE")"
 
     DEPRECATED_HITS=$(printf "%b" "$DEPRECATED_HITS" | sort -u | head -5)
 
