@@ -162,6 +162,45 @@ C-bis (data work, separate calibration window).
   approval. Decision-log entry tracks the case (recurring pattern
   for cross-session continuations — see follow-up).
 
+## Retrospectiva
+
+### Estimate accuracy
+
+| Métrica | Estimado | Real | Δ |
+|---|---|---|---|
+| Líneas código (sin tests/artefactos) | ~320 | ~430 | +34% |
+| Líneas tests | ~250 | ~280 | +12% |
+| Líneas total commit | 580 | 872 | +50% |
+| Archivos | 11 | 11 | 0 |
+
+**Causa del gap (+50%):** 4 bugs no anticipados consumieron ~150
+líneas de fixes (REPO_ROOT shorthand, `set -e` + awk, mawk regex,
+sync-gate continuation parser). Plan + execution log más extensos
+al documentar 6 blockers. Estimación inicial subestimó el costo de
+defensas que cada bug introdujo en su smoke test (~15 líneas por
+bug).
+
+### Process gap
+
+`git stash --include-untracked` durante verificación stasheó
+`.claude/session-state.json` (untracked), y SessionStart:resume al
+volver reseteó `evidence.user_approved` y `flow_type`, bloqueando
+edición y push. Costo: ~3 turnos de reconstrucción + re-aprobación
+verbal. **Fix accionable:** SessionStart:resume debe preservar
+`evidence.user_approved` (y campos de fase) cuando la fecha de
+sesión coincide. Documentar antipatrón en CLAUDE.md.
+
+### Emergent patterns
+
+- **atomic-yaml-rewrite (mktemp + awk + mv)** — 1ª ocurrencia
+  explícita en `scripts/`. Pendiente 3+ recurrencias para
+  graduación; rastrear en C-bis.
+- **Cross-session continuation con spec preexistente** — 2ª
+  ocurrencia de `SKIP_PHASE_EXIT_GATE=1` por este motivo. A la 3ª,
+  ajustar validators consult/brainstorm.
+- **`set -e` swallowing capturado-exit-code** — patrón shell
+  recurrente, ya documentado.
+
 ## Follow-ups
 
 - **Phase C-bis curation** — 47 `TODO: curate definition` entries.
