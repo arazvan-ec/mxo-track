@@ -55,5 +55,64 @@ if [ -f "$STATE_FILE" ] && echo "$AGENT_PROMPT" | grep -qE '\.claude/'; then
   esac
 fi
 
+# ── Gate 3: Norms & Safeguards in agent prompt (Layer Agent, HARD) ──
+# Every write-capable subagent dispatch must include `## Norms` and
+# `## Safeguards` sections in the prompt. Each section can be satisfied
+# either inline (imperative keyword for Norms / Risk|Mitigation table for
+# Safeguards) or by spec-reference (path + section token within proximity).
+# Origin: 2026-04-28 hito 4, SPDD REASONS Canvas applied to subagent prompts.
+
+# Use shared lib for section presence + content classification.
+# Lib path is absolute (decoupled from REPO, which the test harness rewrites
+# to point at fixture repos that lack .claude/hooks/lib/).
+# shellcheck source=lib/section-validator.sh
+source "/home/user/mxo-track/.claude/hooks/lib/section-validator.sh"
+
+PROMPT_TMP="$(mktemp)"
+trap 'rm -f "$PROMPT_TMP"' EXIT
+printf '%s' "$AGENT_PROMPT" > "$PROMPT_TMP"
+
+NORMS_OK=0
+SAFEGUARDS_OK=0
+if section_present "$PROMPT_TMP" "Norms"; then
+  NORMS_BODY=$(section_body "$PROMPT_TMP" "Norms")
+  section_satisfied_inline_or_ref "$NORMS_BODY" "Norms" imperative && NORMS_OK=1
+fi
+if section_present "$PROMPT_TMP" "Safeguards"; then
+  SAFE_BODY=$(section_body "$PROMPT_TMP" "Safeguards")
+  section_satisfied_inline_or_ref "$SAFE_BODY" "Safeguards" risk-mitigation-table && SAFEGUARDS_OK=1
+fi
+
+if [ "$NORMS_OK" = "0" ] || [ "$SAFEGUARDS_OK" = "0" ]; then
+  MISSING=""
+  [ "$NORMS_OK" = "0" ] && MISSING="${MISSING}Norms "
+  [ "$SAFEGUARDS_OK" = "0" ] && MISSING="${MISSING}Safeguards"
+  echo "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"❌ Agent prompt missing structured section(s): $MISSING. Each section requires either inline content (imperative keyword for Norms; Risk|Mitigation table for Safeguards) or spec-reference (path to docs/superpowers/specs/X.md within proximity of the section token). See AGENTS.md § Norms & Safeguards.\"}}"
+  exit 0
+fi
+
+# ── Gate 4: Vocabulary consultation (Phase B B-1, WARN only) ──
+# Surfaces deprecated-alias mentions in the agent prompt. Migrated to
+# lib/vocabulary-reader.sh in i12 (2026-04-29).
+VOCAB_FILE="/home/user/mxo-track/docs/knowledge/_vocabulary.yaml"
+if [ -f "$VOCAB_FILE" ]; then
+  # shellcheck source=lib/vocabulary-reader.sh
+  source "/home/user/mxo-track/.claude/hooks/lib/vocabulary-reader.sh"
+
+  DEPRECATED_HITS=""
+  while IFS='|' read -r alias canonical; do
+    [ -z "$alias" ] && continue
+    if echo "$AGENT_PROMPT" | grep -qiwE -- "\b${alias}\b" 2>/dev/null; then
+      DEPRECATED_HITS="${DEPRECATED_HITS}vocab: \"${alias}\" is deprecated alias for \"${canonical}\"; "
+    fi
+  done <<< "$(vocab_deprecated_aliases "$VOCAB_FILE")"
+  DEPRECATED_HITS=$(echo "$DEPRECATED_HITS" | sed 's/; $//')
+
+  if [ -n "$DEPRECATED_HITS" ]; then
+    ESCAPED=$(echo "⚠ $DEPRECATED_HITS. Consider replacing with canonical term in agent prompt." | sed 's/"/\\"/g')
+    echo "{\"systemMessage\":\"$ESCAPED\"}"
+  fi
+fi
+
 # Clean repo — allow (warnings emitted above do not block)
 exit 0

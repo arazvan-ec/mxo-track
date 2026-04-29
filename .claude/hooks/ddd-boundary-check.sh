@@ -190,4 +190,35 @@ EOF
   exit 0
 fi
 
+# ── Phase B B-2: Vocabulary cross-reference (WARN only) ──
+# Migrated to lib/vocabulary-reader.sh in i12 (2026-04-29).
+VOCAB_FILE="/home/user/mxo-track/docs/knowledge/_vocabulary.yaml"
+SPEC_PATH=$(jq -r '.evidence.spec_path // ""' "/home/user/mxo-track/.claude/session-state.json" 2>/dev/null || echo "")
+if [ -f "$VOCAB_FILE" ] && [ -n "$SPEC_PATH" ] && [ -f "/home/user/mxo-track/$SPEC_PATH" ]; then
+  SPEC_FULL="/home/user/mxo-track/$SPEC_PATH"
+  INFERRED_CTX=$(echo "$REL_PATH" | sed -nE 's|^backend/src/Domain/([^/]+)/.*|\1|p' | tr '[:upper:]' '[:lower:]')
+  if [ -n "$INFERRED_CTX" ]; then
+    # shellcheck source=lib/vocabulary-reader.sh
+    source "/home/user/mxo-track/.claude/hooks/lib/vocabulary-reader.sh"
+    SPEC_TEXT=$(cat "$SPEC_FULL" 2>/dev/null)
+    MISMATCHES=""
+    while IFS= read -r canonical; do
+      [ -z "$canonical" ] && continue
+      ctx=$(vocab_bounded_context "$VOCAB_FILE" "$canonical")
+      [ -z "$ctx" ] && continue
+      ctx_norm=$(echo "$ctx" | tr '[:upper:]' '[:lower:]' | sed 's/-.*//')
+      if [ "$ctx_norm" != "$INFERRED_CTX" ] && [[ "$ctx_norm" != *"$INFERRED_CTX"* ]] && [[ "$INFERRED_CTX" != *"$ctx_norm"* ]]; then
+        MISMATCHES="${MISMATCHES}${canonical} (vocab ctx: ${ctx}, path ctx: ${INFERRED_CTX})\n"
+      fi
+    done <<< "$(vocab_canonicals_in_text "$VOCAB_FILE" "$SPEC_TEXT")"
+    MISMATCHES=$(printf "%b" "$MISMATCHES" | head -3)
+
+    if [ -n "$MISMATCHES" ]; then
+      echo "WARNING vocab cross-ref: spec mentions canonicals with bounded_context different from path-inferred:" >&2
+      echo "$MISMATCHES" | sed 's/^/  /' >&2
+      echo "  Review whether the path or the vocab metadata is correct." >&2
+    fi
+  fi
+fi
+
 exit 0

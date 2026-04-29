@@ -92,8 +92,10 @@ pass ALL of:
    load-bearing.
 
 A change that fails any of the 4 is ceremony, not flow. Ceremony costs
-attention and tokens without improving the solution — remove or
-rewrite it until it passes.
+attention and tokens without improving the solution — discard it.
+Rewriting a failing proposal at reduced scope to make it pass is a
+concession, not a fix: if the maximal version fails on cost/value, the
+correct outcome is not to do it.
 
 ### Recursive application
 
@@ -207,7 +209,8 @@ code edits. Each type activates a different gate chain:
 | **Informational** | "what does X do?" | Micro — consult → answer → capture gaps | No code edits allowed (must reclassify if needed) |
 | **Documentation** | Edit docs | Light — check overlap → execute → verify | No `src/` edits (must reclassify if scope grows) |
 | **Bug fix** | Error, unexpected behavior | Debug — root cause → pattern-wide → TDD fix → verification → capture → retrospective | Blocks fix until root cause + pattern-wide search done |
-| **Code change** | New feature, refactor | Full — consult → brainstorming → planning → implementation → verification → capture → retrospective → finalize | Blocks `src/` edits until consult + brainstorming + planning complete |
+| **Code change** | New feature | Full — consult → brainstorming → planning → implementation → verification → capture → retrospective → finalize | Blocks `src/` edits until consult + brainstorming + planning complete |
+| **Refactor** | Behavior-preserving change to existing code (no new feature, no bug fix) | Full — same phases as code change | Same gates as `code change`; semantic intent distinguished for queryability and future refactor-specific gates |
 | **Exploration** | "audit X", "how does Z?" | Explore — manifest → explore → capture | No code edits allowed (must reclassify if needed) |
 
 After classifying: `jq '.flow_type = "<type>"' .claude/session-state.json`
@@ -220,73 +223,6 @@ and captures findings. The distinction matters because exploration produces arti
 **Phase transitions:** Use `.claude/hooks/phase-advance.sh <next_phase>` to advance.
 Direct writes to `phase_history` via `jq` are detected and reverted. The script enforces
 legal sequence (no skips, no backwards) and adds timestamps automatically.
-
-### Deviation for Wiring-Only Changes
-
-#### How deviation mode works
-
-Deviation skips brainstorm and plan but keeps everything else. The phases that remain —
-consult, implement, verify, capture, retrospective, finalize — are the ones that catch
-errors even in simple changes:
-
-```
-consult → [user approves deviation] → implementation → verification → capture → retrospective → finalize
-   │              │                                                        │
-   reads past     gate: model                                   catches patterns:
-   decisions      presents evidence,                            "this is the 3rd page
-                  user decides                                   missing onStopClick"
-```
-
-**Why consult is mandatory even for deviations:** The consult phase reads execution logs
-and decision logs. Without it, the model doesn't know if this "simple" change was already
-attempted and failed, or if a decision log explicitly chose a different approach. Consult
-produces the context that makes the deviation assessment meaningful — skipping it means
-the model evaluates complexity without knowing what it doesn't know.
-
-**The retrospective is the most important phase for wiring changes** — it's where you
-detect that a "simple" change is actually a symptom of a missing abstraction. Three
-similar wiring fixes in a week means the codebase needs a structural fix, not a fourth
-wiring patch. The retrospective feeds the learning loop: its output goes to the execution
-log, which consult reads in the next session. Without it, the pattern is invisible.
-
-#### The approval gate: criteria and flow
-
-**Criteria (ALL must be met):**
-- **< 30 lines** changed across all files
-- **0 design decisions** — no new abstractions, patterns, or trade-offs
-- **No new entities, migrations, or API endpoints**
-- **Pattern already exists** in the codebase (copying an established approach)
-
-These criteria exist because they are the conditions under which brainstorm produces zero
-value: no alternatives to evaluate (the pattern already exists), no design trade-offs to
-weigh (zero decisions), and not enough code to hide architectural mistakes (< 30 lines).
-If any criterion fails, brainstorm has nonzero value and must not be skipped.
-
-**Activation flow:**
-1. Complete the `consult` phase — read decisions/execution logs. This is not optional.
-   Consult produces the context that determines whether deviation is safe.
-2. Present deviation request to the user with **concrete evidence** for each criterion:
-   ```
-   Propongo desviación (wiring-only):
-   - Líneas estimadas: ~15 (< 30 ✓)
-   - Decisiones de diseño: 0 — solo conectar X con Y (✓)
-   - Nuevas entidades/migraciones/endpoints: ninguna (✓)
-   - Patrón existente: [citar archivo:línea del ejemplo concreto] (✓)
-   ¿Apruebas la desviación?
-   ```
-   The evidence must be specific: "pattern exists" requires a file:line reference to where
-   the pattern is used, not a vague "similar things exist." "< 30 lines" requires a count,
-   not "it's small." Vague evidence is not evidence — it's rationalization wearing a lab coat.
-3. **Wait for explicit user confirmation.** Do not proceed. Do not start "reading files
-   in the meantime." The gate is closed until the user opens it.
-4. If user confirms → activate in session-state and proceed to implementation.
-5. If user denies → continue with full flow (brainstorming + planning). No re-requesting.
-
-**Activate (only after user confirmation):**
-```bash
-jq '.deviation = {"active": true, "reason": "wiring-only (<30 lines, 0 design decisions)", "skipped_phases": ["brainstorming", "planning"], "return_to_phase": null, "acknowledged_by_user": true}' \
-  .claude/session-state.json > /tmp/ss.json && mv /tmp/ss.json .claude/session-state.json
-```
 
 ### Full-Flow: The 8 Phases
 
@@ -383,7 +319,11 @@ mapped to the gate that blocks it:
 | **Spec mirrors tech-debt pattern** without acknowledging | `brainstorm-validator.sh` (Layer H, HARD) — when spec references critical contexts (read from `docs/knowledge/_ddd-boundaries.yaml`) or `src/Controller/Api/Admin/`, requires a `## Prior Art Audit` section with at least one row classified as ✅, ❌ tech-debt, or `new` |
 | **Spec lacks adversarial architectural review** | `brainstorm-validator.sh` invokes `socratic-review-validator.sh` (Layer C, HARD) — when spec references critical paths, requires a `## Architectural Adversarial Review` section with ≥3 numbered Q/A entries (each ≥30 char); at least one question must include an architectural keyword (endorsed, boundary, DDD, tech-debt, architecture, coupling, pattern, tradeoff). Relocated 2026-04-24 from post-verification phase to spec-exit to eliminate rollback cost. |
 | **Edit adds ORM coupling in critical context** | `ddd-boundary-check.sh` (Layer F) — reads `docs/knowledge/_ddd-boundaries.yaml`. **BLOCKS** in full/debug flow when edit adds `createQueryBuilder` or `getRepository` against a critical aggregate AND the spec's Prior Art Audit doesn't cover the file. WARNING-only outside full/debug or when no spec exists yet. Known violations are exempted. |
+| **Spec proposes a reduced version of a failed proposal** | `brainstorm-validator.sh` (Layer K, HARD) — when spec contains reduction markers (MVP, "minimum viable", v0, "ligero", "lightweight", "versión reducida", "arrancar vacío", "scope-down") outside fenced code blocks, requires a `## Maximal Version Considered` section with an "Independent superiority" bullet defending the proposal on grounds OTHER than cost. Bullet must contain at least one design-quality keyword (pattern, garantiz/ensure, drift, consistency, boundary, correctness, alignment, etc.); cost-only language fails. Origin: 2026-04-28 retrospective on Ubiquitous Language System reduction. |
+| **Spec lacks invariants or risk-mitigation pairing** | `brainstorm-validator.sh` (Layers N + S, HARD, universal) — every spec in full/debug must include `## Norms` (≥1 bullet with imperative keyword: must/shall/never/always/no se permite/no debe/siempre/jamás) and `## Safeguards` (markdown table with `Risk \| Mitigation` columns and ≥1 data row, forcing explicit pairing). Universal application; conditional or SOFT alternatives explicitly rejected per the SPDD REASONS Canvas. Origin: 2026-04-28 hito 1. |
 | `verification → capture` without running tests/lint | `verification-validator.sh` — `tests_passed` and `lint_clean` must be `true` (no `skipped` in full/debug) |
+| **Code drifts from plan declarations** | `verification-validator.sh` invokes `sync-validator.sh` (Layer Sync, HARD) — at `verification → capture`, parses `→ files:` declarations from the plan, computes `git diff` from the plan-introduction commit's parent (or `origin/main` fallback) to HEAD plus working tree, filters `WORKFLOW_ARTIFACTS_PATHS` (specs/plans/logs/manifest/decision-log/session-state — scope of the gate, not exception list), and blocks if any touched file is undeclared. Forces plan↔code alignment so future `consult.sh` reads accurate plans. Bypass: `SKIP_SYNC_GATE=1` (decision log entry required). Origin: 2026-04-28 hito 2. |
+| **Subagent prompt lacks architectural framing** | `pre-agent-check.sh` Gate 3 (Layer Agent, HARD) — non-`Explore` Agent dispatches must include `## Norms` (imperative keyword OR spec-reference) and `## Safeguards` (Risk\|Mitigation table OR spec-reference). Single source of truth: prompt can reference spec § Norms / § Safeguards instead of duplicating; agent-specific extensions go inline. See AGENTS.md § Norms & Safeguards. Origin: 2026-04-28 hito 4. |
 | `capture → retrospective` without writing the execution log | `capture-validator.sh` (Layer B, HARD) — `execution_log_path` must be set and file must exist |
 | `retrospective → finalize` without presenting retrospective to user | `retrospective-validator.sh` — requires `evidence.retrospective_shown=true` flag set after visible chat presentation |
 | Forgetting to advance `problems.current` when switching petitions | `todowrite-mirror.sh` (Layer C) — auto-derives `problems.current` from `[prefix]` of active todo |
@@ -400,11 +340,18 @@ requires an entry in `docs/decisions/log.md` explaining the case.
 | `SKIP_CLASSIFY_GATE=1` | Disables `classify-validator.sh` | Emergency edits to framework paths when reclassification has already been discussed but session-state is stuck |
 | `SKIP_PHASE_EXIT_GATE=1` | Disables all phase exit validators in `phase-advance.sh` (incl. consult, verification, socratic-review, capture, retrospective) | Recovery from corrupted evidence state; rebuild session after interruption |
 | `SKIP_DDD_BOUNDARY_GATE=1` | Disables `ddd-boundary-check.sh` | Edits that legitimately touch critical contexts without adding new ORM coupling (e.g., refactoring existing violations); decision log entry describing why required |
+| `SKIP_SYNC_GATE=1` | Disables `sync-validator.sh` | Plan↔code drift that the model and user agree is legitimate (e.g., emergency edit during finalize that cannot be replanned); decision log entry required |
 
 Never bypass without thinking. A gate that blocks legitimate work is a gate
 that needs its conditions tuned — not a gate to silence.
 
-**Full reference:** `.claude/README.md` (gates, validators, deviation mode, harness assumptions)
+**Heurística post-bypass:** todo `SKIP_*_GATE=1` debe generar un follow-up
+en el execution log de la interacción. Sin follow-up → la heurística del
+gate era correcta y el caso fue excepción legítima. Con follow-up → la
+heurística necesita ajuste y queda registrada como deuda. Sin esta regla,
+los bypasses se convierten en hábito sin que nadie note el patrón.
+
+**Full reference:** `.claude/README.md` (gates, validators, harness assumptions)
 <!-- GENERIC-END -->
 
 ---
@@ -448,7 +395,14 @@ gatekeeping at both levels, paying the attention cost twice.
 - **Read / search / explore** — Read, Grep, Glob, read-only Bash
 - **Subagent dispatch** for parallel work already planned
 - **`jq` updates** to `session-state.json` for phase and evidence
-  advancement (these are the model's own state, not user-facing data)
+  advancement (these are the model's own state, not user-facing data).
+  **Excepción:** NO incluir `user_approved` ni `retrospective_shown`
+  en comandos `jq` de actualización de evidencia, ni siquiera
+  redundantemente. El hook `user-prompt-state.sh` es el único escritor
+  sancionado para ambos: detecta aprobación verbal del usuario y
+  setea el flag (con phase=retrospective como gate adicional para
+  `retrospective_shown`). Cualquier asignación directa dispara revert
+  en `phase-transition-controller.sh` aunque el valor no cambie.
 - **Writing spec / plan / execution-log / retrospective** docs under
   `docs/superpowers/`
 - **Regenerating `.claude/session-state.json`** during session bootstrap
@@ -518,10 +472,15 @@ didn't consider alternatives, or didn't check how similar problems were solved b
 Each step produces an artifact that the next step needs. The order is not arbitrary —
 it's a dependency chain:
 
-0. **Consult past decisions** — Read `docs/decisions/log.md` and recent execution logs.
-   → produces: context about what was tried before and why.
-   This prevents re-discovering lessons the codebase already learned. Without it, the
-   model proposes approaches that were previously tried and rejected.
+0. **Consult past decisions and vocabulary** — Read `docs/decisions/log.md` and recent
+   execution logs. **Additionally**, when the user mentions any domain term, run
+   `consult.sh vocab <term>` to check if that term has a canonical name in
+   `docs/knowledge/_vocabulary.yaml`. If found, use the canonical name in the spec;
+   if not found, proceed normally and consider whether the new term should graduate.
+   → produces: context about what was tried before and why + vocabulary alignment.
+   This prevents re-discovering lessons the codebase already learned and prevents
+   coining new aliases for concepts that already have canonical names. Without
+   vocabulary consult, drift accumulates (Route vs Tour, ruta vs RoutePlan, etc.).
 
 1. **Classify bounded context** — Is this critical (DDD pure) or pragmatic (Symfony)?
    → produces: the architectural style for this change.
@@ -576,6 +535,9 @@ Plans go to `docs/superpowers/plans/YYYY-MM-DD-<feature>.md` with:
 - Each task follows TDD: write test → verify fail → implement → verify pass → commit
 - **Never create a separate "add tests" task.** Tests are integral to each task via TDD —
   writing the test IS the first step of implementing the task, not a task on its own.
+- **Estimar contando TODOS los artefactos producidos** — spec, plan, execution log,
+  entradas en decision log — no solo archivos fuente. Un plan de 3 archivos `src/`
+  suele ejecutarse como 6 artefactos.
 
 ### Parallel-First Planning
 

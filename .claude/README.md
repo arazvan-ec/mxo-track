@@ -64,13 +64,6 @@ it, gates cannot enforce anything.
         "label": null               // Descripción de la wave actual
       }
     }
-  },
-  "deviation": {
-    "active": false,
-    "reason": null,
-    "skipped_phases": [],
-    "return_to_phase": null,
-    "acknowledged_by_user": false
   }
 }
 ```
@@ -347,23 +340,70 @@ it's escalated to the human who can actually close it.
 
 ---
 
-## Deviation Mode
+## Emergency Escape
 
-Deviation mode exists for genuine emergencies (hotfixes, production outages) where
-waiting for the full flow would cause more harm than the risk of skipping it.
-It requires explicit user acknowledgment — it cannot be self-activated.
+Deviation mode was removed 2026-04-29 (commit pending) because it
+contradicted the Layer K principle of "discard, don't recoil to a
+reduced version". The legitimate emergency path is now the same as
+any other false-positive bypass: `SKIP_PHASE_EXIT_GATE=1` with a
+`docs/decisions/log.md` entry explaining the case. This is logged,
+audited, and scoped to one phase advance — structurally different
+from the modal deviation flag it replaces.
 
-**Activate:**
+---
+
+## Shell Portability Constraints
+
+The harness runs on `mawk 1.3.x` (Linux default), not `gawk`. Three
+recurring incidents (graduated 2026-04-29 i12 retrospective on Phase B)
+confirmed this class of "regex portability surprise":
+
+1. **`f4d6d36`** — backtick stripping in `files-decl-parser.sh` had to
+   move to a separate `tr` pass because the original gawk-style approach
+   silently dropped tokens.
+2. **Pre-push gate** matches "git push" inside heredoc commit messages
+   (still tracking 2/3) — the regex doesn't distinguish quoted contexts.
+3. **Phase B vocab match** used `match("\\<term\\>")` with `IGNORECASE=1`;
+   mawk treats `\<` and `\>` as literals and ignores `IGNORECASE`. Fix
+   landed in i12 with bash-side `grep -wE`.
+
+### Rules every awk-using hook MUST follow
+
+| Constraint | Why | Workaround |
+|---|---|---|
+| **No `\<` / `\>` word boundaries in awk regex** | mawk treats them as literals; matches silently fail | Use `match()` with explicit alternation OR extract data and match in bash with `grep -wE` |
+| **No `IGNORECASE=1` in awk** | mawk ignores it | Use `tolower()` on both sides of comparison, OR external `grep -i` |
+| **Pipelines that may legitimately fail** | `set -uo pipefail` + `set -e` (errexit) kills the script | Defuse with `\|\| true` (precedent: `decision_ids` in user-prompt-state.sh, `commit f4d6d36`) |
+| **Shell-side state from awk** | awk runs in subshell; variables don't escape | Echo to stdout, capture in `$(...)`, parse in bash |
+
+### Lib pattern: extract in awk, match in bash
+
+When word-boundary or case-insensitive matching is required, the
+canonical pattern (used by `lib/vocabulary-reader.sh`,
+`lib/files-decl-parser.sh`, `lib/section-validator.sh`) is:
+
 ```bash
-jq '.deviation.active = true
-  | .deviation.reason = "hotfix: production down, needs immediate fix"
-  | .deviation.skipped_phases = ["brainstorming","planning"]
-  | .deviation.acknowledged_by_user = true' \
-  .claude/session-state.json > /tmp/ss.json && mv /tmp/ss.json .claude/session-state.json
+# 1. awk extracts structured data (canonicals + aliases) using simple regex.
+pairs=$(awk '/condition/ { print field1 "|" field2 }' "$file")
+
+# 2. bash iterates and uses grep for the actual text matching.
+while IFS='|' read -r alias canonical; do
+  echo "$text" | grep -qiwE -- "\b${alias}\b" && handle_match
+done <<< "$pairs"
 ```
 
-When `deviation.active = true`, the engine shows warnings but does not block.
-**Requires explicit user confirmation before activating.**
+This split keeps awk simple (data extraction only) and delegates
+portable text matching to grep, which honors `\b` consistently.
+
+### Verifying awk runtime in a new env
+
+If hooks behave inconsistently, check the runtime:
+
+```bash
+awk --version | head -1
+# expected: mawk 1.3.x
+# if gawk arrives one day, the constraints become advisory.
+```
 
 ---
 

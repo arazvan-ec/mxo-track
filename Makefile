@@ -19,6 +19,7 @@ lint-shell:
 
 manifest:
 	@bash backend/bin/generate-manifest.sh
+	@bash scripts/render-vocabulary.sh
 
 preflight:
 	@bash backend/bin/preflight.sh

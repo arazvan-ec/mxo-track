@@ -3,8 +3,7 @@
 > **Auto-generated** by `make manifest` (`backend/bin/generate-manifest.sh`).
 > Do not edit manually — regenerate with `make manifest`.
 
-**Generated:** 2026-04-26 20:47
-**Generated:** 2026-04-22 22:04
+**Generated:** 2026-04-29 20:47
 **Regenerate:** `make manifest`
 
 ## Project Overview
@@ -14,7 +13,7 @@
 | Backend | `backend/` | 537 PHP | Symfony 7.4, PHP 8.4 |
 | Frontend | `frontend/` | 153 JS/TS | React |
 | ML Service | `ml-service/` | 17 Python | FastAPI |
-| Docker/Infra | `docker/` + `scripts/` | 9 + 16 | Docker, OSRM, VROOM, Traccar |
+| Docker/Infra | `docker/` + `scripts/` | 9 + 18 | Docker, OSRM, VROOM, Traccar |
 | OpenSpec | `openspec/` | 28 specs | YAML specs |
 | Docs | `docs/` | — | Knowledge modules, analysis |
 
@@ -287,6 +286,7 @@ app/routers
 ### Scripts (`scripts/`)
 
 - `backfill-exec-logs.sh`
+- `bootstrap-vocabulary.sh`
 - `graduate.sh`
 - `link-regression.sh`
 - `mark-verified.sh`
@@ -294,6 +294,7 @@ app/routers
 - `railway-setup-vars.sh`
 - `railway-start.sh`
 - `railway-worker-start.sh`
+- `render-vocabulary.sh`
 - `suggest-tags.sh`
 - `test-graduate.sh`
 - `test-link-regression.sh`

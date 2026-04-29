@@ -65,6 +65,20 @@ if [ -n "$ERRORS" ]; then
   exit 2
 fi
 
+# Sub-invocation: sync-validator (plan↔diff drift detection, HARD)
+# Mirrors Layer C pattern (brainstorm-validator → socratic-review-validator).
+SYNC_VALIDATOR_PATH="$(dirname "$0")/sync-validator.sh"
+if [ -x "$SYNC_VALIDATOR_PATH" ]; then
+  SYNC_OUTPUT=$("$SYNC_VALIDATOR_PATH" "$STATE_FILE" 2>&1 || true)
+  SYNC_EXIT=$("$SYNC_VALIDATOR_PATH" "$STATE_FILE" >/dev/null 2>&1 && echo 0 || echo $?)
+  if [ "$SYNC_EXIT" = "2" ]; then
+    echo "$SYNC_OUTPUT"
+    exit 2
+  elif [ "$SYNC_EXIT" = "1" ] && [ -n "$SYNC_OUTPUT" ]; then
+    WARNINGS="${WARNINGS}${SYNC_OUTPUT}\n"
+  fi
+fi
+
 if [ -n "$WARNINGS" ]; then
   echo -e "$WARNINGS"
   exit 1

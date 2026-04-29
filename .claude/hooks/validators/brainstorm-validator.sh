@@ -63,6 +63,32 @@ else
     ERRORS="${ERRORS}- ANTI-OMISION: Falta seccion '## Omission Decisions' (si no hay omisiones, declarar 'No omissions — all inventory items addressed')\n"
   fi
 
+  # Layer N + S — Norms & Safeguards gates (HARD, universal)
+  # Every spec must include `## Norms` (≥1 imperative-keyword line) and
+  # `## Safeguards` (Risk|Mitigation table with ≥1 data row).
+  # Origin: 2026-04-28 hito 1, SPDD REASONS Canvas. Migrated to
+  # lib/section-validator.sh in 2026-04-28 harness consolidation.
+  # shellcheck source=../lib/section-validator.sh
+  source "$REPO/.claude/hooks/lib/section-validator.sh"
+
+  if ! section_present "$SPEC_FULL" "Norms"; then
+    ERRORS="${ERRORS}- N: Falta seccion '## Norms'. Declara los invariantes de negocio/arquitectura que el cambio debe preservar. Cada Norm requiere al menos un keyword imperativo (must/shall/never/always/no se permite/no debe/siempre/jamas).\n"
+  else
+    NORMS_BODY=$(section_body "$SPEC_FULL" "Norms")
+    if ! section_satisfied_inline_or_ref "$NORMS_BODY" "Norms" imperative; then
+      ERRORS="${ERRORS}- N: Seccion '## Norms' presente pero sin keyword imperativo (must/shall/never/always/no se permite/no debe/siempre/jamas). Cada Norm debe ser una afirmacion imperativa, no descriptiva.\n"
+    fi
+  fi
+
+  if ! section_present "$SPEC_FULL" "Safeguards"; then
+    ERRORS="${ERRORS}- S: Falta seccion '## Safeguards'. Lista los riesgos identificados con sus mitigaciones en una tabla markdown con columnas Risk y Mitigation.\n"
+  else
+    SAFE_BODY=$(section_body "$SPEC_FULL" "Safeguards")
+    if ! section_satisfied_inline_or_ref "$SAFE_BODY" "Safeguards" risk-mitigation-table; then
+      ERRORS="${ERRORS}- S: Seccion '## Safeguards' presente pero sin tabla con columnas 'Risk' y 'Mitigation'. Cada riesgo identificado debe tener mitigacion adjunta (forced pairing).\n"
+    fi
+  fi
+
   # Layer H — Prior Art Audit gate (HARD when critical paths referenced)
   # If the spec references critical domain contexts or admin API controllers,
   # require a `## Prior Art Audit` section with at least one classified row.
@@ -73,12 +99,11 @@ else
   CRITICAL_REGEX=$(ddd_critical_regex)
 
   if grep -qE "($CRITICAL_REGEX)" "$SPEC_FULL" 2>/dev/null; then
-    if ! grep -qE '^## Prior Art Audit' "$SPEC_FULL" 2>/dev/null; then
+    if ! section_present "$SPEC_FULL" "Prior Art Audit"; then
       ERRORS="${ERRORS}- H: spec referencia contextos criticos pero falta seccion '## Prior Art Audit'. Clasifica cada path existente como endorsed (✅), tech-debt (❌ tech-debt), o nuevo (new). Critical contexts source: docs/knowledge/_ddd-boundaries.yaml.\n"
     else
-      # Extract Prior Art Audit section (from its header to the next top-level ## header)
-      # and require at least one row classified in the 'Endorsed?' column.
-      if ! awk '/^## Prior Art Audit/{flag=1; next} /^## /{flag=0} flag' "$SPEC_FULL" 2>/dev/null | grep -qE '(✅|❌ tech-debt|\| new \|)'; then
+      H_BODY=$(section_body "$SPEC_FULL" "Prior Art Audit")
+      if ! section_satisfied_inline_or_ref "$H_BODY" "Prior Art Audit" classified-rows; then
         ERRORS="${ERRORS}- H: Seccion '## Prior Art Audit' existe pero no contiene filas clasificadas. Cada path debe tener columna 'Endorsed?' con ✅, ❌ tech-debt, o new.\n"
       fi
     fi
@@ -116,6 +141,36 @@ else
     fi
   fi
 
+  # Layer K — Anti-Reduction gate (HARD when reduction markers present)
+  # Detects when a spec uses reduction language (MVP, "minimum viable", v0,
+  # "versión reducida", etc.) outside fenced code blocks. Such specs must
+  # include a `## Maximal Version Considered` section that documents:
+  #   - the maximal version evaluated,
+  #   - the concrete 4-test failure that ruled it out,
+  #   - the proposed (reduced) version,
+  #   - an "Independent superiority" bullet that defends the reduced version
+  #     on grounds OTHER than cost (i.e., contains at least one design-quality
+  #     keyword: patrón/pattern, garantiz/ensure, drift, consistency, boundary,
+  #     correctness, alignment, etc.).
+  # Origin: 2026-04-28 retrospective on Ubiquitous Language System reduction.
+  # Strip fenced code blocks before scanning to avoid matching marker tokens
+  # that appear inside ```...``` (e.g., this very validator's documentation).
+  SPEC_BODY=$(awk '/^```/{f=!f; next} !f' "$SPEC_FULL")
+  if echo "$SPEC_BODY" | grep -qiE '(\<MVP\>|mínimo viable|minimum viable|\<v0\>|\<ligero\>|\<ligera\>|lightweight|versión reducida|reduced version|arrancar vacío|start empty|scope[- ]down)'; then
+    if ! section_present "$SPEC_FULL" "Maximal Version Considered"; then
+      ERRORS="${ERRORS}- K: spec contiene marcadores de reducción (MVP/v0/ligero/etc.) pero falta seccion '## Maximal Version Considered'. Documenta la version maximal evaluada, el fallo concreto del 4-test que la descarto, la version propuesta, y un bullet 'Independent superiority' con argumento independiente del coste.\n"
+    else
+      K_SUP_BLOCK=$(section_extract_bullet "$SPEC_FULL" "Maximal Version Considered" "[Ii]ndependent [Ss]uperiority|[Ss]uperioridad independiente")
+      if [ -z "$K_SUP_BLOCK" ]; then
+        ERRORS="${ERRORS}- K: Seccion 'Maximal Version Considered' presente pero falta bullet 'Independent superiority' (o 'superioridad independiente'). Anade un bullet que defienda la version propuesta en terminos no economicos.\n"
+      else
+        if ! section_satisfied_inline_or_ref "$K_SUP_BLOCK" "Independent superiority" positive-signal; then
+          ERRORS="${ERRORS}- K: Bullet 'Independent superiority' apela solo a coste/tamano. Argumenta superioridad independiente del coste (calidad, correctitud, prevencion de un fallo concreto, alineacion con un patron existente).\n"
+        fi
+      fi
+    fi
+  fi
+
   # TDD task isolation: plan must not have standalone "add tests" tasks
   PLAN_PATH_VAL=$(jq -r '.evidence.plan_path // ""' "$STATE_FILE" 2>/dev/null || echo "")
   PLAN_FULL=""
@@ -132,43 +187,35 @@ else
     fi
 
     # Parallel file conflict detection (HARD gate)
-    # Parse [parallel] waves, extract → files: declarations, detect overlaps
+    # Parse [parallel] waves, extract → files: declarations via shared lib,
+    # detect file overlaps within the same wave.
+    # shellcheck source=../lib/files-decl-parser.sh
+    source "$REPO/.claude/hooks/lib/files-decl-parser.sh"
     CURRENT_WAVE=""
-    declare -A WAVE_FILES  # wave_name → "file1|file2|..."
-    declare -A FILE_TASK   # "wave:file" → "task label"
+    declare -A FILE_TASK   # "wave::file" → "task label"
     while IFS= read -r line; do
       # Detect wave headers: ### [parallel] Wave N...
       if echo "$line" | grep -qiE '^\s*#{1,4}\s*\[parallel\]'; then
         CURRENT_WAVE=$(echo "$line" | sed 's/^[# ]*//' | sed 's/\[parallel\]//' | xargs)
       elif echo "$line" | grep -qiE '^\s*#{1,4}\s' && [ -n "$CURRENT_WAVE" ]; then
-        # New non-parallel header resets current wave
         CURRENT_WAVE=""
       fi
 
-      # Inside a parallel wave, look for → files: or → files:
       if [ -n "$CURRENT_WAVE" ]; then
         FILES_DECL=$(echo "$line" | grep -oE '→ files?:\s*.*' | sed 's/→ files\?:\s*//' || true)
         if [ -n "$FILES_DECL" ]; then
-          # Strip a single enclosing pair of parentheses so that payloads like
-          #   "→ files: (a.ts, b.ts)"        → "a.ts, b.ts"         (lista parentizada)
-          #   "→ files: (no file writes)"   → "no file writes"     (sin paths → filter drops all)
-          # become tokenizable. Tokens are still filtered below to only keep
-          # path-like ones (contain `/` OR `.` OR a known bare-name sentinel
-          # such as `Makefile` / `Dockerfile`).
           STRIPPED=$(echo "$FILES_DECL" | sed -E 's/^[[:space:]]*\((.*)\)[[:space:]]*$/\1/')
           TASK_LABEL=$(echo "$line" | grep -oE '\*\*[^*]+\*\*' | head -1 | tr -d '*' || true)
           [ -z "$TASK_LABEL" ] && TASK_LABEL=$(echo "$line" | sed 's/^[-* ]*//' | cut -c1-30)
-          # Split by comma or space; keep only path-like tokens.
-          # A path is path-like if it contains `/`, contains `.`, or matches
-          # a known bare-filename sentinel (Makefile, Dockerfile, etc.).
-          for f in $(echo "$STRIPPED" | tr ',' '\n' | tr ' ' '\n' | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//' | grep -v '^$' | grep -E '/|\.|^(Makefile|Dockerfile|Rakefile|Gemfile|Procfile|Caddyfile)$'); do
+          while IFS= read -r f; do
+            [ -z "$f" ] && continue
             KEY="${CURRENT_WAVE}::${f}"
             if [ -n "${FILE_TASK[$KEY]+x}" ]; then
               ERRORS="${ERRORS}- CONFLICTO PARALELO: En '$CURRENT_WAVE', tareas '${FILE_TASK[$KEY]}' y '$TASK_LABEL' ambas editan '$f'. Mover a waves secuenciales.\n"
             else
               FILE_TASK[$KEY]="$TASK_LABEL"
             fi
-          done
+          done < <(tokenize_files_payload "$STRIPPED")
         fi
       fi
     done < "$PLAN_FULL"

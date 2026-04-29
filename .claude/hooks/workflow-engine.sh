@@ -4,10 +4,9 @@
 # Central engine that:
 # 1. Reads session-state.json
 # 2. Checks flow_type is declared for ALL file edits
-# 3. Warns if deviation is active
-# 4. Routes to flow-specific validation (all flows, not just full)
-# 5. Invokes appropriate phase validators
-# 6. Hard gate failure → deny; Soft gate failure → systemMessage warning
+# 3. Routes to flow-specific validation (all flows, not just full)
+# 4. Invokes appropriate phase validators
+# 5. Hard gate failure → deny; Soft gate failure → systemMessage warning
 #
 # Exit codes from validators:
 #   0 = pass
@@ -58,7 +57,6 @@ fi
 
 FLOW_TYPE=$(jq -r '.flow_type // "null"' "$STATE_FILE" 2>/dev/null || echo "null")
 CURRENT_PHASE=$(jq -r '.current_phase // "null"' "$STATE_FILE" 2>/dev/null || echo "null")
-DEVIATION_ACTIVE=$(jq -r '.deviation.active // false' "$STATE_FILE" 2>/dev/null || echo "false")
 
 # ── Classify file for gating (uses shared lib/classify-file.sh) ──
 FILE_CLASS=$(classify_file "$FILE_PATH")
@@ -84,13 +82,7 @@ elif ! is_valid_flow_type "$FLOW_TYPE"; then
   esac
 fi
 
-# ── Gate 2: Deviation mode — warn but allow ──
-if [ "$DEVIATION_ACTIVE" = "true" ]; then
-  RETURN_TO=$(jq -r '.deviation.return_to_phase // "unknown"' "$STATE_FILE" 2>/dev/null || echo "unknown")
-  warn "⚠ DESVIO ACTIVO [$FLOW_TYPE | $CURRENT_PHASE] Retoma fase '$RETURN_TO' despues de la accion actual."
-fi
-
-# ── Gate 3: Scope-change detection via interaction_id (all flows that touch code) ──
+# ── Gate 2: Scope-change detection via interaction_id (all flows that touch code) ──
 CURRENT_INTERACTION=$(jq -r '.interaction_id // 0' "$STATE_FILE" 2>/dev/null || echo "0")
 EVIDENCE_INTERACTION=$(jq -r '.evidence.interaction_id // 0' "$STATE_FILE" 2>/dev/null || echo "0")
 if [ "$CURRENT_INTERACTION" != "$EVIDENCE_INTERACTION" ]; then
@@ -243,7 +235,7 @@ if [ "$VALIDATOR_SPEC" = "debug-code" ]; then
   exit 0
 fi
 
-# ── Gate 4: Run validators in order (full-flow) ──
+# ── Gate 3: Run validators in order (full-flow) ──
 ACCUMULATED_WARNINGS=""
 for validator_name in $VALIDATOR_SPEC; do
   VALIDATOR_SCRIPT="$VALIDATORS_DIR/${validator_name}-validator.sh"

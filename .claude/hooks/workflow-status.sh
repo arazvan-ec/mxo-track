@@ -15,8 +15,6 @@ fi
 
 FLOW_TYPE=$(jq -r '.flow_type // "not set"' "$STATE_FILE")
 CURRENT_PHASE=$(jq -r '.current_phase // "not set"' "$STATE_FILE")
-DEV_ACTIVE=$(jq -r '.deviation.active // false' "$STATE_FILE")
-DEV_REASON=$(jq -r '.deviation.reason // "none"' "$STATE_FILE")
 
 # Phase list for full-flow
 PHASES=("consult" "brainstorming" "planning" "implementation" "verification" "capture" "retrospective" "finalize")
@@ -29,7 +27,6 @@ Generated: $(date -u +%Y-%m-%dT%H:%M:%SZ)
 ## Current Session
 - **Flow type:** $FLOW_TYPE
 - **Current phase:** $CURRENT_PHASE
-- **Deviation:** $([ "$DEV_ACTIVE" = "true" ] && echo "ACTIVE — $DEV_REASON" || echo "none")
 
 ## Phase Progress
 | Phase | Status | Evidence |
@@ -55,15 +52,6 @@ for phase in "${PHASES[@]}"; do
     echo "| $phase | ⬚ pending | — |" >> "$OUTPUT"
   fi
 done
-
-# Deviation history
-echo "" >> "$OUTPUT"
-echo "## Recent Deviations" >> "$OUTPUT"
-if [ "$DEV_ACTIVE" = "true" ]; then
-  echo "- **ACTIVE:** $DEV_REASON" >> "$OUTPUT"
-else
-  echo "(none this session)" >> "$OUTPUT"
-fi
 
 # Hooks health
 echo "" >> "$OUTPUT"

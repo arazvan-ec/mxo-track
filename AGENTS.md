@@ -53,6 +53,61 @@ Paste this verbatim into the "Constraints" section of each agent prompt.
 
 ---
 
+## Norms & Safeguards (mandatory architectural framing)
+
+**Why:** Subagents dispatch with a fresh context — whatever the orchestrator writes is
+the totality of the agent's guidance. The mini-flow boilerplate above covers process
+(consult+verify) but not architecture. Without explicit invariants and risk-mitigation
+pairs, agents make local decisions that conflict with the orchestrator's spec — most
+visibly in parallel waves where multiple agents diverge on naming, boundaries, or
+file ownership.
+
+**Enforced by:** `pre-agent-check.sh` Gate 3 (HARD). Any non-`Explore` agent dispatch
+whose prompt lacks `## Norms` or `## Safeguards` (inline content or spec-reference)
+is denied at PreToolUse. Origin: 2026-04-28 hito 4.
+
+**Two equivalent forms:**
+
+### Form 1 — Inline (when no spec exists or agent-specific extensions needed)
+
+```markdown
+## Norms
+- The agent must touch only the files declared in its task.
+- Tests shall pass before reporting `done`.
+
+## Safeguards
+| Risk | Mitigation |
+|------|------------|
+| Drift in parallel waves | Touch only declared files; verify via `git diff --name-only` before reporting |
+| Subagent re-discovers solved problem | Read referenced execution log first |
+```
+
+### Form 2 — Spec-reference (when the orchestrator's interaction has a spec)
+
+```markdown
+## Norms
+See docs/superpowers/specs/2026-04-28-X-design.md § Norms for invariants.
+
+## Safeguards
+See docs/superpowers/specs/2026-04-28-X-design.md § Safeguards for risk-mitigation pairs.
+Plus parallel-specific: do not edit files that wave 1c will touch.
+```
+
+**Validation criteria (Gate 3):**
+
+- `## Norms` heading must be present, satisfied by either:
+  - Inline: ≥1 line containing imperative keyword (`must`, `shall`, `never`, `always`,
+    `no se permite`, `no debe`, `siempre`, `jamás`)
+  - Spec-reference: path matching `docs/superpowers/specs/.+\.md` within ~200 chars of
+    the token `Norms` (any direction)
+- `## Safeguards` heading must be present, satisfied by either:
+  - Inline: ≥1 markdown table row with both `Risk` and `Mitigation` headers
+  - Spec-reference: same path pattern within ~200 chars of `Safeguards`
+
+**Mix and match** is fine: Norms via reference + Safeguards inline, or vice versa.
+
+---
+
 ## Parallel Task Progress Tracking
 
 **Why:** When dispatching 2+ subagents concurrently, the orchestrator only knows task

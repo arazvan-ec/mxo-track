@@ -334,13 +334,6 @@ cat > "$STATE_FILE" <<EOJSON
     "task_progress": {"current": 0, "total": 0, "label": null, "completed_labels": [], "task_index": []},
     "work_context": {"description": null, "problems": {"total": 0, "current": 0, "labels": []}, "wave": {"total": 0, "current": 0, "label": null, "labels": []}},
     "todo_progress": {"total": 0, "completed": 0, "in_progress_label": null, "items": []}
-  },
-  "deviation": {
-    "active": false,
-    "reason": null,
-    "skipped_phases": [],
-    "return_to_phase": null,
-    "acknowledged_by_user": false
   }
 }
 EOJSON

@@ -74,15 +74,17 @@ if [ "$FLOW_TYPE" = "full" ] && [ -n "$USER_PROMPT" ]; then
     if [ "$CURRENT_APPROVED" != "true" ]; then
       jq '.evidence.user_approved = true' "$STATE_FILE" > /tmp/upt.json && mv /tmp/upt.json "$STATE_FILE"
       STATE=$(cat "$STATE_FILE" 2>/dev/null || echo "{}")
+      cp "$STATE_FILE" /tmp/ptc-state-snapshot.json 2>/dev/null || true
     fi
   fi
 
   # Decision-ID approval: 2+ references like "D1a", "D2b" imply confirmation
   # of a numbered decision list (e.g. "1. D1a 2. D2b 3. D3a")
-  DECISION_IDS=$(echo "$PROMPT_LOWER" | grep -oE '\bd[0-9]+[a-e]?\b' | wc -l | tr -d ' ')
+  DECISION_IDS=$(echo "$PROMPT_LOWER" | { grep -oE '\bd[0-9]+[a-e]?\b' || true; } | wc -l | tr -d ' ')
   if [ "$DECISION_IDS" -ge 2 ] && [ "$CURRENT_APPROVED" != "true" ]; then
     jq '.evidence.user_approved = true' "$STATE_FILE" > /tmp/upt.json && mv /tmp/upt.json "$STATE_FILE"
     STATE=$(cat "$STATE_FILE" 2>/dev/null || echo "{}")
+    cp "$STATE_FILE" /tmp/ptc-state-snapshot.json 2>/dev/null || true
   fi
 
   # Rejection patterns (reset approval)
@@ -90,10 +92,24 @@ if [ "$FLOW_TYPE" = "full" ] && [ -n "$USER_PROMPT" ]; then
     if [ "$CURRENT_APPROVED" = "true" ]; then
       jq '.evidence.user_approved = false' "$STATE_FILE" > /tmp/upt.json && mv /tmp/upt.json "$STATE_FILE"
       STATE=$(cat "$STATE_FILE" 2>/dev/null || echo "{}")
+      cp "$STATE_FILE" /tmp/ptc-state-snapshot.json 2>/dev/null || true
+    fi
+  fi
+
+  # Retrospective approval: reuse approval regex but gate on phase=retrospective.
+  # The flag gates phase-advance to finalize. Only this hook may set it; the
+  # phase-transition-controller reverts direct jq writes (mirrors user_approved).
+  # Origin: 2026-04-29 i10 — closes "stop-hook as approval proxy" pattern
+  # observed in Hito 1, Hito 2, Hito 4, Phase A, Hito 5.
+  CURRENT_RETRO_SHOWN=$(echo "$STATE" | jq -r '.evidence.retrospective_shown // false')
+  if [ "$CURRENT_PHASE" = "retrospective" ] && [ "$CURRENT_RETRO_SHOWN" != "true" ]; then
+    if echo "$PROMPT_LOWER" | grep -qiE '(^|\s)(sí|si,|si$|yes|ok|dale|adelante|aprobado|apruebo|perfecto|de acuerdo|estoy de acuerdo|me parece bien|prefiero|vamos con|go ahead|approved|lgtm|apruebo el plan|lo apruebo|suena bien|hazlo|implementa|proceed|me gusta|está bien|esta bien|correcto|confirmo|confirm|procede|continua|continúa|igual que|igual a|como las otras)(\s|$|[,.\!])'; then
+      jq '.evidence.retrospective_shown = true' "$STATE_FILE" > /tmp/upt.json && mv /tmp/upt.json "$STATE_FILE"
+      STATE=$(cat "$STATE_FILE" 2>/dev/null || echo "{}")
+      cp "$STATE_FILE" /tmp/ptc-state-snapshot.json 2>/dev/null || true
     fi
   fi
 fi
-DEV_ACTIVE=$(echo "$STATE" | jq -r '.deviation.active // false')
 
 # Work context — hierarchical progress tracking
 INTERACTION_CLASS=$(echo "$STATE" | jq -r '.interaction_classification // ""')
@@ -154,10 +170,18 @@ if [ "$FLOW_TYPE" = "null" ] || [ -z "$FLOW_TYPE" ]; then
   exit 0
 fi
 
-# Auto-reset completed flows: if finalize is done (branch_strategy set), reset for next interaction
+# Auto-reset completed flows: if finalize is done (branch_strategy set) AND
+# the latest commit is already pushed to upstream, reset for next interaction.
+# The HEAD-vs-upstream check prevents premature reset when the user types
+# something between commit and push (which previously cleared branch_strategy
+# and forced manual re-set before pushing — recurring bug across 5 Hitos).
 if [ "$FLOW_TYPE" = "full" ] && [ "$CURRENT_PHASE" = "finalize" ]; then
   BRANCH_STRATEGY_CHECK=$(echo "$STATE" | jq -r '.evidence.branch_strategy // ""')
-  if [ -n "$BRANCH_STRATEGY_CHECK" ]; then
+  HEAD_SHA=$(cd "$REPO" && git rev-parse HEAD 2>/dev/null || echo "")
+  UPSTREAM_SHA=$(cd "$REPO" && git rev-parse @{upstream} 2>/dev/null || echo "")
+  PUSHED="false"
+  [ -n "$HEAD_SHA" ] && [ "$HEAD_SHA" = "$UPSTREAM_SHA" ] && PUSHED="true"
+  if [ -n "$BRANCH_STRATEGY_CHECK" ] && [ "$PUSHED" = "true" ]; then
     LAST_SUMMARY=$(echo "$STATE" | jq -c '{flow_type: .flow_type, phase: .current_phase, branch_strategy: .evidence.branch_strategy}')
     jq --argjson summary "$LAST_SUMMARY" '
       .flow_type = null |
@@ -184,6 +208,7 @@ if [ "$FLOW_TYPE" = "full" ] && [ "$CURRENT_PHASE" = "finalize" ]; then
       .evidence.work_context = {"description": null, "problems": {"total": 0, "current": 0, "labels": []}, "wave": {"total": 0, "current": 0, "label": null, "labels": []}} |
       .evidence.todo_progress = {"total": 0, "completed": 0, "in_progress_label": null, "items": []}
     ' "$STATE_FILE" > /tmp/ss_reset.json && mv /tmp/ss_reset.json "$STATE_FILE"
+    cp "$STATE_FILE" /tmp/ptc-state-snapshot.json 2>/dev/null || true
     echo "📍 Sin clasificar — clasificar antes de proceder"
     exit 0
   fi
@@ -362,9 +387,6 @@ if [ "$FLOW_TYPE" = "full" ]; then
     fi
   done
 
-  DEV_SUFFIX=""
-  [ "$DEV_ACTIVE" = "true" ] && DEV_SUFFIX=" [DESVÍO]"
-
   # Capitalize current phase for display
   DISPLAY_PHASE="$(echo "${CURRENT_PHASE:0:1}" | tr '[:lower:]' '[:upper:]')${CURRENT_PHASE:1}"
 
@@ -378,7 +400,7 @@ if [ "$FLOW_TYPE" = "full" ]; then
       PROB_PREFIX="⚠ MULTI-PROBLEMA (${WC_PROB_TOTAL}) sin current — setear problems.current | "
     fi
   fi
-  LINE1="📍 ${PROB_PREFIX}${DISPLAY_PHASE} (${CURRENT_INDEX}/${TOTAL})${DEV_SUFFIX}"
+  LINE1="📍 ${PROB_PREFIX}${DISPLAY_PHASE} (${CURRENT_INDEX}/${TOTAL})"
   # Show wave hierarchy from planning onwards (when plan has been parsed)
   case "$CURRENT_PHASE" in
     planning|implementation|verification|capture|retrospective)
