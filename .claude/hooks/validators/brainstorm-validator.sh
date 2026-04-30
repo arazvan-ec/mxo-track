@@ -5,13 +5,34 @@
 set -euo pipefail
 
 STATE_FILE="${1:-.claude/session-state.json}"
-REPO="/home/user/mxo-track"
+REPO="${REPO:-/home/user/mxo-track}"
 
 USER_TURNS=$(jq -r '.evidence.user_turns // 0' "$STATE_FILE" 2>/dev/null || echo "0")
 ALTERNATIVES=$(jq -r '.evidence.alternatives_proposed // false' "$STATE_FILE" 2>/dev/null || echo "false")
 USER_APPROVED=$(jq -r '.evidence.user_approved // false' "$STATE_FILE" 2>/dev/null || echo "false")
 SPEC_PATH=$(jq -r '.evidence.spec_path // ""' "$STATE_FILE" 2>/dev/null || echo "")
 CURRENT_PHASE=$(jq -r '.current_phase // ""' "$STATE_FILE" 2>/dev/null || echo "")
+
+# git-probe fallback (d, 2026-04-30): when alternatives_proposed=false but
+# the spec at SPEC_PATH is tracked-clean AND contains required sections,
+# treat alternatives as effectively proposed. user_approved is DELIBERATELY
+# excluded from the probe — verbal human approval remains mandatory per
+# spec § Alternatives Rejected D.
+if [ "$ALTERNATIVES" != "true" ] && [ -n "$SPEC_PATH" ]; then
+  PROBE_LIB="$REPO/.claude/hooks/lib/git-probe.sh"
+  if [ -f "$PROBE_LIB" ]; then
+    # shellcheck disable=SC1090
+    source "$PROBE_LIB"
+    if is_path_committed_clean "$REPO" "$SPEC_PATH"; then
+      SPEC_FULL_PROBE="$REPO/$SPEC_PATH"
+      if grep -q -E "^## Alternatives Rejected" "$SPEC_FULL_PROBE" 2>/dev/null \
+         && grep -q -E "^## Norms" "$SPEC_FULL_PROBE" 2>/dev/null \
+         && grep -q -E "^## Safeguards" "$SPEC_FULL_PROBE" 2>/dev/null; then
+        ALTERNATIVES="true"
+      fi
+    fi
+  fi
+fi
 
 ERRORS=""
 WARNINGS=""

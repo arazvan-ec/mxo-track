@@ -111,6 +111,23 @@ if [ "$FLOW_TYPE" = "full" ] && [ -n "$USER_PROMPT" ]; then
   fi
 fi
 
+# ── Plan-session-date stamp (B3) ──
+# When evidence.plan_path transitions null → set, also record
+# evidence.plan_session_date so the session-cut-validator can enforce
+# the planning→implementation cut. Single-writer invariant: this hook
+# is the only sanctioned writer of plan_session_date.
+# Origin: 2026-04-30 cross-session resume hardening (B3).
+if [ -f "$STATE_FILE" ]; then
+  CURRENT_PLAN_PATH=$(echo "$STATE" | jq -r '.evidence.plan_path // ""')
+  CURRENT_PLAN_DATE=$(echo "$STATE" | jq -r '.evidence.plan_session_date // ""')
+  if [ -n "$CURRENT_PLAN_PATH" ] && [ -z "$CURRENT_PLAN_DATE" ]; then
+    TODAY_STAMP=$(date +%Y-%m-%d)
+    jq --arg d "$TODAY_STAMP" '.evidence.plan_session_date = $d' "$STATE_FILE" > /tmp/upt.json && mv /tmp/upt.json "$STATE_FILE"
+    STATE=$(cat "$STATE_FILE" 2>/dev/null || echo "{}")
+    cp "$STATE_FILE" /tmp/ptc-state-snapshot.json 2>/dev/null || true
+  fi
+fi
+
 # Work context — hierarchical progress tracking
 INTERACTION_CLASS=$(echo "$STATE" | jq -r '.interaction_classification // ""')
 WC_DESCRIPTION=$(echo "$STATE" | jq -r '.evidence.work_context.description // ""')

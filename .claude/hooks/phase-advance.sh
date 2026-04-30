@@ -134,6 +134,29 @@ elif [ "${SKIP_PHASE_EXIT_GATE:-0}" = "1" ]; then
   echo "⚠ SKIP_PHASE_EXIT_GATE=1 — bypassing exit gate for phase '$CURRENT_PHASE'" >&2
 fi
 
+# ── B3 session-cut gate (2026-04-30 cross-session resume hardening) ──
+# Block planning→implementation and retrospective→finalize when the prior
+# phase's stamp matches today's session_date. Forces fresh-session review
+# at the two highest-bias transitions.
+SESSION_CUT_VALIDATOR="$VALIDATORS_DIR/session-cut-validator.sh"
+if [ -f "$SESSION_CUT_VALIDATOR" ] && [ "${SKIP_PHASE_EXIT_GATE:-0}" != "1" ]; then
+  CUT_TRANSITION=""
+  if [ "$CURRENT_PHASE" = "planning" ] && [ "$NEXT_PHASE" = "implementation" ]; then
+    CUT_TRANSITION="planning-to-implementation"
+  elif [ "$CURRENT_PHASE" = "retrospective" ] && [ "$NEXT_PHASE" = "finalize" ]; then
+    CUT_TRANSITION="retrospective-to-finalize"
+  fi
+  if [ -n "$CUT_TRANSITION" ]; then
+    bash "$SESSION_CUT_VALIDATOR" "$CUT_TRANSITION" "$STATE_FILE" || {
+      CUT_EXIT=$?
+      if [ "$CUT_EXIT" -eq 2 ]; then
+        echo "Bypass (last resort): export SKIP_SESSION_CUT_GATE=1 (decision-log entry required)" >&2
+        exit 1
+      fi
+    }
+  fi
+fi
+
 # Perform the transition
 TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 jq --arg phase "$NEXT_PHASE" --arg ts "$TIMESTAMP" --arg prev "$CURRENT_PHASE" \

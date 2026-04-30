@@ -12,6 +12,11 @@ MARK_VERIFIED="$REPO/scripts/mark-verified.sh"
 TODAY=$(date +%Y-%m-%d)
 
 # ── Helper: check if previous state is resumable (spec+plan on disk, mid-flow) ──
+# Resumable phases now include brainstorming and planning so that
+# state-loss accidents (e.g., git stash --include-untracked stashing
+# session-state.json) don't drop evidence flags when the model is
+# clearly mid-flow with both artifacts on disk.
+# Origin: 2026-04-30 cross-session resume hardening (a).
 is_resumable() {
   local state_file="$1"
   [ -f "$state_file" ] || return 1
@@ -27,21 +32,55 @@ is_resumable() {
   [ ! -f "$REPO/$plan" ] && return 1
 
   case "$phase" in
-    implementation|verification|capture|retrospective|finalize) return 0 ;;
+    brainstorming|planning|implementation|verification|capture|retrospective|finalize) return 0 ;;
   esac
   return 1
 }
 
-# ── Helper: restore user_approved if state is resumable and currently false ──
-restore_approval_if_resumable() {
+# ── Helper: restore the bundle of evidence flags consistent with the
+# resumed phase, when state is resumable.
+#
+# - decisions_read=true  and  logs_scanned=true  always when resumable.
+# - alternatives_proposed=true  and  user_approved=true  only when
+#   phase ≥ planning AND evidence.spec_path references a file present
+#   on disk. Conservative: never assert approval flags for phases
+#   earlier than planning.
+#
+# Read-only otherwise: never lowers existing true flags. The single-
+# writer invariant for user_approved is preserved because this helper
+# only fires inside is_resumable (spec+plan on disk + advanced phase),
+# never in fresh sessions.
+#
+# Origin: 2026-04-30 cross-session resume hardening (a).
+# Renamed from restore_approval_if_resumable to reflect broader scope.
+restore_evidence_bundle_if_resumable() {
   local state_file="$1"
-  local approved
-  approved=$(jq -r '.evidence.user_approved // false' "$state_file" 2>/dev/null || echo "false")
-  [ "$approved" = "true" ] && return 0
+  is_resumable "$state_file" || return 0
 
-  if is_resumable "$state_file"; then
-    jq '.evidence.user_approved = true' "$state_file" > /tmp/ss-resume.json && mv /tmp/ss-resume.json "$state_file"
-  fi
+  local phase
+  phase=$(jq -r '.current_phase // ""' "$state_file" 2>/dev/null)
+
+  local set_approval="false"
+  case "$phase" in
+    planning|implementation|verification|capture|retrospective|finalize)
+      set_approval="true"
+      ;;
+  esac
+
+  jq --argjson approval "$set_approval" '
+    .evidence.decisions_read = (.evidence.decisions_read // false or true) |
+    .evidence.logs_scanned = (.evidence.logs_scanned // false or true) |
+    (if $approval then
+       .evidence.alternatives_proposed = (.evidence.alternatives_proposed // false or true) |
+       .evidence.user_approved = (.evidence.user_approved // false or true)
+     else . end)
+  ' "$state_file" > /tmp/ss-resume.json && mv /tmp/ss-resume.json "$state_file"
+}
+
+# Backward-compat alias: keep the old name working in case any external
+# caller references it. New code uses restore_evidence_bundle_if_resumable.
+restore_approval_if_resumable() {
+  restore_evidence_bundle_if_resumable "$@"
 }
 
 # ── Helper: surface related past execution logs for the current branch ──
