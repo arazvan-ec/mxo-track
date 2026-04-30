@@ -58,10 +58,23 @@ if [ "$FLOW_TYPE" != "full" ] && [ "$FLOW_TYPE" != "debug" ]; then
 fi
 
 # ── Check if push contains protected path changes ──
-# Uses shared classify_file() — single source of truth with workflow-engine.sh
+# A1 (2026-04-29): evaluate the *unpushed* commits diff
+# (`@{upstream}...HEAD`) instead of the whole-branch diff. The gate's
+# intent is "don't push protected code without flow completion" —
+# preserved when only unpushed commits are evaluated. Doc-only
+# checkpoint pushes mid-flow are no longer false-positives.
+# Spec: docs/superpowers/specs/2026-04-29-cross-session-resume-hardening-design.md § A1.
+# Fallback to `origin/main...HEAD` only when no upstream exists
+# (initial branch push).
+# Uses shared classify_file() — single source of truth with workflow-engine.sh.
 has_protected_changes() {
-  local changed_files
-  changed_files=$(cd "$REPO" && git diff --name-only origin/main...HEAD 2>/dev/null || echo "")
+  local changed_files diff_range
+  if (cd "$REPO" && git rev-parse --verify --quiet '@{upstream}' >/dev/null 2>&1); then
+    diff_range='@{upstream}...HEAD'
+  else
+    diff_range='origin/main...HEAD'
+  fi
+  changed_files=$(cd "$REPO" && git diff --name-only "$diff_range" 2>/dev/null || echo "")
 
   if [ -z "$changed_files" ]; then
     return 1
