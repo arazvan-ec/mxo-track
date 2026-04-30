@@ -341,6 +341,7 @@ requires an entry in `docs/decisions/log.md` explaining the case.
 | `SKIP_PHASE_EXIT_GATE=1` | Disables all phase exit validators in `phase-advance.sh` (incl. consult, verification, socratic-review, capture, retrospective) | Recovery from corrupted evidence state; rebuild session after interruption |
 | `SKIP_DDD_BOUNDARY_GATE=1` | Disables `ddd-boundary-check.sh` | Edits that legitimately touch critical contexts without adding new ORM coupling (e.g., refactoring existing violations); decision log entry describing why required |
 | `SKIP_SYNC_GATE=1` | Disables `sync-validator.sh` | Plan↔code drift that the model and user agree is legitimate (e.g., emergency edit during finalize that cannot be replanned); decision log entry required |
+| `SKIP_SESSION_CUT_GATE=1` | Disables `session-cut-validator.sh` (B3 fresh-session gate) | Emergency hotfix flows where independent review is explicitly waived by the user (e.g., production rollback that cannot wait for next session); decision log entry required |
 
 Never bypass without thinking. A gate that blocks legitimate work is a gate
 that needs its conditions tuned — not a gate to silence.
@@ -1149,6 +1150,27 @@ make the finite budget explicit:
   may have lost the file contents that guide implementation
 - **Split large tasks:** >8 steps means the plan won't survive a single compaction cycle.
   Better to split into 2 sessions with a push between them
+- **Antipattern: `git stash --include-untracked` during verification.** Stashes
+  `.claude/session-state.json` (untracked) along with everything else; the next
+  SessionStart:resume can leave evidence flags out of sync with reality. Use plain
+  `git stash` (tracked-only) when you need to A/B test against a clean tree.
+  Origin: 2026-04-29 Phase C tooling retrospective. Spec:
+  `docs/superpowers/specs/2026-04-29-cross-session-resume-hardening-design.md`.
+
+### Session-cut gates (B3)
+
+Two transitions enforce a fresh-session boundary so the model can review prior work
+without confirmation bias:
+- **`planning → implementation`** blocks when `evidence.plan_session_date` equals
+  today's `session_date`. Forces the next session to read the plan with fresh context.
+- **`retrospective → finalize`** blocks when
+  `evidence.last_code_commit_session_date` equals today's `session_date`. Acts as a
+  PR-review-by-fresh-eyes before merge.
+
+Bypass: `SKIP_SESSION_CUT_GATE=1` with mandatory `docs/decisions/log.md` entry,
+reserved for emergency hotfixes where independent review is provably waived. Origin:
+2026-04-30 cross-session resume hardening. Spec:
+`docs/superpowers/specs/2026-04-29-cross-session-resume-hardening-design.md`.
 <!-- GENERIC-END -->
 
 ---

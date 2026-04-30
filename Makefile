@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: help lint lint-shell manifest preflight workflow-status workflow-reset hooks-health
+.PHONY: help lint lint-shell manifest preflight workflow-status workflow-reset hooks-health vocab-drift vocab-rename
 help:
 	@echo "make lint            - Sintaxis PHP"
 	@echo "make lint-shell      - Shellcheck sobre .claude/hooks/*.sh y scripts/*.sh (severity=warning)"
@@ -9,6 +9,8 @@ help:
 	@echo "make workflow-status - Show current workflow status"
 	@echo "make workflow-reset  - Reset workflow state (new session)"
 	@echo "make hooks-health    - Check hooks are properly configured"
+	@echo "make vocab-drift     - Reportar drift en docs/knowledge/_vocabulary.yaml"
+	@echo "make vocab-rename    - Renombrar canonical (uso: bash scripts/vocab-rename.sh OLD NEW [PATH])"
 
 lint:
 	@find backend/src -name '*.php' -print0 | xargs -0 -n1 php -l
@@ -32,6 +34,13 @@ workflow-reset:  ## Reset workflow state (new session)
 	@rm -f .claude/session-state.json
 	@.claude/hooks/session-start.sh
 	@echo "Workflow state reset."
+
+vocab-drift:  ## Reportar drift en docs/knowledge/_vocabulary.yaml
+	@bash scripts/vocab-drift.sh
+
+vocab-rename:  ## Helper de rename — invocar el script directamente
+	@echo "Uso: bash scripts/vocab-rename.sh <old_canonical> <new_canonical> [<new_authoritative_path>]"
+	@exit 0
 
 hooks-health:  ## Check hooks are properly configured
 	@echo "Checking hooks..."
