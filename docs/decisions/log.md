@@ -8,6 +8,20 @@ Registro de decisiones de diseño significativas. Cada entrada captura el contex
 
 ---
 
+### [2026-05-03] Spec consolidado de crítica + mitigaciones del harness (12 estrategias)
+
+- **Problema:** Análisis externo (Manus AI 2026-04-30) propuso 9 mitigaciones a 5 problemas estructurales del harness. Análisis paralelo desde grafo conceptual IA aportó 3 más. Necesidad: procesar las 12 con criterio uniforme antes de adoptar nada.
+- **Decisión:** Spec único `docs/superpowers/specs/2026-05-03-harness-critique-and-mitigations-design.md` aplica el 4-test de CLAUDE.md a cada estrategia. Veredicto: 9 ADOPTAR · 2 DESCARTAR (#4 token cripto, #6 chaos monkey) · 1 APLAZAR (#5 granular approval, re-evaluar trimestral). Las 9 ADOPTAR condicionadas a Hito 0 reductor (poda + paridad doc) como prerrequisito HARD; sin reducción neta ≥15% LOC + paridad completa, el plan se aborta y reescribe como spec de poda exclusiva.
+- **Alternativas descartadas:** (B) Spec maestro + 12 sub-specs por estrategia — pre-fragmentación duplica esfuerzo; cada ADOPCIÓN tendrá su propio spec en su interacción. (C) Solo matriz de cobertura sin las 12 decisiones — exactamente el patrón anti-K que el harness sanciona.
+- **Resultado:** 4 archivos producidos (spec 347 líneas, plan, execution log, esta entrada). Bypass `SKIP_PHASE_EXIT_GATE=1` usado una vez para `verification → capture` (docs-only, PHPUnit ausente — entrada de bypass propia, ver abajo). Adopción de las 9 estrategias se ejecuta en interacciones futuras según el orden de hitos definido en § 5 del spec.
+
+### [2026-05-03] SKIP_PHASE_EXIT_GATE bypass for docs-only meta-spec verification
+
+- **Problema:** Interacción `claude/harness-critique-and-mitigations-spec-kXDx4` produce un único artefacto Markdown (`docs/superpowers/specs/2026-05-03-harness-critique-and-mitigations-design.md`) sin tocar código. `verification-validator.sh` en flow=full rechaza `tests_passed=skipped`. PHPUnit no está instalado en el entorno actual (`vendor/bin/phpunit` ausente).
+- **Decisión:** Bypass `SKIP_PHASE_EXIT_GATE=1` para `verification → capture`. `lint_clean=true` honesto (`make lint` corrió y pasó). `tests_passed=skipped` honesto (no hay tests para un cambio docs-only y la infra de test no está disponible).
+- **Alternativas descartadas:** (A) Setear `tests_passed=true` mintiendo — destruye el sistema de evidencia. (B) Instalar PHPUnit — fuera de scope, requiere `composer install`. (C) Relajar el validator para aceptar "skipped" en docs-only — cambio estructural fuera del scope (es exactamente el tipo de cambio al harness que el spec recién escrito propone gobernar via Hito 0). (D) Convertir la interacción a `documentation` flow tipo light — requeriría reclasificar al inicio; la decisión inicial de full vino del usuario explícitamente.
+- **Resultado:** Bypass usado una vez. Heurística post-bypass: si esto se repite ≥3 veces (specs full docs-only sin código), el `verification-validator` debería detectar `git diff --name-only` que solo contiene `docs/` + `*.md` y aceptar `tests_passed=skipped` automáticamente. Follow-up registrado en execution log.
+
 ### [2026-04-22] SKIP_PHASE_EXIT_GATE bypass when shellcheck missing (Option 3-Enforced)
 
 - **Problema:** `verification-validator.sh` rechaza `lint_clean=skipped` en full/debug flows (hardened en PR5, 2026-04-21) asumiendo que `shellcheck` está instalado. En el entorno actual de Claude Code on the web el paquete no está presente; `make lint-shell` falla con "shellcheck not installed". El gate bloquea `verification → capture` aunque la única evidencia faltante sea infraestructura ausente, no código sucio.
