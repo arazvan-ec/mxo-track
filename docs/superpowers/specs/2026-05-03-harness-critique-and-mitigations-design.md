@@ -43,7 +43,7 @@ implementación.
 
 ---
 
-## 3. Existing Functionality Inventory (sub-dominio harness)
+## Existing Functionality Inventory
 
 Inventario explícito de elementos del harness que las 12 estrategias tocan o
 podrían tocar. Cada item con decisión Include / Omit / Transform respecto a
@@ -200,7 +200,7 @@ razonamiento previo de rechazo y no las re-adopte por inercia.
 
 ---
 
-## 8. Norms
+## Norms
 
 > Reglas imperativas sobre el propio spec y sus consumidores futuros.
 
@@ -213,7 +213,7 @@ razonamiento previo de rechazo y no las re-adopte por inercia.
 
 ---
 
-## 9. Safeguards
+## Safeguards
 
 | Risk | Mitigation |
 |---|---|
