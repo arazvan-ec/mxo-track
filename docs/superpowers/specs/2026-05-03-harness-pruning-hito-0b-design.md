@@ -39,7 +39,7 @@ la "agresividad" es nominal. **Desventaja A:** auditar test-workflow-engine
 
 ---
 
-## 3. Existing Functionality Inventory
+## Existing Functionality Inventory
 
 | Elemento | LOC | Decisión | Justificación |
 |---|---|---|---|
@@ -62,7 +62,7 @@ la "agresividad" es nominal. **Desventaja A:** auditar test-workflow-engine
 
 ---
 
-## 4. Omission Decisions
+## Omission Decisions
 
 | Elemento | Decisión | Justificación |
 |---|---|---|
@@ -160,7 +160,47 @@ la "agresividad" es nominal. **Desventaja A:** auditar test-workflow-engine
 
 ---
 
-## 7. Architectural Adversarial Review
+## Maximal Version Considered
+
+> Disparada por la mención del término "MVP" en § Safeguards (al
+> justificar la eliminación de Layer K). Esta sección documenta que la
+> versión adoptada **es** la maximal — no hay versión maximal posterior
+> que se haya descartado por coste.
+
+- **Versión maximal evaluada (Approach A — APROBADA):** poda agresiva
+  cubriendo dead code confirmado (`test-self-gating.sh`, 340 LOC),
+  Layer K (~30 LOC + tests), refactor table-driven de section-gates en
+  brainstorm-validator (~−40 LOC), auditoría de `test-workflow-engine.sh`
+  (513 LOC con 14 fallos contra targets inexistentes), y reescritura
+  completa de `workflow-engine.md` para paridad documental.
+- **Versiones inferiores descartadas:**
+  - Approach B (poda quirúrgica, sólo Layer K + test huérfano):
+    descartada porque proyecta −500 a −800 LOC, **no alcanza el target
+    ≥15% del spec maestro** (T3 falla — el plan maestro abortaría).
+  - Approach C (sólo doc): descartada porque produce 0% reducción y
+    dispara la cláusula de abort del spec maestro.
+- **Versión maximal posterior NO evaluada:** una poda más profunda
+  (eliminar también Layer Sync 130 LOC, Layer Agent 118 LOC, B3 67 LOC)
+  fue **considerada y descartada en el Adversarial Review Q3** porque
+  esas layers pasan el 4-test retrospectivo y eliminarlas por tamaño en
+  lugar de por evidencia violaría el principio "ceremonia, no flujo —
+  descártala". Eso sería una versión **más** agresiva, no más reducida.
+- **Independent superiority de Approach A (no por coste):** A se elige
+  por **alineamiento con el patrón endorsed** de poda con 4-test
+  retroactivo (precedente Layers I, J en 2026-04-26) — no por ahorro de
+  trabajo. La regla "ceremonia descártala" exige que la decisión se base
+  en evidencia de fallo del 4-test (que K tiene y Sync/Agent no), no en
+  el LOC count. Esto **garantiza correctness** del proceso de poda:
+  eliminar lo que falló su test, mantener lo que pasa, sin drift hacia
+  decisiones por tamaño. La consistency con I/J/K previene el sesgo de
+  status quo (preservar lo grande sólo porque es grande) y el sesgo
+  inverso (eliminar lo grande sólo porque es grande). El **boundary**
+  preservado es: el 4-test es el único árbitro; el LOC count es métrica,
+  no criterio.
+
+---
+
+## Architectural Adversarial Review
 
 **Q1. ¿Eliminar Layer K no es exactamente el patrón de tech-debt que el harness intenta prevenir — descartar un endorsed por percepción de "ceremonia"?**
 
