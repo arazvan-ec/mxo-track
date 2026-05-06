@@ -162,35 +162,15 @@ else
     fi
   fi
 
-  # Layer K — Anti-Reduction gate (HARD when reduction markers present)
-  # Detects when a spec uses reduction language (MVP, "minimum viable", v0,
-  # "versión reducida", etc.) outside fenced code blocks. Such specs must
-  # include a `## Maximal Version Considered` section that documents:
-  #   - the maximal version evaluated,
-  #   - the concrete 4-test failure that ruled it out,
-  #   - the proposed (reduced) version,
-  #   - an "Independent superiority" bullet that defends the reduced version
-  #     on grounds OTHER than cost (i.e., contains at least one design-quality
-  #     keyword: patrón/pattern, garantiz/ensure, drift, consistency, boundary,
-  #     correctness, alignment, etc.).
-  # Origin: 2026-04-28 retrospective on Ubiquitous Language System reduction.
-  # Strip fenced code blocks before scanning to avoid matching marker tokens
-  # that appear inside ```...``` (e.g., this very validator's documentation).
-  SPEC_BODY=$(awk '/^```/{f=!f; next} !f' "$SPEC_FULL")
-  if echo "$SPEC_BODY" | grep -qiE '(\<MVP\>|mínimo viable|minimum viable|\<v0\>|\<ligero\>|\<ligera\>|lightweight|versión reducida|reduced version|arrancar vacío|start empty|scope[- ]down)'; then
-    if ! section_present "$SPEC_FULL" "Maximal Version Considered"; then
-      ERRORS="${ERRORS}- K: spec contiene marcadores de reducción (MVP/v0/ligero/etc.) pero falta seccion '## Maximal Version Considered'. Documenta la version maximal evaluada, el fallo concreto del 4-test que la descarto, la version propuesta, y un bullet 'Independent superiority' con argumento independiente del coste.\n"
-    else
-      K_SUP_BLOCK=$(section_extract_bullet "$SPEC_FULL" "Maximal Version Considered" "[Ii]ndependent [Ss]uperiority|[Ss]uperioridad independiente")
-      if [ -z "$K_SUP_BLOCK" ]; then
-        ERRORS="${ERRORS}- K: Seccion 'Maximal Version Considered' presente pero falta bullet 'Independent superiority' (o 'superioridad independiente'). Anade un bullet que defienda la version propuesta en terminos no economicos.\n"
-      else
-        if ! section_satisfied_inline_or_ref "$K_SUP_BLOCK" "Independent superiority" positive-signal; then
-          ERRORS="${ERRORS}- K: Bullet 'Independent superiority' apela solo a coste/tamano. Argumenta superioridad independiente del coste (calidad, correctitud, prevencion de un fallo concreto, alineacion con un patron existente).\n"
-        fi
-      fi
-    fi
-  fi
+  # Layer K — REMOVED 2026-05-04 under Hito 0.b (4-test retrospective).
+  # T1 failed: regex check verified section presence, not rigor of reasoning
+  # (P3 — structure-vs-rigor); T3 failed: ~40 LOC + fenced-code-block stripping
+  # + maintenance for 1 documented case which was a recursive false positive
+  # on its own implementation spec. The semantic role (forcing maximal-version
+  # consideration) is preserved by user approval of the spec design — when the
+  # user evaluates alternatives in brainstorming and explicitly approves the
+  # maximal one, regex enforcement is redundant. Spec:
+  # docs/superpowers/specs/2026-05-03-harness-pruning-hito-0b-design.md.
 
   # TDD task isolation: plan must not have standalone "add tests" tasks
   PLAN_PATH_VAL=$(jq -r '.evidence.plan_path // ""' "$STATE_FILE" 2>/dev/null || echo "")
