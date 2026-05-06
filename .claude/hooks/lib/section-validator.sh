@@ -47,8 +47,9 @@ section_body() {
 #   imperative              — ≥1 line contains imperative keyword
 #   risk-mitigation-table   — ≥1 markdown table header line has Risk + Mitigation columns
 #   classified-rows         — ≥1 row contains ✅ | ❌ tech-debt | new (Layer H)
-#   positive-signal         — body matches positive-signal keyword set (Layer K)
-#   multiline-bullet        — body contains a "- " bullet anywhere (Layer K helper)
+#
+# Note: modes `positive-signal` and `multiline-bullet` were removed 2026-05-04
+# alongside Layer K (Hito 0.b). `section_extract_bullet` likewise removed.
 section_satisfied_inline_or_ref() {
   local body="$1"
   local heading_token="$2"
@@ -76,36 +77,8 @@ section_satisfied_inline_or_ref() {
     classified-rows)
       echo "$body" | grep -qE '(✅|❌ tech-debt|\| new \|)'
       ;;
-    positive-signal)
-      echo "$body" | tr '[:upper:]' '[:lower:]' \
-        | grep -qE '(patrón|patron|pattern|garantiz|ensure|document|verifica|verified|drift|consist|boundary|principle|principio|prevent|prevenir|alineación|alineacion|align|correctitud|correctness|semantic|invariante|invariant|atomic|decoupl|encapsul|integridad|mantenib|maintain|robust|safety|safe|reliab|fiab)'
-      ;;
-    multiline-bullet)
-      echo "$body" | grep -qE '^[[:space:]]*[-*][[:space:]]'
-      ;;
     *)
       return 1
       ;;
   esac
-}
-
-# ── section_extract_bullet <file> <heading> <bullet_label> ──
-# Extract a multiline bullet (label + continuation lines) from a section.
-# Used by Layer K for the "Independent superiority" bullet.
-# Echoes the captured block (label line + continuation), empty if not found.
-section_extract_bullet() {
-  local file="$1"
-  local heading="$2"
-  local label_re="$3"
-  awk -v h="^## ${heading}" -v lbl="${label_re}" '
-    $0 ~ h { in_section=1; next }
-    in_section && /^## / { in_section=0 }
-    in_section && match($0, "^[[:space:]]*[-*][[:space:]].*(" lbl ")") {
-      capturing=1; block=$0; next
-    }
-    capturing && /^[[:space:]]*[-*][[:space:]]/ { capturing=0 }
-    capturing && /^## / { capturing=0 }
-    capturing { block = block " " $0 }
-    END { print block }
-  ' "$file"
 }

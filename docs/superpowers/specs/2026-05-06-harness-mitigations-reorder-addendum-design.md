@@ -1,8 +1,28 @@
 # Harness Mitigations Reorder Addendum (A2) + Strategy #13 LLM-as-Judge
 
+> **STATUS: SUPERSEDED (2026-05-06).** El plan maestro al que este addendum
+> reordenaba (`2026-05-03-harness-critique-and-mitigations-design.md`) fue
+> **ABORTADO** ese mismo día per cláusula § 11 — Hito 0.b alcanzó solo
+> −10.71% LOC (target ≥15%), y las 9 estrategias adoptadas quedaron
+> APLAZADAS hasta un Hito 0.c. Ver `docs/decisions/log.md` § [2026-05-06]
+> "Hito 0.b parcialmente cumplido → spec maestro abort per § 11" y
+> `docs/superpowers/execution-logs/2026-05-06-harness-pruning-hito-0b.md`.
+>
+> **Implicaciones para este addendum:**
+> - El reorden A2 (subir #3+#9 al frente) es moot: no hay orden vivo que reordenar.
+> - La Norm "mini-paridad doc per-PR" es redundante: paridad global ya cerrada manualmente en Hito 0.b (`workflow-engine.md` reescrito 313→371).
+> - La estrategia #13 (LLM-as-judge) sigue siendo idea válida pero sin plan vivo donde insertarse; re-proponer cuando Hito 0.c reactive el plan.
+> - Layer K (citado como caso paradigmático de §2.2) fue **eliminado** del harness por aplicación retroactiva del 4-test — validación viva del principio que el addendum defendía.
+>
+> **Este artefacto se preserva como deliberación histórica** (no como plan
+> vivo) por valor para futuras consultas (`consult.sh tag harness`):
+> documenta el patrón `consult-saves-rework`, el patrón
+> `addendum-not-supersession`, y la mecánica de re-priorización ante
+> evidencia externa nueva.
+
 **Fecha:** 2026-05-06
-**Tipo:** Addendum al spec consolidado del 2026-05-03
-**Parent:** `docs/superpowers/specs/2026-05-03-harness-critique-and-mitigations-design.md`
+**Tipo:** Addendum al spec consolidado del 2026-05-03 (superseded el mismo día)
+**Parent:** `docs/superpowers/specs/2026-05-03-harness-critique-and-mitigations-design.md` (también afectado por abort de § 11)
 **Branch:** `claude/review-manus-analysis-olj1I`
 **No-modifica:** `.claude/`, hooks, `CLAUDE.md`. Único artefacto de esta interacción.
 

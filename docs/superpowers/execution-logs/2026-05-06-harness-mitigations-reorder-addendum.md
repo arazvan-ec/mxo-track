@@ -1,6 +1,11 @@
 ---
 type: spec
-tags: [harness, addendum, reorder, llm-judge, manus, governance, 4-test, recursivity, grounding, consult-saves-rework]
+status: superseded
+status_reason: "Master plan aborted same day per § 11 (Hito 0.b reached 10.71% < 15% target). 9 strategies APLAZADAS until Hito 0.c. Addendum's reorder is moot; preserved as historical deliberation."
+status_referenced_by:
+  - docs/decisions/log.md (entry 2026-05-06 Hito 0.b parcialmente cumplido)
+  - docs/superpowers/execution-logs/2026-05-06-harness-pruning-hito-0b.md
+tags: [harness, addendum, reorder, llm-judge, manus, governance, 4-test, recursivity, grounding, consult-saves-rework, superseded, merge-late-cost]
 files_touched:
   - docs/superpowers/specs/2026-05-06-harness-mitigations-reorder-addendum-design.md
   - docs/superpowers/plans/2026-05-06-harness-mitigations-reorder-addendum.md
@@ -125,4 +130,27 @@ Sub-estimación de archivos sigue siendo el patrón dominante (3ª vez consecuti
 - `decision-log-in-finalize` (2ª — graduación lista).
 - `docs-only-meta-spec` (2ª).
 - `prune-before-add` (3ª — graduación lista).
-- **Anti-patrón meta:** el harness atrae specs sobre sí mismo a un ritmo que excede su capacidad de implementación. Hito 0 lleva 4 días sin ejecutarse; hoy se añadió un addendum que lo retrasa indirectamente al añadir #13 a la cola. Si el ratio de specs:implementaciones del harness se mantiene > 1, graduar a regla "no se permiten nuevos specs harness hasta cerrar el backlog actual".
+- **Patrón nuevo descubierto en post-mortem (merge tardío):** `merge-late-cost`. La rama no se actualizó con `main` al inicio; PR #270 (Hito 0.b) había mergeado entre el SessionStart:resume del 2026-05-03 y nuestro arranque del 2026-05-06. Coste: 248 líneas de spec + 50 de plan + 130 de execution log producidos sobre premisa estale (asumimos plan vivo; el plan estaba abortado). Mitigación: arrancar consult con `git fetch origin main` + `git log origin/main` desde la fecha del último log relevante. 1ª ocurrencia explícita; 1 más → graduar a regla en CLAUDE.md § consult.
+- **Anti-patrón meta refinado:** el addendum asumía que el harness está hipertrofiado y que las 9 estrategias se quedan en cola. La realidad mergeada en main demuestra lo contrario: el harness **se auto-poda agresivamente** — Layer K eliminado por aplicación retroactiva del propio 4-test, hooks orphan removidos en Wave Plus, paridad doc cerrada manualmente. La urgencia narrativa que motivó el reorden A2 era parcialmente mítica; el harness mostró capacidad de auto-corrección. Lección: leer la evidencia empírica antes de re-priorizar basándose en análisis externo.
+
+### Discovery durante post-mortem (merge tardío)
+
+Solicitar `git fetch + merge main` antes de finalizar reveló:
+
+1. **Plan maestro abortado** — § 11 cláusula triggered porque Hito 0.b alcanzó 10.71% (target 15%). Las 9 estrategias quedan APLAZADAS hasta Hito 0.c.
+2. **Layer K eliminado** del `brainstorm-validator.sh` por aplicación retroactiva del 4-test (T1: presencia ≠ rigor; T3: 40 LOC para 1 caso documentado).
+3. **`workflow-engine.md` reescrito** 313→371 — paridad doc cerrada manualmente en Hito 0.b, no via gate #1.
+4. **Hooks eliminados:** `post-tool-handler.sh`, `phase-transition-controller.sh` + 3 test files (orphans Wave Plus).
+5. **3 bypass entries nuevos** en decision log entre 2026-05-04 y 2026-05-06.
+
+Estas eran cosas que el `consult.sh tag harness` (que sí ejecutamos) NO reveló porque opera sobre HEAD, no sobre origin/main. Validación retroactiva del nuevo patrón `merge-late-cost`.
+
+### Decisión de cierre tras descubrimiento
+
+Usuario eligió **(α) Mark-as-superseded**: addendum y este log se preservan con
+encabezado `STATUS: SUPERSEDED` para trazabilidad histórica, sin contaminar el
+plan vivo. Las lecciones (`consult-saves-rework`, `merge-late-cost`,
+`decision-log-in-finalize`) sobreviven en este log y son consultables vía
+`consult.sh tag superseded` o `consult.sh tag merge-late-cost` para que la
+próxima interacción full sobre el harness arranque con `git fetch + merge main`
+como paso 0 explícito.

@@ -5,7 +5,7 @@ set -euo pipefail
 REPO="/home/user/mxo-track"
 STATE_FILE="$REPO/.claude/session-state.json"
 ADVANCE="$REPO/.claude/hooks/phase-advance.sh"
-CONTROLLER="$REPO/.claude/hooks/phase-transition-controller.sh"
+CONTROLLER="$REPO/.claude/hooks/post-bash-validator.sh"  # phase-transition-controller logic inlined here 2026-04-08; standalone removed 2026-05-04
 SNAPSHOT="/tmp/ptc-state-snapshot.json"
 BACKUP="/tmp/test-el-backup.json"
 BACKUP_SNAPSHOT="/tmp/test-el-snapshot-backup.json"
