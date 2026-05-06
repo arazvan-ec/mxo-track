@@ -32,7 +32,7 @@ este addendum es su artefacto.
 
 ---
 
-## 2. Existing Functionality Inventory
+## Existing Functionality Inventory
 
 | Elemento | Decisión | Justificación |
 |---|---|---|
@@ -45,7 +45,7 @@ este addendum es su artefacto.
 | Estrategias DESCARTADAS (#4 token cripto, #6 chaos monkey) | Omit | Sin evidencia nueva que invalide el rechazo; criterios de re-adopción del parent siguen vigentes. |
 | Estrategia APLAZADA (#5 granular approval) | Omit | Criterio de re-evaluación trimestral del parent sigue vigente. |
 
-## 3. Omission Decisions
+## Omission Decisions
 
 | Elemento | Decisión | Justificación |
 |---|---|---|
@@ -55,7 +55,7 @@ este addendum es su artefacto.
 
 ---
 
-## 4. Prior Art Audit
+## Prior Art Audit
 
 | Element | Status | Notes |
 |---|---|---|
