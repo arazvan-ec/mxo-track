@@ -11,6 +11,18 @@
 **Trigger:** Próxima interacción dedicada (P4 implícito de esta serie). Test: `test-user-prompt-state.sh` debe cubrir los 4 casos documentados.
 **Origin:** Decision log 2026-05-18 (3 entries), execution log 2026-05-18-pattern-audit-gate-drift.md follow-ups, retrospective gap C.
 
+### [2026-05-18] Proceso — Retrospective phase debe incluir análisis explícito de "backlog candidates" antes de finalize
+
+**Estado:** Pendiente (1ª ocurrencia formal — petición explícita del usuario tras observar el gap)
+**Problema:** La retrospectiva actual cubre 3 puntos obligatorios (estimate accuracy, process gap, emergent patterns) pero **no incluye un paso explícito que conecte las mejoras surfaceadas con su captura en el backlog**. En esta interacción (2026-05-18) la retrospectiva listó 5 follow-ups como "emergent patterns" pero el modelo avanzó hacia `finalize` sin proponer entradas de backlog — el usuario tuvo que interrumpir con "antes de seguir hay que crear un backlog". La conexión retrospectiva → backlog → próxima interacción quedó implícita y se rompió.
+**Decisión propuesta:**
+  1. **Extender la "Retrospective visibility rule" en CLAUDE.md** con un 4º punto obligatorio: *"Backlog candidates analysis: revisar los emergent patterns y process gaps; para cada uno que cumpla ≥1 de los siguientes criterios → proponer entrada de backlog: (a) cumple threshold ≥3 ocurrencias, (b) usuario lo solicitó explícitamente, (c) supera 4-test."* Si no hay candidatos: escribir explícitamente `Backlog candidates: 0 — no surfaced improvements this interaction` (consistente con el patrón "always present, sometimes empty" de Skill 15 § Gate-drift).
+  2. **Extender `retrospective-validator.sh`** para verificar al exit de fase que (a) la retrospectiva contiene la sección "Backlog candidates" Y (b) si tiene candidatos, `docs/backlog.md` ha sido modificado en el git diff de la interacción.
+  3. **Heurística auto-propuesta:** el modelo, después de presentar la retrospectiva visible y recibir aprobación, debe automáticamente preguntar "¿propongo entradas de backlog para los siguientes N follow-ups identificados?" antes del `phase-advance.sh finalize`.
+**Ocurrencias:** 1ª (esta interacción — la retrospectiva listó 5 follow-ups graduables que NO fueron a backlog hasta que el usuario interrumpió). Petición explícita del usuario eleva prioridad.
+**Trigger:** Junto a P4 + UX item del approval — o bien dedicado si la implementación de ambos toca otros subsistemas. Test: `test-retrospective-validator.sh` debe cubrir "retrospectiva sin sección backlog candidates" y "retrospectiva con candidates pero sin edit a backlog".
+**Origin:** Petición explícita del usuario 2026-05-18 ("Quiero añadir una logística a la retro para analizar si después de hacerla se pueden implementar mejoras y presentar un plan para añadirlo al backlog"). El gap se evidenció en la propia interacción donde se identificó.
+
 ### [2026-05-18] Harness — proactive gate-feedback + semantic approval interpretation (UX layer)
 
 **Estado:** Pendiente (1ª ocurrencia formal — petición explícita del usuario)
