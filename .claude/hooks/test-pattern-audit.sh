@@ -74,6 +74,10 @@ PA="$(pwd)/.claude/hooks/pattern-audit.sh"
 export CONSULT_LOGS_DIR="$LOGS_DIR"
 export PATTERN_AUDIT_REGISTRY="$REGISTRY"
 export PATTERN_AUDIT_KNOWLEDGE_DIR="$KNOWLEDGE_DIR"
+# Isolate gate-drift detection (added 2026-05-18) so this suite tests only
+# the graduation-candidate path. Point at a non-existent decision log so
+# the new section short-circuits cleanly.
+export PATTERN_AUDIT_DECISION_LOG="$TMPDIR/no-such-decision-log.md"
 
 out=$("$PA" 2>&1)
 

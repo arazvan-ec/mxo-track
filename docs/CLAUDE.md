@@ -58,8 +58,12 @@ that adds, modifies, or removes functionality.
 1. Read all execution logs from the period
 2. Read recent decision log entries
 3. Analyze: estimation accuracy, blocker frequency, decision outcomes
-4. Write review in `docs/superpowers/retrospectives/YYYY-MM-review.md`
-5. Act: update knowledge modules, propose CLAUDE.md changes, adjust calibration
+4. **Gate-drift review (always perform; "0 flagged" is a valid result):**
+   a. Run `.claude/hooks/pattern-audit.sh` and capture the "gates with ≥3 bypasses" block.
+   b. For each flagged gate, choose `[TUNE]` (update validator heuristic) or `[LEGITIMIZE]` (document the case in CLAUDE.md § Bypass env vars). Both choices require a decision-log entry justifying the call.
+   c. If no gates flagged: write the line `Gate-drift: 0 gates flagged — harness stable for the period` in the review document.
+5. Write review in `docs/superpowers/retrospectives/YYYY-MM-review.md`
+6. Act: update knowledge modules, propose CLAUDE.md changes, adjust calibration
 <!-- GENERIC-END -->
 
 <!-- GENERIC-START -->

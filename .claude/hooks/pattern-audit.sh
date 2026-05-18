@@ -23,69 +23,63 @@ if [ ! -x "$CONSULT" ]; then
   exit 0
 fi
 
-# Extract ≥3 tags/patterns from consult.sh stats output.
+# ── Detection 1: Tags/patterns with ≥3 occurrences not in _graduations.yaml ──
 # Line format: "  <name>                : N logs ⚠ PATTERN (≥3)"
 patterns=$("$CONSULT" stats 2>/dev/null | awk '/⚠ PATTERN/ { print $1, $3 }' || true)
 
-if [ -z "$patterns" ]; then
-  exit 0
-fi
-
-# Parse graduated names from registry (keys under tags: and patterns:)
-graduated_names=""
-if [ -f "$REGISTRY" ]; then
-  graduated_names=$(awk '
-    /^tags:$/             { s="tags"; next }
-    /^patterns:/          { s="patterns"; next }
-    /^keyword_mappings:/  { s="km"; next }
-    /^[a-z]/ && !/^#/     { s=""; next }
-    (s=="tags" || s=="patterns") && /^  [a-z][a-z0-9-]*:$/ {
-      name=$1; sub(/:$/, "", name); print name
-    }
-  ' "$REGISTRY")
-fi
-
-# Heuristic: find best-guess module for an ungraduated name via substring match.
-suggest_module() {
-  local name="$1"
-  [ ! -d "$KNOWLEDGE_DIR" ] && { echo "???"; return; }
-  local hit
-  hit=$(grep -lF "$name" "$KNOWLEDGE_DIR"/*.md 2>/dev/null | head -1)
-  if [ -z "$hit" ]; then
-    echo "???"
-  else
-    basename "$hit"
-  fi
-}
-
-CANDIDATES=()
-while IFS= read -r row; do
-  [ -z "$row" ] && continue
-  tag=$(echo "$row" | awk '{print $1}')
-  count=$(echo "$row" | awk '{print $2}')
-  [ -z "$tag" ] && continue
-
-  if echo "$graduated_names" | grep -qxF "$tag"; then
-    continue
+if [ -n "$patterns" ]; then
+  graduated_names=""
+  if [ -f "$REGISTRY" ]; then
+    graduated_names=$(awk '
+      /^tags:$/             { s="tags"; next }
+      /^patterns:/          { s="patterns"; next }
+      /^keyword_mappings:/  { s="km"; next }
+      /^[a-z]/ && !/^#/     { s=""; next }
+      (s=="tags" || s=="patterns") && /^  [a-z][a-z0-9-]*:$/ {
+        name=$1; sub(/:$/, "", name); print name
+      }
+    ' "$REGISTRY")
   fi
 
-  CANDIDATES+=("$tag|$count")
-done <<< "$patterns"
+  suggest_module() {
+    local name="$1"
+    [ ! -d "$KNOWLEDGE_DIR" ] && { echo "???"; return; }
+    local hit
+    hit=$(grep -lF "$name" "$KNOWLEDGE_DIR"/*.md 2>/dev/null | head -1)
+    if [ -z "$hit" ]; then
+      echo "???"
+    else
+      basename "$hit"
+    fi
+  }
 
-if [ ${#CANDIDATES[@]} -eq 0 ]; then
-  exit 0
+  CANDIDATES=()
+  while IFS= read -r row; do
+    [ -z "$row" ] && continue
+    tag=$(echo "$row" | awk '{print $1}')
+    count=$(echo "$row" | awk '{print $2}')
+    [ -z "$tag" ] && continue
+
+    if echo "$graduated_names" | grep -qxF "$tag"; then
+      continue
+    fi
+
+    CANDIDATES+=("$tag|$count")
+  done <<< "$patterns"
+
+  if [ ${#CANDIDATES[@]} -gt 0 ]; then
+    echo ""
+    echo "⚠ pattern-audit: tags/patterns with ≥3 occurrences not in _graduations.yaml:"
+    for c in "${CANDIDATES[@]}"; do
+      tag="${c%%|*}"
+      count="${c##*|}"
+      module=$(suggest_module "$tag")
+      printf "  • %-30s (%s logs)\n" "$tag" "$count"
+      printf "    → graduate.sh %s --module=%s --section=\"???\"\n" "$tag" "$module"
+    done
+    echo ""
+  fi
 fi
-
-echo ""
-echo "⚠ pattern-audit: tags/patterns with ≥3 occurrences not in _graduations.yaml:"
-for c in "${CANDIDATES[@]}"; do
-  tag="${c%%|*}"
-  count="${c##*|}"
-  module=$(suggest_module "$tag")
-  printf "  • %-30s (%s logs)\n" "$tag" "$count"
-  printf "    → graduate.sh %s --module=%s --section=\"???\"\n" "$tag" "$module"
-done
-echo ""
 
 # ── Phase B B-3: Deprecated-alias scan in execution logs ──
 # Scan recent logs for terms matching aliases with surface: deprecated
@@ -113,6 +107,64 @@ if [ -f "$VOCAB_FILE" ] && [ -d "$EXEC_LOGS_DIR" ]; then
       echo "⚠ pattern-audit: deprecated-alias mentions in recent logs (≤30 days):"
       echo "$DEPRECATED_HITS"
       echo ""
+    fi
+  fi
+fi
+
+# ── Gate-drift detection ──
+# Parse decision log for SKIP_*_GATE bypass entries grouped by gate; surface
+# gates with ≥THRESHOLD bypasses in the last WINDOW_DAYS days as advisory.
+# Output emits both [TUNE] and [LEGITIMIZE] options per flagged gate so the
+# user must explicitly disambiguate (gate too strict vs. legitimate recurring
+# exception). Origin: 2026-05-18 P2 — spec
+# docs/superpowers/specs/2026-05-18-pattern-audit-gate-drift-design.md
+DECISION_LOG="${PATTERN_AUDIT_DECISION_LOG:-$REPO_ROOT/docs/decisions/log.md}"
+WINDOW_DAYS="${PATTERN_AUDIT_BYPASS_WINDOW_DAYS:-90}"
+THRESHOLD="${PATTERN_AUDIT_BYPASS_THRESHOLD:-3}"
+
+if [ -f "$DECISION_LOG" ]; then
+  CUTOFF=$(date -u -d "-${WINDOW_DAYS} days" +%Y-%m-%d 2>/dev/null \
+        || date -u -v-"${WINDOW_DAYS}"d +%Y-%m-%d 2>/dev/null)
+
+  if [ -n "$CUTOFF" ]; then
+    GATE_HITS=$(awk -v cutoff="$CUTOFF" '
+      /^### \[[0-9]{4}-[0-9]{2}-[0-9]{2}\]/ {
+        match($0, /[0-9]{4}-[0-9]{2}-[0-9]{2}/)
+        date = substr($0, RSTART, RLENGTH)
+        in_window = (date >= cutoff) ? 1 : 0
+        next
+      }
+      in_window && match($0, /SKIP_[A-Z][A-Z_]+_GATE/) {
+        gate = substr($0, RSTART, RLENGTH)
+        key = gate "|" date
+        if (!seen[key]) { print gate "|" date; seen[key] = 1 }
+      }
+    ' "$DECISION_LOG" 2>/dev/null)
+
+    if [ -n "$GATE_HITS" ]; then
+      FLAGGED=$(echo "$GATE_HITS" | awk -F'|' -v th="$THRESHOLD" '
+        { gates[$1] = (gates[$1] ? gates[$1] "," : "") $2; counts[$1]++ }
+        END {
+          for (g in counts) {
+            if (counts[g] >= th) print g "|" counts[g] "|" gates[g]
+          }
+        }
+      ' | sort)
+
+      if [ -n "$FLAGGED" ]; then
+        echo ""
+        echo "⚠ pattern-audit: gates with ≥${THRESHOLD} bypasses in last ${WINDOW_DAYS} days:"
+        while IFS='|' read -r gate count dates; do
+          [ -z "$gate" ] && continue
+          printf "  • %s (%s entries: %s)\n" "$gate" "$count" "$dates"
+          echo "    Choose one structural response:"
+          echo "    [TUNE]       Update validator heuristic — gate fires on legitimate work."
+          echo "                 → review the relevant validator in .claude/hooks/validators/"
+          echo "    [LEGITIMIZE] Document as accepted bypass case in CLAUDE.md."
+          echo "                 → add row to § Bypass env vars with the recurring justification"
+        done <<< "$FLAGGED"
+        echo ""
+      fi
     fi
   fi
 fi

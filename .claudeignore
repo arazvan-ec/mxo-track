@@ -1,0 +1,28 @@
+# .claudeignore — paths excluded from Claude Code tool searches (Grep, Glob).
+# Scope: build artifacts and dependency trees with no semantic value for code understanding.
+# Spec: docs/superpowers/specs/2026-05-18-claudeignore-bootstrap-design.md
+#
+# Maintenance: any addition to this file requires justification in
+# docs/decisions/log.md or an execution log. Silent additions are forbidden.
+
+# PHP / Composer dependencies (backend)
+backend/vendor/
+
+# Node / npm dependencies (frontend)
+frontend/node_modules/
+
+# Symfony runtime artifacts
+backend/var/cache/
+backend/var/log/
+
+# Frontend build outputs
+frontend/dist/
+frontend/.vite/
+frontend/build/
+backend/public/build/
+
+# Lock files (consulted via Read with explicit path, not Grep/Glob)
+*.lock
+
+# Git internals (explicit; most tools exclude automatically)
+.git/
