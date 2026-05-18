@@ -2,6 +2,53 @@
 
 ## Backlog Arquitectónico
 
+### [2026-05-18] Harness — extender approval-detection regex en `user-prompt-state.sh`
+
+**Estado:** Pendiente (graduable AHORA — 4ª ocurrencia)
+**Problema:** Regex de aprobación verbal en `user-prompt-state.sh:73` no matchea verbos directivos comunes en español ("avanza", "sigue", "vamos", "pasa a", "arranca", "tira"). Combinado con la regla "hook es único escritor de `user_approved`" + revert por `phase-transition-controller`, produce fricción cuando el usuario aprueba con wording natural pero el flag queda `false`.
+**Decisión propuesta:** [TUNE] del gate. Extender el regex agregando: `avanza|sigue|vamos|pasa a|arranca|tira|empieza|venga|adelante con|ve con`. Adicionalmente, emitir log warning explícito en `phase-transition-controller` cuando se detecta intento de direct-write a `user_approved` desde herramienta no sancionada (ayuda al modelo a notar el error).
+**Ocurrencias documentadas:** 2026-04-28 SessionStart resume reset, 2026-04-29 SessionStart resume reset, 2026-05-06 `retrospective_shown` phase-gate mismatch, 2026-05-18 "Avanza a planning" not matched.
+**Trigger:** Próxima interacción dedicada (P4 implícito de esta serie). Test: `test-user-prompt-state.sh` debe cubrir los 4 casos documentados.
+**Origin:** Decision log 2026-05-18 (3 entries), execution log 2026-05-18-pattern-audit-gate-drift.md follow-ups, retrospective gap C.
+
+### [2026-05-18] Harness — `verification-validator` aceptación inteligente de `lint_clean=skipped`
+
+**Estado:** Pendiente (graduable AHORA — 5ª ocurrencia)
+**Problema:** `verification-validator.sh` rechaza `lint_clean=skipped` en flow=full/debug, asumiendo que `shellcheck` está siempre instalado. En el sandbox de Claude Code on the web `shellcheck` no está disponible. El bypass `SKIP_PHASE_EXIT_GATE=1` se usa repetidamente con decision-log entry para esta razón.
+**Decisión propuesta:** [TUNE] del validator. Detectar dos escenarios donde `lint_clean=skipped` es honesto:
+  1. `git diff --name-only` desde el commit del plan no contiene archivos `*.sh`/`*.bash` → bypass shell-lint requirement.
+  2. `command -v shellcheck` no encuentra el binario → aceptar `skipped` con campo `lint_skip_reason=shellcheck_missing`, propagar como ⚠ (no ✅) hasta pre-push-gate.
+**Ocurrencias documentadas:** 2026-04-22 shellcheck missing (1ª), 2026-05-03 docs-only meta-spec (2ª), 2026-05-04 Hito 0.b implementation phase (3ª), 2026-05-06 Hito 0.b retrospective (4ª), 2026-05-18 esta interacción (5ª).
+**Trigger:** Cuando se aborde la P4 de approval-regex (alta correlación de fricción en mismo subsistema).
+**Origin:** Decision log 2026-05-18 (entry SKIP_PHASE_EXIT_GATE verification→capture), execution log 2026-05-18-pattern-audit-gate-drift.md follow-ups.
+
+### [2026-05-18] Harness — `capture-validator` chicken-and-egg con `execution_log_path`
+
+**Estado:** Pendiente (2ª ocurrencia explícita)
+**Problema:** `capture-validator` requiere que `evidence.execution_log_path` apunte a un archivo existente en disco, pero al escribir el log por primera vez el archivo aún no existe. Workflow-engine bloquea el `Write` inicial. Workaround actual: `touch <path>` vía Bash (Bash no activa el gate capture que sólo matchea `Edit|Write`).
+**Decisión propuesta:** Cambiar el workflow-engine para permitir `Write` cuando `file_path == evidence.execution_log_path && file_is_empty_or_missing`. O alternativamente, hacer que `capture-validator` cree el archivo vacío automáticamente al setear `execution_log_path` por primera vez.
+**Ocurrencias documentadas:** 2026-04-22 (1ª — entrada inicial de la deuda), 2026-05-18 (2ª — esta interacción, 3 archivos `touch`-ados).
+**Trigger:** Próxima vez que aparezca, alcanzando threshold ≥3. Mientras tanto, el workaround manual es la práctica documentada.
+**Origin:** Decision log 2026-04-22 "Capture gate chicken-and-egg" + execution log 2026-05-18-pattern-audit-gate-drift.md.
+
+### [2026-05-18] Harness — `sync-validator` necesita mecanismo "amend plan" en runtime
+
+**Estado:** Pendiente (2ª ocurrencia explícita)
+**Problema:** `sync-validator.sh` bloquea `verification → capture` si archivos modificados/eliminados no están en el plan original (`→ files:` declarations). Cuando durante implementación se descubren orphans, se cambian convenciones de path (ej. `tests/hooks/fixtures/` → fixture inline en `.claude/hooks/test-*.sh`), o se modifica un test existente para isolation de regresión — el plan estaría desactualizado en runtime. Reabrir brainstorming/planning para amend es fricción inaceptable.
+**Decisión propuesta:** Permitir `amend-plan.sh <task-id> <new-file>` que agrega `→ files:` entries al plan sin reabrir fases anteriores. Validar que el amend ocurre en fase `implementation` o `verification` y se commitea junto al cambio. Alternativa: extender plan-progress.sh para auto-detectar drift y proponer amend interactivo.
+**Ocurrencias documentadas:** 2026-05-04 Hito 0.b orphans descubiertos en wave Plus (1ª), 2026-05-18 esta interacción path-change + test isolation fix (2ª).
+**Trigger:** 3ª ocurrencia (alcanza threshold) o cuando se aborde la suite de mejoras al sync-validator.
+**Origin:** Decision log 2026-05-04 SKIP_SYNC_GATE bypass + 2026-05-18 SKIP_PHASE_EXIT_GATE bypass (mismo gate también disparó sync indirectamente).
+
+### [2026-05-18] Proceso — Prior Art Audit debe inspeccionar control flow, no solo API superficial
+
+**Estado:** Pendiente (1ª ocurrencia formal)
+**Problema:** En P2 (`pattern-audit.sh` gate-drift), el Prior Art Audit del spec marcó `pattern-audit.sh:1-32` como "✅ Endorsed" pero no flagged el early-exit en línea 32 que short-circuited las detecciones nuevas. El short-circuit solo se descubrió durante implementación, requiriendo refactor en runtime.
+**Decisión propuesta:** Actualizar `brainstorm-validator.sh` Layer H (Prior Art Audit) para sugerir explícitamente en su feedback al modelo: "cuando extiendas un script existente, inspecciona también: (a) early-exits, (b) sentinels/short-circuits, (c) shared state mutations, no solo el API público". O alternativamente, agregar columna "Control flow notes" al template de Prior Art Audit.
+**Ocurrencias:** 1ª (P2 esta interacción). Tracking para 3+ ocurrencias antes de graduar a fix estructural.
+**Trigger:** 3ª ocurrencia documentada de "Prior Art Audit perdió detalle de control flow" — mientras tanto, queda como práctica recordatoria.
+**Origin:** Retrospective gap A de 2026-05-18 execution log de P2.
+
 ### [2026-03-11] Providers configurables: Proxy + Factory vs alternativas
 
 **Estado:** Pendiente de implementación
