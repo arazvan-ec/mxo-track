@@ -11,6 +11,19 @@
 **Trigger:** Próxima interacción dedicada (P4 implícito de esta serie). Test: `test-user-prompt-state.sh` debe cubrir los 4 casos documentados.
 **Origin:** Decision log 2026-05-18 (3 entries), execution log 2026-05-18-pattern-audit-gate-drift.md follow-ups, retrospective gap C.
 
+### [2026-05-18] Harness — proactive gate-feedback + semantic approval interpretation (UX layer)
+
+**Estado:** Pendiente (1ª ocurrencia formal — petición explícita del usuario)
+**Problema:** El usuario solicitó explícitamente 3 mejoras conectadas a la fricción de approval detection (mensaje 2026-05-18): *"Hay que mejorar la detección de los approves, o me indicas mejor como seguir o entiendes mejor mis respuestas"*. La 1ª (detección regex) está capturada en el item anterior. Las 2 restantes son problemas de **comunicación** y **comprensión semántica** que la extensión del regex no resuelve:
+  - **(a) Indicar mejor cómo seguir:** cuando un gate de approval podría bloquear, el sistema (modelo + hook) debe **proactivamente** mostrar al usuario los wordings exactos que desbloquean, ANTES de que el bloqueo ocurra. Actualmente sólo se informa tras el fallo, forzando un turno extra de fricción.
+  - **(b) Entender mejor las respuestas:** depender exclusivamente de regex es frágil — cualquier verbo o frase no contemplada produce false negative. Alternativa: usar la propia capacidad del modelo (LLM) para interpretar semánticamente la intención del usuario, con regex como fast-path y fallback al modelo cuando regex no matchea Y el contexto sugiere aprobación implícita.
+**Decisión propuesta:**
+  - **(a)** Cuando `evidence.user_approved=false` y la fase actual está cerca de un gate que lo requiere (brainstorming exit, retrospective exit), el `UserPromptSubmit` hook debe emitir línea informativa: "✋ Para avanzar, di una de: apruebo / ok / procede / adelante (o similar). Tu último mensaje no se interpretó como aprobación." — ANTES de que el usuario intente avanzar.
+  - **(b)** Investigar feasibility de "semantic approval probe": al detectar prompt sin match de regex pero en contexto pre-gate, el modelo emite una self-question (vía mensaje al user o vía structured output) "¿este prompt es una aprobación de lo presentado?" y setea el flag basado en la respuesta. Más caro pero robusto. Decisión adoptar/descartar se toma cuando se implemente el item (a).
+**Ocurrencias:** 1ª (esta interacción). Tracking para 3+ ocurrencias antes de exigir implementación, PERO la petición explícita del usuario eleva la prioridad sobre threshold-based graduation.
+**Trigger:** Junto a P4 (regex extension) — mismo subsistema, misma sesión de implementación.
+**Origin:** Mensaje del usuario 2026-05-18 ("Hay que mejorar la detección de los approves..."), no capturado completamente en el primer pase del backlog. Añadido en interacción inmediatamente posterior cuando el usuario surfaceó el gap.
+
 ### [2026-05-18] Harness — `verification-validator` aceptación inteligente de `lint_clean=skipped`
 
 **Estado:** Pendiente (graduable AHORA — 5ª ocurrencia)
