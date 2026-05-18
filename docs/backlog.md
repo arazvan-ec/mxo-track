@@ -2,6 +2,23 @@
 
 ## Backlog Arquitectónico
 
+### [2026-05-18] Tooling — Evaluación CORE (RedPlanetHQ) como capa de orquestación cross-tool
+
+**Estado:** Pendiente — decisión "NO adoptar ahora, experimento limitado + re-evaluar en 6-9 meses"
+**Problema:** CORE (https://github.com/RedPlanetHQ/core) es un "Personal AI OS" con knowledge graph temporal (Neo4j), approval gates, audit log, multi-modal access (Slack/WhatsApp/Telegram/email) y 50+ connectors vía MCP. Opera a la capa de **orquestación cross-tool**, no de coding workflow — complementario a Claude Code + CLAUDE.md (que opera a nivel single-repo). Question: ¿adoptamos? ¿ahora? ¿en qué scope?
+**Análisis hecho:** Deep dive 8-item comparando memory model (KG temporal vs vector RAG), self-hosting cost, approval gates, multi-modal security, benchmark LoCoMo (88.24%), connectors aplicables a mxo-track (GitHub/Sentry/Slack/Linear cubren 80% del valor), alternativas (Cline 62k★, Aider 45k★, Continue 33k★ — pivotó a CI checks). Documentado en chat 2026-05-18 (no en archivo aún — ver decisión propuesta debajo).
+**Decisión propuesta:**
+  1. **NO adoptar para producción ahora.** Razones: (a) stack stateful overhead alto (Postgres + Neo4j + Redis para uso individual), (b) early-stage churn (74 releases en pocos meses sugiere interfaces inestables), (c) doble fuente de verdad potencial con `docs/backlog.md` + Linear (si lo usamos).
+  2. **Experimento limitado (1-2 semanas)** cuando haya bandwidth: conectar GitHub + Sentry + Slack + 1 task recurrente (morning brief con PRs abiertos + errores nuevos). Métrica de éxito: reducción medible de tiempo de coordinación manual.
+  3. **Re-evaluar en 2026-Q4 / 2027-Q1** cuando llegue a v1.x con interfaces estables.
+  4. **Knowledge module nuevo** `docs/knowledge/ai-tooling-landscape.md` que capture la comparativa (Cline/Aider/Continue/CORE/Claude Code) como referencia durable — la próxima vez que aparezca un "Personal AI OS X" no rehacemos el análisis desde cero.
+**Triggers de re-evaluación:**
+  - Aparece use case real cross-tool (e.g., coordinación Linear ↔ GitHub ↔ Sentry se vuelve fricción frecuente)
+  - CORE alcanza v1.x con changelog estable
+  - Equipo crece (>1 dev) y la memoria cross-tool tiene ROI compartido
+  - Alternativa equivalente con menor stack-overhead aparece
+**Origin:** Investigación 2026-05-18 a petición del usuario tras lectura comparativa de articulo Anthropic + análisis de CORE. 8-item deep dive cubriendo memoria, governance, multi-modal security, benchmarks, connectors, integración, alternativas.
+
 ### [2026-05-18] Harness — extender approval-detection regex en `user-prompt-state.sh`
 
 **Estado:** Pendiente (graduable AHORA — 4ª ocurrencia)
