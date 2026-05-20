@@ -203,7 +203,15 @@ esac
 
 case "$LINT_CLEAN" in
   true)    CHECKLIST="${CHECKLIST}✅ lint_clean | " ;;
-  skipped) CHECKLIST="${CHECKLIST}⚠ lint_clean (skipped) | " ;;
+  skipped)
+    # P3 2026-05-20: surface lint_skip_reason when present (smart acceptance trail).
+    LINT_SKIP_REASON=$(jq -r '.evidence.lint_skip_reason // ""' "$STATE_FILE" 2>/dev/null || echo "")
+    if [ -n "$LINT_SKIP_REASON" ]; then
+      CHECKLIST="${CHECKLIST}⚠ lint_clean (skipped: $LINT_SKIP_REASON) | "
+    else
+      CHECKLIST="${CHECKLIST}⚠ lint_clean (skipped) | "
+    fi
+    ;;
   *)       CHECKLIST="${CHECKLIST}❌ lint_clean (actual: $LINT_CLEAN) | "; ERRORS="${ERRORS}lint " ;;
 esac
 

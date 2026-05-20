@@ -31,8 +31,8 @@
 
 set -euo pipefail
 
-REPO="/home/user/mxo-track"
-STATE_FILE="$REPO/.claude/session-state.json"
+REPO="${REPO:-/home/user/mxo-track}"
+STATE_FILE="${STATE_FILE:-$REPO/.claude/session-state.json}"
 
 # Load phase sequences from the single source of truth
 # shellcheck source=./lib/flow-phases.sh
@@ -61,16 +61,35 @@ fi
 
 # ── User Approval Detection ──
 # user_approved is a HUMAN decision. Only this hook sets it — direct jq writes
-# are reverted by phase-transition-controller.
+# are reverted by phase-transition-controller (in post-bash-validator.sh).
 # Flow: .prompt → strip <system-reminder> → lowercase → match approval/rejection
 # If both match, rejection wins (conservative).
+#
+# ── Shared regex patterns (DRY refactor 2026-05-20 P1) ──
+# Origin: docs/superpowers/specs/2026-05-20-approval-ux-overhaul-design.md
+# Extended with Spanish directive verbs after 4 documented occurrences of the
+# "approval not detected" pattern (2026-04-28, 2026-04-29, 2026-05-06, 2026-05-18).
+APPROVAL_REGEX='(^|\s)(sí|si,|si$|yes|ok|dale|adelante|aprobado|apruebo|perfecto|de acuerdo|estoy de acuerdo|me parece bien|prefiero|vamos con|vamos a|vamos|go ahead|approved|lgtm|apruebo el plan|lo apruebo|suena bien|hazlo|implementa|proceed|me gusta|está bien|esta bien|correcto|confirmo|confirm|procede|continua|continúa|igual que|igual a|como las otras|avanza|sigue|pasa a|arranca|tira para|tira con|tira|venga|empieza|continúa con|ve con)(\s|$|[,.\!])'
+REJECTION_REGEX='(^|\s)(no[, ]|cambia|modifica|diferente|otra opci|no me convence|rechaz|no estoy de acuerdo)'
+
+# Semantic probe detection (P1 — emitted later in rendering)
+SEMANTIC_PROBE_NEEDED=0
+
 if [ "$FLOW_TYPE" = "full" ] && [ -n "$USER_PROMPT" ]; then
   CURRENT_APPROVED=$(echo "$STATE" | jq -r '.evidence.user_approved // false')
   CLEAN_PROMPT=$(echo "$USER_PROMPT" | sed '/<system-reminder>/,/<\/system-reminder>/d')
   PROMPT_LOWER=$(echo "$CLEAN_PROMPT" | tr '[:upper:]' '[:lower:]')
 
-  # Approval patterns (Spanish + English)
-  if echo "$PROMPT_LOWER" | grep -qiE '(^|\s)(sí|si,|si$|yes|ok|dale|adelante|aprobado|apruebo|perfecto|de acuerdo|estoy de acuerdo|me parece bien|prefiero|vamos con|go ahead|approved|lgtm|apruebo el plan|lo apruebo|suena bien|hazlo|implementa|proceed|me gusta|está bien|esta bien|correcto|confirmo|confirm|procede|continua|continúa|igual que|igual a|como las otras)(\s|$|[,.\!])'; then
+  # Detect intent FIRST so rejection wins when both match (per design comment).
+  # Fixes pre-existing bug where "no estoy de acuerdo" matched 'estoy de acuerdo'
+  # (approval) before the rejection regex got a chance to short-circuit.
+  IS_APPROVAL=0
+  IS_REJECTION=0
+  echo "$PROMPT_LOWER" | grep -qiE "$APPROVAL_REGEX"  && IS_APPROVAL=1
+  echo "$PROMPT_LOWER" | grep -qiE "$REJECTION_REGEX" && IS_REJECTION=1
+
+  # Approval patterns (only fire if rejection did NOT match)
+  if [ "$IS_APPROVAL" = "1" ] && [ "$IS_REJECTION" = "0" ]; then
     if [ "$CURRENT_APPROVED" != "true" ]; then
       jq '.evidence.user_approved = true' "$STATE_FILE" > /tmp/upt.json && mv /tmp/upt.json "$STATE_FILE"
       STATE=$(cat "$STATE_FILE" 2>/dev/null || echo "{}")
@@ -81,14 +100,14 @@ if [ "$FLOW_TYPE" = "full" ] && [ -n "$USER_PROMPT" ]; then
   # Decision-ID approval: 2+ references like "D1a", "D2b" imply confirmation
   # of a numbered decision list (e.g. "1. D1a 2. D2b 3. D3a")
   DECISION_IDS=$(echo "$PROMPT_LOWER" | { grep -oE '\bd[0-9]+[a-e]?\b' || true; } | wc -l | tr -d ' ')
-  if [ "$DECISION_IDS" -ge 2 ] && [ "$CURRENT_APPROVED" != "true" ]; then
+  if [ "$DECISION_IDS" -ge 2 ] && [ "$CURRENT_APPROVED" != "true" ] && [ "$IS_REJECTION" = "0" ]; then
     jq '.evidence.user_approved = true' "$STATE_FILE" > /tmp/upt.json && mv /tmp/upt.json "$STATE_FILE"
     STATE=$(cat "$STATE_FILE" 2>/dev/null || echo "{}")
     cp "$STATE_FILE" /tmp/ptc-state-snapshot.json 2>/dev/null || true
   fi
 
-  # Rejection patterns (reset approval)
-  if echo "$PROMPT_LOWER" | grep -qiE '(^|\s)(no[, ]|cambia|modifica|diferente|otra opci|no me convence|rechaz|no estoy de acuerdo)'; then
+  # Rejection patterns (reset approval when previously true) — uses shared REJECTION_REGEX
+  if [ "$IS_REJECTION" = "1" ]; then
     if [ "$CURRENT_APPROVED" = "true" ]; then
       jq '.evidence.user_approved = false' "$STATE_FILE" > /tmp/upt.json && mv /tmp/upt.json "$STATE_FILE"
       STATE=$(cat "$STATE_FILE" 2>/dev/null || echo "{}")
@@ -96,18 +115,33 @@ if [ "$FLOW_TYPE" = "full" ] && [ -n "$USER_PROMPT" ]; then
     fi
   fi
 
-  # Retrospective approval: reuse approval regex but gate on phase=retrospective.
+  # Retrospective approval: reuse APPROVAL_REGEX but gate on phase=retrospective.
   # The flag gates phase-advance to finalize. Only this hook may set it; the
   # phase-transition-controller reverts direct jq writes (mirrors user_approved).
-  # Origin: 2026-04-29 i10 — closes "stop-hook as approval proxy" pattern
-  # observed in Hito 1, Hito 2, Hito 4, Phase A, Hito 5.
+  # Origin: 2026-04-29 i10 — closes "stop-hook as approval proxy" pattern.
   CURRENT_RETRO_SHOWN=$(echo "$STATE" | jq -r '.evidence.retrospective_shown // false')
   if [ "$CURRENT_PHASE" = "retrospective" ] && [ "$CURRENT_RETRO_SHOWN" != "true" ]; then
-    if echo "$PROMPT_LOWER" | grep -qiE '(^|\s)(sí|si,|si$|yes|ok|dale|adelante|aprobado|apruebo|perfecto|de acuerdo|estoy de acuerdo|me parece bien|prefiero|vamos con|go ahead|approved|lgtm|apruebo el plan|lo apruebo|suena bien|hazlo|implementa|proceed|me gusta|está bien|esta bien|correcto|confirmo|confirm|procede|continua|continúa|igual que|igual a|como las otras)(\s|$|[,.\!])'; then
+    if echo "$PROMPT_LOWER" | grep -qiE "$APPROVAL_REGEX"; then
       jq '.evidence.retrospective_shown = true' "$STATE_FILE" > /tmp/upt.json && mv /tmp/upt.json "$STATE_FILE"
       STATE=$(cat "$STATE_FILE" 2>/dev/null || echo "{}")
       cp "$STATE_FILE" /tmp/ptc-state-snapshot.json 2>/dev/null || true
     fi
+  fi
+
+  # Semantic probe detection (P1 2026-05-20):
+  # Mark probe needed when prompt is short + ambiguous (no regex match either way)
+  # AND we're at a pre-gate state where user_approved still matters.
+  RECHECK_APPROVED=$(echo "$STATE" | jq -r '.evidence.user_approved // false')
+  PROMPT_LEN=${#CLEAN_PROMPT}
+  if [ "$RECHECK_APPROVED" != "true" ] && \
+     [ "$PROMPT_LEN" -gt 0 ] && [ "$PROMPT_LEN" -le 80 ] && \
+     ! echo "$PROMPT_LOWER" | grep -qiE "$APPROVAL_REGEX" && \
+     ! echo "$PROMPT_LOWER" | grep -qiE "$REJECTION_REGEX"; then
+    case "$CURRENT_PHASE" in
+      brainstorming|retrospective)
+        SEMANTIC_PROBE_NEEDED=1
+        ;;
+    esac
   fi
 fi
 
@@ -564,6 +598,29 @@ if [ "$FLOW_TYPE" = "full" ]; then
     finalize) [ -n "$BRANCH_STRATEGY" ] && NEXT="ejecutar $BRANCH_STRATEGY" || NEXT="declarar strategy" ;;
   esac
   echo "  Siguiente: $NEXT"
+
+  # ── Proactive gate feedback (P1 2026-05-20) ──
+  # When user_approved=false near a gate exit, surface unblock wordings.
+  case "$CURRENT_PHASE" in
+    brainstorming)
+      if [ "$ALTERNATIVES" = "true" ] && [ "$USER_APPROVED" != "true" ]; then
+        echo "  ✋ Para avanzar di: apruebo / ok / procede / adelante / avanza / sigue / vamos"
+      fi
+      ;;
+    retrospective)
+      RETRO_SHOWN_CHECK=$(echo "$STATE" | jq -r '.evidence.retrospective_shown // false')
+      if [ -n "$EXEC_LOG" ] && [ "$RETRO_SHOWN_CHECK" != "true" ]; then
+        echo "  ✋ Para avanzar di: apruebo / ok / procede / adelante / avanza / sigue / vamos"
+      fi
+      ;;
+  esac
+
+  # ── Semantic probe (P1 2026-05-20) ──
+  # When prompt was ambiguous (short + neither approval nor rejection match) at
+  # a pre-gate state, surface explicit options to disambiguate.
+  if [ "$SEMANTIC_PROBE_NEEDED" = "1" ]; then
+    echo "  📋 Prompt ambiguo — para aprobar di 'apruebo'; para rechazar di 'no' o 'cambia'"
+  fi
 
   # Narration guard during active work phases
   case "$CURRENT_PHASE" in

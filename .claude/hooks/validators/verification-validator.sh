@@ -47,7 +47,49 @@ esac
 case "$LINT_CLEAN" in
   true)   ;;  # pass
   skipped)
-    if [ "$STRICT_SKIPPED" = "1" ]; then
+    # P3 2026-05-20: Smart acceptance of lint_clean=skipped when the skip is
+    # provably honest. Two scenarios accept automatically:
+    #   1. shellcheck binary not available (sandbox without lint tooling)
+    #   2. diff doesn't contain any *.sh / *.bash files (nothing to lint)
+    # Spec: docs/superpowers/specs/2026-05-20-verification-lint-skipped-smart-acceptance-design.md
+    SMART_ACCEPT=0
+    LINT_SKIP_REASON=""
+
+    # Scenario 1: shellcheck missing
+    if ! command -v shellcheck >/dev/null 2>&1; then
+      SMART_ACCEPT=1
+      LINT_SKIP_REASON="shellcheck_missing"
+    fi
+
+    # Scenario 2: no shell files in diff (uses shared git-refs helper for consistency
+    # with sync-validator).
+    if [ "$SMART_ACCEPT" = "0" ]; then
+      LIB_GIT_REFS="$(dirname "$0")/../lib/git-refs.sh"
+      DIFF_BASE=""
+      if [ -f "$LIB_GIT_REFS" ]; then
+        # shellcheck source=../lib/git-refs.sh
+        source "$LIB_GIT_REFS" 2>/dev/null || true
+        if declare -F get_plan_commit_parent >/dev/null 2>&1; then
+          DIFF_BASE=$(get_plan_commit_parent "$STATE_FILE" 2>/dev/null || echo "")
+        fi
+      fi
+      [ -z "$DIFF_BASE" ] && DIFF_BASE=$(git rev-parse origin/main 2>/dev/null || echo "")
+
+      if [ -n "$DIFF_BASE" ]; then
+        SHELL_IN_DIFF=$(git diff --name-only "$DIFF_BASE...HEAD" 2>/dev/null | grep -E '\.(sh|bash)$' || true)
+        SHELL_IN_WT=$(git status --porcelain 2>/dev/null | awk '{print $2}' | grep -E '\.(sh|bash)$' || true)
+        if [ -z "$SHELL_IN_DIFF" ] && [ -z "$SHELL_IN_WT" ]; then
+          SMART_ACCEPT=1
+          LINT_SKIP_REASON="no_shell_files_in_diff"
+        fi
+      fi
+    fi
+
+    if [ "$SMART_ACCEPT" = "1" ]; then
+      # Record the reason in evidence; propagate as ⚠ (not ✅) downstream.
+      jq --arg r "$LINT_SKIP_REASON" '.evidence.lint_skip_reason = $r' "$STATE_FILE" > /tmp/vv-fix.json && mv /tmp/vv-fix.json "$STATE_FILE" 2>/dev/null || true
+      WARNINGS="${WARNINGS}- SOFT: lint_clean=skipped accepted (reason: $LINT_SKIP_REASON). Propagates as ⚠ to pre-push-gate.\n"
+    elif [ "$STRICT_SKIPPED" = "1" ]; then
       ERRORS="${ERRORS}- lint_clean=skipped no es aceptable en flow=$FLOW_TYPE. Ejecuta 'make lint && make lint-shell'.\n"
     else
       WARNINGS="${WARNINGS}- SOFT: lint_clean=skipped (lint tooling unavailable). Verify lint passes before merging.\n"

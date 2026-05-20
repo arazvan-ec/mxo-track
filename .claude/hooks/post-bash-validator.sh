@@ -127,6 +127,9 @@ if echo "$COMMAND" | grep -q 'session-state.json'; then
         if echo "$COMMAND" | grep -qE 'user_approved\s*=\s*true'; then
           jq '.evidence.user_approved = false' "$STATE_FILE" > /tmp/ptc-fix.json && mv /tmp/ptc-fix.json "$STATE_FILE"
           WARNINGS="${WARNINGS}⚠ REVERT: user_approved fue seteado directamente via jq. Solo el hook UserPromptSubmit puede aprobarlo. "
+          # P1 2026-05-20: persistent warning log so the model sees the revert
+          # across turns, not just in this single tool result.
+          echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) REVERT user_approved direct-write detected; command: $(echo "$COMMAND" | head -c 200)" >> /tmp/ptc-revert-warnings.log
         fi
       fi
 

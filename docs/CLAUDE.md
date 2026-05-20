@@ -50,6 +50,36 @@ that adds, modifies, or removes functionality.
 <!-- PROJECT-SPECIFIC-END -->
 
 <!-- GENERIC-START -->
+## Retrospective Visibility Rule
+
+The retrospective MUST be presented to the user as a visible message BEFORE
+writing it to the execution log. Three mandatory points + one obligatory
+backlog analysis:
+
+1. **Estimate accuracy** — estimated vs. actual (lines, files, time). Root cause of any gap.
+2. **Process gap** — what allowed something to go wrong or deviate? What's the fix?
+3. **Emergent patterns** — any new pattern? If 3+ occurrences, graduate to knowledge module.
+4. **Backlog candidates analysis (always perform; "0 candidates" is a valid result):**
+   Review the emergent patterns and process gaps. For each that meets ≥1 of:
+   (a) ≥3 occurrences documented,
+   (b) explicitly requested by the user,
+   (c) passes the 4-test (forces quality practice + right phase + cost/value + sourced),
+   → propose a backlog entry in `docs/backlog.md` BEFORE advancing to finalize.
+   If 0 candidates: write the literal line `Backlog candidates: 0 — no surfaced improvements this interaction` in the execution log retrospective section.
+
+After presenting the retrospective and receiving user approval
+(`retrospective_shown=true`), the model SHALL ask:
+*"¿Propongo entradas de backlog para los N follow-ups identificados?"*
+before invoking `phase-advance.sh finalize`. Silent advance is forbidden.
+
+Enforcement: `retrospective-validator.sh` is HARD — blocks `retrospective → finalize`
+if the execution log lacks either a `## Backlog candidates` section or the
+literal "0 — no surfaced improvements" line, OR if candidates are listed but
+`docs/backlog.md` has no diff in the interaction's commit range.
+
+Origin: 2026-05-20 P2 — spec
+`docs/superpowers/specs/2026-05-20-retrospective-backlog-candidates-design.md`.
+
 ## Learning Review (Skill 15)
 
 **When:** Monthly, or when 5+ execution logs accumulated without analysis.
